@@ -1,73 +1,73 @@
 <template>
   <div v-if="store.copyPanelOpen" class="pm-modal-overlay" @click.self="close">
     <div class="pm-modal pm-cp-modal">
-      <h3>{{ store.t('block.copyPanel.title') }}</h3>
+      <h3>{{ store.t('preset.copyPanel.title') }}</h3>
       <div class="pm-cp-body">
         <div class="pm-cp-col">
           <div class="pm-cp-col-head">
             <select class="pm-cp-sel" v-model="sides.left.name">
-              <option value="" disabled>{{ store.t('block.copyPanel.selectPreset') }}</option>
+              <option value="" disabled>{{ store.t('preset.copyPanel.selectPreset') }}</option>
               <option v-for="p in presetOptions" :key="p.name" :value="p.name">{{ p.name }}</option>
             </select>
             <button class="pm-btn" :disabled="!sides.left.name" @click="loadSide('left')">{{ store.t('common.load') }}</button>
           </div>
           <template v-if="sides.left.data">
             <div class="pm-cp-toolbar">
-              <button class="pm-btn" @click="selectAll('left')">{{ store.t('block.copyPanel.selectAll') }}</button>
-              <button class="pm-btn" @click="clearSel('left')">{{ store.t('block.copyPanel.clearAll') }}</button>
+              <button class="pm-btn" @click="selectAll('left')">{{ store.t('preset.copyPanel.selectAll') }}</button>
+              <button class="pm-btn" @click="clearSel('left')">{{ store.t('preset.copyPanel.clearAll') }}</button>
               <span class="pm-search-count">{{ sides.left.sel.size }}/{{ sides.left.data.prompts.length }}</span>
               <span class="pm-spacer"></span>
               <button class="pm-btn accent" :disabled="!sides.left.dirty" @click="saveSide('left')">{{ store.t('common.save') }}{{ sides.left.dirty ? ' *' : '' }}</button>
             </div>
             <div class="pm-cp-list">
-              <p v-if="!leftOrdered.length" class="pm-cp-empty">{{ store.t('block.copyPanel.noBlocks') }}</p>
+              <p v-if="!leftOrdered.length" class="pm-cp-empty">{{ store.t('preset.copyPanel.noBlocks') }}</p>
               <div v-for="e in leftOrdered" :key="e.block.identifier" class="pm-cp-item pm-block-item" :class="{ selected: sides.left.sel.has(e.block.identifier) }" @click="onItemClick('left', e.block.identifier, $event)">
                 <span class="pm-block-role" :class="roleClass(e.block.role)">{{ e.block.role }}</span>
                 <span class="pm-block-name">{{ e.block.name || e.block.identifier }}</span>
-                <span v-if="e.hidden" class="pm-hidden-badge" :title="store.t('block.sidebar.hiddenTitle')">{{ store.t('common.hidden') }}</span>
-                <span class="pm-block-act del" :title="store.t('block.copyPanel.removeBlock')" @click.stop="removeBlock('left', e.block.identifier)">🗑</span>
+                <span v-if="e.hidden" class="pm-hidden-badge" :title="store.t('preset.sidebar.hiddenTitle')">{{ store.t('common.hidden') }}</span>
+                <span class="pm-block-act del" :title="store.t('preset.copyPanel.removeBlock')" @click.stop="removeBlock('left', e.block.identifier)">🗑</span>
               </div>
             </div>
           </template>
-          <p v-else class="pm-cp-empty">{{ store.t('block.copyPanel.pickPreset') }}</p>
+          <p v-else class="pm-cp-empty">{{ store.t('preset.copyPanel.pickPreset') }}</p>
         </div>
 
         <div class="pm-cp-mid">
-          <button class="pm-btn accent" :disabled="!sides.left.sel.size || !sides.right.data" :title="store.t('block.copyPanel.copyRight')" @click="copy('left')">{{ isMobile ? '▼' : '▶' }}</button>
-          <button class="pm-btn accent" :disabled="!sides.right.sel.size || !sides.left.data" :title="store.t('block.copyPanel.copyLeft')" @click="copy('right')">{{ isMobile ? '▲' : '◀' }}</button>
+          <button class="pm-btn accent" :disabled="!sides.left.sel.size || !sides.right.data" :title="store.t('preset.copyPanel.copyRight')" @click="copy('left')">{{ isMobile ? '▼' : '▶' }}</button>
+          <button class="pm-btn accent" :disabled="!sides.right.sel.size || !sides.left.data" :title="store.t('preset.copyPanel.copyLeft')" @click="copy('right')">{{ isMobile ? '▲' : '◀' }}</button>
         </div>
 
         <div class="pm-cp-col">
           <div class="pm-cp-col-head">
             <select class="pm-cp-sel" v-model="sides.right.name">
-              <option value="" disabled>{{ store.t('block.copyPanel.selectPreset') }}</option>
+              <option value="" disabled>{{ store.t('preset.copyPanel.selectPreset') }}</option>
               <option v-for="p in presetOptions" :key="p.name" :value="p.name">{{ p.name }}</option>
             </select>
             <button class="pm-btn" :disabled="!sides.right.name" @click="loadSide('right')">{{ store.t('common.load') }}</button>
           </div>
           <template v-if="sides.right.data">
             <div class="pm-cp-toolbar">
-              <button class="pm-btn" @click="selectAll('right')">{{ store.t('block.copyPanel.selectAll') }}</button>
-              <button class="pm-btn" @click="clearSel('right')">{{ store.t('block.copyPanel.clearAll') }}</button>
+              <button class="pm-btn" @click="selectAll('right')">{{ store.t('preset.copyPanel.selectAll') }}</button>
+              <button class="pm-btn" @click="clearSel('right')">{{ store.t('preset.copyPanel.clearAll') }}</button>
               <span class="pm-search-count">{{ sides.right.sel.size }}/{{ sides.right.data.prompts.length }}</span>
               <span class="pm-spacer"></span>
               <button class="pm-btn accent" :disabled="!sides.right.dirty" @click="saveSide('right')">{{ store.t('common.save') }}{{ sides.right.dirty ? ' *' : '' }}</button>
             </div>
             <div class="pm-cp-list">
-              <p v-if="!rightOrdered.length" class="pm-cp-empty">{{ store.t('block.copyPanel.noBlocks') }}</p>
+              <p v-if="!rightOrdered.length" class="pm-cp-empty">{{ store.t('preset.copyPanel.noBlocks') }}</p>
               <div v-for="e in rightOrdered" :key="e.block.identifier" class="pm-cp-item pm-block-item" :class="{ selected: sides.right.sel.has(e.block.identifier) }" @click="onItemClick('right', e.block.identifier, $event)">
                 <span class="pm-block-role" :class="roleClass(e.block.role)">{{ e.block.role }}</span>
                 <span class="pm-block-name">{{ e.block.name || e.block.identifier }}</span>
-                <span v-if="e.hidden" class="pm-hidden-badge" :title="store.t('block.sidebar.hiddenTitle')">{{ store.t('common.hidden') }}</span>
-                <span class="pm-block-act del" :title="store.t('block.copyPanel.removeBlock')" @click.stop="removeBlock('right', e.block.identifier)">🗑</span>
+                <span v-if="e.hidden" class="pm-hidden-badge" :title="store.t('preset.sidebar.hiddenTitle')">{{ store.t('common.hidden') }}</span>
+                <span class="pm-block-act del" :title="store.t('preset.copyPanel.removeBlock')" @click.stop="removeBlock('right', e.block.identifier)">🗑</span>
               </div>
             </div>
           </template>
-          <p v-else class="pm-cp-empty">{{ store.t('block.copyPanel.pickPreset') }}</p>
+          <p v-else class="pm-cp-empty">{{ store.t('preset.copyPanel.pickPreset') }}</p>
         </div>
       </div>
       <div class="pm-modal-footer">
-        <button class="pm-btn" @click="close">{{ store.t('block.copyPanel.close') }}</button>
+        <button class="pm-btn" @click="close">{{ store.t('preset.copyPanel.close') }}</button>
       </div>
     </div>
   </div>
@@ -146,7 +146,7 @@ function loadSide(side: Side) {
   })
 }
 
-// Same ctrl/shift/plain click model as the main editor's sidebar (BlockSidebar.vue → store's
+// Same ctrl/shift/plain click model as the main editor's sidebar (PresetSidebar.vue → store's
 // selectBlock) — see applyMultiSelect's doc comment in utils.ts for the exact semantics.
 // `all` must be in the same VISUAL order the list renders in (leftOrdered/rightOrdered), not raw
 // prompts[] storage order — otherwise shift-range-select would pick the wrong span of rows even
@@ -191,8 +191,8 @@ function ensureOrder(data: PresetData): OrderItem[] {
 function copy(from: Side) {
   const src = sides[from]
   const dst = sides[other(from)]
-  if (!src.data || !dst.data) { store.showToast(store.t('block.copyPanel.loadBothFirst')); return }
-  if (!src.sel.size) { store.showToast(store.t('block.copyPanel.selectBlocksFirst')); return }
+  if (!src.data || !dst.data) { store.showToast(store.t('preset.copyPanel.loadBothFirst')); return }
+  if (!src.sel.size) { store.showToast(store.t('preset.copyPanel.selectBlocksFirst')); return }
 
   const dstOrder = ensureOrder(dst.data)
   const existingIds = new Set(dst.data.prompts.map(p => p.identifier))
@@ -218,7 +218,7 @@ function copy(from: Side) {
     n++
   }
   dst.dirty = true
-  store.showToast(store.t('shared.toast.copiedBlocks', { n, dir: store.t(from === 'left' ? 'block.copyPanel.dirRight' : 'block.copyPanel.dirLeft') }))
+  store.showToast(store.t('shared.toast.copiedBlocks', { n, dir: store.t(from === 'left' ? 'preset.copyPanel.dirRight' : 'preset.copyPanel.dirLeft') }))
 }
 
 function removeBlock(side: Side, id: string) {

@@ -7,14 +7,14 @@
       <p v-else>{{ store.t('shared.editorShell.loading') }}</p>
     </div>
   </div>
-  <BlockContentEditor v-else-if="tabsStore.activeTab.domain === 'block'" />
+  <PresetContentEditor v-else-if="tabsStore.activeTab.domain === 'preset'" />
   <RegexContentEditor v-else-if="tabsStore.activeTab.domain === 'regex'" />
 </template>
 
 <script setup lang="ts">
 import { usePresetStore } from '../../stores/presetStore'
 import { useTabsStore } from '../../stores/tabsStore'
-import BlockContentEditor from '../block/BlockContentEditor.vue'
+import PresetContentEditor from '../preset/PresetContentEditor.vue'
 import RegexContentEditor from '../regex/RegexContentEditor.vue'
 
 const store = usePresetStore()

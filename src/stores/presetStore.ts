@@ -81,7 +81,7 @@ export const usePresetStore = defineStore('main', () => {
    *  it.
    *
    *  Trade-off: re-clicking a row that's already the active tab won't re-fire this (activeId
-   *  doesn't change, so the computed doesn't invalidate) — BlockSidebar.vue's plain-click handler
+   *  doesn't change, so the computed doesn't invalidate) — PresetSidebar.vue's plain-click handler
    *  still sets selectedGi/anchorGi locally itself to cover exactly that case (a plain click's job
    *  is "select exactly this row" regardless of whether it was already open); when it also
    *  changes the active tab, this watcher fires too and computes the identical value, which is
@@ -95,7 +95,7 @@ export const usePresetStore = defineStore('main', () => {
    *  open()/focus(), via requestListScroll) tries to read flatNodes — otherwise a same-tick race
    *  could have it compute gi against a still-collapsed group and scroll to nothing. */
   watch(() => tabsStore.activeTab, (tab) => {
-    if (!tab || tab.domain !== 'block') return
+    if (!tab || tab.domain !== 'preset') return
     const gi = revealAndFindGi(tab.key)
     if (gi < 0) return
     // Idempotency guard: avoid handing the sidebar's v-for a new Set reference (and a re-render)
@@ -159,14 +159,14 @@ export const usePresetStore = defineStore('main', () => {
    * `prompts` is watched WITHOUT deep instead — it holds every block's full content string, and
    * a deep watcher re-traverses the ENTIRE array (every block, every field) on every single
    * mutation it sees, including a nested one. Since block content is edited character-by-
-   * character (BlockContentEditor.vue's v-model), a deep watch here meant every keystroke paid
+   * character (PresetContentEditor.vue's v-model), a deep watch here meant every keystroke paid
    * for a full-preset traversal — the real cause of the "text appears in chunks" typing lag
    * (see PROJECT.md), nothing to do with the editor's own idle-callback scheduling.
    * A non-deep watch on a ref-wrapped array still fires on top-level mutations (push/splice/
    * reassignment) — i.e. add/delete/duplicate block — for free. It does NOT fire when a nested
    * field (content/name/role) on an existing element changes, so those few call sites mark dirty
-   * explicitly via markDirty()/`dirty.value = true` right where they mutate: BlockContentEditor.
-   * vue's content setter, BlockSettingsForm.vue's name/role handlers, BlockSidebar.vue's inline
+   * explicitly via markDirty()/`dirty.value = true` right where they mutate: PresetContentEditor.
+   * vue's content setter, PresetSettingsForm.vue's name/role handlers, PresetSidebar.vue's inline
    * rename commit, and replaceCurrent()/replaceAll() below.
    *
    * The only wrinkle: assigning a freshly-loaded preset's data into `prompts`/`order` in
@@ -227,7 +227,7 @@ export const usePresetStore = defineStore('main', () => {
   /* ====== Computed ====== */
   const currentBlock = computed<PresetBlock | null>(() => {
     const tab = tabsStore.activeTab
-    if (!tab || tab.domain !== 'block') return null
+    if (!tab || tab.domain !== 'preset') return null
     return prompts.value.find(p => p.identifier === tab.key) ?? null
   })
 
@@ -457,7 +457,7 @@ export const usePresetStore = defineStore('main', () => {
     })
     const item: OrderItem = { identifier: id, enabled: true }
     // 插入位置：当前激活的块后面（如果有），否则追加到末尾
-    const activeId = tabsStore.activeTab?.domain === 'block' ? tabsStore.activeTab.key : null
+    const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
     const activeGi = identifierToGi(activeId)
     if (activeGi >= 0) {
       const node = flatNodes.value[activeGi]
@@ -472,7 +472,7 @@ export const usePresetStore = defineStore('main', () => {
       order.value.push(item)
     }
     // 直接打开新块的标签——编辑器内容由标签驱动，不再需要桥接
-    tabsStore.open({ domain: 'block', key: id, label: 'New Block' })
+    tabsStore.open({ domain: 'preset', key: id, label: 'New Block' })
     showToast(t('shared.toast.blockCreated'))
   }
   function deleteBlock(gi: number) {
@@ -500,7 +500,7 @@ export const usePresetStore = defineStore('main', () => {
         if (node.isGroup) {
           // 删除组时关闭组内所有块的标签
           for (const child of (node.ref as OrderGroup).children) {
-            tabsStore.close('block', child.identifier)
+            tabsStore.close('preset', child.identifier)
           }
           parent.splice(idx, 1)
         } else {
@@ -509,7 +509,7 @@ export const usePresetStore = defineStore('main', () => {
           const pi = prompts.value.findIndex(p => p.identifier === id)
           if (pi >= 0) prompts.value.splice(pi, 1)
           // 关闭被删除块的标签
-          tabsStore.close('block', id)
+          tabsStore.close('preset', id)
         }
         selectedGi.value.delete(gi)
         rebuildVarIndex()
@@ -529,7 +529,7 @@ export const usePresetStore = defineStore('main', () => {
         showToast(t('shared.toast.cannotHideMarker'))
         return
       }
-      tabsStore.close('block', id)
+      tabsStore.close('preset', id)
     }
     parent.splice(idx, 1)
     selectedGi.value.delete(gi)
@@ -538,7 +538,7 @@ export const usePresetStore = defineStore('main', () => {
   function addHiddenBlock(identifier: string) {
     const item: OrderItem = { identifier, enabled: true }
     // 插入位置：当前激活的块后面（如果有），否则追加到末尾
-    const activeId = tabsStore.activeTab?.domain === 'block' ? tabsStore.activeTab.key : null
+    const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
     const activeGi = identifierToGi(activeId)
     if (activeGi >= 0) {
       const node = flatNodes.value[activeGi]
@@ -554,7 +554,7 @@ export const usePresetStore = defineStore('main', () => {
     }
     // 打开标签让编辑器显示新加的块
     const block = prompts.value.find(p => p.identifier === identifier)
-    tabsStore.open({ domain: 'block', key: identifier, label: block?.name || identifier })
+    tabsStore.open({ domain: 'preset', key: identifier, label: block?.name || identifier })
     showToast(t('shared.toast.blockAdded'))
   }
   function toggleBlock(gi: number) {
@@ -664,7 +664,7 @@ export const usePresetStore = defineStore('main', () => {
     searchIdx.value = i
     const r = searchResults.value[i]
     revealAndFindGi(r.blockId) // 自动展开折叠组
-    tabsStore.requestListScroll('block')
+    tabsStore.requestListScroll('preset')
     requestEditorJump(r.line, r.col, r.ml, true)
   }
   function jumpToSearchResult(i: number) {
@@ -674,7 +674,7 @@ export const usePresetStore = defineStore('main', () => {
     // 直接打开标签——编辑器内容、展开折叠组、侧边栏高亮全部由标签驱动（见 revealAndFindGi 上方
     // 那个 watch(tabsStore.activeTab, ...)），这里不用再手动 revealAndFindGi 一次
     const block = prompts.value.find(p => p.identifier === r.blockId)
-    tabsStore.open({ domain: 'block', key: r.blockId, label: block?.name || r.blockName })
+    tabsStore.open({ domain: 'preset', key: r.blockId, label: block?.name || r.blockName })
     requestEditorJump(r.line, r.col, r.ml, false)
   }
   function navSearch(dir: number) {
@@ -745,7 +745,7 @@ export const usePresetStore = defineStore('main', () => {
     const v = filteredVarOps.value[i]
     // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理，见 revealAndFindGi 上方
     const block = prompts.value.find(p => p.identifier === v.blockId)
-    tabsStore.open({ domain: 'block', key: v.blockId, label: block?.name || v.blockName })
+    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName })
     requestEditorJump(v.line, v.col, v.varName.length)
   }
   function navVar(dir: number) {
@@ -768,7 +768,7 @@ export const usePresetStore = defineStore('main', () => {
     let currentIdx = -1
     // findVarOps (utils.ts) is nesting-aware — unlike the old per-varName regex here, it correctly
     // finds ops nested inside another setvar/addvar's value instead of mis-closing on the nested
-    // macro's own `}}`. We scan for ALL var ops in the block and filter down to `varName` here,
+    // macro's own `}}`. We scan for ALL var ops in the preset and filter down to `varName` here,
     // since findVarOps has no notion of "only this variable".
     // The click always originates from the block currently open in the editor (that's the only
     // place enableVarClick is wired up), so we receive the block identifier directly.
@@ -809,7 +809,7 @@ export const usePresetStore = defineStore('main', () => {
     const v = varPopupOps.value[i]
     // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理，见 revealAndFindGi 上方
     const block = prompts.value.find(p => p.identifier === v.blockId)
-    tabsStore.open({ domain: 'block', key: v.blockId, label: block?.name || v.blockName })
+    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName })
     requestEditorJump(v.line, v.col, v.varName.length)
   }
   function navPopupVar(dir: number) {
@@ -830,7 +830,7 @@ export const usePresetStore = defineStore('main', () => {
     return macroAwareDiff(raw, rendered)
   }
 
-  /** For Now, the only Function that will use ST main Menu data is Block Preview.
+  /** For Now, the only Function that will use ST main Menu data is Preset Preview.
    * And since switch to another preset is SLOW in ST, we decided to only *select*(switch) preset
    * when the selected preset in main Menu is different with the chosen preset in script.*/
   function selectPresetByName(name: string) {

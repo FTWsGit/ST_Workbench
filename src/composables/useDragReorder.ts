@@ -2,7 +2,7 @@ import { getHostDocument, getHostWindow } from './hostEnv'
 import { ref } from 'vue'
 
 const DRAG_THRESHOLD = 4
-// Auto-scroll tuning, ported as-is from BlockSidebar.vue's handleListAutoScroll/startDragScroll:
+// Auto-scroll tuning, ported as-is from PresetSidebar.vue's handleListAutoScroll/startDragScroll:
 // AUTO_SCROLL_EDGE_PX is how close to the top/bottom edge (in px) the pointer has to be before
 // auto-scroll kicks in; AUTO_SCROLL_MAX_SPEED is the scroll speed (px/frame) right at the edge,
 // scaled down linearly to 0 at AUTO_SCROLL_EDGE_PX away from the edge.
@@ -12,7 +12,7 @@ const AUTO_SCROLL_MAX_SPEED = 40
 /**
  * Pointer-based drag-to-reorder for a list, plus the "scroll item into view" helper that
  * useListScrollSync consumes. Key type is generic (`T`, defaults to `number`) so this one
- * implementation covers every domain's list: BlockSidebar keys by `gi` (a flatNodes index,
+ * implementation covers every domain's list: PresetSidebar keys by `gi` (a flatNodes index,
  * `number`), RegexSidebar keys by plain array index (also `number`, but semantically just "index"
  * with no flatNodes indirection), and any future identifier-keyed list (e.g. a card domain with
  * no grouping) can key by `string` directly — matches applyMultiSelect<T>()'s existing genericity
@@ -26,7 +26,7 @@ const AUTO_SCROLL_MAX_SPEED = 40
  * enable it, or omit it for a list that doesn't need it (e.g. RegexSidebar, which is short enough
  * in practice that this was never implemented for it — this composable makes it a one-line add
  * whenever that changes, rather than requiring its own from-scratch implementation the way
- * BlockSidebar's did before this extraction).
+ * PresetSidebar's did before this extraction).
  */
 export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => HTMLElement | null | undefined }) {
   const dragIdx = ref<T | null>(null)
@@ -54,9 +54,9 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
 
   // Throttle dragover-equivalent updates with requestAnimationFrame, and only touch the refs
   // when the effective (idx, pos) actually changes, to avoid re-rendering the whole v-for list on
-  // every pointermove tick — ported from BlockSidebar.vue's flushDragOver/pendingOver, which
-  // mattered there because block lists can be long; kept generic here since nothing about it is
-  // block-specific and a short regex list is strictly no worse off with it.
+  // every pointermove tick — ported from PresetSidebar.vue's flushDragOver/pendingOver, which
+  // mattered there because preset lists can be long; kept generic here since nothing about it is
+  // preset-specific and a short regex list is strictly no worse off with it.
   let dragRAF = 0
   let pendingOver: { idx: T; pos: 'top' | 'bottom' } | null = null
   function flushDragOver() {
@@ -104,7 +104,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
     })()
   }
   /** Auto-scrolls `opts.autoScrollContainer()` when the pointer is near its top/bottom edge —
-   *  ported from BlockSidebar.vue's handleListAutoScroll/startDragScroll/stopDragScroll (see
+   *  ported from PresetSidebar.vue's handleListAutoScroll/startDragScroll/stopDragScroll (see
    *  module doc comment above). No-op if `autoScrollContainer` wasn't passed to this composable
    *  instance, or if it currently returns null/undefined. */
   function handleListAutoScroll(clientY: number) {
@@ -122,7 +122,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
 
   // Suppresses host-document text selection while dragging — without this, a fast drag gesture
   // also selects the text of whatever it passes over, which looks broken. Ported from
-  // BlockSidebar.vue's suppressSelection/restoreSelection; kept generic since it has nothing to
+  // PresetSidebar.vue's suppressSelection/restoreSelection; kept generic since it has nothing to
   // do with blocks specifically, any drag-to-reorder list wants this.
   function suppressSelection() {
     const hostDoc = getHostDocument()
@@ -141,7 +141,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
    * event triplet covers mouse/touch/pen uniformly).
    *
    * TOUCH vs SCROLL: touch drags are gated to the .pm-drag-handle element specifically — see
-   * BlockSidebar.vue's onItemMouseDown for the full reasoning (short version: letting touch-drag
+   * PresetSidebar.vue's onItemMouseDown for the full reasoning (short version: letting touch-drag
    * start anywhere on the row means it fights the browser's native scroll for the same gesture,
    * since a real scroll swipe also crosses DRAG_THRESHOLD almost immediately; requiring a small
    * dedicated handle, with `touch-action: none` set on JUST that handle in main.css, is the
@@ -150,7 +150,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
    *
    * `onDrop`'s job is intentionally narrow: "item `from` was dropped near item `to`, on its top
    * (`after: false`) or bottom (`after: true`) half". Any domain-specific interpretation of that
-   * — e.g. BlockSidebar's group-insert semantics (dropping just inside vs. between groups) — stays
+   * — e.g. PresetSidebar's group-insert semantics (dropping just inside vs. between groups) — stays
    * in the caller's `onDrop` callback, not in this composable. See sidebar-refactor-report.md 四.3.
    */
   function onItemMouseDown(i: T, e: PointerEvent, onDrop: (from: T, to: T, after: boolean) => void) {

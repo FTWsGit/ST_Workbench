@@ -59,7 +59,7 @@ const previewText = computed(() => {
 })
 
 // v-model bridge into the currently-selected script's replaceString — same pattern as
-// BlockContentEditor.vue's `content` computed. When the active regex tab changes, this getter's
+// PresetContentEditor.vue's `content` computed. When the active regex tab changes, this getter's
 // return value changes too, and HighlightedEditor's own "external modelValue change" detection
 // picks it up and re-renders — no extra watcher needed here for that.
 const replaceStringModel = computed<string>({
@@ -69,7 +69,7 @@ const replaceStringModel = computed<string>({
 
 // Settings dialog font-size/family changes don't resize the textarea itself, so
 // HighlightedEditor's own ResizeObserver won't catch them — nudge it explicitly, same as
-// BlockContentEditor.vue.
+// PresetContentEditor.vue.
 watch(() => [store.settings.editorFontSize, store.settings.editorFontFamily], () => {
   editorRef.value?.refreshFont()
 })

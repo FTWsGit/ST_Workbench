@@ -1,9 +1,9 @@
 <template>
   <div v-if="store.currentBlock" class="pm-rx-form">
-    <label class="pm-rx-label" style="margin-top:0">{{ store.t('block.settings.name') }}</label>
-    <input class="pm-rx-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="store.t('block.settings.namePlaceholder')" />
+    <label class="pm-rx-label" style="margin-top:0">{{ store.t('preset.settings.name') }}</label>
+    <input class="pm-rx-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="store.t('preset.settings.namePlaceholder')" />
 
-    <label class="pm-rx-label">{{ store.t('block.settings.role') }}</label>
+    <label class="pm-rx-label">{{ store.t('preset.settings.role') }}</label>
     <select class="pm-rx-input" :value="store.currentBlock.role" @change="onRoleChange">
       <option value="system">system</option>
       <option value="user">user</option>
@@ -11,10 +11,10 @@
     </select>
 
     <p v-if="store.currentBlock.marker" class="pm-muted" style="font-size:12px;margin-top:10px">
-      {{ store.t('block.settings.markerHint', { id: store.currentBlock.identifier }) }}
+      {{ store.t('preset.settings.markerHint', { id: store.currentBlock.identifier }) }}
     </p>
   </div>
-  <p v-else class="pm-empty-note">{{ store.t('block.settings.empty') }}</p>
+  <p v-else class="pm-empty-note">{{ store.t('preset.settings.empty') }}</p>
 </template>
 
 <script setup lang="ts">
@@ -45,6 +45,6 @@ function onRoleChange(e: Event) {
 // 改名后标签栏文字会一直显示旧名字，是个真实存在但没被单独提过的小 bug，顺手一起修了。
 watch(() => store.currentBlock?.name, (name) => {
   const b = store.currentBlock
-  if (b && name !== undefined) tabsStore.renameTab('block', b.identifier, name || b.identifier)
+  if (b && name !== undefined) tabsStore.renameTab('preset', b.identifier, name || b.identifier)
 })
 </script>

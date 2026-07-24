@@ -43,11 +43,11 @@ export function useListSelection<T>(opts: {
   }
 
   // ---- Long press (touch/pen off the drag handle) ----
-  // Ported as-is from BlockSidebar.vue's onItemMouseDown touch/pen-off-handle branch (previously
+  // Ported as-is from PresetSidebar.vue's onItemMouseDown touch/pen-off-handle branch (previously
   // duplicated inline there). Only meant to be called for pointerdowns a drag composable (e.g.
   // useDragReorder) already declined to start a drag for — same "off the handle" condition both
   // use, since .pm-drag-handle is a shared convention across every draggable list, not
-  // block-specific (see useDragReorder.ts's doc comment). A completed long-press dispatches as
+  // preset-specific (see useDragReorder.ts's doc comment). A completed long-press dispatches as
   // 'ctrl' mode — exactly what the previous from-scratch implementation did
   // (`store.selectBlock(i, { ctrl: true })`): toggling this item's selection is the natural
   // touch-equivalent of a desktop Ctrl+click, there isn't a separate "long-press selection rule".

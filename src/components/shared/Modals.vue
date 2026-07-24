@@ -79,9 +79,9 @@
   <!-- Add Hidden -->
   <div v-if="store.hiddenOpen" class="pm-modal-overlay" @click.self="store.hiddenOpen = false">
     <div class="pm-modal">
-      <h3>{{ store.t('block.sidebar.hiddenBlock') }}</h3>
+      <h3>{{ store.t('preset.sidebar.hiddenBlock') }}</h3>
       <div class="pm-modal-list">
-        <div v-if="!store.hiddenBlocks.length" class="pm-empty-note">{{ store.t('block.copyPanel.noBlocks') }}</div>
+        <div v-if="!store.hiddenBlocks.length" class="pm-empty-note">{{ store.t('preset.copyPanel.noBlocks') }}</div>
         <div v-for="p in store.hiddenBlocks" :key="p.identifier" class="pm-modal-item"
              @click="store.addHiddenBlock(p.identifier); store.hiddenOpen = false">
           <span class="pm-block-role" :class="roleClass(p.role)">{{ p.role }}</span>

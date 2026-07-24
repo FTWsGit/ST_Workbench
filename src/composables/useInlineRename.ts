@@ -2,7 +2,7 @@ import { ref, nextTick } from 'vue'
 
 /**
  * Double-click-to-rename: click a name to enter edit mode, an <input> replaces the label,
- * focuses and selects its text, and blur/Enter commits while Esc cancels. BlockSidebar.vue used
+ * focuses and selects its text, and blur/Enter commits while Esc cancels. PresetSidebar.vue used
  * to hand-write this twice — once for block names, once for group names — with the two copies
  * differing only in which store field they read/wrote. This composable is that one
  * implementation; each caller instantiates it once per distinct rename target (block names and

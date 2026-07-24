@@ -45,12 +45,12 @@ export default {
   'shared.header.deletePreset': '删除预设',
   'shared.header.switchPreset': '切换预设',
   'shared.header.noneLoaded': '(未加载任何预设)',
-  'shared.header.mode.block': '预设',
+  'shared.header.mode.preset': '预设',
   'shared.header.mode.regex': '正则',
 
   // Mobile-only header controls (App.vue) — ☰ opens the sidebar as a left drawer, ⋯ opens the
   // tools action sheet. Everything the action sheet lists reuses the existing shared.header.*
-  // labels above (mode.block/mode.regex/reload/copyBlocks/search/settings/varNav/preview/
+  // labels above (mode.preset/mode.regex/reload/copyBlocks/search/settings/varNav/preview/
   // newPreset/deletePreset), so only these two container labels are new.
   'shared.mobile.sidebar': '侧边栏',
   'shared.mobile.tools': '更多工具',
@@ -148,71 +148,71 @@ export default {
   // ---- shared.highlightedEditor：编辑器状态栏 ----
   'shared.highlightedEditor.cursor': '行 {line}，列 {col}',
 
-  // ---- block.sidebar：预设块侧边栏 ----
-  'block.sidebar.title': '提示词块',
-  'block.sidebar.newBlock': '+ 新建',
-  'block.sidebar.hiddenBlock': '+ 隐藏块',
-  'block.sidebar.bind': '🔗 绑定分组',
-  'block.sidebar.unbind': '🔓 解除绑定',
-  'block.sidebar.hiddenTitle': '不在当前生效顺序里',
-  'block.sidebar.settingsPanel': '设置面板（名称/角色）',
+  // ---- preset.sidebar：预设侧边栏 ----
+  'preset.sidebar.title': '提示词块',
+  'preset.sidebar.newBlock': '+ 新建',
+  'preset.sidebar.hiddenBlock': '+ 隐藏块',
+  'preset.sidebar.bind': '🔗 绑定分组',
+  'preset.sidebar.unbind': '🔓 解除绑定',
+  'preset.sidebar.hiddenTitle': '不在当前生效顺序里',
+  'preset.sidebar.settingsPanel': '设置面板（名称/角色）',
 
-  // ---- block.settingsForm：预设块设置表单 ----
-  'block.settings.name': '名称',
-  'block.settings.namePlaceholder': '给这个块起个名字',
-  'block.settings.role': '角色',
-  'block.settings.markerHint': '这是一个 marker 块（{id}），内容由 SillyTavern 内部生成，这里的角色/名称改动可能不影响实际渲染。',
-  'block.settings.empty': '选择一个块以编辑其设置',
+  // ---- preset.settingsForm：预设块设置表单 ----
+  'preset.settings.name': '名称',
+  'preset.settings.namePlaceholder': '给这个块起个名字',
+  'preset.settings.role': '角色',
+  'preset.settings.markerHint': '这是一个 marker 块（{id}），内容由 SillyTavern 内部生成，这里的角色/名称改动可能不影响实际渲染。',
+  'preset.settings.empty': '选择一个块以编辑其设置',
 
-  // ---- block.search：搜索替换 ----
-  'block.search.placeholder': '搜索所有块…',
-  'block.search.replacePlaceholder': '替换…',
-  'block.search.replace': '替换',
-  'block.search.replaceAll': '替换全部',
-  'block.search.results': '{count} 个结果',
+  // ---- preset.search：搜索替换 ----
+  'preset.search.placeholder': '搜索所有块…',
+  'preset.search.replacePlaceholder': '替换…',
+  'preset.search.replace': '替换',
+  'preset.search.replaceAll': '替换全部',
+  'preset.search.results': '{count} 个结果',
 
-  // ---- block.varPanel：变量导航面板 ----
-  'block.varPanel.title': '📊 变量',
-  'block.varPanel.toggleFloat': '切换悬浮模式',
-  'block.varPanel.filter': '筛选…',
-  'block.varPanel.prev': '◀ 上',
-  'block.varPanel.next': '下 ▶',
+  // ---- preset.varPanel：变量导航面板 ----
+  'preset.varPanel.title': '📊 变量',
+  'preset.varPanel.toggleFloat': '切换悬浮模式',
+  'preset.varPanel.filter': '筛选…',
+  'preset.varPanel.prev': '◀ 上',
+  'preset.varPanel.next': '下 ▶',
 
-  // ---- block.preview：预览面板 ----
-  'block.preview.title': '👁 提示词预览',
-  'block.preview.toggleFloat': '切换悬浮模式',
-  'block.preview.collapseExpand': '折叠/展开全部',
-  'block.preview.modeBlocks': '逐块',
-  'block.preview.modeRaw': '最终请求',
-  'block.preview.hintBlocks': '来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。',
-  'block.preview.hintRaw': 'SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。',
-  'block.preview.generate': '▶ 生成',
-  'block.preview.copy': '📋 复制',
-  'block.preview.generating': '⏳ 生成中…',
-  'block.preview.collapseExpandSingle': '折叠/展开',
-  'block.preview.emptyBlocks': '点击"生成"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。',
-  'block.preview.emptyRaw': '点击"生成"捕获最终请求——这会短暂启动一次真实生成并立即取消。',
+  // ---- preset.preview：预览面板 ----
+  'preset.preview.title': '👁 提示词预览',
+  'preset.preview.toggleFloat': '切换悬浮模式',
+  'preset.preview.collapseExpand': '折叠/展开全部',
+  'preset.preview.modeBlocks': '逐块',
+  'preset.preview.modeRaw': '最终请求',
+  'preset.preview.hintBlocks': '来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。',
+  'preset.preview.hintRaw': 'SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。',
+  'preset.preview.generate': '▶ 生成',
+  'preset.preview.copy': '📋 复制',
+  'preset.preview.generating': '⏳ 生成中…',
+  'preset.preview.collapseExpandSingle': '折叠/展开',
+  'preset.preview.emptyBlocks': '点击"生成"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。',
+  'preset.preview.emptyRaw': '点击"生成"捕获最终请求——这会短暂启动一次真实生成并立即取消。',
 
-  // ---- block.varPopup：变量弹窗 ----
-  'block.varPopup.hit': '{count} 处匹配',
-  'block.varPopup.hitSingle': '{count} 处匹配',
+  // ---- preset.varPopup：变量弹窗 ----
+  'preset.varPopup.hit': '{count} 处匹配',
+  'preset.varPopup.hitSingle': '{count} 处匹配',
 
-  // ---- block.copyPanel：跨预设复制 ----
-  'block.copyPanel.title': '🔀 跨预设复制提示词块',
-  'block.copyPanel.selectPreset': '选择预设…',
-  'block.copyPanel.load': '加载',
-  'block.copyPanel.selectAll': '全部',
-  'block.copyPanel.clearAll': '无',
-  'block.copyPanel.noBlocks': '没有块',
-  'block.copyPanel.pickPreset': '选择并加载一个预设',
-  'block.copyPanel.copyRight': '复制选中项 → 右侧',
-  'block.copyPanel.copyLeft': '复制选中项 → 左侧',
-  'block.copyPanel.removeBlock': '从此列表中移除',
-  'block.copyPanel.close': '关闭',
-  'block.copyPanel.dirRight': '→ 右侧',
-  'block.copyPanel.dirLeft': '→ 左侧',
-  'block.copyPanel.loadBothFirst': '请先加载两侧预设',
-  'block.copyPanel.selectBlocksFirst': '请先选择要复制的块',
+  // ---- preset.copyPanel：跨预设复制 ----
+  'preset.copyPanel.title': '🔀 跨预设复制提示词块',
+  'preset.copyPanel.selectPreset': '选择预设…',
+  'preset.copyPanel.load': '加载',
+  'preset.copyPanel.selectAll': '全部',
+  'preset.copyPanel.clearAll': '无',
+  'preset.copyPanel.noBlocks': '没有块',
+  'preset.copyPanel.pickPreset': '选择并加载一个预设',
+  'preset.copyPanel.copyRight': '复制选中项 → 右侧',
+  'preset.copyPanel.copyLeft': '复制选中项 → 左侧',
+  'preset.copyPanel.removeBlock': '从此列表中移除',
+  'preset.copyPanel.close': '关闭',
+  'preset.copyPanel.dirRight': '→ 右侧',
+  'preset.copyPanel.dirLeft': '→ 左侧',
+  'preset.copyPanel.loadBothFirst': '请先加载两侧预设',
+  'preset.copyPanel.selectBlocksFirst': '请先选择要复制的块',
 
   // ---- regex.sidebar：正则侧边栏 ----
   'regex.sidebar.title': '正则脚本',

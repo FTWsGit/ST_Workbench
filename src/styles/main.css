@@ -649,7 +649,7 @@
      (.pm-block-item:hover .pm-block-actions{opacity:1} above) — touch has no hover state, so
      without this override these buttons are invisible and undiscoverable on mobile. Same for
      .pm-drag-handle, which fades in on hover for the same reason — it also now doubles as the
-     ONLY touch drag-initiation target (see useDragReorder.ts / BlockSidebar.vue's
+     ONLY touch drag-initiation target (see useDragReorder.ts / PresetSidebar.vue's
      onItemMouseDown), so it needs to be both visible and comfortably sized, not just
      discoverable. */
   .pm-block-actions{opacity:.85 !important}

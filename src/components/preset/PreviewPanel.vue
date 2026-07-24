@@ -2,28 +2,28 @@
   <div class="pm-preview-panel" :class="{ float: store.settings.previewFloat }" :style="{ width: store.settings.previewWidth + 'px' }">
     <div class="pm-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
     <div class="pm-rp-header">
-      <span>{{ store.t('block.preview.title') }}</span>
+      <span>{{ store.t('preset.preview.title') }}</span>
       <div class="pm-row-tight">
-        <button v-if="store.previewMode === 'blocks'" class="pm-btn icon-btn" :title="store.t('block.preview.collapseExpand')" @click="store.toggleAllPreviewBlocks()">▾</button>
-        <button class="pm-btn icon-btn" :class="{ active: store.settings.previewFloat }" :title="store.t('block.preview.toggleFloat')" @click="toggleFloat">📌</button>
+        <button v-if="store.previewMode === 'blocks'" class="pm-btn icon-btn" :title="store.t('preset.preview.collapseExpand')" @click="store.toggleAllPreviewBlocks()">▾</button>
+        <button class="pm-btn icon-btn" :class="{ active: store.settings.previewFloat }" :title="store.t('preset.preview.toggleFloat')" @click="toggleFloat">📌</button>
         <button class="pm-btn close-btn compact" @click="store.previewOpen = false">✕</button>
       </div>
     </div>
     <div class="pp-tools">
       <div class="pm-preview-tabs">
-        <button class="pm-preview-tab" :class="{ active: store.previewMode === 'blocks' }" @click="store.previewMode = 'blocks'">{{ store.t('block.preview.modeBlocks') }}</button>
-        <button class="pm-preview-tab" :class="{ active: store.previewMode === 'raw' }" @click="store.previewMode = 'raw'">{{ store.t('block.preview.modeRaw') }}</button>
+        <button class="pm-preview-tab" :class="{ active: store.previewMode === 'blocks' }" @click="store.previewMode = 'blocks'">{{ store.t('preset.preview.modeBlocks') }}</button>
+        <button class="pm-preview-tab" :class="{ active: store.previewMode === 'raw' }" @click="store.previewMode = 'raw'">{{ store.t('preset.preview.modeRaw') }}</button>
       </div>
       <p class="pp-mode-hint">
-        <template v-if="store.previewMode === 'blocks'">{{ store.t('block.preview.hintBlocks') }}</template>
-        <template v-else>{{ store.t('block.preview.hintRaw') }}</template>
+        <template v-if="store.previewMode === 'blocks'">{{ store.t('preset.preview.hintBlocks') }}</template>
+        <template v-else>{{ store.t('preset.preview.hintRaw') }}</template>
       </p>
       <div class="pm-row-mt">
         <button class="pm-btn accent" :disabled="store.previewLoading" @click="generate()">
-          <template v-if="store.previewLoading">{{ store.t('block.preview.generating') }}</template>
-          <template v-else>{{ store.t('block.preview.generate') }}</template>
+          <template v-if="store.previewLoading">{{ store.t('preset.preview.generating') }}</template>
+          <template v-else>{{ store.t('preset.preview.generate') }}</template>
         </button>
-        <button class="pm-btn" @click="copyPreview()">{{ store.t('block.preview.copy') }}</button>
+        <button class="pm-btn" @click="copyPreview()">{{ store.t('preset.preview.copy') }}</button>
       </div>
       <p v-if="store.previewError" class="pp-error">⚠ {{ store.previewError }}</p>
     </div>
@@ -35,7 +35,7 @@
               <span v-if="g.isMarker" class="pb-role pb-marker">MARKER</span>
               <span class="pb-name">{{ g.name }}</span>
               <span class="pb-msg-count" v-if="g.messages.length > 1">{{ g.messages.length }} {{ store.t('common.messages') }}</span>
-              <button class="pb-toggle" :title="store.t('block.preview.collapseExpandSingle')">▾</button>
+              <button class="pb-toggle" :title="store.t('preset.preview.collapseExpandSingle')">▾</button>
             </div>
             <div class="pb-body">
               <div v-for="(m, mi) in g.messages" :key="mi" class="pb-msg">
@@ -48,11 +48,11 @@
             </div>
           </div>
         </template>
-        <p v-else-if="!store.previewLoading" class="pm-muted">{{ store.t('block.preview.emptyBlocks') }}</p>
+        <p v-else-if="!store.previewLoading" class="pm-muted">{{ store.t('preset.preview.emptyBlocks') }}</p>
       </template>
       <template v-else>
         <pre v-if="store.previewRawText" class="pp-raw">{{ store.previewRawText }}</pre>
-        <p v-else-if="!store.previewLoading" class="pm-muted">{{ store.t('block.preview.emptyRaw') }}</p>
+        <p v-else-if="!store.previewLoading" class="pm-muted">{{ store.t('preset.preview.emptyRaw') }}</p>
       </template>
     </div>
   </div>

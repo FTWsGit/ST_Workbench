@@ -19,7 +19,7 @@
             <button class="pm-btn" @click="store.settingsOpen = true">{{ store.t('shared.header.settings') }}</button>
             <div class="pm-sep"></div>
             <div class="pm-mode-switch">
-              <button class="pm-btn sm" :class="{ active: tabsStore.sidebarMode === 'block' }" @click="tabsStore.setSidebarMode('block')">{{ store.t('shared.header.mode.block') }}</button>
+              <button class="pm-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="tabsStore.setSidebarMode('preset')">{{ store.t('shared.header.mode.preset') }}</button>
               <button class="pm-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="tabsStore.setSidebarMode('regex')">{{ store.t('shared.header.mode.regex') }}</button>
             </div>
             <div class="pm-sep"></div>
@@ -55,7 +55,7 @@
         <SearchPanel v-if="store.searchOpen" /> 
 
         <div class="pm-main">
-          <BlockSidebar v-if="tabsStore.sidebarMode === 'block'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
+          <PresetSidebar v-if="tabsStore.sidebarMode === 'preset'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
           <RegexSidebar v-else-if="tabsStore.sidebarMode === 'regex'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
           <div class="pm-editor-col">
             <TabBar />
@@ -76,7 +76,7 @@
         <!-- Mobile-only action sheet for everything that didn't fit the compact header row. -->
         <div v-if="isMobile" class="pm-mobile-tools-sheet" :class="{ 'pm-mobile-drawer-open': mobileDrawerVisible === 'tools' }">
           <div class="pm-mobile-tools-grip"></div>
-          <button class="pm-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'block' }" @click="runTool(() => tabsStore.setSidebarMode('block'))">{{ store.t('shared.header.mode.block') }}</button>
+          <button class="pm-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="runTool(() => tabsStore.setSidebarMode('preset'))">{{ store.t('shared.header.mode.preset') }}</button>
           <button class="pm-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="runTool(() => tabsStore.setSidebarMode('regex'))">{{ store.t('shared.header.mode.regex') }}</button>
           <button class="pm-mobile-tools-item" @click="runTool(() => { store.copyPanelOpen = true })">{{ store.t('shared.header.copyBlocks') }}</button>
           <button class="pm-mobile-tools-item" :class="{ active: store.searchOpen }" @click="runTool(toggleSearch)">{{ store.t('shared.header.search') }}</button>
@@ -101,12 +101,12 @@
 
 <script setup lang="ts">
 import { usePresetStore } from './stores/presetStore'
-import SearchPanel from './components/block/SearchPanel.vue'
-import BlockSidebar from './components/block/BlockSidebar.vue'
-import VarPanel from './components/block/VarPanel.vue'
-import PreviewPanel from './components/block/PreviewPanel.vue'
-import VarPopup from './components/block/VarPopup.vue'
-import CopyPanel from './components/block/CopyPanel.vue'
+import SearchPanel from './components/preset/SearchPanel.vue'
+import PresetSidebar from './components/preset/PresetSidebar.vue'
+import VarPanel from './components/preset/VarPanel.vue'
+import PreviewPanel from './components/preset/PreviewPanel.vue'
+import VarPopup from './components/preset/VarPopup.vue'
+import CopyPanel from './components/preset/CopyPanel.vue'
 import RegexSidebar from './components/regex/RegexSidebar.vue'
 import Modals from './components/shared/Modals.vue'
 import TabBar from './components/shared/TabBar.vue'
@@ -123,7 +123,7 @@ const tabsStore = useTabsStore()
 const store = usePresetStore()
 
 // Mobile layout: sidebar/varNav/preview/settingsDock render as off-canvas overlays (left drawer
-// for sidebar, bottom sheets for the other three — see main.css's @media (max-width) block)
+// for sidebar, bottom sheets for the other three — see main.css's @media (max-width) preset)
 // instead of docked flex columns. At most one is visibly slid into view at a time, tracked here;
 // 'tools' is the ⋯ action sheet itself, not a panel. The underlying store flags
 // (varNavOpen/previewOpen/settingsDockOpen) keep meaning exactly what they already mean on
@@ -176,7 +176,7 @@ watch(() => tabsStore.settingsDockOpen, (open) => {
   if (open) mobileDrawerVisible.value = 'settingsDock'
   else if (mobileDrawerVisible.value === 'settingsDock') mobileDrawerVisible.value = 'none'
 })
-// Switching block/regex mode (from the tools sheet on mobile) brings the sidebar into view,
+// Switching preset/regex mode (from the tools sheet on mobile) brings the sidebar into view,
 // since that's the part that just changed and is presumably what the user wants to look at.
 watch(() => tabsStore.sidebarMode, () => { if (isMobile.value) mobileDrawerVisible.value = 'sidebar' })
 // Whenever the active tab changes — most commonly the user picked something in the sidebar
@@ -189,14 +189,14 @@ watch(() => tabsStore.activeId, () => {
 // presetStore.ts) call requestEditorJump, which bumps store.editorJump's token on every single
 // call — including when the jump target is inside the tab that's ALREADY active, where
 // tabsStore.activeId wouldn't change at all and the watcher above would never fire. Without this
-// second watcher, jumping to a different variable/match inside the block you're already editing
+// second watcher, jumping to a different variable/match inside the preset you're already editing
 // left the var-nav/preview sheet sitting on top of the editor with nothing visibly happening —
 // exactly the "click does nothing" symptom, just for the one case activeId alone can't catch.
 watch(() => store.editorJump, () => {
   if (isMobile.value) mobileDrawerVisible.value = 'none'
 })
 
-// FAB long-press-to-move. Mirrors the long-press pattern in BlockSidebar.vue's
+// FAB long-press-to-move. Mirrors the long-press pattern in PresetSidebar.vue's
 // onItemMouseDown (same LONG_PRESS_MS/DRAG_THRESHOLD) and the "draft during drag, commit once on
 // release" rule used everywhere else a drag ends up in `settings` (see usePanelResize call sites) —
 // but this one isn't a good fit for either existing composable: useDragReorder is drop-target/list

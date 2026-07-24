@@ -20,14 +20,14 @@ import { usePresetStore } from '../../stores/presetStore'
 import { useTabsStore } from '../../stores/tabsStore'
 import { usePanelResize } from '../../composables/usePanelResize'
 import RegexSettingsForm from '../regex/RegexSettingsForm.vue'
-import BlockSettingsForm from '../block/BlockSettingsForm.vue'
+import PresetSettingsForm from '../preset/PresetSettingsForm.vue'
 
 const store = usePresetStore()
 const tabsStore = useTabsStore()
 // Domain -> settings-form component routing table (see PROJECT_HANDOFF.md 架构总览 2). Adding a
 // new domain's settings form is just one more entry here — this component never needs to know
 // what's actually inside each form.
-const FORMS: Record<string, any> = { regex: RegexSettingsForm, block: BlockSettingsForm }
+const FORMS: Record<string, any> = { regex: RegexSettingsForm, preset: PresetSettingsForm }
 const formComponent = computed(() => tabsStore.activeTab ? FORMS[tabsStore.activeTab.domain] : null)
 
 const resize = usePanelResize({

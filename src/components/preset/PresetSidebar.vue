@@ -1,14 +1,14 @@
 <template>
   <aside class="pm-sidebar" ref="sidebarRef" :class="{ 'pm-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
     <div class="pm-sidebar-header">
-      <span>{{ store.t('block.sidebar.title', { count: store.order.length }) }}</span>
+      <span>{{ store.t('preset.sidebar.title', { count: store.order.length }) }}</span>
       <ListToolbar :count="store.prompts.length">
-        <button class="pm-btn" @click="store.addBlock()">{{ store.t('block.sidebar.newBlock') }}</button>
-        <button class="pm-btn" @click="store.hiddenOpen = true">{{ store.t('block.sidebar.hiddenBlock') }}</button>
+        <button class="pm-btn" @click="store.addBlock()">{{ store.t('preset.sidebar.newBlock') }}</button>
+        <button class="pm-btn" @click="store.hiddenOpen = true">{{ store.t('preset.sidebar.hiddenBlock') }}</button>
       </ListToolbar>
       <div class="pm-sidebar-tools">
-        <button class="pm-btn" :disabled="!canBind" @click="store.bindSelected()">{{ store.t('block.sidebar.bind') }}</button>
-        <button class="pm-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ store.t('block.sidebar.unbind') }}</button>
+        <button class="pm-btn" :disabled="!canBind" @click="store.bindSelected()">{{ store.t('preset.sidebar.bind') }}</button>
+        <button class="pm-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ store.t('preset.sidebar.unbind') }}</button>
       </div>
     </div>
     <div class="pm-block-list" ref="listRef">
@@ -92,7 +92,7 @@ import ListToolbar from '../shared/ListToolbar.vue'
 // see the very end of the template) — Vue only auto-inherits a parent's :class/attrs onto a
 // component's root when there's exactly ONE root; for multi-root ("fragment") components it's
 // simply dropped, silently, with no warning in this case since :class specifically is what's
-// affected. App.vue passing :class="{ 'pm-mobile-drawer-open': ... }" on <BlockSidebar /> would
+// affected. App.vue passing :class="{ 'pm-mobile-drawer-open': ... }" on <PresetSidebar /> would
 // never have reached the <aside> either way — hence this prop, bound directly on <aside> below.
 const props = defineProps<{ mobileDrawerOpen?: boolean }>()
 
@@ -102,7 +102,7 @@ const listRef = ref<HTMLElement>()
 
 // Drag-to-reorder mechanics (pointer tracking, auto-scroll-near-edge, throttled drag-over calc,
 // text-selection suppression) all live in useDragReorder now — see its module doc comment. What
-// stays here is block-specific: the group-insert semantics interpretation of onDrop's
+// stays here is preset-specific: the group-insert semantics interpretation of onDrop's
 // (from, to, after), handled entirely inside store.reorderBlock (unchanged, see
 // sidebar-refactor-report.md 四.3 on why that stays out of the composable). The long-press
 // multi-select gesture is a separate interaction, wired up further down via useListSelection.
@@ -195,9 +195,9 @@ const {
     if (!p) return
     p.name = newName
     store.markDirty() // nested field mutation — the shallow `prompts` watch won't catch this
-    // BlockSettingsForm.vue has an equivalent watch, but it's unmounted whenever the settings
+    // PresetSettingsForm.vue has an equivalent watch, but it's unmounted whenever the settings
     // dock is closed (see SettingsDock.vue's v-if) — can't rely on it running, so sync directly.
-    tabsStore.renameTab('block', item.identifier, newName || item.identifier)
+    tabsStore.renameTab('preset', item.identifier, newName || item.identifier)
   },
 })
 function setBlockNameInput(el: any, _gi: number) { setBlockNameInputRaw(el) }
@@ -231,7 +231,7 @@ watch(() => resize.active.value, (v) => { if (!v) store.saveSettings() })
    in the template — one map, one source of truth, same reasoning as useDragReorder's doc comment
    on why it exposes itemEls at all. */
 useListScrollSync({
-  domain: 'block',
+  domain: 'preset',
   itemEls,
   keyOf: () => {
     const tab = tabsStore.activeTab
@@ -251,7 +251,7 @@ useListScrollSync({
    Tauri flag ourselves (it lives in the host app's tauri.conf.json, not this script), so instead
    we reimplement the whole interaction on plain pointerdown/pointermove/pointerup — now inside
    useDragReorder.ts (see its module doc comment for the full reasoning, previously duplicated
-   here). This component only supplies onDrop's block-specific interpretation: `gi`-space
+   here). This component only supplies onDrop's preset-specific interpretation: `gi`-space
    from/to/after gets handed straight to store.reorderBlock(), which already owns the group-insert
    semantics (dropping just inside vs. between groups) — nothing about that logic changes here,
    see sidebar-refactor-report.md 四.3 on why that stays out of the composable. */
@@ -316,7 +316,7 @@ const listSelection = useListSelection<number>({
     } else {
       const item = node.ref as OrderItem
       const block = store.prompts.find(p => p.identifier === item.identifier)
-      tabsStore.open({ domain: 'block', key: item.identifier, label: block?.name || item.identifier })
+      tabsStore.open({ domain: 'preset', key: item.identifier, label: block?.name || item.identifier })
     }
   },
 })

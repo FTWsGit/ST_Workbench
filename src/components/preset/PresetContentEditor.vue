@@ -11,7 +11,7 @@
       <span class="pm-rce-name">{{ store.currentBlock?.name || store.currentBlock?.identifier }}</span>
       <span v-if="store.currentBlock" class="pm-block-role" :class="roleClass(store.currentBlock.role)">{{ store.currentBlock.role }}</span>
       <span class="pm-spacer"></span>
-      <button class="pm-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('block.sidebar.settingsPanel')">⚙</button>
+      <button class="pm-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('preset.sidebar.settingsPanel')">⚙</button>
     </div>
     <HighlightedEditor
       ref="editorRef"

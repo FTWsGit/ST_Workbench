@@ -3,14 +3,14 @@ import { useTabsStore } from '../stores/tabsStore'
 
 /**
  * Watches tabsStore.listScrollToken[domain] and scrolls whatever item currently maps to
- * `tabsStore.activeTab.key` into view. Both BlockSidebar and RegexSidebar used to hand-roll
+ * `tabsStore.activeTab.key` into view. Both PresetSidebar and RegexSidebar used to hand-roll
  * their own version of this watch — RegexSidebar always resolved its scroll target from
- * `activeTab.key` (correct), while BlockSidebar scrolled to `store.selectedGi`'s smallest
+ * `activeTab.key` (correct), while PresetSidebar scrolled to `store.selectedGi`'s smallest
  * member instead (a leftover from the pre-tabs architecture, where "selected" and "displayed"
  * were the same thing — see sidebar-refactor-report.md 一/1.2 for the full history). Once
  * `selectedGi` and `activeTab` were split into independent state, that assumption silently
  * broke: clicking an already-open tab in TabBar ticks the scroll token but never touches
- * `selectedGi`, so the old BlockSidebar logic scrolled to a stale selection instead of the tab
+ * `selectedGi`, so the old PresetSidebar logic scrolled to a stale selection instead of the tab
  * that was just focused.
  *
  * This composable is the structural fix: there is exactly one implementation of "resolve the

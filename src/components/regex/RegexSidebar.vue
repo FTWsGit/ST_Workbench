@@ -40,7 +40,7 @@ import { useConfirmStore } from '../../stores/confirmStore'
 import { esc } from '../../utils'
 import ListToolbar from '../shared/ListToolbar.vue'
 
-// See BlockSidebar.vue's identical prop for why: this template also has two root nodes
+// See PresetSidebar.vue's identical prop for why: this template also has two root nodes
 // (<aside> + the sibling .pm-resize-handle div at the end), so a parent's :class doesn't
 // automatically reach <aside> the way it would for a single-root component.
 const props = defineProps<{ mobileDrawerOpen?: boolean }>()
