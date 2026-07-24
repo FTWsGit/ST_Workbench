@@ -16,7 +16,7 @@ import { getHostWindow } from './hostEnv'
  * Uses Pointer Events (not mouse events) so this also works with touch input on mobile — a
  * single pointerdown/pointermove/pointerup triplet covers mouse, touch, and pen uniformly,
  * unlike mouse events which touch browsers don't reliably dispatch for drag gestures. The
- * handle's own `touch-action: none` (see .pm-resize-handle / .pm-right-resize-handle in
+ * handle's own `touch-action: none` (see .wb-resize-handle / .wb-right-resize-handle in
  * main.css) stops the browser from also interpreting the drag as a page-scroll gesture, which
  * would otherwise fight with this handler for the same touch.
  */

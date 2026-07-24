@@ -46,7 +46,7 @@ export function useListSelection<T>(opts: {
   // Ported as-is from PresetSidebar.vue's onItemMouseDown touch/pen-off-handle branch (previously
   // duplicated inline there). Only meant to be called for pointerdowns a drag composable (e.g.
   // useDragReorder) already declined to start a drag for — same "off the handle" condition both
-  // use, since .pm-drag-handle is a shared convention across every draggable list, not
+  // use, since .wb-drag-handle is a shared convention across every draggable list, not
   // preset-specific (see useDragReorder.ts's doc comment). A completed long-press dispatches as
   // 'ctrl' mode — exactly what the previous from-scratch implementation did
   // (`store.selectBlock(i, { ctrl: true })`): toggling this item's selection is the natural
@@ -62,7 +62,7 @@ export function useListSelection<T>(opts: {
    *  itself — the caller's own pointerdown handler is expected to fall through to its drag
    *  composable when this returns false. */
   function onPointerDown(id: T, e: PointerEvent): boolean {
-    if (e.pointerType === 'mouse' || (e.target as HTMLElement).closest('.pm-drag-handle')) return false
+    if (e.pointerType === 'mouse' || (e.target as HTMLElement).closest('.wb-drag-handle')) return false
     const hostWin = getHostWindow()
     const threshold = opts.longPress?.thresholdPx ?? 4
     const delay = opts.longPress?.delayMs ?? 200

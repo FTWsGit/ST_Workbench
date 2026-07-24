@@ -1,33 +1,33 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 .st-wb {
-  --pm-bg:#0f1017;--pm-bg-s:#15161f;--pm-bg-e:#1b1d27;--pm-bg-h:#232530;--pm-bg-a:#2b2e3c;
-  --pm-bg-input:#141520;--pm-border:#282a3a;--pm-border-f:#c8954a;
-  --pm-tx:#ccc8be;--pm-tx2:#78768a;--pm-tx3:#809596;
-  --pm-ac:#c8954a;--pm-ac-h:#d8a55a;--pm-ac-d:rgba(200,149,74,.12);
-  --pm-dg:#b86060;--pm-dg-d:rgba(184,96,96,.14);--pm-ok:#60b060;
-  --pm-r:8px;--pm-rs:4px;
-  --pm-fm:'DM Sans',-apple-system,sans-serif;
-  --pm-fc:'JetBrains Mono','Fira Code',monospace;
-  --pm-tr:.2s ease;
-  --pm-fs:14.5px;--pm-lh:1.65;--pm-ff:'JetBrains Mono','Fira Code',monospace;
+  --wb-bg:#0f1017;--wb-bg-s:#15161f;--wb-bg-e:#1b1d27;--wb-bg-h:#232530;--wb-bg-a:#2b2e3c;
+  --wb-bg-input:#141520;--wb-border:#282a3a;--wb-border-f:#c8954a;
+  --wb-tx:#ccc8be;--wb-tx2:#78768a;--wb-tx3:#809596;
+  --wb-ac:#c8954a;--wb-ac-h:#d8a55a;--wb-ac-d:rgba(200,149,74,.12);
+  --wb-dg:#b86060;--wb-dg-d:rgba(184,96,96,.14);--wb-ok:#60b060;
+  --wb-r:8px;--wb-rs:4px;
+  --wb-fm:'DM Sans',-apple-system,sans-serif;
+  --wb-fc:'JetBrains Mono','Fira Code',monospace;
+  --wb-tr:.2s ease;
+  --wb-fs:14.5px;--wb-lh:1.65;--wb-ff:'JetBrains Mono','Fira Code',monospace;
   --hl-b:#58b8c0;--hl-k:#a078c0;--hl-s:#555570;--hl-v:#c8a045;--hl-c:#68b868;
   --hl-cm:#555570;--hl-m:#6090c0;--hl-sq:#c89850;--hl-dq:#78b0c0;--hl-ab:#60a870;--hl-sb:#d08a5c;
-  font-family:var(--pm-fm);color:var(--pm-tx);font-size:16px;line-height:1.5;
+  font-family:var(--wb-fm);color:var(--wb-tx);font-size:16px;line-height:1.5;
   position:relative;width:100%;height:100%;
 }
 .st-wb *,.st-wb *::before,.st-wb *::after{box-sizing:border-box;margin:0;padding:0}
-.st-wb button{font-family:var(--pm-fm);cursor:pointer;border:none;background:none;color:var(--pm-tx);font-size:13px}
-.st-wb input,.st-wb select,.st-wb textarea{font-family:var(--pm-fm);color:var(--pm-tx);background:var(--pm-bg-input);border:1px solid var(--pm-border);border-radius:var(--pm-rs);padding:6px 10px;font-size:13px;outline:none;transition:border var(--pm-tr)}
-.st-wb input:focus,.st-wb select:focus,.st-wb textarea:focus{border-color:var(--pm-border-f)}
+.st-wb button{font-family:var(--wb-fm);cursor:pointer;border:none;background:none;color:var(--wb-tx);font-size:13px}
+.st-wb input,.st-wb select,.st-wb textarea{font-family:var(--wb-fm);color:var(--wb-tx);background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:6px 10px;font-size:13px;outline:none;transition:border var(--wb-tr)}
+.st-wb input:focus,.st-wb select:focus,.st-wb textarea:focus{border-color:var(--wb-border-f)}
 .st-wb select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2378768a'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px}
 .st-wb ::-webkit-scrollbar{width:6px;height:6px}
 .st-wb ::-webkit-scrollbar-track{background:transparent}
-.st-wb ::-webkit-scrollbar-thumb{background:var(--pm-border);border-radius:3px}
+.st-wb ::-webkit-scrollbar-thumb{background:var(--wb-border);border-radius:3px}
 .st-wb ::-webkit-scrollbar-thumb:hover{background:#3a3c4e}
 
 /* FAB */
-.wb-fab{position:absolute;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;background:var(--pm-bg-e)!important;border:1px solid rgba(200,149,74,.4)!important;color:var(--pm-ac);font-size:15px;font-weight:700;cursor:pointer;z-index:9999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:all .2s;pointer-events:auto!important;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.wb-fab{position:absolute;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;background:var(--wb-bg-e)!important;border:1px solid rgba(200,149,74,.4)!important;color:var(--wb-ac);font-size:15px;font-weight:700;cursor:pointer;z-index:9999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:all .2s;pointer-events:auto!important;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .wb-fab:hover{transform:scale(1.1);box-shadow:0 0 24px rgba(200,149,74,.3)}
 /* While the long-press-drag is active (see App.vue's onFabPointerDown): no transition (it would
    lag a whole frame behind the pointer), a "grabbing" cursor, and a slightly stronger shadow/scale
@@ -36,107 +36,107 @@
 .wb-fab.dragging{transition:none;cursor:grabbing;box-shadow:0 6px 28px rgba(0,0,0,.6);transform:scale(1.08)}
 
 /* Panel (fullscreen overlay) */
-.pm-panel{position:absolute;inset:0;z-index:100000;display:flex;flex-direction:column;background:var(--pm-bg);color:var(--pm-tx);font-family:var(--pm-fm);overflow:hidden;pointer-events:auto}
+.wb-panel{position:absolute;inset:0;z-index:100000;display:flex;flex-direction:column;background:var(--wb-bg);color:var(--wb-tx);font-family:var(--wb-fm);overflow:hidden;pointer-events:auto}
 
 /* Header/Toolbar */
-.pm-header{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--pm-bg-s);border-bottom:1px solid var(--pm-border);min-height:44px;flex-shrink:0;flex-wrap:wrap}
-.pm-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:var(--pm-rs);background:var(--pm-bg-e);border:1px solid var(--pm-border);font-size:14px;font-weight:600;letter-spacing:.02em;transition:all var(--pm-tr);white-space:nowrap}
-.pm-btn:hover{background:var(--pm-bg-h);border-color:rgba(200,149,74,.35)}
-.pm-btn.accent{background:var(--pm-ac-d);border-color:rgba(200,149,74,.4);color:var(--pm-ac)}
-.pm-btn.accent:hover{background:rgba(200,149,74,.22);border-color:var(--pm-ac)}
-.pm-btn.active{border-color:rgba(200,149,74,.4);color:var(--pm-ac)}
-.pm-btn.close-btn{font-size:16px;padding:4px 8px}
-.pm-btn.close-btn:hover{background:var(--pm-dg-d);color:var(--pm-dg)}
-.pm-sep{width:1px;height:20px;background:var(--pm-border);margin:0 4px;flex-shrink:0}
-.pm-spacer{flex:1}
-.pm-preset-sel{max-width:200px;font-size:13px}
+.wb-header{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--wb-bg-s);border-bottom:1px solid var(--wb-border);min-height:44px;flex-shrink:0;flex-wrap:wrap}
+.wb-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:var(--wb-rs);background:var(--wb-bg-e);border:1px solid var(--wb-border);font-size:14px;font-weight:600;letter-spacing:.02em;transition:all var(--wb-tr);white-space:nowrap}
+.wb-btn:hover{background:var(--wb-bg-h);border-color:rgba(200,149,74,.35)}
+.wb-btn.accent{background:var(--wb-ac-d);border-color:rgba(200,149,74,.4);color:var(--wb-ac)}
+.wb-btn.accent:hover{background:rgba(200,149,74,.22);border-color:var(--wb-ac)}
+.wb-btn.active{border-color:rgba(200,149,74,.4);color:var(--wb-ac)}
+.wb-btn.close-btn{font-size:16px;padding:4px 8px}
+.wb-btn.close-btn:hover{background:var(--wb-dg-d);color:var(--wb-dg)}
+.wb-sep{width:1px;height:20px;background:var(--wb-border);margin:0 4px;flex-shrink:0}
+.wb-spacer{flex:1}
+.pr-preset-sel{max-width:200px;font-size:13px}
 
 /* Search Panel */
-.pm-search{background:var(--pm-bg-e);border-bottom:1px solid var(--pm-border);padding:8px 16px;flex-shrink:0}
-.pm-search-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.pm-search-bar input[type="text"]{flex:0 1 240px;min-width:120px}
-.pm-search-bar .pm-repl-input{flex:0 1 200px;min-width:100px}
-.pm-search-count{font-size:13px;color:var(--pm-tx3);white-space:nowrap;font-family:var(--pm-fc)}
-.pm-search-results{max-height:200px;overflow-y:auto;padding-top:4px}
-.pm-sr-item{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--pm-rs);font-size:13px;font-family:var(--pm-fc);cursor:pointer;transition:background var(--pm-tr)}
-.pm-sr-item:hover{background:var(--pm-bg-h)}
-.pm-sr-item.active{background:var(--pm-ac-d)}
-.pm-sr-block{color:var(--pm-ac);font-weight:500;flex-shrink:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pm-sr-line{color:var(--pm-tx3);flex-shrink:0;width:32px;text-align:right}
-.pm-sr-ctx{color:var(--pm-tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.pm-sr-ctx em{color:var(--pm-ac);font-style:normal;font-weight:600}
+.pr-search{background:var(--wb-bg-e);border-bottom:1px solid var(--wb-border);padding:8px 16px;flex-shrink:0}
+.pr-search-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pr-search-bar input[type="text"]{flex:0 1 240px;min-width:120px}
+.pr-search-bar .pr-repl-input{flex:0 1 200px;min-width:100px}
+.pr-search-count{font-size:13px;color:var(--wb-tx3);white-space:nowrap;font-family:var(--wb-fc)}
+.pr-search-results{max-height:200px;overflow-y:auto;padding-top:4px}
+.pr-sr-item{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--wb-rs);font-size:13px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr)}
+.pr-sr-item:hover{background:var(--wb-bg-h)}
+.pr-sr-item.active{background:var(--wb-ac-d)}
+.pr-sr-block{color:var(--wb-ac);font-weight:500;flex-shrink:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr-sr-line{color:var(--wb-tx3);flex-shrink:0;width:32px;text-align:right}
+.pr-sr-ctx{color:var(--wb-tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.pr-sr-ctx em{color:var(--wb-ac);font-style:normal;font-weight:600}
 
 /* Main Layout */
-.pm-main{display:flex;flex:1;overflow:hidden;position:relative}
+.wb-main{display:flex;flex:1;overflow:hidden;position:relative}
 
 /* Resize handles */
-.pm-resize-handle{width:5px;cursor:col-resize;background:transparent;flex-shrink:0;position:relative;z-index:5;touch-action:none}
-.pm-resize-handle::after{content:'';position:absolute;top:0;bottom:0;left:1px;width:3px;background:var(--pm-border);transition:background var(--pm-tr)}
-.pm-resize-handle:hover::after,.pm-resize-handle.active::after{background:var(--pm-ac)}
-.pm-right-resize-handle{position:absolute;left:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:5;background:transparent;touch-action:none}
-.pm-right-resize-handle::after{content:'';position:absolute;top:0;bottom:0;right:1px;width:3px;background:var(--pm-border);transition:background var(--pm-tr)}
-.pm-right-resize-handle:hover::after,.pm-right-resize-handle.active::after{background:var(--pm-ac)}
+.wb-resize-handle{width:5px;cursor:col-resize;background:transparent;flex-shrink:0;position:relative;z-index:5;touch-action:none}
+.wb-resize-handle::after{content:'';position:absolute;top:0;bottom:0;left:1px;width:3px;background:var(--wb-border);transition:background var(--wb-tr)}
+.wb-resize-handle:hover::after,.wb-resize-handle.active::after{background:var(--wb-ac)}
+.wb-right-resize-handle{position:absolute;left:-3px;top:0;bottom:0;width:7px;cursor:col-resize;z-index:5;background:transparent;touch-action:none}
+.wb-right-resize-handle::after{content:'';position:absolute;top:0;bottom:0;right:1px;width:3px;background:var(--wb-border);transition:background var(--wb-tr)}
+.wb-right-resize-handle:hover::after,.wb-right-resize-handle.active::after{background:var(--wb-ac)}
 
 /* Sidebar — shared by BOTH block (Sidebar.vue) and regex (RegexSidebarList.vue) domains. Keep
    this one visual language for "a domain's item list" rather than letting each domain grow its
    own sidebar shell; see PROJECT_HANDOFF.md 架构总览 3 and the CopyPanel/RegexSidebarList notes. */
-.pm-sidebar{width:340px;min-width:220px;background:var(--pm-bg-s);border-right:1px solid var(--pm-border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;user-select:none;-webkit-user-select:none}
-.pm-sidebar-header{padding:8px 14px 6px;border-bottom:1px solid var(--pm-border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--pm-tx2);flex-shrink:0}
-.pm-block-list{flex:1;overflow-y:auto;padding:3px 6px;scroll-behavior:smooth;user-select:none;-webkit-user-select:none}
-.pm-block-item{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:var(--pm-rs);cursor:pointer;border:1px solid transparent;transition:background var(--pm-tr),border-color var(--pm-tr);margin-bottom:1px;user-select:none}
-.pm-block-item:hover{background:var(--pm-bg-h)}
-.pm-block-item.selected{background:var(--pm-bg-a);border-color:rgba(200,149,74,.3)}
-.pm-block-item.dragging{opacity:.3}
-.pm-block-item.disabled .pm-block-name{color:var(--pm-tx3)}
-.pm-block-item.disabled .pm-block-role{opacity:.4}
-.pm-drag-handle{color:var(--pm-tx3);cursor:grab;font-size:12px;letter-spacing:2px;line-height:1;flex-shrink:0;opacity:.35;transition:opacity var(--pm-tr)}
-.pm-block-item:hover .pm-drag-handle{opacity:.7}
-.pm-drag-handle:active{cursor:grabbing}
-.pm-toggle-sw{width:28px;height:14px;border-radius:7px;background:var(--pm-bg-input);border:1px solid var(--pm-border);position:relative;flex-shrink:0;transition:all var(--pm-tr);cursor:pointer}
-.pm-toggle-sw.on{background:rgba(200,149,74,.18);border-color:rgba(200,149,74,.5)}
-.pm-toggle-sw::after{content:'';position:absolute;width:10px;height:10px;border-radius:50%;background:var(--pm-tx3);top:1px;left:1px;transition:all var(--pm-tr)}
-.pm-toggle-sw.on::after{background:var(--pm-ac);transform:translateX(14px)}
-.pm-block-name{flex:1;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.pm-block-role{font-size:11px;padding:1px 5px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
-.pm-block-role.sys{background: rgba(236, 72, 153, 0.20);color: #f9a8d4;}
-.pm-block-role.user{background: rgba(0, 178, 255, 0.25);color: #9ad9ff;}
-.pm-block-role.asst{background: rgba(74, 222, 128, 0.18);color: #8af0a9;}
-.pm-block-actions{display:flex;gap:1px;flex-shrink:0;opacity:0;transition:opacity var(--pm-tr)}
-.pm-block-item:hover .pm-block-actions{opacity:1}
-.pm-block-act{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:13px;color:var(--pm-tx3);transition:all var(--pm-tr)}
-.pm-block-act:hover{background:var(--pm-bg-h);color:var(--pm-tx)}
-.pm-block-act.del:hover{color:var(--pm-dg);background:var(--pm-dg-d)}
-.st-wb .drag-over-top{box-shadow:inset 0 2px 0 var(--pm-ac)!important}
-.st-wb .drag-over-bottom{box-shadow:inset 0 -2px 0 var(--pm-ac)!important}
+.wb-sidebar{width:340px;min-width:220px;background:var(--wb-bg-s);border-right:1px solid var(--wb-border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;user-select:none;-webkit-user-select:none}
+.wb-sidebar-header{padding:8px 14px 6px;border-bottom:1px solid var(--wb-border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--wb-tx2);flex-shrink:0}
+.wb-list{flex:1;overflow-y:auto;padding:3px 6px;scroll-behavior:smooth;user-select:none;-webkit-user-select:none}
+.pr-block-item{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:var(--wb-rs);cursor:pointer;border:1px solid transparent;transition:background var(--wb-tr),border-color var(--wb-tr);margin-bottom:1px;user-select:none}
+.pr-block-item:hover{background:var(--wb-bg-h)}
+.pr-block-item.selected{background:var(--wb-bg-a);border-color:rgba(200,149,74,.3)}
+.pr-block-item.dragging{opacity:.3}
+.pr-block-item.disabled .pr-block-name{color:var(--wb-tx3)}
+.pr-block-item.disabled .pr-block-role{opacity:.4}
+.wb-drag-handle{color:var(--wb-tx3);cursor:grab;font-size:12px;letter-spacing:2px;line-height:1;flex-shrink:0;opacity:.35;transition:opacity var(--wb-tr)}
+.pr-block-item:hover .wb-drag-handle{opacity:.7}
+.wb-drag-handle:active{cursor:grabbing}
+.wb-toggle-sw{width:28px;height:14px;border-radius:7px;background:var(--wb-bg-input);border:1px solid var(--wb-border);position:relative;flex-shrink:0;transition:all var(--wb-tr);cursor:pointer}
+.wb-toggle-sw.on{background:rgba(200,149,74,.18);border-color:rgba(200,149,74,.5)}
+.wb-toggle-sw::after{content:'';position:absolute;width:10px;height:10px;border-radius:50%;background:var(--wb-tx3);top:1px;left:1px;transition:all var(--wb-tr)}
+.wb-toggle-sw.on::after{background:var(--wb-ac);transform:translateX(14px)}
+.pr-block-name{flex:1;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pr-block-role{font-size:11px;padding:1px 5px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.pr-block-role.sys{background: rgba(236, 72, 153, 0.20);color: #f9a8d4;}
+.pr-block-role.user{background: rgba(0, 178, 255, 0.25);color: #9ad9ff;}
+.pr-block-role.asst{background: rgba(74, 222, 128, 0.18);color: #8af0a9;}
+.pr-block-actions{display:flex;gap:1px;flex-shrink:0;opacity:0;transition:opacity var(--wb-tr)}
+.pr-block-item:hover .pr-block-actions{opacity:1}
+.pr-block-act{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:var(--wb-rs);font-size:13px;color:var(--wb-tx3);transition:all var(--wb-tr)}
+.pr-block-act:hover{background:var(--wb-bg-h);color:var(--wb-tx)}
+.pr-block-act.del:hover{color:var(--wb-dg);background:var(--wb-dg-d)}
+.st-wb .drag-over-top{box-shadow:inset 0 2px 0 var(--wb-ac)!important}
+.st-wb .drag-over-bottom{box-shadow:inset 0 -2px 0 var(--wb-ac)!important}
 
 /* Group Header */
-.st-wb .pm-group-header {
+.st-wb .pr-group-header {
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 6px 7px;
-  border-radius: var(--pm-rs);
+  border-radius: var(--wb-rs);
   cursor: pointer;
   border: 1px solid transparent;
-  transition: background var(--pm-tr), border-color var(--pm-tr);
+  transition: background var(--wb-tr), border-color var(--wb-tr);
   margin-bottom: 1px;
   user-select: none;
   -webkit-user-select: none;
-  background: var(--pm-bg-e);
+  background: var(--wb-bg-e);
   font-weight: 600;
 }
-.st-wb .pm-group-header:hover {
-  background: var(--pm-bg-h);
+.st-wb .pr-group-header:hover {
+  background: var(--wb-bg-h);
 }
-.st-wb .pm-group-header.selected {
-  background: var(--pm-bg-a);
+.st-wb .pr-group-header.selected {
+  background: var(--wb-bg-a);
   border-color: rgba(200, 149, 74, 0.3);
 }
-.st-wb .pm-group-header.disabled {
+.st-wb .pr-group-header.disabled {
   opacity: 0.5;
 }
-.st-wb .pm-group-toggle {
-  color: var(--pm-tx3);
+.st-wb .pr-group-toggle {
+  color: var(--wb-tx3);
   width: 28px;
   height: 28px;
   display: flex;
@@ -144,20 +144,20 @@
   justify-content: center;
   flex-shrink: 0;
   cursor: pointer;
-  border-radius: var(--pm-rs);
-  transition: all var(--pm-tr);
+  border-radius: var(--wb-rs);
+  transition: all var(--wb-tr);
 }
-.st-wb .pm-group-toggle:hover {
-  background: var(--pm-bg-h);
-  color: var(--pm-tx);
+.st-wb .pr-group-toggle:hover {
+  background: var(--wb-bg-h);
+  color: var(--wb-tx);
 }
-.st-wb .pm-group-toggle.collapsed svg {
+.st-wb .pr-group-toggle.collapsed svg {
   transform: rotate(-90deg);
 }
-.st-wb .pm-group-toggle svg {
-  transition: transform var(--pm-tr);
+.st-wb .pr-group-toggle svg {
+  transition: transform var(--wb-tr);
 }
-.st-wb .pm-group-name {
+.st-wb .pr-group-name {
   flex: 1;
   font-size: 14px;
   white-space: nowrap;
@@ -165,119 +165,119 @@
   text-overflow: ellipsis;
   min-width: 0;
 }
-.st-wb .pm-group-count {
+.st-wb .pr-group-count {
   font-size: 11px;
-  color: var(--pm-tx3);
-  background: var(--pm-bg-input);
+  color: var(--wb-tx3);
+  background: var(--wb-bg-input);
   padding: 1px 5px;
   border-radius: 3px;
   flex-shrink: 0;
 }
 
-.st-wb .pm-group-name-input {
+.st-wb .pr-group-name-input {
   flex: 1;
   font-size: 14px;
   font-weight: 500;
   padding: 2px 6px;
-  background: var(--pm-bg-input);
-  border: 1px solid var(--pm-border-f);
-  border-radius: var(--pm-rs);
-  color: var(--pm-tx);
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border-f);
+  border-radius: var(--wb-rs);
+  color: var(--wb-tx);
   min-width: 0;
   outline: none;
 }
-.st-wb .pm-group-name-input:focus {
-  border-color: var(--pm-ac);
+.st-wb .pr-group-name-input:focus {
+  border-color: var(--wb-ac);
   box-shadow: 0 0 0 2px rgba(200, 149, 74, 0.15);
 }
 
-.st-wb .pm-block-name-input {
+.st-wb .pr-block-name-input {
   flex: 1;
   font-size: 14px;
   font-weight: 500;
   padding: 2px 6px;
-  background: var(--pm-bg-input);
-  border: 1px solid var(--pm-border-f);
-  border-radius: var(--pm-rs);
-  color: var(--pm-tx);
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border-f);
+  border-radius: var(--wb-rs);
+  color: var(--wb-tx);
   min-width: 0;
   outline: none;
 }
-.st-wb .pm-block-name-input:focus {
-  border-color: var(--pm-ac);
+.st-wb .pr-block-name-input:focus {
+  border-color: var(--wb-ac);
   box-shadow: 0 0 0 2px rgba(200, 149, 74, 0.15);
 }
 
 /* Nested block indent */
-.st-wb .pm-block-item.nested {
-  background: var(--pm-bg);
+.st-wb .pr-block-item.nested {
+  background: var(--wb-bg);
   margin-left: 4px;
-  border-left: 2px solid var(--pm-border);
+  border-left: 2px solid var(--wb-border);
 }
 
 /* Multi-select highlight */
-.st-wb .pm-block-item.selected,
-.st-wb .pm-group-header.selected {
-  background: var(--pm-bg-a);
+.st-wb .pr-block-item.selected,
+.st-wb .pr-group-header.selected {
+  background: var(--wb-bg-a);
   border-color: rgba(200, 149, 74, 0.3);
 }
 
 /* Sidebar tools */
-.pm-sidebar-header {
+.wb-sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 14px 6px;
-  border-bottom: 1px solid var(--pm-border);
+  border-bottom: 1px solid var(--wb-border);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--pm-tx2);
+  color: var(--wb-tx2);
   flex-shrink: 0;
 }
-.pm-sidebar-tools {
+.wb-sidebar-tools {
   display: flex;
   gap: 4px;
 }
-.pm-sidebar-tools .pm-btn {
+.wb-sidebar-tools .wb-btn {
   padding: 2px 8px;
   font-size: 11px;
 }
-.pm-sidebar-tools .pm-btn:disabled {
+.wb-sidebar-tools .wb-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
 /* Editor — shared meta/content/statusbar shell for BOTH the block editor (Editor.vue) and the
-   regex content editor (RegexContentEditor.vue via .pm-rce below). Keep changes here in sync
+   regex content editor (RegexContentEditor.vue via .rx-editor below). Keep changes here in sync
    across both; don't let one domain grow its own copy of this shell. */
-.pm-editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--pm-bg);min-width:280px}
-.pm-editor-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--pm-tx3);gap:10px}
-.pm-editor-empty .icon{font-size:50px;opacity:.25}
-.pm-editor-meta{display:flex;gap:12px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--pm-border);flex-shrink:0;flex-wrap:wrap}
-.pm-editor-meta label{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--pm-tx2)}
-.pm-editor-content{flex:1;display:flex;overflow:hidden;position:relative}
-.pm-line-nums{width:46px;background:var(--pm-bg-s);border-right:1px solid var(--pm-border);overflow:hidden;padding:16px 0;flex-shrink:0;user-select:none}
-.pm-line-nums .ln{display:flex;align-items:flex-start;justify-content:flex-end;padding-right:8px;font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:var(--pm-lh);color:var(--pm-tx3);overflow:hidden;box-sizing:border-box}
-.pm-line-nums .ln.search-hit{color:var(--pm-ac)}
-.pm-line-nums .ln.search-cur{color:var(--pm-bg);background:var(--pm-ac);border-radius:2px}
-.pm-editor-wrap{flex:1;position:relative;overflow:hidden}
-/* Qualified with the .pm-editor-wrap ancestor (not just the bare class) so these reliably
+.wb-editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--wb-bg);min-width:280px}
+.wb-editor-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--wb-tx3);gap:10px}
+.wb-editor-empty .icon{font-size:50px;opacity:.25}
+.wb-editor-meta{display:flex;gap:12px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--wb-border);flex-shrink:0;flex-wrap:wrap}
+.wb-editor-meta label{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--wb-tx2)}
+.wb-editor-content{flex:1;display:flex;overflow:hidden;position:relative}
+.wb-line-nums{width:46px;background:var(--wb-bg-s);border-right:1px solid var(--wb-border);overflow:hidden;padding:16px 0;flex-shrink:0;user-select:none}
+.wb-line-nums .ln{display:flex;align-items:flex-start;justify-content:flex-end;padding-right:8px;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);color:var(--wb-tx3);overflow:hidden;box-sizing:border-box}
+.wb-line-nums .ln.search-hit{color:var(--wb-ac)}
+.wb-line-nums .ln.search-cur{color:var(--wb-bg);background:var(--wb-ac);border-radius:2px}
+.wb-editor-wrap{flex:1;position:relative;overflow:hidden}
+/* Qualified with the .wb-editor-wrap ancestor (not just the bare class) so these reliably
    beat the base ".st-wb textarea{...}" rule above, which has higher specificity (0,1,1) than
    a single class selector (0,1,0) would. Without this, the base rule's opaque background and
    visible text color silently won, leaving a fully-opaque, wrong-font-size textarea sitting on
    top of (z-index 2) and completely hiding the correctly-highlighted <pre> underneath. */
-.pm-editor-wrap .pm-editor-hl,.pm-editor-wrap .pm-editor-ta{position:absolute;top:0;left:0;width:100%;height:100%;padding:16px;font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:var(--pm-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
-.pm-editor-wrap .pm-editor-ta{z-index:2;color:transparent!important;caret-color:var(--pm-tx);background:transparent!important;resize:none;outline:none;overflow-y:auto;overflow-x:hidden}
-.pm-editor-wrap .pm-editor-hl{z-index:1;pointer-events:none;color:var(--pm-tx);background:var(--pm-bg);overflow:hidden}
-/* Invisible measurement elements, never shown: .pm-line-mirror measures single-line height /
-   caret coords; .pm-lh-measure lays out one child div per logical line so updateLineNums() can
+.wb-editor-wrap .wb-editor-hl,.wb-editor-wrap .wb-editor-ta{position:absolute;top:0;left:0;width:100%;height:100%;padding:16px;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
+.wb-editor-wrap .wb-editor-ta{z-index:2;color:transparent!important;caret-color:var(--wb-tx);background:transparent!important;resize:none;outline:none;overflow-y:auto;overflow-x:hidden}
+.wb-editor-wrap .wb-editor-hl{z-index:1;pointer-events:none;color:var(--wb-tx);background:var(--wb-bg);overflow:hidden}
+/* Invisible measurement elements, never shown: .wb-line-mirror measures single-line height /
+   caret coords; .wb-lh-measure lays out one child div per logical line so updateLineNums() can
    read each line's REAL wrapped height (see HighlightedEditor.vue). Its child divs inherit
    font / white-space / tab-size / line-height from this rule, so they wrap exactly like the
    textarea does. */
-.pm-editor-wrap .pm-line-mirror,.pm-editor-wrap .pm-lh-measure{position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;height:auto;padding:0 16px;font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:var(--pm-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
-.pm-statusbar{display:flex;align-items:center;gap:16px;padding:3px 20px;background:var(--pm-bg-s);border-top:1px solid var(--pm-border);font-size:13px;color:var(--pm-tx3);font-family:var(--pm-fc);flex-shrink:0}
+.wb-editor-wrap .wb-line-mirror,.wb-editor-wrap .wb-lh-measure{position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;height:auto;padding:0 16px;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
+.wb-statusbar{display:flex;align-items:center;gap:16px;padding:3px 20px;background:var(--wb-bg-s);border-top:1px solid var(--wb-border);font-size:13px;color:var(--wb-tx3);font-family:var(--wb-fc);flex-shrink:0}
 
 /* Syntax Highlight — scoped under .st-wb: these class names (hl-b, hl-k, ...) are short and
    generic enough that an unscoped rule could collide with or lose to styles defined elsewhere
@@ -296,216 +296,216 @@
 
 
 /* Var click popup — small floating popup near a clicked {{...var...}}, ported from MiMo */
-.st-wb .pm-var-popup{position:absolute;z-index:100003;background:var(--pm-bg-e);border:1px solid rgba(200,149,74,.4);border-radius:var(--pm-r);box-shadow:0 8px 30px rgba(0,0,0,.45);min-width:340px;max-width:520px;display:flex;flex-direction:column;animation:pm-fadeUp .12s ease;pointer-events:auto}
-.st-wb .vp-header{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--pm-border);font-size:12px;flex-shrink:0}
-.st-wb .vp-varname{color:var(--hl-v);font-weight:600;font-family:var(--pm-fc);font-size:14px}
-.st-wb .vp-count{color:var(--pm-tx3);font-size:13px}
-.st-wb .vp-spacer{flex:1}
-.st-wb .vp-btn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:11px;color:var(--pm-tx2);transition:all var(--pm-tr)}
-.st-wb .vp-btn:hover{background:var(--pm-bg-h);color:var(--pm-tx)}
-.st-wb .vp-btn.close-btn:hover{background:var(--pm-dg-d);color:var(--pm-dg)}
-.st-wb .vp-list{overflow-y:auto;padding:3px;max-height:200px}
-.st-wb .vp-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--pm-rs);font-size:11.5px;font-family:var(--pm-fc);cursor:pointer;transition:background var(--pm-tr)}
-.st-wb .vp-item:hover{background:var(--pm-bg-h)}
-.st-wb .vp-item.current{background:var(--pm-ac-d)}
+.st-wb .pr-var-popup{position:absolute;z-index:100003;background:var(--wb-bg-e);border:1px solid rgba(200,149,74,.4);border-radius:var(--wb-r);box-shadow:0 8px 30px rgba(0,0,0,.45);min-width:340px;max-width:520px;display:flex;flex-direction:column;animation:wb-fadeUp .12s ease;pointer-events:auto}
+.st-wb .pr-vp-header{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--wb-border);font-size:12px;flex-shrink:0}
+.st-wb .pr-vp-varname{color:var(--hl-v);font-weight:600;font-family:var(--wb-fc);font-size:14px}
+.st-wb .pr-vp-count{color:var(--wb-tx3);font-size:13px}
+.st-wb .pr-vp-spacer{flex:1}
+.st-wb .pr-vp-btn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:var(--wb-rs);font-size:11px;color:var(--wb-tx2);transition:all var(--wb-tr)}
+.st-wb .pr-vp-btn:hover{background:var(--wb-bg-h);color:var(--wb-tx)}
+.st-wb .pr-vp-btn.close-btn:hover{background:var(--wb-dg-d);color:var(--wb-dg)}
+.st-wb .pr-vp-list{overflow-y:auto;padding:3px;max-height:200px}
+.st-wb .pr-vp-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--wb-rs);font-size:11.5px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr)}
+.st-wb .pr-vp-item:hover{background:var(--wb-bg-h)}
+.st-wb .pr-vp-item.current{background:var(--wb-ac-d)}
 
 /* Right panels */
-.pm-right-panel{width:360px;background:var(--pm-bg-s);border-left:1px solid var(--pm-border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
-.pm-right-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:50;box-shadow:-6px 0 30px rgba(0,0,0,.5);border-left:1px solid rgba(200,149,74,.25)}
-.pm-rp-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;border-bottom:1px solid var(--pm-border);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--pm-tx2);flex-shrink:0}
-.pm-rp-tools{display:flex;gap:6px;padding:8px 12px;align-items:center;border-bottom:1px solid var(--pm-border);flex-shrink:0}
-.pm-rp-tools input{flex:1;min-width:0;font-size:14px;padding:5px 8px}
-.pm-rp-nav{display:flex;gap:6px;padding:6px 12px;align-items:center;border-bottom:1px solid var(--pm-border);flex-shrink:0;flex-wrap:wrap}
-.pm-rp-list{flex:1;overflow-y:auto;padding:4px 8px}
-.pm-vr-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--pm-rs);font-size:13px;font-family:var(--pm-fc);cursor:pointer;transition:background var(--pm-tr);margin-left:8px}
-.pm-vr-item:hover{background:var(--pm-bg-h)}
-.pm-vr-item.active{background:var(--pm-ac-d)}
-.pm-vr-type{padding:1px 5px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;flex-shrink:0}
-.pm-vr-type.set{background:rgba(74,222,128,.16);color:#4ade80}
-.pm-vr-type.add{background:rgba(96,165,250,.16);color:#60a5fa}
-.pm-vr-type.get{background:rgba(251,191,36,.16);color:#fbbf24}
-.pm-vr-group{margin:7px 4px 3px;padding:4px 6px 2px;border-top:1px solid rgba(40,42,58,.55);color:var(--pm-ac-h);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.pm-vr-val{color:var(--pm-tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.pm-vr-block{color:var(--pm-tx);margin-left:auto;flex-shrink:0;font-size:13px}
+.wb-right-panel{width:360px;background:var(--wb-bg-s);border-left:1px solid var(--wb-border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
+.wb-right-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:50;box-shadow:-6px 0 30px rgba(0,0,0,.5);border-left:1px solid rgba(200,149,74,.25)}
+.wb-rp-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;border-bottom:1px solid var(--wb-border);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--wb-tx2);flex-shrink:0}
+.wb-rp-tools{display:flex;gap:6px;padding:8px 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.wb-rp-tools input{flex:1;min-width:0;font-size:14px;padding:5px 8px}
+.wb-rp-nav{display:flex;gap:6px;padding:6px 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0;flex-wrap:wrap}
+.wb-rp-list{flex:1;overflow-y:auto;padding:4px 8px}
+.pr-vr-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--wb-rs);font-size:13px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr);margin-left:8px}
+.pr-vr-item:hover{background:var(--wb-bg-h)}
+.pr-vr-item.active{background:var(--wb-ac-d)}
+.pr-vr-type{padding:1px 5px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;flex-shrink:0}
+.pr-vr-type.set{background:rgba(74,222,128,.16);color:#4ade80}
+.pr-vr-type.add{background:rgba(96,165,250,.16);color:#60a5fa}
+.pr-vr-type.get{background:rgba(251,191,36,.16);color:#fbbf24}
+.pr-vr-group{margin:7px 4px 3px;padding:4px 6px 2px;border-top:1px solid rgba(40,42,58,.55);color:var(--wb-ac-h);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.pr-vr-val{color:var(--wb-tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.pr-vr-block{color:var(--wb-tx);margin-left:auto;flex-shrink:0;font-size:13px}
 .st-wb .icon-btn{padding:2px 6px}
-.st-wb .icon-btn.active{color:var(--pm-ac);border-color:rgba(200,149,74,.5);background:var(--pm-ac-d)}
+.st-wb .icon-btn.active{color:var(--wb-ac);border-color:rgba(200,149,74,.5);background:var(--wb-ac-d)}
 
 /* Preview — embedded by default (pushes/squeezes the editor, like Var Nav), .float switches it
    to a floating overlay drawer instead. Toggled via the 📌 button in the panel header. */
-.pm-preview-panel{background:var(--pm-bg-e);border-left:1px solid rgba(200,149,74,.25);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
-.pm-preview-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:60;box-shadow:-8px 0 40px rgba(0,0,0,.55)}
-.st-wb .pp-tools{padding:10px 16px;border-bottom:1px solid var(--pm-border);flex-shrink:0}
-.st-wb .pp-output-wrap{flex:1;overflow:auto;padding:8px}
-.st-wb .pb-body .phl,.st-wb .pp-raw .phl{background:rgba(200,149,74,.22);color:var(--pm-ac-h);border-radius:2px;padding:0 2px}
+.pr-preview-panel{background:var(--wb-bg-e);border-left:1px solid rgba(200,149,74,.25);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
+.pr-preview-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:60;box-shadow:-8px 0 40px rgba(0,0,0,.55)}
+.st-wb .pr-pp-tools{padding:10px 16px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.st-wb .pr-pp-output-wrap{flex:1;overflow:auto;padding:8px}
+.st-wb .pr-pb-body .pr-phl,.st-wb .pr-pp-raw .pr-phl{background:rgba(200,149,74,.22);color:var(--wb-ac-h);border-radius:2px;padding:0 2px}
 
 /* Mode tabs (Per-Block vs Full Text) */
-.st-wb .pm-preview-tabs{display:flex;gap:4px;background:var(--pm-bg-input);border:1px solid var(--pm-border);border-radius:var(--pm-rs);padding:3px}
-.st-wb .pm-preview-tab{flex:1;padding:6px 10px;border-radius:3px;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--pm-tx2);transition:all var(--pm-tr)}
-.st-wb .pm-preview-tab:hover{color:var(--pm-tx)}
-.st-wb .pm-preview-tab.active{background:var(--pm-ac-d);color:var(--pm-ac)}
-.st-wb .pp-mode-hint{font-size:12px;line-height:1.5;color:var(--pm-tx3);margin-top:8px}
-.st-wb .pp-error{font-size:12px;color:var(--pm-dg);background:var(--pm-dg-d);border-radius:var(--pm-rs);padding:6px 10px;margin-top:8px;line-height:1.5}
+.st-wb .pr-preview-tabs{display:flex;gap:4px;background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:3px}
+.st-wb .pr-preview-tab{flex:1;padding:6px 10px;border-radius:3px;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--wb-tx2);transition:all var(--wb-tr)}
+.st-wb .pr-preview-tab:hover{color:var(--wb-tx)}
+.st-wb .pr-preview-tab.active{background:var(--wb-ac-d);color:var(--wb-ac)}
+.st-wb .pr-pp-mode-hint{font-size:12px;line-height:1.5;color:var(--wb-tx3);margin-top:8px}
+.st-wb .pr-pp-error{font-size:12px;color:var(--wb-dg);background:var(--wb-dg-d);border-radius:var(--wb-rs);padding:6px 10px;margin-top:8px;line-height:1.5}
 
 /* Preview blocks — one card per prompt block, separated & collapsible */
-.st-wb .pb-block{margin-bottom:6px;background:var(--pm-bg);border:1px solid var(--pm-border);border-radius:var(--pm-r);overflow:hidden}
-.st-wb .pb-header{font-size:13px;font-weight:700;padding:10px 14px;border-bottom:1px solid rgba(40,42,58,.6);display:flex;gap:8px;align-items:center;cursor:pointer;transition:background var(--pm-tr);background:var(--pm-bg)}
-.st-wb .pb-header:hover{background:var(--pm-bg-h)}
-.st-wb .pb-role{text-transform:uppercase;letter-spacing:.04em;font-size:12px;padding:2px 7px;border-radius:3px}
-.st-wb .pb-role.pb-sys{background:rgba(160,100,220,.18);color:#c084fc}
-.st-wb .pb-role.pb-user{background:rgba(60,140,255,.18);color:#60a5fa}
-.st-wb .pb-role.pb-asst{background:rgba(74,222,128,.16);color:#4ade80}
-.st-wb .pb-role.pb-marker{background:rgba(200,149,74,.18);color:var(--pm-ac-h)}
-.st-wb .pb-name{color:var(--pm-tx);font-size:13px;font-weight:600}
-.st-wb .pb-msg-count{color:var(--pm-tx3);font-size:11px;font-weight:600}
-.st-wb .pb-body{padding:10px 14px;margin:0}
-.st-wb .pb-block.collapsed .pb-body{display:none}
-.st-wb .pb-block.collapsed{padding-bottom:0}
-.st-wb .pb-toggle{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:11px;color:var(--pm-tx2);transition:all var(--pm-tr);margin-left:auto}
-.st-wb .pb-header:hover .pb-toggle{color:var(--pm-tx)}
-.st-wb .pb-block.collapsed .pb-toggle{transform:rotate(-90deg)}
-.st-wb .pb-msg{padding:6px 0}
-.st-wb .pb-msg + .pb-msg{border-top:1px solid rgba(40,42,58,.5);margin-top:2px}
-.st-wb .pb-msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.st-wb .pb-tokens{font-family:var(--pm-fc);font-size:11px;color:var(--pm-tx3)}
-.st-wb .pb-msg-text{font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--pm-tx);margin:0}
+.st-wb .pr-pb-block{margin-bottom:6px;background:var(--wb-bg);border:1px solid var(--wb-border);border-radius:var(--wb-r);overflow:hidden}
+.st-wb .pr-pb-header{font-size:13px;font-weight:700;padding:10px 14px;border-bottom:1px solid rgba(40,42,58,.6);display:flex;gap:8px;align-items:center;cursor:pointer;transition:background var(--wb-tr);background:var(--wb-bg)}
+.st-wb .pr-pb-header:hover{background:var(--wb-bg-h)}
+.st-wb .pr-pb-role{text-transform:uppercase;letter-spacing:.04em;font-size:12px;padding:2px 7px;border-radius:3px}
+.st-wb .pr-pb-role.pb-sys{background:rgba(160,100,220,.18);color:#c084fc}
+.st-wb .pr-pb-role.pb-user{background:rgba(60,140,255,.18);color:#60a5fa}
+.st-wb .pr-pb-role.pb-asst{background:rgba(74,222,128,.16);color:#4ade80}
+.st-wb .pr-pb-role.pb-marker{background:rgba(200,149,74,.18);color:var(--wb-ac-h)}
+.st-wb .pr-pb-name{color:var(--wb-tx);font-size:13px;font-weight:600}
+.st-wb .pr-pb-msg-count{color:var(--wb-tx3);font-size:11px;font-weight:600}
+.st-wb .pr-pb-body{padding:10px 14px;margin:0}
+.st-wb .pr-pb-block.collapsed .pr-pb-body{display:none}
+.st-wb .pr-pb-block.collapsed{padding-bottom:0}
+.st-wb .pr-pb-toggle{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:var(--wb-rs);font-size:11px;color:var(--wb-tx2);transition:all var(--wb-tr);margin-left:auto}
+.st-wb .pr-pb-header:hover .pr-pb-toggle{color:var(--wb-tx)}
+.st-wb .pr-pb-block.collapsed .pr-pb-toggle{transform:rotate(-90deg)}
+.st-wb .pr-pb-msg{padding:6px 0}
+.st-wb .pr-pb-msg + .pr-pb-msg{border-top:1px solid rgba(40,42,58,.5);margin-top:2px}
+.st-wb .pr-pb-msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.st-wb .pr-pb-tokens{font-family:var(--wb-fc);font-size:11px;color:var(--wb-tx3)}
+.st-wb .pr-pb-msg-text{font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--wb-tx);margin:0}
 
 /* Full-text raw preview */
-.st-wb .pp-raw{font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--pm-tx);margin:0}
+.st-wb .pr-pp-raw{font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--wb-tx);margin:0}
 
 
 /* Modals */
-.pm-modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(3px);z-index:100001;}
-.pm-modal{background:var(--pm-bg-e);border:1px solid var(--pm-border);border-radius:var(--pm-r);padding:24px;min-width:360px;max-width:500px;max-height:70vh;display:flex;flex-direction:column}
-.pm-modal h3{font-size:15px;font-weight:700;margin-bottom:16px}
-.pm-modal-list{flex:1;overflow-y:auto;margin-bottom:16px;max-height:300px}
-.pm-modal-item{padding:10px 12px;border-radius:var(--pm-rs);cursor:pointer;transition:background var(--pm-tr);display:flex;align-items:center;gap:8px}
-.pm-modal-item:hover{background:var(--pm-bg-h)}
-.pm-modal-footer{display:flex;justify-content:flex-end;gap:8px}
-.pm-confirm-text{font-size:14px;line-height:1.6;color:var(--pm-tx2);margin:0 0 18px}
-.pm-confirm-text strong{color:var(--pm-tx)}
-.pm-confirm-danger{color:var(--pm-dg)}
+.wb-modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:10001;backdrop-filter:blur(3px);z-index:100001;}
+.wb-modal{background:var(--wb-bg-e);border:1px solid var(--wb-border);border-radius:var(--wb-r);padding:24px;min-width:360px;max-width:500px;max-height:70vh;display:flex;flex-direction:column}
+.wb-modal h3{font-size:15px;font-weight:700;margin-bottom:16px}
+.wb-modal-list{flex:1;overflow-y:auto;margin-bottom:16px;max-height:300px}
+.wb-modal-item{padding:10px 12px;border-radius:var(--wb-rs);cursor:pointer;transition:background var(--wb-tr);display:flex;align-items:center;gap:8px}
+.wb-modal-item:hover{background:var(--wb-bg-h)}
+.wb-modal-footer{display:flex;justify-content:flex-end;gap:8px}
+.wb-confirm-text{font-size:14px;line-height:1.6;color:var(--wb-tx2);margin:0 0 18px}
+.wb-confirm-text strong{color:var(--wb-tx)}
+.wb-confirm-danger{color:var(--wb-dg)}
 
-/* Modal size modifiers — same pattern as .pm-cp-modal below: base .pm-modal + a modifier class
+/* Modal size modifiers — same pattern as .pr-cp-modal below: base .wb-modal + a modifier class
    instead of inline min/max-width per instance. */
-.pm-modal.lg{min-width:500px;max-width:640px;max-height:82vh}
-.pm-modal.sm{min-width:420px;max-width:520px}
-.pm-modal-scroll{overflow-y:auto;flex:1;margin-bottom:16px;padding-right:4px}
+.wb-modal.lg{min-width:500px;max-width:640px;max-height:82vh}
+.wb-modal.sm{min-width:420px;max-width:520px}
+.wb-modal-scroll{overflow-y:auto;flex:1;margin-bottom:16px;padding-right:4px}
 
-/* Generic confirmStore prompt() input — see confirmStore.ts/Modals.vue. Same .pm-modal.sm shell
+/* Generic confirmStore prompt() input — see confirmStore.ts/Modals.vue. Same .wb-modal.sm shell
    as the confirm dialog, just with a text input above the footer instead of a message. */
-.pm-prompt-input{width:100%;margin:4px 0 18px}
+.wb-prompt-input{width:100%;margin:4px 0 18px}
 
 /* Cross-Preset Copy Panel */
-.pm-cp-modal{width:92vw;max-width:1200px;height:80vh;max-height:80vh}
-.pm-cp-body{display:flex;gap:10px;flex:1;overflow:hidden;margin:4px 0 16px}
-.pm-cp-col{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--pm-bg);border:1px solid var(--pm-border);border-radius:var(--pm-r);overflow:hidden}
-.pm-cp-col-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--pm-border);flex-shrink:0}
-.pm-cp-sel{flex:1;min-width:0;font-size:13px}
-.pm-cp-toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--pm-border);flex-shrink:0}
-.pm-cp-list{flex:1;overflow-y:auto;padding:4px 6px;user-select:none;-webkit-user-select:none}
-.pm-cp-empty{color:var(--pm-tx3);font-size:13px;padding:16px;text-align:center}
-.pm-cp-mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;flex-shrink:0}
+.pr-cp-modal{width:92vw;max-width:1200px;height:80vh;max-height:80vh}
+.pr-cp-body{display:flex;gap:10px;flex:1;overflow:hidden;margin:4px 0 16px}
+.pr-cp-col{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--wb-bg);border:1px solid var(--wb-border);border-radius:var(--wb-r);overflow:hidden}
+.pr-cp-col-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.pr-cp-sel{flex:1;min-width:0;font-size:13px}
+.pr-cp-toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.pr-cp-list{flex:1;overflow-y:auto;padding:4px 6px;user-select:none;-webkit-user-select:none}
+.pr-cp-empty{color:var(--wb-tx3);font-size:13px;padding:16px;text-align:center}
+.pr-cp-mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;flex-shrink:0}
 
 /* Small "not in the current effective order" marker for CopyPanel's hidden-block rows — same
-   compact-pill visual language as .pm-vr-type (badge classes in utils.ts's varOpBadge), just
+   compact-pill visual language as .pr-vr-type (badge classes in utils.ts's varOpBadge), just
    neutral/muted instead of color-coded by type. */
-.pm-hidden-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:3px;background:var(--pm-bg-input);color:var(--pm-tx3);flex-shrink:0}
+.pr-hidden-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:3px;background:var(--wb-bg-input);color:var(--wb-tx3);flex-shrink:0}
 
 /* Settings */
-.pm-settings-section{margin-bottom:18px}
-.pm-settings-section>label{font-size:13px;font-weight:700;color:var(--pm-tx2);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
-.pm-color-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.pm-color-row input[type="color"]{width:36px;height:26px;border:1px solid var(--pm-border);border-radius:4px;cursor:pointer;padding:1px;background:var(--pm-bg-input)}
-.pm-color-row .cl-label{font-size:13px;color:var(--pm-tx);flex:1}
-.pm-color-row .cl-hex{font-family:var(--pm-fc);font-size:12px;color:var(--pm-tx3);min-width:60px}
+.wb-settings-section{margin-bottom:18px}
+.wb-settings-section>label{font-size:13px;font-weight:700;color:var(--wb-tx2);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.wb-color-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.wb-color-row input[type="color"]{width:36px;height:26px;border:1px solid var(--wb-border);border-radius:4px;cursor:pointer;padding:1px;background:var(--wb-bg-input)}
+.wb-color-row .cl-label{font-size:13px;color:var(--wb-tx);flex:1}
+.wb-color-row .cl-hex{font-family:var(--wb-fc);font-size:12px;color:var(--wb-tx3);min-width:60px}
 
 /* Shared small utilities — replace one-off inline style="..." attributes that were scattered
    across Modals.vue / PreviewPanel.vue / VarPanel.vue for the same handful of layout patterns. */
-.pm-row{display:flex;align-items:center;gap:12px}
-.pm-row-tight{display:flex;gap:4px}
-.pm-row-mt{display:flex;gap:6px;margin-top:8px}
-.pm-flex1{flex:1}
-.pm-muted{color:var(--pm-tx3)}
-.pm-empty-note{color:var(--pm-tx3);padding:12px;font-size:13px}
-.pm-range-wide{width:220px;accent-color:var(--pm-ac)}
-.pm-select-wide{width:280px}
-.pm-value-label{font-family:var(--pm-fc);font-size:14px;min-width:50px}
-.pm-var-name-em{color:var(--pm-tx);font-weight:500}
-.pm-btn.close-btn.compact{padding:2px 6px}
-.pm-btn.sm{padding:4px 10px}
+.wb-row{display:flex;align-items:center;gap:12px}
+.wb-row-tight{display:flex;gap:4px}
+.wb-row-mt{display:flex;gap:6px;margin-top:8px}
+.wb-flex1{flex:1}
+.wb-muted{color:var(--wb-tx3)}
+.wb-empty-note{color:var(--wb-tx3);padding:12px;font-size:13px}
+.wb-range-wide{width:220px;accent-color:var(--wb-ac)}
+.wb-select-wide{width:280px}
+.wb-value-label{font-family:var(--wb-fc);font-size:14px;min-width:50px}
+.wb-var-name-em{color:var(--wb-tx);font-weight:500}
+.wb-btn.close-btn.compact{padding:2px 6px}
+.wb-btn.sm{padding:4px 10px}
 
 /* Toast */
-.pm-toast{position:absolute;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--pm-bg-a);border:1px solid var(--pm-border);border-radius:var(--pm-r);padding:9px 18px;font-size:12px;font-weight:500;z-index:100002;;transition:transform .3s ease,opacity .3s ease;opacity:0;pointer-events:none;white-space:nowrap}
-.pm-toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.wb-toast{position:absolute;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--wb-bg-a);border:1px solid var(--wb-border);border-radius:var(--wb-r);padding:9px 18px;font-size:12px;font-weight:500;z-index:100002;;transition:transform .3s ease,opacity .3s ease;opacity:0;pointer-events:none;white-space:nowrap}
+.wb-toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
 /* Animations */
 .wb-fab-enter-active,.wb-fab-leave-active{transition:opacity .2s ease}
 .wb-fab-enter-from,.wb-fab-leave-to{opacity:0}
-.pm-panel-enter-active,.pm-panel-leave-active{transition:all .25s ease}
-.pm-panel-enter-from{opacity:0;transform:scale(.97)}
-.pm-panel-leave-to{opacity:0;transform:scale(.97)}
-@keyframes pm-fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.wb-panel-enter-active,.wb-panel-leave-active{transition:all .25s ease}
+.wb-panel-enter-from{opacity:0;transform:scale(.97)}
+.wb-panel-leave-to{opacity:0;transform:scale(.97)}
+@keyframes wb-fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
-.pm-preset-name{
-  font-family:var(--pm-fc);font-size:13px;color:var(--pm-tx3);
+.pr-preset-name{
+  font-family:var(--wb-fc);font-size:13px;color:var(--wb-tx3);
   max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
-.pm-preset-select{
-  font-family:var(--pm-fc);font-size:13px;color:var(--pm-tx2);
-  max-width:220px;background:var(--pm-bg-input);border:1px solid var(--pm-border);
-  border-radius:var(--pm-rs);padding:4px 8px;transition:border-color var(--pm-tr),color var(--pm-tr)
+.pr-preset-select{
+  font-family:var(--wb-fc);font-size:13px;color:var(--wb-tx2);
+  max-width:220px;background:var(--wb-bg-input);border:1px solid var(--wb-border);
+  border-radius:var(--wb-rs);padding:4px 8px;transition:border-color var(--wb-tr),color var(--wb-tr)
 }
-.pm-preset-select:hover{color:var(--pm-tx);border-color:rgba(200,149,74,.4)}
-.pm-preset-select:focus-visible{outline:2px solid var(--pm-ac);outline-offset:1px}
+.pr-preset-select:hover{color:var(--wb-tx);border-color:rgba(200,149,74,.4)}
+.pr-preset-select:focus-visible{outline:2px solid var(--wb-ac);outline-offset:1px}
 
-.pm-panel{position:absolute;inset:0;z-index:100000;}
-.pm-modal-overlay{position:absolute;inset:0;z-index:100001;}
-.pm-toast{z-index:100002;}
+.wb-panel{position:absolute;inset:0;z-index:100000;}
+.wb-modal-overlay{position:absolute;inset:0;z-index:100001;}
+.wb-toast{z-index:100002;}
 
 /* ===== TabBar.vue ===== */
-.pm-tabbar{display:flex;align-items:stretch;overflow-x:auto;flex-shrink:0;border-bottom:1px solid var(--pm-border);background:var(--pm-bg)}
-.pm-tab{display:flex;align-items:center;gap:6px;padding:0 5px;height:32px;border-right:1px solid var(--pm-border);cursor:pointer;white-space:nowrap;color:var(--pm-tx3);font-size:13px;flex-shrink:0}
-.pm-tab:hover{background:var(--pm-bg-h)}
-.pm-tab.active{background:var(--pm-bg-e);color:var(--pm-tx);border-bottom:2px solid var(--pm-ac);margin-bottom:-1px}
-.pm-tab-domain-dot{width:6px;height:6px;border-radius:50%;background:var(--pm-tx3);opacity:.6;flex-shrink:0}
-.pm-tab-domain-dot.domain-regex{background:var(--pm-ac)}
-.pm-tab-close{font-size:24px;opacity:.5;padding:0 2px;border-radius:3px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
-.pm-tab-close:hover{opacity:1;background:var(--pm-dg-d);color:var(--pm-dg)}
+.wb-tabbar{display:flex;align-items:stretch;overflow-x:auto;flex-shrink:0;border-bottom:1px solid var(--wb-border);background:var(--wb-bg)}
+.wb-tab{display:flex;align-items:center;gap:6px;padding:0 5px;height:32px;border-right:1px solid var(--wb-border);cursor:pointer;white-space:nowrap;color:var(--wb-tx3);font-size:13px;flex-shrink:0}
+.wb-tab:hover{background:var(--wb-bg-h)}
+.wb-tab.active{background:var(--wb-bg-e);color:var(--wb-tx);border-bottom:2px solid var(--wb-ac);margin-bottom:-1px}
+.wb-tab-domain-dot{width:6px;height:6px;border-radius:50%;background:var(--wb-tx3);opacity:.6;flex-shrink:0}
+.wb-tab-domain-dot.domain-regex{background:var(--wb-ac)}
+.wb-tab-close{font-size:24px;opacity:.5;padding:0 2px;border-radius:3px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
+.wb-tab-close:hover{opacity:1;background:var(--wb-dg-d);color:var(--wb-dg)}
 
 
-.pm-mode-switch{display:flex;gap:2px}
+.wb-mode-switch{display:flex;gap:2px}
 
-.pm-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--pm-border);overflow-y:auto;padding:12px}
-.pm-settings-dock-header{font-size:12px;color:var(--pm-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;padding:12px}
+.wb-settings-dock-header{font-size:12px;color:var(--wb-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
 
-.pm-rce{display:flex;flex-direction:column;flex:1;min-width:0}
-.pm-rce-meta{display:flex;align-items:center;gap:6px}
-.pm-rce-name{font-size:13px;color:var(--pm-tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pm-rce-body{flex:1;overflow:hidden;display:flex;min-height:0}
-.pm-rce-replace{flex:1;width:100%;resize:none;font-family:var(--pm-ff);font-size:var(--pm-fs)}
-.pm-rce-preview{flex:1;overflow-y:auto;padding:10px;white-space:pre-wrap;word-break:break-word;font-size:14px}
-.pm-rce-testbar{flex-shrink:0;display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--pm-border)}
-.pm-rce-testinput{width:100%;resize:vertical}
+.rx-editor{display:flex;flex-direction:column;flex:1;min-width:0}
+.rx-editor-meta{display:flex;align-items:center;gap:6px}
+.rx-editor-name{font-size:13px;color:var(--wb-tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rx-editor-body{flex:1;overflow:hidden;display:flex;min-height:0}
+.rx-editor-replace{flex:1;width:100%;resize:none;font-family:var(--wb-ff);font-size:var(--wb-fs)}
+.rx-editor-preview{flex:1;overflow-y:auto;padding:10px;white-space:pre-wrap;word-break:break-word;font-size:14px}
+.rx-editor-testbar{flex-shrink:0;display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--wb-border)}
+.rx-editor-testinput{width:100%;resize:vertical}
 
-.pm-rx-form{display:flex;flex-direction:column;gap:4px}
-.pm-rx-label{font-size:12px;color:var(--pm-tx3);margin-top:10px}
-.pm-rx-form .pm-rx-input,.pm-rx-form textarea,.pm-rx-form select{width:100%}
-.pm-rx-mono{font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px}
-.pm-rx-input.invalid{border-color:var(--pm-dg)}
-.pm-rx-err{color:var(--pm-dg);font-size:12px;margin-top:2px}
-.pm-rx-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
-.pm-rx-check{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap}
-.pm-rx-check input[type=checkbox]{width:1em;height:1em;margin:0;flex-shrink:0;background-color: #5f5f5f;}
-.pm-rx-surface{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.pm-rx-advanced-toggle{align-self:flex-start;margin-top:12px;background:transparent;border-color:transparent;padding-left:0}
-.pm-rx-advanced{display:flex;flex-direction:column;gap:8px;padding:10px;margin-top:6px;border:1px solid var(--pm-border);border-radius:var(--pm-rs);background:var(--pm-bg)}
-.pm-rx-num{width:90px !important}
-.pm-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--pm-border);overflow-y:auto;overflow-x:hidden;padding:12px;min-width:0}
-.pm-settings-dock-header{font-size:12px;color:var(--pm-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-.pm-settings-dock-body{padding:12px;overflow-y:auto}
+.rx-form{display:flex;flex-direction:column;gap:4px}
+.rx-label{font-size:12px;color:var(--wb-tx3);margin-top:10px}
+.rx-form .rx-input,.rx-form textarea,.rx-form select{width:100%}
+.rx-mono{font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px}
+.rx-input.invalid{border-color:var(--wb-dg)}
+.rx-err{color:var(--wb-dg);font-size:12px;margin-top:2px}
+.rx-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
+.rx-check{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap}
+.rx-check input[type=checkbox]{width:1em;height:1em;margin:0;flex-shrink:0;background-color: #5f5f5f;}
+.rx-surface{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.rx-advanced-toggle{align-self:flex-start;margin-top:12px;background:transparent;border-color:transparent;padding-left:0}
+.rx-advanced{display:flex;flex-direction:column;gap:8px;padding:10px;margin-top:6px;border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg)}
+.rx-num{width:90px !important}
+.wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;overflow-x:hidden;padding:12px;min-width:0}
+.wb-settings-dock-header{font-size:12px;color:var(--wb-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.wb-settings-dock-body{padding:12px;overflow-y:auto}
 
-.pm-editor-col{display:flex;flex-direction:column;flex:1;min-width:0}
-.pm-editor-row{display:flex;flex:1;overflow:hidden;min-height:0}
+.wb-editor-col{display:flex;flex-direction:column;flex:1;min-width:0}
+.wb-editor-row{display:flex;flex:1;overflow:hidden;min-height:0}
 
 /* ==========================================================================
    Mobile layout (<= MOBILE_BREAKPOINT in hostEnv.ts, kept in sync with the
@@ -514,9 +514,9 @@
 
    REVISION NOTE: an earlier version of this block tried to keep every panel
    in normal document flow and stack them into a single column, showing only
-   one at a time via display:none toggling (.pm-mobile-hide). That caused
+   one at a time via display:none toggling (.wb-mobile-hide). That caused
    real bugs in practice (nested/nonsensical scroll containers once
-   `.pm-main` itself became `overflow-y:auto` while its flex children *also*
+   `.wb-main` itself became `overflow-y:auto` while its flex children *also*
    scroll internally — "what scrolls and what you see stop matching up" —
    plus `.float` panels got forced out of floating mode, breaking their own
    toggle). This version instead takes panels OUT of flow entirely on
@@ -524,40 +524,40 @@
    set up in main.ts — see its comment for why every overlay in this app
    shares ONE fixed anchor instead of each being independently
    position:fixed) and slides them on/off screen as overlays. Only
-   `.pm-editor-col` (the actual prompt editor) stays in normal flow, full
+   `.wb-editor-col` (the actual prompt editor) stays in normal flow, full
    width — it's the one thing that should always just be "the page" on a
    phone. This is the standard off-canvas-drawer / bottom-sheet pattern:
    nothing here fights the editor's own scroll container for space, so
    there's no layering ambiguity to begin with.
 
-     - .pm-sidebar (block/regex list) slides in from the LEFT, toggled by
+     - .wb-sidebar (block/regex list) slides in from the LEFT, toggled by
        the ☰ button in the mobile header — see App.vue's mobileDrawerVisible
-       state and the .pm-mobile-hamburger button.
-     - .pm-right-panel (var nav + settings dock share this class) and
-       .pm-preview-panel become BOTTOM SHEETS instead — slide up from the
+       state and the .wb-mobile-hamburger button.
+     - .wb-right-panel (var nav + settings dock share this class) and
+       .pr-preview-panel become BOTTOM SHEETS instead — slide up from the
        bottom, ~82vh tall. These are reached via the mobile header's ⋯
        "tools" button, which opens a small action-sheet listing them (see
-       .pm-mobile-tools-sheet below) rather than cramming 8+ buttons into
+       .wb-mobile-tools-sheet below) rather than cramming 8+ buttons into
        one header row, which is its own usability problem on a ~360px
        screen independent of the panel-layering bugs above.
      - Resize handles are pointless with no side-by-side neighbor to size
        against, so they're hidden.
-     - A shared .pm-mobile-backdrop dims the editor behind whichever
+     - A shared .wb-mobile-backdrop dims the editor behind whichever
        drawer/sheet is open and closes it on tap.
    ========================================================================== */
 @media (max-width: 720px) {
-  .pm-header{padding:6px 8px;gap:4px}
-  .pm-btn{padding:5px 9px;font-size:13px}
-  .pm-preset-sel,.pm-preset-select,.pm-preset-name{max-width:90px}
+  .wb-header{padding:6px 8px;gap:4px}
+  .wb-btn{padding:5px 9px;font-size:13px}
+  .pr-preset-sel,.pr-preset-select,.pr-preset-name{max-width:90px}
 
-  .pm-main{position:relative;overflow:hidden}
-  .pm-editor-col{width:100% !important}
+  .wb-main{position:relative;overflow:hidden}
+  .wb-editor-col{width:100% !important}
 
   /* Sidebar: left slide-in drawer. width needs !important — <aside> carries its own inline
      `style="width: ...px"` bound to store.settings.sidebarWidth (the desktop resize-drag value),
      and an inline style otherwise always wins over any class selector regardless of source
      order, @media or not. */
-  .pm-sidebar{
+  .wb-sidebar{
     position:absolute;top:0;bottom:0;left:0;
     z-index:150;
     width:85vw !important;max-width:340px;
@@ -565,19 +565,19 @@
     box-shadow:6px 0 40px rgba(0,0,0,.6);
     transition:transform .25s ease;
   }
-  .pm-sidebar.pm-mobile-drawer-open{transform:translateX(0)}
+  .wb-sidebar.wb-mobile-drawer-open{transform:translateX(0)}
 
   /* Var Nav / Settings Dock / Preview: bottom sheets. Written as compound
-     selectors matching the `.float` variant too (`.pm-right-panel.float` /
-     `.pm-preview-panel.float` are defined earlier in this file, OUTSIDE any
+     selectors matching the `.float` variant too (`.wb-right-panel.float` /
+     `.pr-preview-panel.float` are defined earlier in this file, OUTSIDE any
      media query, with position:absolute) — matching specificity (2 classes)
      plus later source order is what lets this win the cascade regardless of
      whether the user has "float mode" toggled on, instead of relying on a
      fragile specificity accident. */
-  .pm-right-panel,
-  .pm-right-panel.float,
-  .pm-preview-panel,
-  .pm-preview-panel.float{
+  .wb-right-panel,
+  .wb-right-panel.float,
+  .pr-preview-panel,
+  .pr-preview-panel.float{
     position:absolute;left:0;right:0;top:auto;bottom:0;
     z-index:150;
     width:100% !important;
@@ -587,24 +587,24 @@
     transform:translateY(100%);
     transition:transform .25s ease;
   }
-  .pm-right-panel.pm-mobile-drawer-open,
-  .pm-preview-panel.pm-mobile-drawer-open{transform:translateY(0)}
+  .wb-right-panel.wb-mobile-drawer-open,
+  .pr-preview-panel.wb-mobile-drawer-open{transform:translateY(0)}
   /* Small grab-handle affordance at the top of each sheet, standard bottom-sheet visual cue.
      Needs the panel's own header pushed down a bit so the grip doesn't sit on top of its text. */
-  .pm-right-panel::before,
-  .pm-preview-panel::before{
+  .wb-right-panel::before,
+  .pr-preview-panel::before{
     content:'';position:absolute;top:8px;left:50%;
     width:36px;height:4px;border-radius:2px;
-    background:var(--pm-border);transform:translateX(-50%);
+    background:var(--wb-border);transform:translateX(-50%);
   }
-  .pm-right-panel .pm-rp-header,
-  .pm-preview-panel .pm-rp-header{padding-top:20px}
+  .wb-right-panel .wb-rp-header,
+  .pr-preview-panel .wb-rp-header{padding-top:20px}
 
-  .pm-resize-handle,.pm-right-resize-handle{display:none}
+  .wb-resize-handle,.wb-right-resize-handle{display:none}
 
   /* Shared dimmed backdrop behind whichever drawer/sheet is open — see
      App.vue's mobileDrawerVisible + closeMobileDrawer(). */
-  .pm-mobile-backdrop{
+  .wb-mobile-backdrop{
     position:absolute;inset:0;z-index:140;
     background:rgba(0,0,0,.5);
   }
@@ -614,19 +614,19 @@
      desktop row — 8+ buttons don't fit a ~360px header no matter how much
      padding gets trimmed, so the overflow buttons move into the ⋯ tools
      sheet below rather than getting squeezed. */
-  .pm-mobile-hamburger,.pm-mobile-tools-btn{
+  .wb-mobile-hamburger,.wb-mobile-tools-btn{
     width:36px;height:36px;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;
-    font-size:16px;background:transparent;border:1px solid var(--pm-border);
-    border-radius:var(--pm-rs);color:var(--pm-tx);
+    font-size:16px;background:transparent;border:1px solid var(--wb-border);
+    border-radius:var(--wb-rs);color:var(--wb-tx);
   }
 
   /* ⋯ tools action sheet — compact bottom sheet, distinct from the full-height
      ones above (this one just lists actions/entry points, it isn't a panel
      with its own scrollable content). */
-  .pm-mobile-tools-sheet{
+  .wb-mobile-tools-sheet{
     position:absolute;left:0;right:0;bottom:0;z-index:150;
-    background:var(--pm-bg-e);
+    background:var(--wb-bg-e);
     border-radius:16px 16px 0 0;
     box-shadow:0 -8px 40px rgba(0,0,0,.6);
     padding:8px 0 max(8px, env(safe-area-inset-bottom));
@@ -634,26 +634,26 @@
     transform:translateY(100%);
     transition:transform .25s ease;
   }
-  .pm-mobile-tools-sheet.pm-mobile-drawer-open{transform:translateY(0)}
-  .pm-mobile-tools-grip{width:36px;height:4px;border-radius:2px;background:var(--pm-border);margin:8px auto 4px}
-  .pm-mobile-tools-item{
+  .wb-mobile-tools-sheet.wb-mobile-drawer-open{transform:translateY(0)}
+  .wb-mobile-tools-grip{width:36px;height:4px;border-radius:2px;background:var(--wb-border);margin:8px auto 4px}
+  .wb-mobile-tools-item{
     padding:14px 20px;text-align:left;background:none;border:none;
-    border-bottom:1px solid var(--pm-border);
-    color:var(--pm-tx);font-size:15px;
+    border-bottom:1px solid var(--wb-border);
+    color:var(--wb-tx);font-size:15px;
   }
-  .pm-mobile-tools-item:last-child{border-bottom:none}
-  .pm-mobile-tools-item:disabled{opacity:.4}
-  .pm-mobile-tools-item.active{color:var(--pm-ac)}
+  .wb-mobile-tools-item:last-child{border-bottom:none}
+  .wb-mobile-tools-item:disabled{opacity:.4}
+  .wb-mobile-tools-item.active{color:var(--wb-ac)}
 
-  /* .pm-block-actions (per-row edit/delete icons) are hover-revealed on desktop
-     (.pm-block-item:hover .pm-block-actions{opacity:1} above) — touch has no hover state, so
+  /* .pr-block-actions (per-row edit/delete icons) are hover-revealed on desktop
+     (.pr-block-item:hover .pr-block-actions{opacity:1} above) — touch has no hover state, so
      without this override these buttons are invisible and undiscoverable on mobile. Same for
-     .pm-drag-handle, which fades in on hover for the same reason — it also now doubles as the
+     .wb-drag-handle, which fades in on hover for the same reason — it also now doubles as the
      ONLY touch drag-initiation target (see useDragReorder.ts / PresetSidebar.vue's
      onItemMouseDown), so it needs to be both visible and comfortably sized, not just
      discoverable. */
-  .pm-block-actions{opacity:.85 !important}
-  .pm-drag-handle{
+  .pr-block-actions{opacity:.85 !important}
+  .wb-drag-handle{
     opacity:.85 !important;
     touch-action:none; /* stop the browser reading a handle-drag as a page/list scroll */
     padding:8px 6px; margin:-8px -6px; /* grow the tap target without shifting layout */
@@ -663,43 +663,43 @@
      finger (~40px is the commonly cited comfortable minimum). Rather than resizing the icons
      themselves (which would look oversized relative to surrounding text), grow the tappable
      area with padding and center the icon inside it via flex, so visual size is unchanged. */
-  .pm-block-act,.vp-btn,.pb-toggle,.pm-group-toggle{
+  .pr-block-act,.pr-vp-btn,.pr-pb-toggle,.pr-group-toggle{
     width:36px;height:36px;
   }
-  .pm-toggle-sw{width:38px;height:20px}
-  .pm-toggle-sw::after{width:16px;height:16px}
-  .pm-toggle-sw.on::after{transform:translateX(18px)}
-  .pm-tab{height:40px}
+  .wb-toggle-sw{width:38px;height:20px}
+  .wb-toggle-sw::after{width:16px;height:16px}
+  .wb-toggle-sw.on::after{transform:translateX(18px)}
+  .wb-tab{height:40px}
   .icon-btn{padding:8px 10px}
 
   /* Modals: desktop's centered fixed-width dialog (min-width:360px) can overflow a narrow
      phone screen. Let it use most of the viewport width instead, and drop the height cap that
      assumed a keyboard-free desktop viewport. */
-  .pm-modal{min-width:0;width:92vw;max-height:80vh}
-  .pm-modal.lg,.pm-modal.sm{min-width:0;max-width:92vw}
-  .pm-cp-modal{width:96vw;height:88vh;max-height:88vh}
-  .pm-cp-body{flex-direction:column}
+  .wb-modal{min-width:0;width:92vw;max-height:80vh}
+  .wb-modal.lg,.wb-modal.sm{min-width:0;max-width:92vw}
+  .pr-cp-modal{width:96vw;height:88vh;max-height:88vh}
+  .pr-cp-body{flex-direction:column}
 
   /* Safe-area insets for notched phones and bottom nav bars */
-  .pm-header{padding-top:max(6px, env(safe-area-inset-top))}
-  .pm-sidebar{padding-bottom:env(safe-area-inset-bottom)}
-  .pm-block-list{padding-bottom:calc(3px + env(safe-area-inset-bottom))}
+  .wb-header{padding-top:max(6px, env(safe-area-inset-top))}
+  .wb-sidebar{padding-bottom:env(safe-area-inset-bottom)}
+  .wb-list{padding-bottom:calc(3px + env(safe-area-inset-bottom))}
   .wb-fab{bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right))}
-  .pm-right-panel,
-  .pm-preview-panel{padding-bottom:env(safe-area-inset-bottom)}
+  .wb-right-panel,
+  .pr-preview-panel{padding-bottom:env(safe-area-inset-bottom)}
 
   /* Sidebar tools: allow wrap so Bind/Unbind don't overflow */
-  .pm-sidebar-tools{flex-wrap:wrap;gap:4px}
-  .pm-sidebar-tools .pm-btn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wb-sidebar-tools{flex-wrap:wrap;gap:4px}
+  .wb-sidebar-tools .wb-btn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   /* Tighten block rows so name+role+actions fit */
-  .pm-block-item{gap:4px;padding:6px 4px}
-  .pm-block-name{font-size:13px}
-  .pm-block-role{font-size:10px;padding:0 3px;letter-spacing:0}
+  .pr-block-item{gap:4px;padding:6px 4px}
+  .pr-block-name{font-size:13px}
+  .pr-block-role{font-size:10px;padding:0 3px;letter-spacing:0}
 
   /* Editor meta row: don't wrap, let name ellipsis */
-  .pm-editor-meta{flex-wrap:nowrap;gap:8px;padding:8px 12px}
-  .pm-rce-name{min-width:0}
+  .wb-editor-meta{flex-wrap:nowrap;gap:8px;padding:8px 12px}
+  .rx-editor-name{min-width:0}
 
   .wb-fab{bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right))}
 }

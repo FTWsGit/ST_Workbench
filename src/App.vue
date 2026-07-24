@@ -5,89 +5,89 @@
               :style="fabStyle" @pointerdown="onFabPointerDown" @click="onFabClick">W</button>
     </Transition>
 
-    <Transition name="pm-panel">
-      <div v-if="store.panelOpen" class="pm-panel">
-        <div class="pm-header">
+    <Transition name="wb-panel">
+      <div v-if="store.panelOpen" class="wb-panel">
+        <div class="wb-header">
           <!-- Desktop: full button row, unchanged. Mobile: a compact row (☰ / Save / preset /
                ⋯ / ✕) — the rest of these buttons move into the ⋯ tools sheet below (see
-               .pm-mobile-tools-sheet), since 8+ buttons don't fit a ~360px header no matter how
+               .wb-mobile-tools-sheet), since 8+ buttons don't fit a ~360px header no matter how
                much padding gets trimmed. -->
           <template v-if="!isMobile">
-            <button class="pm-btn accent" @click="store.doSavePreset()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
-            <div class="pm-sep"></div>
-            <button class="pm-btn" @click="store.reloadPreset()">{{ store.t('shared.header.reload') }}</button>
-            <button class="pm-btn" @click="store.settingsOpen = true">{{ store.t('shared.header.settings') }}</button>
-            <div class="pm-sep"></div>
-            <div class="pm-mode-switch">
-              <button class="pm-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="tabsStore.setSidebarMode('preset')">{{ store.t('shared.header.mode.preset') }}</button>
-              <button class="pm-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="tabsStore.setSidebarMode('regex')">{{ store.t('shared.header.mode.regex') }}</button>
+            <button class="wb-btn accent" @click="store.doSavePreset()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
+            <div class="wb-sep"></div>
+            <button class="wb-btn" @click="store.reloadPreset()">{{ store.t('shared.header.reload') }}</button>
+            <button class="wb-btn" @click="store.settingsOpen = true">{{ store.t('shared.header.settings') }}</button>
+            <div class="wb-sep"></div>
+            <div class="wb-mode-switch">
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="tabsStore.setSidebarMode('preset')">{{ store.t('shared.header.mode.preset') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="tabsStore.setSidebarMode('regex')">{{ store.t('shared.header.mode.regex') }}</button>
             </div>
-            <div class="pm-sep"></div>
-            <button class="pm-btn" @click="store.copyPanelOpen = true">{{ store.t('shared.header.copyBlocks') }}</button>
-            <button class="pm-btn" :class="{ active: store.searchOpen }" @click="toggleSearch">{{ store.t('shared.header.search') }}</button>
-            <div class="pm-spacer"></div>
-            <button class="pm-btn" :class="{ active: store.varNavOpen }" @click="store.varNavOpen = !store.varNavOpen">{{ store.t('shared.header.varNav') }}</button>
-            <button class="pm-btn" :class="{ active: store.previewOpen }" @click="store.previewOpen = !store.previewOpen">{{ store.t('shared.header.preview') }}</button>
-            <button class="pm-btn icon-btn" :title="store.t('shared.header.newPreset')" @click="onNewPreset">+</button>
-            <button class="pm-btn icon-btn" :title="store.t('shared.header.deletePreset')" @click="onDeletePreset" :disabled="!store.presetName">🗑</button>
-            <select v-if="store.presetList.length" class="pm-preset-select" :value="store.presetName" @change="onPresetSelect($event)" :title="store.t('shared.header.switchPreset')">
+            <div class="wb-sep"></div>
+            <button class="wb-btn" @click="store.copyPanelOpen = true">{{ store.t('shared.header.copyBlocks') }}</button>
+            <button class="wb-btn" :class="{ active: store.searchOpen }" @click="toggleSearch">{{ store.t('shared.header.search') }}</button>
+            <div class="wb-spacer"></div>
+            <button class="wb-btn" :class="{ active: store.varNavOpen }" @click="store.varNavOpen = !store.varNavOpen">{{ store.t('shared.header.varNav') }}</button>
+            <button class="wb-btn" :class="{ active: store.previewOpen }" @click="store.previewOpen = !store.previewOpen">{{ store.t('shared.header.preview') }}</button>
+            <button class="wb-btn icon-btn" :title="store.t('shared.header.newPreset')" @click="onNewPreset">+</button>
+            <button class="wb-btn icon-btn" :title="store.t('shared.header.deletePreset')" @click="onDeletePreset" :disabled="!store.presetName">🗑</button>
+            <select v-if="store.presetList.length" class="pr-preset-select" :value="store.presetName" @change="onPresetSelect($event)" :title="store.t('shared.header.switchPreset')">
               <option v-if="!store.presetList.some(p => p.name === store.presetName)" :value="store.presetName" disabled>{{ store.presetName || store.t('shared.header.noneLoaded') }}</option>
               <option v-for="p in store.presetList" :key="p.name" :value="p.name">{{ p.name }}</option>
             </select>
-            <span v-else-if="store.presetName" class="pm-preset-name">{{ store.presetName }}</span>
-            <button class="pm-btn close-btn" @click="store.panelOpen = false">✕</button>
+            <span v-else-if="store.presetName" class="pr-preset-name">{{ store.presetName }}</span>
+            <button class="wb-btn close-btn" @click="store.panelOpen = false">✕</button>
           </template>
           <template v-else>
-            <button class="pm-mobile-hamburger" :title="store.t('shared.mobile.sidebar')" @click="toggleMobileSidebar">☰</button>
-            <button class="pm-btn accent" @click="store.doSavePreset()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
-            <button class="pm-btn" @click="store.reloadPreset()">{{ store.t('shared.header.reload') }}</button>
-            <select v-if="store.presetList.length" class="pm-preset-select" :value="store.presetName" @change="onPresetSelect($event)" :title="store.t('shared.header.switchPreset')">
+            <button class="wb-mobile-hamburger" :title="store.t('shared.mobile.sidebar')" @click="toggleMobileSidebar">☰</button>
+            <button class="wb-btn accent" @click="store.doSavePreset()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
+            <button class="wb-btn" @click="store.reloadPreset()">{{ store.t('shared.header.reload') }}</button>
+            <select v-if="store.presetList.length" class="pr-preset-select" :value="store.presetName" @change="onPresetSelect($event)" :title="store.t('shared.header.switchPreset')">
               <option v-if="!store.presetList.some(p => p.name === store.presetName)" :value="store.presetName" disabled>{{ store.presetName || store.t('shared.header.noneLoaded') }}</option>
               <option v-for="p in store.presetList" :key="p.name" :value="p.name">{{ p.name }}</option>
             </select>
-            <span v-else-if="store.presetName" class="pm-preset-name">{{ store.presetName }}</span>
-            <div class="pm-spacer"></div>
-            <button class="pm-mobile-tools-btn" :class="{ active: mobileDrawerVisible === 'tools' }" :title="store.t('shared.mobile.tools')" @click="toggleMobileTools">⋯</button>
-            <button class="pm-btn close-btn" @click="store.panelOpen = false">✕</button>
+            <span v-else-if="store.presetName" class="pr-preset-name">{{ store.presetName }}</span>
+            <div class="wb-spacer"></div>
+            <button class="wb-mobile-tools-btn" :class="{ active: mobileDrawerVisible === 'tools' }" :title="store.t('shared.mobile.tools')" @click="toggleMobileTools">⋯</button>
+            <button class="wb-btn close-btn" @click="store.panelOpen = false">✕</button>
           </template>
         </div>
 
         <SearchPanel v-if="store.searchOpen" /> 
 
-        <div class="pm-main">
+        <div class="wb-main">
           <PresetSidebar v-if="tabsStore.sidebarMode === 'preset'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
           <RegexSidebar v-else-if="tabsStore.sidebarMode === 'regex'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
-          <div class="pm-editor-col">
+          <div class="wb-editor-col">
             <TabBar />
-            <div class="pm-editor-row">
+            <div class="wb-editor-row">
               <EditorShell />
-              <SettingsDock :class="{ 'pm-mobile-drawer-open': isMobile && mobileDrawerVisible === 'settingsDock' }" />
+              <SettingsDock :class="{ 'wb-mobile-drawer-open': isMobile && mobileDrawerVisible === 'settingsDock' }" />
             </div>
           </div>
-          <VarPanel v-if="store.varNavOpen" :class="{ 'pm-mobile-drawer-open': isMobile && mobileDrawerVisible === 'varNav' }" />
-          <PreviewPanel v-if="store.previewOpen" :class="{ 'pm-mobile-drawer-open': isMobile && mobileDrawerVisible === 'preview' }" />
+          <VarPanel v-if="store.varNavOpen" :class="{ 'wb-mobile-drawer-open': isMobile && mobileDrawerVisible === 'varNav' }" />
+          <PreviewPanel v-if="store.previewOpen" :class="{ 'wb-mobile-drawer-open': isMobile && mobileDrawerVisible === 'preview' }" />
         </div>
 
         <!-- Mobile-only: dims the editor behind whichever drawer/sheet is open, tap to close.
              Never rendered on desktop (v-if="isMobile"), where nothing here ever opens as an
              overlay in the first place. -->
-        <div v-if="isMobile && mobileDrawerVisible !== 'none'" class="pm-mobile-backdrop" @click="closeMobileDrawer"></div>
+        <div v-if="isMobile && mobileDrawerVisible !== 'none'" class="wb-mobile-backdrop" @click="closeMobileDrawer"></div>
 
         <!-- Mobile-only action sheet for everything that didn't fit the compact header row. -->
-        <div v-if="isMobile" class="pm-mobile-tools-sheet" :class="{ 'pm-mobile-drawer-open': mobileDrawerVisible === 'tools' }">
-          <div class="pm-mobile-tools-grip"></div>
-          <button class="pm-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="runTool(() => tabsStore.setSidebarMode('preset'))">{{ store.t('shared.header.mode.preset') }}</button>
-          <button class="pm-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="runTool(() => tabsStore.setSidebarMode('regex'))">{{ store.t('shared.header.mode.regex') }}</button>
-          <button class="pm-mobile-tools-item" @click="runTool(() => { store.copyPanelOpen = true })">{{ store.t('shared.header.copyBlocks') }}</button>
-          <button class="pm-mobile-tools-item" :class="{ active: store.searchOpen }" @click="runTool(toggleSearch)">{{ store.t('shared.header.search') }}</button>
-          <button class="pm-mobile-tools-item" @click="runTool(() => { store.settingsOpen = true })">{{ store.t('shared.header.settings') }}</button>
-          <button class="pm-mobile-tools-item" :class="{ active: store.varNavOpen }" @click="runTool(() => { store.varNavOpen = !store.varNavOpen })">{{ store.t('shared.header.varNav') }}</button>
-          <button class="pm-mobile-tools-item" :class="{ active: store.previewOpen }" @click="runTool(() => { store.previewOpen = !store.previewOpen })">{{ store.t('shared.header.preview') }}</button>
-          <button class="pm-mobile-tools-item" @click="runTool(onNewPreset)">{{ store.t('shared.header.newPreset') }}</button>
-          <button class="pm-mobile-tools-item" :disabled="!store.presetName" @click="runTool(onDeletePreset)">{{ store.t('shared.header.deletePreset') }}</button>
+        <div v-if="isMobile" class="wb-mobile-tools-sheet" :class="{ 'wb-mobile-drawer-open': mobileDrawerVisible === 'tools' }">
+          <div class="wb-mobile-tools-grip"></div>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="runTool(() => tabsStore.setSidebarMode('preset'))">{{ store.t('shared.header.mode.preset') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="runTool(() => tabsStore.setSidebarMode('regex'))">{{ store.t('shared.header.mode.regex') }}</button>
+          <button class="wb-mobile-tools-item" @click="runTool(() => { store.copyPanelOpen = true })">{{ store.t('shared.header.copyBlocks') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: store.searchOpen }" @click="runTool(toggleSearch)">{{ store.t('shared.header.search') }}</button>
+          <button class="wb-mobile-tools-item" @click="runTool(() => { store.settingsOpen = true })">{{ store.t('shared.header.settings') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: store.varNavOpen }" @click="runTool(() => { store.varNavOpen = !store.varNavOpen })">{{ store.t('shared.header.varNav') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: store.previewOpen }" @click="runTool(() => { store.previewOpen = !store.previewOpen })">{{ store.t('shared.header.preview') }}</button>
+          <button class="wb-mobile-tools-item" @click="runTool(onNewPreset)">{{ store.t('shared.header.newPreset') }}</button>
+          <button class="wb-mobile-tools-item" :disabled="!store.presetName" @click="runTool(onDeletePreset)">{{ store.t('shared.header.deletePreset') }}</button>
         </div>
 
-        <!-- CopyPanel before Modals: CopyPanel is itself a .pm-modal-overlay, and its own
+        <!-- CopyPanel before Modals: CopyPanel is itself a .wb-modal-overlay, and its own
              confirm/prompt dialogs (reload/remove/close-unsaved) are confirmStore-driven and
              rendered by Modals below it — Modals needs to be the LATER sibling so its overlay
              actually paints on top of CopyPanel's overlay instead of underneath it. -->

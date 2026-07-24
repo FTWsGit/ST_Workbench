@@ -1,30 +1,30 @@
 <template>
-  <div class="pm-right-panel" :class="{ float: store.settings.varPanelFloat }" :style="{ width: store.settings.varPanelWidth + 'px' }">
-    <div class="pm-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
-    <div class="pm-rp-header">
+  <div class="wb-right-panel" :class="{ float: store.settings.varPanelFloat }" :style="{ width: store.settings.varPanelWidth + 'px' }">
+    <div class="wb-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
+    <div class="wb-rp-header">
       <span>{{ store.t('preset.varPanel.title') }}</span>
-      <div class="pm-row-tight">
-        <button class="pm-btn icon-btn" :class="{ active: store.settings.varPanelFloat }" :title="store.t('preset.varPanel.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="pm-btn close-btn compact" @click="store.varNavOpen = false">✕</button>
+      <div class="wb-row-tight">
+        <button class="wb-btn icon-btn" :class="{ active: store.settings.varPanelFloat }" :title="store.t('preset.varPanel.toggleFloat')" @click="toggleFloat">📌</button>
+        <button class="wb-btn close-btn compact" @click="store.varNavOpen = false">✕</button>
       </div>
     </div>
-    <div class="pm-rp-tools">
+    <div class="wb-rp-tools">
       <input type="text" v-model="store.varFilterQ" :placeholder="store.t('preset.varPanel.filter')" />
-      <button class="pm-btn sm" @click="store.rebuildVarIndex()">🔄</button>
+      <button class="wb-btn sm" @click="store.rebuildVarIndex()">🔄</button>
     </div>
-    <div class="pm-rp-nav">
-      <button class="pm-btn" @click="store.navVar(-1)">{{ store.t('preset.varPanel.prev') }}</button>
-      <button class="pm-btn" @click="store.navVar(1)">{{ store.t('preset.varPanel.next') }}</button>
-      <span class="pm-search-count">{{ store.filteredVarOps.length }}/{{ store.allVarOps.length }}</span>
+    <div class="wb-rp-nav">
+      <button class="wb-btn" @click="store.navVar(-1)">{{ store.t('preset.varPanel.prev') }}</button>
+      <button class="wb-btn" @click="store.navVar(1)">{{ store.t('preset.varPanel.next') }}</button>
+      <span class="pr-search-count">{{ store.filteredVarOps.length }}/{{ store.allVarOps.length }}</span>
     </div>
-    <div class="pm-rp-list">
+    <div class="wb-rp-list">
       <template v-for="(v, i) in store.filteredVarOps" :key="i">
-        <div v-if="i === 0 || v.varName !== store.filteredVarOps[i - 1].varName" class="pm-vr-group">{{ v.varName }}</div>
-        <div class="pm-vr-item" :class="{ active: i === store.varIdx }" @click="store.jumpToVarOp(i)">
-          <span class="pm-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
-          <span class="pm-var-name-em">{{ v.varName }}</span>
-          <span v-if="v.varValue" class="pm-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
-          <span class="pm-vr-block">[{{ v.blockName }}]</span>
+        <div v-if="i === 0 || v.varName !== store.filteredVarOps[i - 1].varName" class="pr-vr-group">{{ v.varName }}</div>
+        <div class="pr-vr-item" :class="{ active: i === store.varIdx }" @click="store.jumpToVarOp(i)">
+          <span class="pr-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
+          <span class="wb-var-name-em">{{ v.varName }}</span>
+          <span v-if="v.varValue" class="pr-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
+          <span class="pr-vr-block">[{{ v.blockName }}]</span>
         </div>
       </template>
     </div>

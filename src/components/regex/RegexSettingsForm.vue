@@ -1,43 +1,43 @@
 <template>
-  <div v-if="script" class="pm-rx-form">
-    <label class="pm-rx-check"><input type="checkbox" v-model="enabled" /> {{ store.t('regex.settings.enabled') }}</label>
+  <div v-if="script" class="rx-form">
+    <label class="rx-check"><input type="checkbox" v-model="enabled" /> {{ store.t('regex.settings.enabled') }}</label>
 
-    <label class="pm-rx-label">{{ store.t('regex.settings.findRegexLabel') }}</label>
-    <input class="pm-rx-input pm-rx-mono" :class="{ invalid: !findValid }" v-model="script.findRegex" :placeholder="store.t('regex.settings.findRegexPlaceholder')" />
-    <p v-if="!findValid" class="pm-rx-err">{{ store.t('regex.settings.findRegexInvalid') }}</p>
+    <label class="rx-label">{{ store.t('regex.settings.findRegexLabel') }}</label>
+    <input class="rx-input rx-mono" :class="{ invalid: !findValid }" v-model="script.findRegex" :placeholder="store.t('regex.settings.findRegexPlaceholder')" />
+    <p v-if="!findValid" class="rx-err">{{ store.t('regex.settings.findRegexInvalid') }}</p>
 
-    <label class="pm-rx-label">{{ store.t('regex.settings.scriptNameLabel') }}</label>
-    <input class="pm-rx-input" v-model="script.scriptName" :placeholder="store.t('regex.settings.scriptNamePlaceholder')" />
+    <label class="rx-label">{{ store.t('regex.settings.scriptNameLabel') }}</label>
+    <input class="rx-input" v-model="script.scriptName" :placeholder="store.t('regex.settings.scriptNamePlaceholder')" />
 
-    <label class="pm-rx-label">{{ store.t('regex.settings.placementLabel') }}</label>
-    <div class="pm-row pm-rx-checks">
-      <label v-for="opt in PLACEMENT_OPTIONS" :key="opt.value" class="pm-rx-check">
+    <label class="rx-label">{{ store.t('regex.settings.placementLabel') }}</label>
+    <div class="wb-row rx-checks">
+      <label v-for="opt in PLACEMENT_OPTIONS" :key="opt.value" class="rx-check">
         <input type="checkbox" :checked="script.placement.includes(opt.value)" @change="togglePlacement(opt.value)" />
         {{ store.t(opt.labelKey) }}
       </label>
     </div>
 
-    <label class="pm-rx-label">{{ store.t('regex.settings.surfaceLabel') }}</label>
-    <div class="pm-rx-surface">
-      <button class="pm-btn sm" :class="{ active: script.markdownOnly && !script.promptOnly }" @click="setSurfaceMode('display')">{{ store.t('regex.settings.displayOnly') }}</button>
-      <button class="pm-btn sm" :class="{ active: script.promptOnly && !script.markdownOnly }" @click="setSurfaceMode('prompt')">{{ store.t('regex.settings.promptOnly') }}</button>
-      <button class="pm-btn sm" :class="{ active: script.markdownOnly && script.promptOnly }" @click="setSurfaceMode('both')">{{ store.t('regex.settings.both') }}</button>
+    <label class="rx-label">{{ store.t('regex.settings.surfaceLabel') }}</label>
+    <div class="rx-surface">
+      <button class="wb-btn sm" :class="{ active: script.markdownOnly && !script.promptOnly }" @click="setSurfaceMode('display')">{{ store.t('regex.settings.displayOnly') }}</button>
+      <button class="wb-btn sm" :class="{ active: script.promptOnly && !script.markdownOnly }" @click="setSurfaceMode('prompt')">{{ store.t('regex.settings.promptOnly') }}</button>
+      <button class="wb-btn sm" :class="{ active: script.markdownOnly && script.promptOnly }" @click="setSurfaceMode('both')">{{ store.t('regex.settings.both') }}</button>
     </div>
 
-    <button class="pm-btn pm-rx-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ store.t('regex.settings.advancedToggle') }}</button>
-    <div v-if="advancedOpen" class="pm-rx-advanced">
-      <label class="pm-rx-label" style="margin:0">{{ store.t('regex.settings.trimLabel') }}</label>
-      <textarea class="pm-rx-textarea" rows="3" v-model="trimStringsText"></textarea>
-      <label class="pm-rx-check"><input type="checkbox" v-model="script.runOnEdit" /> {{ store.t('regex.settings.runOnEdit') }}</label>
-      <label class="pm-rx-label" style="margin:0">{{ store.t('regex.settings.substituteLabel') }}</label>
-      <select class="pm-select-wide" v-model.number="script.substituteRegex">
+    <button class="wb-btn rx-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ store.t('regex.settings.advancedToggle') }}</button>
+    <div v-if="advancedOpen" class="rx-advanced">
+      <label class="rx-label" style="margin:0">{{ store.t('regex.settings.trimLabel') }}</label>
+      <textarea class="rx-textarea" rows="3" v-model="trimStringsText"></textarea>
+      <label class="rx-check"><input type="checkbox" v-model="script.runOnEdit" /> {{ store.t('regex.settings.runOnEdit') }}</label>
+      <label class="rx-label" style="margin:0">{{ store.t('regex.settings.substituteLabel') }}</label>
+      <select class="wb-select-wide" v-model.number="script.substituteRegex">
         <option v-for="o in SUBSTITUTE_OPTIONS" :key="o.value" :value="o.value">{{ store.t(o.labelKey) }}</option>
       </select>
-      <div class="pm-row">
-        <label class="pm-rx-label" style="margin:0">{{ store.t('regex.settings.minDepth') }}</label>
-        <input class="pm-rx-input pm-rx-num" type="number" v-model.number="minDepthModel" :placeholder="store.t('regex.settings.depthPlaceholder')" />
-        <label class="pm-rx-label" style="margin:0">{{ store.t('regex.settings.maxDepth') }}</label>
-        <input class="pm-rx-input pm-rx-num" type="number" v-model.number="maxDepthModel" :placeholder="store.t('regex.settings.depthPlaceholder')" />
+      <div class="wb-row">
+        <label class="rx-label" style="margin:0">{{ store.t('regex.settings.minDepth') }}</label>
+        <input class="rx-input rx-num" type="number" v-model.number="minDepthModel" :placeholder="store.t('regex.settings.depthPlaceholder')" />
+        <label class="rx-label" style="margin:0">{{ store.t('regex.settings.maxDepth') }}</label>
+        <input class="rx-input rx-num" type="number" v-model.number="maxDepthModel" :placeholder="store.t('regex.settings.depthPlaceholder')" />
       </div>
     </div>
   </div>

@@ -1,20 +1,20 @@
 <template>
-  <div v-if="store.currentBlock" class="pm-rx-form">
-    <label class="pm-rx-label" style="margin-top:0">{{ store.t('preset.settings.name') }}</label>
-    <input class="pm-rx-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="store.t('preset.settings.namePlaceholder')" />
+  <div v-if="store.currentBlock" class="rx-form">
+    <label class="rx-label" style="margin-top:0">{{ store.t('preset.settings.name') }}</label>
+    <input class="rx-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="store.t('preset.settings.namePlaceholder')" />
 
-    <label class="pm-rx-label">{{ store.t('preset.settings.role') }}</label>
-    <select class="pm-rx-input" :value="store.currentBlock.role" @change="onRoleChange">
+    <label class="rx-label">{{ store.t('preset.settings.role') }}</label>
+    <select class="rx-input" :value="store.currentBlock.role" @change="onRoleChange">
       <option value="system">system</option>
       <option value="user">user</option>
       <option value="assistant">assistant</option>
     </select>
 
-    <p v-if="store.currentBlock.marker" class="pm-muted" style="font-size:12px;margin-top:10px">
+    <p v-if="store.currentBlock.marker" class="wb-muted" style="font-size:12px;margin-top:10px">
       {{ store.t('preset.settings.markerHint', { id: store.currentBlock.identifier }) }}
     </p>
   </div>
-  <p v-else class="pm-empty-note">{{ store.t('preset.settings.empty') }}</p>
+  <p v-else class="wb-empty-note">{{ store.t('preset.settings.empty') }}</p>
 </template>
 
 <script setup lang="ts">

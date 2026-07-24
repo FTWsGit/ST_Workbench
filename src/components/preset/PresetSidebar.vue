@@ -1,77 +1,77 @@
 <template>
-  <aside class="pm-sidebar" ref="sidebarRef" :class="{ 'pm-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
-    <div class="pm-sidebar-header">
+  <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
+    <div class="wb-sidebar-header">
       <span>{{ store.t('preset.sidebar.title', { count: store.order.length }) }}</span>
       <ListToolbar :count="store.prompts.length">
-        <button class="pm-btn" @click="store.addBlock()">{{ store.t('preset.sidebar.newBlock') }}</button>
-        <button class="pm-btn" @click="store.hiddenOpen = true">{{ store.t('preset.sidebar.hiddenBlock') }}</button>
+        <button class="wb-btn" @click="store.addBlock()">{{ store.t('preset.sidebar.newBlock') }}</button>
+        <button class="wb-btn" @click="store.hiddenOpen = true">{{ store.t('preset.sidebar.hiddenBlock') }}</button>
       </ListToolbar>
-      <div class="pm-sidebar-tools">
-        <button class="pm-btn" :disabled="!canBind" @click="store.bindSelected()">{{ store.t('preset.sidebar.bind') }}</button>
-        <button class="pm-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ store.t('preset.sidebar.unbind') }}</button>
+      <div class="wb-sidebar-tools">
+        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ store.t('preset.sidebar.bind') }}</button>
+        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ store.t('preset.sidebar.unbind') }}</button>
       </div>
     </div>
-    <div class="pm-block-list" ref="listRef">
+    <div class="wb-list" ref="listRef">
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">
         <!-- Group Header -->
         <div v-if="node.isGroup"
              :ref="(el) => setItemRef(el, gi)"
-             class="pm-group-header"
+             class="pr-group-header"
              :class="{ selected: store.selectedGi.has(gi), disabled: !(node.ref as OrderGroup).enabled, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom' }"
              :style="itemStyle(node)"
              @pointerdown="onItemMouseDown(gi, $event)"
              @click="onItemClick(gi, $event)">
-          <span class="pm-group-toggle" :class="{ collapsed: (node.ref as OrderGroup).collapsed }" @click.stop="onGroupToggle(gi)">
+          <span class="pr-group-toggle" :class="{ collapsed: (node.ref as OrderGroup).collapsed }" @click.stop="onGroupToggle(gi)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
-          <span v-if="editingGroupGi !== gi" class="pm-block-name" @dblclick.stop="startEditGroupName(gi)">{{ (node.ref as OrderGroup).name }}</span>
+          <span v-if="editingGroupGi !== gi" class="pr-block-name" @dblclick.stop="startEditGroupName(gi)">{{ (node.ref as OrderGroup).name }}</span>
           <input v-else
                  :ref="(el) => setGroupNameInput(el, gi)"
-                 class="pm-group-name-input"
+                 class="pr-group-name-input"
                  :value="(node.ref as OrderGroup).name"
                  @blur="finishEditGroupName(gi, $event)"
                  @keydown.enter.prevent="finishEditGroupName(gi, $event)"
                  @keydown.esc.prevent="cancelEditGroupName()"
                  @click.stop
                  @pointerdown.stop />
-          <span class="pm-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
-          <span class="pm-block-actions">
-            <span class="pm-block-act" @click.stop="store.toggleBlock(gi)">👁</span>
-            <span class="pm-block-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
+          <span class="pr-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
+          <span class="pr-block-actions">
+            <span class="pr-block-act" @click.stop="store.toggleBlock(gi)">👁</span>
+            <span class="pr-block-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
           </span>
         </div>
         <!-- Block Item -->
         <div v-else
              :ref="(el) => setItemRef(el, gi)"
-             class="pm-block-item"
+             class="pr-block-item"
              :class="{ selected: store.selectedGi.has(gi), disabled: !(node.ref as OrderItem).enabled, dragging: dragIdx === gi, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom', nested: node.depth > 0 }"
              :style="itemStyle(node)"
              @pointerdown="onItemMouseDown(gi, $event)"
              @click="onItemClick(gi, $event)">
-          <span class="pm-drag-handle">⠿</span>
-          <span class="pm-toggle-sw" :class="{ on: (node.ref as OrderItem).enabled }" @click.stop="store.toggleBlock(gi)"></span>
-          <span v-if="editingBlockGi !== gi" class="pm-block-name" @dblclick.stop="startEditBlockName(gi)">
+          <span class="wb-drag-handle">⠿</span>
+          <span class="wb-toggle-sw" :class="{ on: (node.ref as OrderItem).enabled }" @click.stop="store.toggleBlock(gi)"></span>
+          <span v-if="editingBlockGi !== gi" class="pr-block-name" @dblclick.stop="startEditBlockName(gi)">
             {{ getBlock((node.ref as OrderItem).identifier)?.name || (node.ref as OrderItem).identifier }}
           </span>
           <input v-else
                  :ref="(el) => setBlockNameInput(el, gi)"
-                 class="pm-block-name-input"
+                 class="pr-block-name-input"
                  :value="getBlock((node.ref as OrderItem).identifier)?.name || (node.ref as OrderItem).identifier"
                  @blur="finishEditBlockName(gi, $event)"
                  @keydown.enter.prevent="finishEditBlockName(gi, $event)"
                  @keydown.esc.prevent="cancelEditBlockName()"
                  @click.stop
                  @pointerdown.stop />
-          <span class="pm-block-role" :class="roleClass((node.ref as OrderItem).identifier)">{{ getBlock((node.ref as OrderItem).identifier)?.role || 'system' }}</span>
-          <span class="pm-block-actions">
-            <span class="pm-block-act" @click.stop="store.hideBlock(gi)">👁</span>
-            <span class="pm-block-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
+          <span class="pr-block-role" :class="roleClass((node.ref as OrderItem).identifier)">{{ getBlock((node.ref as OrderItem).identifier)?.role || 'system' }}</span>
+          <span class="pr-block-actions">
+            <span class="pr-block-act" @click.stop="store.hideBlock(gi)">👁</span>
+            <span class="pr-block-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
           </span>
         </div>
       </template>
     </div>
   </aside>
-  <div class="pm-resize-handle" :class="{ active: resize.active.value }" @pointerdown="onResizeStart"></div>
+  <div class="wb-resize-handle" :class="{ active: resize.active.value }" @pointerdown="onResizeStart"></div>
 </template>
 
 <script setup lang="ts">
@@ -88,11 +88,11 @@ import { useListSelection } from '../../composables/useListSelection'
 import ListToolbar from '../shared/ListToolbar.vue'
 
 // Explicit prop rather than relying on Vue's automatic class/attr fallthrough from the parent:
-// this component's <template> has TWO root nodes (<aside> + the sibling .pm-resize-handle div,
+// this component's <template> has TWO root nodes (<aside> + the sibling .wb-resize-handle div,
 // see the very end of the template) — Vue only auto-inherits a parent's :class/attrs onto a
 // component's root when there's exactly ONE root; for multi-root ("fragment") components it's
 // simply dropped, silently, with no warning in this case since :class specifically is what's
-// affected. App.vue passing :class="{ 'pm-mobile-drawer-open': ... }" on <PresetSidebar /> would
+// affected. App.vue passing :class="{ 'wb-mobile-drawer-open': ... }" on <PresetSidebar /> would
 // never have reached the <aside> either way — hence this prop, bound directly on <aside> below.
 const props = defineProps<{ mobileDrawerOpen?: boolean }>()
 
@@ -275,8 +275,8 @@ function onDragDrop(from: number, to: number, after: boolean) {
 // touch drags to start from a small dedicated handle rather than the whole row: mouse users keep
 // the desktop convenience of dragging from anywhere on the row (a mouse drag never competes with
 // a scroll gesture, so there's nothing to disambiguate), but a touch/pen pointerdown only starts
-// a drag if it actually landed on .pm-drag-handle — anywhere else on the row is left completely
-// alone, so the browser's native scroll handles it with zero interference. .pm-drag-handle gets
+// a drag if it actually landed on .wb-drag-handle — anywhere else on the row is left completely
+// alone, so the browser's native scroll handles it with zero interference. .wb-drag-handle gets
 // `touch-action: none` in main.css so a touch that DOES land there is never also read as "start
 // scrolling", but nothing outside the handle is touch-action-restricted, so normal list scrolling
 // is untouched everywhere else in the row.

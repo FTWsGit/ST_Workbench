@@ -140,7 +140,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
    * touch on mobile — see usePanelResize.ts's doc comment for the same reasoning (one pointer
    * event triplet covers mouse/touch/pen uniformly).
    *
-   * TOUCH vs SCROLL: touch drags are gated to the .pm-drag-handle element specifically — see
+   * TOUCH vs SCROLL: touch drags are gated to the .wb-drag-handle element specifically — see
    * PresetSidebar.vue's onItemMouseDown for the full reasoning (short version: letting touch-drag
    * start anywhere on the row means it fights the browser's native scroll for the same gesture,
    * since a real scroll swipe also crosses DRAG_THRESHOLD almost immediately; requiring a small
@@ -156,7 +156,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
   function onItemMouseDown(i: T, e: PointerEvent, onDrop: (from: T, to: T, after: boolean) => void) {
     if (e.pointerType === 'mouse') {
       if (e.button !== 0) return
-    } else if (!(e.target as HTMLElement).closest('.pm-drag-handle')) {
+    } else if (!(e.target as HTMLElement).closest('.wb-drag-handle')) {
       return
     }
     const hostWin = getHostWindow()

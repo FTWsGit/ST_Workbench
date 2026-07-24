@@ -3,10 +3,10 @@
      (Vue/bundler component resolution is case-insensitive-ish for this), but confusing to grep
      for. No behavior change. -->
 <template>
-  <div class="pm-cp-toolbar">
+  <div class="pr-cp-toolbar">
     <slot />
-    <span class="pm-spacer"></span>
-    <span class="pm-muted">{{ store.t('shared.listToolbar.count', { count }) }}</span>
+    <span class="wb-spacer"></span>
+    <span class="wb-muted">{{ store.t('shared.listToolbar.count', { count }) }}</span>
   </div>
 </template>
 <script setup lang="ts">

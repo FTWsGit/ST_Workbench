@@ -4,7 +4,7 @@
   optional jump-to-position + optional var-click
   detection. This is the machinery that used to live entirely inside Editor.vue (the block content
   editor) — extracted so RegexContentEditor.vue's replaceString editor gets the same line numbers,
-  highlighting, and font-size/family (via the same --pm-fs/--pm-ff CSS vars) instead of being a
+  highlighting, and font-size/family (via the same --wb-fs/--wb-ff CSS vars) instead of being a
   bare unstyled <textarea>. See PROJECT_HANDOFF.md 架构总览 2 and the former "已知的视觉不一致"
   section — this is what closes that gap.
 
@@ -27,25 +27,25 @@
      and re-measures cursor position.
 -->
 <template>
-  <div class="pm-editor-content">
-    <div class="pm-line-nums" ref="lnRef">
+  <div class="wb-editor-content">
+    <div class="wb-line-nums" ref="lnRef">
       <div v-for="(h, i) in lineHeights" :key="i" class="ln" :class="lineClass(i)" :style="{ height: h + 'px' }">{{ i + 1 }}</div>
     </div>
-    <div class="pm-editor-wrap">
-      <pre class="pm-editor-hl" ref="hlRef"></pre>
-      <textarea class="pm-editor-ta" ref="taRef" spellcheck="false" :placeholder="placeholder"
+    <div class="wb-editor-wrap">
+      <pre class="wb-editor-hl" ref="hlRef"></pre>
+      <textarea class="wb-editor-ta" ref="taRef" spellcheck="false" :placeholder="placeholder"
                 :readonly="disabled" autocomplete="off" data-lpignore="true" data-form-type="other"
                 :value="content" @input="onInput" @scroll="syncScroll"
                 @keydown="onKeydown" @click="onClick" @keyup="updateCursor"></textarea>
       <!-- hidden mirror used to measure single-line height / caret coords (handles CJK / tabs / mixed width) -->
-      <div class="pm-line-mirror" ref="mirrorRef" aria-hidden="true"></div>
+      <div class="wb-line-mirror" ref="mirrorRef" aria-hidden="true"></div>
       <!-- hidden batch container: per-logical-line wrapped heights are measured by laying each
            line out in its own child div here (one append pass + one read pass ≈ one layout),
            see updateLineNums() -->
-      <div class="pm-lh-measure" ref="measureRef" aria-hidden="true"></div>
+      <div class="wb-lh-measure" ref="measureRef" aria-hidden="true"></div>
     </div>
   </div>
-  <div v-if="showStatusbar" class="pm-statusbar">
+  <div v-if="showStatusbar" class="wb-statusbar">
     <span>{{ cursorText }}</span>
     <span>{{ charsLabel }}</span>
     <span>{{ linesLabel }}</span>
@@ -205,7 +205,7 @@ function emitContent() {
 // advances to the next multiple-of-`tab-size` column — anywhere from 1 to 4 space-widths —
 // not a fixed 4-space width; gutter overshoots). Both directions were visible depending on
 // content. So instead we let the browser itself do the wrapping: each logical line is laid out
-// in its own child of a hidden container (.pm-lh-measure) that shares the textarea's exact
+// in its own child of a hidden container (.wb-lh-measure) that shares the textarea's exact
 // font/white-space/tab-size CSS and content width, and we read its real offsetHeight.
 // Cost stays low because (a) results are cached per (contentWidth, lineText) — steady-state
 // typing only ever re-measures the line being edited — and (b) cache misses are measured in
@@ -222,7 +222,7 @@ function measureSingleLineHeight(): number {
   const prevText = mirror.textContent
   mirror.textContent = '\u00A0' // a single, non-wrapping character guarantees exactly one line
   // getBoundingClientRect() (not offsetHeight) — offsetHeight's IDL type is `long`, so it
-  // truncates/rounds any fractional line-height (e.g. --pm-fs:14.5px * --pm-lh:1.65 = 23.925px)
+  // truncates/rounds any fractional line-height (e.g. --wb-fs:14.5px * --wb-lh:1.65 = 23.925px)
   // to an integer right here at the source. See updateLineNums() for why that sub-pixel loss
   // matters once these per-line heights get stacked.
   const h = mirror.getBoundingClientRect().height || 20
@@ -240,8 +240,8 @@ function updateLineNums() {
   const text = content.value
   const cs = getComputedStyle(ta) // safe: resolves off the live element itself, not a global
   const cw = ta.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
-  // .pm-editor-ta is overflow-y:auto (scrollbar reserved once content overflows vertically,
-  // shrinking clientWidth) but .pm-editor-hl (the colored text you actually see) is
+  // .wb-editor-ta is overflow-y:auto (scrollbar reserved once content overflows vertically,
+  // shrinking clientWidth) but .wb-editor-hl (the colored text you actually see) is
   // overflow:hidden and, left to its own CSS width:100%, never loses that width — so once a
   // scrollbar appears the visible layer wraps later than the real textarea underneath it,
   // and the gap grows with every wrapped line below that point. Forcing the same clientWidth

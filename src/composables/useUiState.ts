@@ -23,8 +23,8 @@ export function useUiState() {
   const cssVars = computed(() => {
     const fm = FONT_OPTIONS.find(f => f.name === settings.value.editorFontFamily)
     return {
-      '--pm-fs': settings.value.editorFontSize + 'px',
-      '--pm-ff': fm ? fm.value : FONT_OPTIONS[0].value,
+      '--wb-fs': settings.value.editorFontSize + 'px',
+      '--wb-ff': fm ? fm.value : FONT_OPTIONS[0].value,
       ...Object.fromEntries(Object.entries(settings.value.syntaxColors).map(([k, v]) => ['--' + k, v])),
     }
   })

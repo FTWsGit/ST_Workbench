@@ -66,7 +66,7 @@ function mount() {
   // and browsers elevate it to a special viewport-layer above <html>'s other
   // children when <html> has a transform. Being INSIDE <body> lets our z-index
   // compete within <body>'s stacking context instead of losing to <body> itself.
-  // Every actual UI element inside (.wb-fab, .pm-panel, the mobile drawers/sheets, etc.) is
+  // Every actual UI element inside (.wb-fab, .wb-panel, the mobile drawers/sheets, etc.) is
   // `position:absolute` in main.css, not `fixed` — they resolve against THIS single positioned,
   // viewport-sized anchor, so there's only one stacking-context boundary to reason about instead
   // of one per element (each of which would otherwise have had to independently win the same
@@ -79,7 +79,7 @@ function mount() {
   el.style.height = '100dvh' // dynamic viewport height for mobile nav-bar safety
   el.style.zIndex = '2147483647' // max valid CSS z-index
   el.style.pointerEvents = 'none' // covers the full screen at all times now — see main.css's
-  // pointer-events:auto on .wb-fab/.pm-panel/.pm-var-popup, the only parts of this that are
+  // pointer-events:auto on .wb-fab/.wb-panel/.pr-var-popup, the only parts of this that are
   // ever actually visible, so clicks anywhere else on the host page still reach it normally.
   targetDoc.body.appendChild(el)
 

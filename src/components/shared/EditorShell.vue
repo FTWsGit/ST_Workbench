@@ -1,6 +1,6 @@
 <template>
-  <div class="pm-editor-panel" v-if="!tabsStore.activeTab">
-    <div class="pm-editor-empty">
+  <div class="wb-editor-panel" v-if="!tabsStore.activeTab">
+    <div class="wb-editor-empty">
       <div class="icon">📝</div>
       <p v-if="tabsStore.sidebarMode === 'regex'">{{ store.t('shared.editorShell.emptyRegex') }}</p>
       <p v-else-if="store.hasData">{{ store.t('shared.editorShell.emptyBlock') }}</p>

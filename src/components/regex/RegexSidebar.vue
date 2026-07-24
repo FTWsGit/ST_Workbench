@@ -1,31 +1,31 @@
 <template>
-  <aside class="pm-sidebar" :class="{ 'pm-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
-    <div class="pm-sidebar-header">
+  <aside class="wb-sidebar" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
+    <div class="wb-sidebar-header">
       <span>{{ store.t('regex.sidebar.title', { count: store.regexScripts.length }) }}</span>
       <ListToolbar :count="store.regexScripts.length">
-        <button class="pm-btn" @click="onAdd">{{ store.t('regex.sidebar.newScript') }}</button>
+        <button class="wb-btn" @click="onAdd">{{ store.t('regex.sidebar.newScript') }}</button>
       </ListToolbar>
     </div>
-    <div class="pm-block-list">
-      <p v-if="!store.regexScripts.length" class="pm-cp-empty">{{ store.t('regex.sidebar.empty') }}</p>
+    <div class="wb-list">
+      <p v-if="!store.regexScripts.length" class="pr-cp-empty">{{ store.t('regex.sidebar.empty') }}</p>
       <div v-for="(r, i) in store.regexScripts" :key="r.id"
            :ref="(el) => setItemRef(el, i)"
-           class="pm-block-item"
+           class="pr-block-item"
            :class="{ selected: tabsStore.activeId === 'regex:' + r.id, disabled: r.disabled, dragging: dragIdx === i,
                      'drag-over-top': dragOverIdx === i && dragOverPos === 'top',
                      'drag-over-bottom': dragOverIdx === i && dragOverPos === 'bottom' }"
            @pointerdown="onDragStart(i, $event)"
            @click="onItemClick(i)">
-        <span class="pm-drag-handle">⠿</span>
-        <span class="pm-toggle-sw" :class="{ on: !r.disabled }" :title="store.t('regex.sidebar.toggleTitle')" @click.stop="r.disabled = !r.disabled"></span>
-        <span class="pm-block-name">{{ r.scriptName || store.t('common.unnamed') }}</span>
-        <span class="pm-block-actions">
-          <span class="pm-block-act del" :title="store.t('regex.sidebar.deleteTitle')" @click.stop="onDelete(r)">🗑</span>
+        <span class="wb-drag-handle">⠿</span>
+        <span class="wb-toggle-sw" :class="{ on: !r.disabled }" :title="store.t('regex.sidebar.toggleTitle')" @click.stop="r.disabled = !r.disabled"></span>
+        <span class="pr-block-name">{{ r.scriptName || store.t('common.unnamed') }}</span>
+        <span class="pr-block-actions">
+          <span class="pr-block-act del" :title="store.t('regex.sidebar.deleteTitle')" @click.stop="onDelete(r)">🗑</span>
         </span>
       </div>
     </div>
   </aside>
-  <div class="pm-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
+  <div class="wb-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
 </template>
 
 <script setup lang="ts">
@@ -41,7 +41,7 @@ import { esc } from '../../utils'
 import ListToolbar from '../shared/ListToolbar.vue'
 
 // See PresetSidebar.vue's identical prop for why: this template also has two root nodes
-// (<aside> + the sibling .pm-resize-handle div at the end), so a parent's :class doesn't
+// (<aside> + the sibling .wb-resize-handle div at the end), so a parent's :class doesn't
 // automatically reach <aside> the way it would for a single-root component.
 const props = defineProps<{ mobileDrawerOpen?: boolean }>()
 

@@ -1,21 +1,21 @@
 <template>
-  <div class="pm-search">
-    <div class="pm-search-bar">
+  <div class="pr-search">
+    <div class="pr-search-bar">
       <input type="text" v-model="store.searchQuery" @input="store.doSearch()" :placeholder="store.t('preset.search.placeholder')" @keydown.enter.prevent="store.navSearch($event.shiftKey ? -1 : 1)">
-      <input type="text" v-model="store.searchReplace" :placeholder="store.t('preset.search.replacePlaceholder')" class="pm-repl-input" @keydown.enter.prevent="store.replaceCurrent()">
-      <button class="pm-btn" @click="store.navSearch(-1)">◀</button>
-      <button class="pm-btn" @click="store.navSearch(1)">▶</button>
-      <button class="pm-btn" @click="store.replaceCurrent()">{{ store.t('preset.search.replace') }}</button>
-      <button class="pm-btn" @click="store.replaceAll()">{{ store.t('preset.search.replaceAll') }}</button>
-      <span class="pm-search-count">{{ store.t('preset.search.results', { count: store.searchResults.length }) }}</span>
+      <input type="text" v-model="store.searchReplace" :placeholder="store.t('preset.search.replacePlaceholder')" class="pr-repl-input" @keydown.enter.prevent="store.replaceCurrent()">
+      <button class="wb-btn" @click="store.navSearch(-1)">◀</button>
+      <button class="wb-btn" @click="store.navSearch(1)">▶</button>
+      <button class="wb-btn" @click="store.replaceCurrent()">{{ store.t('preset.search.replace') }}</button>
+      <button class="wb-btn" @click="store.replaceAll()">{{ store.t('preset.search.replaceAll') }}</button>
+      <span class="pr-search-count">{{ store.t('preset.search.results', { count: store.searchResults.length }) }}</span>
     </div>
-    <div class="pm-search-results" v-if="store.searchResults.length">
+    <div class="pr-search-results" v-if="store.searchResults.length">
       <div v-for="(r, i) in displayResults" :key="i"
-           class="pm-sr-item" :class="{ active: i === store.searchIdx }"
+           class="pr-sr-item" :class="{ active: i === store.searchIdx }"
            @click="jumpTo(i)">
-        <span class="pm-sr-block">{{ r.blockName }}</span>
-        <span class="pm-sr-line">L{{ r.line + 1 }}</span>
-        <span class="pm-sr-ctx" v-html="renderCtx(r)"></span>
+        <span class="pr-sr-block">{{ r.blockName }}</span>
+        <span class="pr-sr-line">L{{ r.line + 1 }}</span>
+        <span class="pr-sr-ctx" v-html="renderCtx(r)"></span>
       </div>
     </div>
   </div>

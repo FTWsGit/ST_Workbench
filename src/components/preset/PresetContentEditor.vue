@@ -6,12 +6,12 @@
   → var-popup wiring, and the name/role meta bar.
 -->
 <template>
-  <div class="pm-editor-panel">
-    <div class="pm-editor-meta">
-      <span class="pm-rce-name">{{ store.currentBlock?.name || store.currentBlock?.identifier }}</span>
-      <span v-if="store.currentBlock" class="pm-block-role" :class="roleClass(store.currentBlock.role)">{{ store.currentBlock.role }}</span>
-      <span class="pm-spacer"></span>
-      <button class="pm-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('preset.sidebar.settingsPanel')">⚙</button>
+  <div class="wb-editor-panel">
+    <div class="wb-editor-meta">
+      <span class="rx-editor-name">{{ store.currentBlock?.name || store.currentBlock?.identifier }}</span>
+      <span v-if="store.currentBlock" class="pr-block-role" :class="roleClass(store.currentBlock.role)">{{ store.currentBlock.role }}</span>
+      <span class="wb-spacer"></span>
+      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('preset.sidebar.settingsPanel')">⚙</button>
     </div>
     <HighlightedEditor
       ref="editorRef"

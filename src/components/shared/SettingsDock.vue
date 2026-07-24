@@ -1,14 +1,14 @@
 <template>
-  <div v-if="formComponent && tabsStore.settingsDockOpen" class="pm-right-panel pm-settings-dock" :class="{ float: store.settings.settingsDockFloat }" :style="{ width: store.settings.settingsDockWidth + 'px' }">
-    <div class="pm-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
-    <div class="pm-rp-header">
+  <div v-if="formComponent && tabsStore.settingsDockOpen" class="wb-right-panel wb-settings-dock" :class="{ float: store.settings.settingsDockFloat }" :style="{ width: store.settings.settingsDockWidth + 'px' }">
+    <div class="wb-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
+    <div class="wb-rp-header">
       <span>{{ store.t('shared.settingsDock.title') }}</span>
-      <div class="pm-row-tight">
-        <button class="pm-btn icon-btn" :class="{ active: store.settings.settingsDockFloat }" :title="store.t('shared.settingsDock.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="pm-btn close-btn compact" @click="tabsStore.settingsDockOpen = false">✕</button>
+      <div class="wb-row-tight">
+        <button class="wb-btn icon-btn" :class="{ active: store.settings.settingsDockFloat }" :title="store.t('shared.settingsDock.toggleFloat')" @click="toggleFloat">📌</button>
+        <button class="wb-btn close-btn compact" @click="tabsStore.settingsDockOpen = false">✕</button>
       </div>
     </div>
-    <div class="pm-settings-dock-body">
+    <div class="wb-settings-dock-body">
       <component :is="formComponent" />
     </div>
   </div>

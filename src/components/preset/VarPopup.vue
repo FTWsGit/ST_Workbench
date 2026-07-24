@@ -1,20 +1,20 @@
 <template>
-  <div v-if="store.varPopupOpen" class="pm-var-popup" :style="{ top: store.varPopupPos.top + 'px', left: store.varPopupPos.left + 'px' }">
-    <div class="vp-header">
-      <span class="vp-varname">{{ store.varPopupVarName }}</span>
-      <span class="vp-count">{{ store.t(store.varPopupOps.length !== 1 ? 'preset.varPopup.hit' : 'preset.varPopup.hitSingle', { count: store.varPopupOps.length }) }}</span>
-      <span class="vp-spacer"></span>
-      <button class="vp-btn" @click="store.navPopupVar(-1)">◀</button>
-      <button class="vp-btn" @click="store.navPopupVar(1)">▶</button>
-      <button class="vp-btn close-btn" @click="store.hideVarPopup()">✕</button>
+  <div v-if="store.varPopupOpen" class="pr-var-popup" :style="{ top: store.varPopupPos.top + 'px', left: store.varPopupPos.left + 'px' }">
+    <div class="pr-vp-header">
+      <span class="pr-vp-varname">{{ store.varPopupVarName }}</span>
+      <span class="pr-vp-count">{{ store.t(store.varPopupOps.length !== 1 ? 'preset.varPopup.hit' : 'preset.varPopup.hitSingle', { count: store.varPopupOps.length }) }}</span>
+      <span class="pr-vp-spacer"></span>
+      <button class="pr-vp-btn" @click="store.navPopupVar(-1)">◀</button>
+      <button class="pr-vp-btn" @click="store.navPopupVar(1)">▶</button>
+      <button class="pr-vp-btn close-btn" @click="store.hideVarPopup()">✕</button>
     </div>
-    <div class="vp-list">
+    <div class="pr-vp-list">
       <div v-for="(v, i) in store.varPopupOps" :key="i"
-           class="vp-item" :class="{ current: i === store.varPopupIdx }"
+           class="pr-vp-item" :class="{ current: i === store.varPopupIdx }"
            @click="store.jumpToPopupVar(i)">
-        <span class="pm-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
-        <span v-if="v.varValue" class="pm-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
-        <span class="pm-vr-block">[{{ v.blockName }}]</span>
+        <span class="pr-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
+        <span v-if="v.varValue" class="pr-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
+        <span class="pr-vr-block">[{{ v.blockName }}]</span>
       </div>
     </div>
   </div>
@@ -33,7 +33,7 @@ const store = usePresetStore()
 function onDocClick(e: MouseEvent) {
   if (!store.varPopupOpen) return
   const target = e.target as HTMLElement
-  if (target.closest('.pm-var-popup') || target.closest('.pm-editor-ta')) return
+  if (target.closest('.pr-var-popup') || target.closest('.wb-editor-ta')) return
   store.hideVarPopup()
 }
 function onKeydown(e: KeyboardEvent) {

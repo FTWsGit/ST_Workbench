@@ -1,15 +1,15 @@
 <template>
-  <div class="pm-editor-panel pm-rce" v-if="script">
-    <div class="pm-editor-meta">
-      <span class="pm-rce-name">{{ script.scriptName || store.t('common.unnamed') }}</span>
-      <span class="pm-spacer"></span>
-      <button class="pm-btn sm" :class="{ active: mode === 'edit' }" @click="mode = 'edit'">{{ store.t('regex.editor.edit') }}</button>
-      <button class="pm-btn sm" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">{{ store.t('regex.editor.preview') }}</button>
+  <div class="wb-editor-panel rx-editor" v-if="script">
+    <div class="wb-editor-meta">
+      <span class="rx-editor-name">{{ script.scriptName || store.t('common.unnamed') }}</span>
+      <span class="wb-spacer"></span>
+      <button class="wb-btn sm" :class="{ active: mode === 'edit' }" @click="mode = 'edit'">{{ store.t('regex.editor.edit') }}</button>
+      <button class="wb-btn sm" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">{{ store.t('regex.editor.preview') }}</button>
       <template v-if="mode === 'preview'">
-        <button class="pm-btn sm" :class="{ active: !renderHtml }" @click="renderHtml = false">{{ store.t('regex.editor.plainText') }}</button>
-        <button class="pm-btn sm" :class="{ active: renderHtml }" @click="renderHtml = true">{{ store.t('regex.editor.html') }}</button>
+        <button class="wb-btn sm" :class="{ active: !renderHtml }" @click="renderHtml = false">{{ store.t('regex.editor.plainText') }}</button>
+        <button class="wb-btn sm" :class="{ active: renderHtml }" @click="renderHtml = true">{{ store.t('regex.editor.html') }}</button>
       </template>
-      <button class="pm-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('regex.editor.settingsPanel')">⚙</button>
+      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('regex.editor.settingsPanel')">⚙</button>
     </div>
 
     <HighlightedEditor v-if="mode === 'edit'"
@@ -20,16 +20,16 @@
       :status-chars-label="store.t('common.chars')"
       :status-lines-label="store.t('common.lines')" />
 
-    <div v-else class="pm-rce-body">
-      <div v-if="!renderHtml" class="pm-rce-preview">{{ previewText }}</div>
-      <div v-else class="pm-rce-preview" v-html="previewText"></div>
+    <div v-else class="rx-editor-body">
+      <div v-if="!renderHtml" class="rx-editor-preview">{{ previewText }}</div>
+      <div v-else class="rx-editor-preview" v-html="previewText"></div>
     </div>
 
-    <div class="pm-rce-testbar">
-      <label class="pm-rx-label" style="margin:0">{{ store.t('regex.editor.testText') }}</label>
-      <textarea class="pm-rce-testinput" rows="3" v-model="testInput" :placeholder="store.t('regex.editor.testPlaceholder')"></textarea>
-      <p v-if="!findValid" class="pm-rx-err">{{ store.t('regex.editor.invalidFindRegex') }}</p>
-      <p class="pm-muted" style="font-size:12px">{{ store.t('regex.editor.previewLimitation') }}</p>
+    <div class="rx-editor-testbar">
+      <label class="rx-label" style="margin:0">{{ store.t('regex.editor.testText') }}</label>
+      <textarea class="rx-editor-testinput" rows="3" v-model="testInput" :placeholder="store.t('regex.editor.testPlaceholder')"></textarea>
+      <p v-if="!findValid" class="rx-err">{{ store.t('regex.editor.invalidFindRegex') }}</p>
+      <p class="wb-muted" style="font-size:12px">{{ store.t('regex.editor.previewLimitation') }}</p>
     </div>
   </div>
 </template>
