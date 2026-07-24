@@ -1,8 +1,8 @@
-# st-preset-manager
+# ST_Workbench
 
 [English](README_EN.md)
 
-一个为 [SillyTavern](https://github.com/SillyTavern/SillyTavern) / [TauriTavern](https://github.com/Darkatse/TauriTavern)「酒馆」设计的 Chat Completion 预设管理工具。基于 Vue 3 + Pinia + TypeScript 构建，打包为单文件脚本，直接注入到酒馆页面中运行。点击右下角的悬浮窗即可打开。
+一个为 [SillyTavern](https://github.com/SillyTavern/SillyTavern) / [TauriTavern](https://github.com/Darkatse/TauriTavern)「酒馆」设计的全内容(预设+角色卡+世界书)管理工具。基于 Vue 3 + Pinia + TypeScript 构建，打包为单文件脚本，直接注入到酒馆页面中运行。点击右下角的悬浮窗即可打开。
 
 它提供了一个占据全屏的独立面板，让你能够**可视化地编排、编辑、搜索、预览**预设中的每一个提示词块，以及绑定在预设上的正则脚本，而不再需要在酒馆原生的小弹窗里逐个翻找。
 

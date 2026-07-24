@@ -111,7 +111,7 @@ const store = usePresetStore()
 
 // Local drafts for the two controls that fire continuously while being dragged (range slider,
 // color picker). Binding these straight to store.settings meant every tick of the drag pushed
-// a reactive update through cssVars -> the .st-pm inline style -> a full style recalc, PLUS a
+// a reactive update through cssVars -> the .st-wb inline style -> a full style recalc, PLUS a
 // synchronous localStorage write, dozens of times a second — visibly janky. Now the draft only
 // updates local component state while dragging, and commits to the store (and localStorage)
 // once, on release.

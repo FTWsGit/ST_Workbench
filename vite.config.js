@@ -15,7 +15,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: 'src/main.ts',
-      name: 'STPresetManager',
+      name: 'ST_Workbench',
       fileName: 'index',
       formats: ['iife'],
     },

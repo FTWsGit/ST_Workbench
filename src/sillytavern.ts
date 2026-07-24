@@ -142,9 +142,9 @@ function ensureTopImporter(): Promise<(spec: string) => Promise<any>> {
     const top = getTopWindow() as any
     if (typeof top.__stpmImport === 'function') return top.__stpmImport
     const doc = top.document as Document
-    if (!doc.getElementById('st-pm-importer')) {
+    if (!doc.getElementById('st-wb-importer')) {
       const script = doc.createElement('script')
-      script.id = 'st-pm-importer'
+      script.id = 'st-wb-importer'
       script.type = 'module'
       script.textContent = 'window.__stpmImport = (s) => import(s);'
       doc.head!.appendChild(script)

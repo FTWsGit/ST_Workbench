@@ -56,7 +56,7 @@ export async function copyToHostClipboard(text: string): Promise<boolean> {
       return true
     }
   } catch (e) {
-    console.warn('[st-preset-manager] navigator.clipboard.writeText failed, falling back to execCommand:', e)
+    console.warn('[ST_Workbench] navigator.clipboard.writeText failed, falling back to execCommand:', e)
   }
   try {
     const doc: Document = hostWin.document
@@ -73,7 +73,7 @@ export async function copyToHostClipboard(text: string): Promise<boolean> {
     if (!ok) throw new Error('execCommand("copy") returned false')
     return true
   } catch (e) {
-    console.error('[st-preset-manager] Clipboard copy failed (both navigator.clipboard and execCommand):', e)
+    console.error('[ST_Workbench] Clipboard copy failed (both navigator.clipboard and execCommand):', e)
     return false
   }
 }

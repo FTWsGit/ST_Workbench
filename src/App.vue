@@ -1,8 +1,8 @@
 <template>
-  <div class="st-pm" :style="store.cssVars">
-    <Transition name="pm-fab">
-      <button v-if="!store.panelOpen" class="pm-fab" :class="{ dragging: fabDragging }"
-              :style="fabStyle" @pointerdown="onFabPointerDown" @click="onFabClick">PM</button>
+  <div class="st-wb" :style="store.cssVars">
+    <Transition name="wb-fab">
+      <button v-if="!store.panelOpen" class="wb-fab" :class="{ dragging: fabDragging }"
+              :style="fabStyle" @pointerdown="onFabPointerDown" @click="onFabClick">W</button>
     </Transition>
 
     <Transition name="pm-panel">
@@ -208,7 +208,7 @@ watch(() => store.editorJump, () => {
 // preventDefault on pointerdown), so quick taps are exactly as fast as before. Only if the timer
 // actually fires do we flip into drag mode and start suppressing the click that would otherwise
 // follow the pointerup.
-const FAB_SIZE = 48 // keep in sync with .pm-fab's width/height in main.css
+const FAB_SIZE = 48 // keep in sync with .wb-fab's width/height in main.css
 const FAB_DRAG_THRESHOLD = 4
 const FAB_LONG_PRESS_MS = 100
 const fabDragging = ref(false)
@@ -223,7 +223,7 @@ function clampFabPos(x: number, y: number) {
   const hostWin = getHostWindow()
   // Only clamps against the raw viewport box, not env(safe-area-inset-*) — reading a CSS env()
   // value back out in JS needs an extra getComputedStyle round-trip for marginal benefit here.
-  // The CSS default position (bottom/right, see .pm-fab) still honors the safe-area media query;
+  // The CSS default position (bottom/right, see .wb-fab) still honors the safe-area media query;
   // this only applies once the user has actually dragged the FAB somewhere themselves.
   const maxX = Math.max(0, hostWin.innerWidth - FAB_SIZE)
   const maxY = Math.max(0, hostWin.innerHeight - FAB_SIZE)

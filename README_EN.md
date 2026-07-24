@@ -1,8 +1,8 @@
-# st-preset-manager
+# ST_Workbench
 
 [中文](README.md)
 
-A Chat Completion preset management tool for [SillyTavern](https://github.com/SillyTavern/SillyTavern) / [TauriTavern](https://github.com/Darkatse/TauriTavern). Built with Vue 3 + Pinia + TypeScript and packaged as a single-file script that injects directly into the host page. Click the floating button in the bottom-right corner to open.
+A Content management tool for [SillyTavern](https://github.com/SillyTavern/SillyTavern) / [TauriTavern](https://github.com/Darkatse/TauriTavern). Built with Vue 3 + Pinia + TypeScript and packaged as a single-file script that injects directly into the host page. Click the floating button in the bottom-right corner to open.
 
 It provides a fullscreen independent panel for **visually organizing, editing, searching, and previewing** every prompt block in your preset, as well as the regex scripts bound to it — no more digging through SillyTavern's native small popups one by one.
 

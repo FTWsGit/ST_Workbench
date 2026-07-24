@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap');
 
-.st-pm {
+.st-wb {
   --pm-bg:#0f1017;--pm-bg-s:#15161f;--pm-bg-e:#1b1d27;--pm-bg-h:#232530;--pm-bg-a:#2b2e3c;
   --pm-bg-input:#141520;--pm-border:#282a3a;--pm-border-f:#c8954a;
   --pm-tx:#ccc8be;--pm-tx2:#78768a;--pm-tx3:#809596;
@@ -16,24 +16,24 @@
   font-family:var(--pm-fm);color:var(--pm-tx);font-size:16px;line-height:1.5;
   position:relative;width:100%;height:100%;
 }
-.st-pm *,.st-pm *::before,.st-pm *::after{box-sizing:border-box;margin:0;padding:0}
-.st-pm button{font-family:var(--pm-fm);cursor:pointer;border:none;background:none;color:var(--pm-tx);font-size:13px}
-.st-pm input,.st-pm select,.st-pm textarea{font-family:var(--pm-fm);color:var(--pm-tx);background:var(--pm-bg-input);border:1px solid var(--pm-border);border-radius:var(--pm-rs);padding:6px 10px;font-size:13px;outline:none;transition:border var(--pm-tr)}
-.st-pm input:focus,.st-pm select:focus,.st-pm textarea:focus{border-color:var(--pm-border-f)}
-.st-pm select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2378768a'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px}
-.st-pm ::-webkit-scrollbar{width:6px;height:6px}
-.st-pm ::-webkit-scrollbar-track{background:transparent}
-.st-pm ::-webkit-scrollbar-thumb{background:var(--pm-border);border-radius:3px}
-.st-pm ::-webkit-scrollbar-thumb:hover{background:#3a3c4e}
+.st-wb *,.st-wb *::before,.st-wb *::after{box-sizing:border-box;margin:0;padding:0}
+.st-wb button{font-family:var(--pm-fm);cursor:pointer;border:none;background:none;color:var(--pm-tx);font-size:13px}
+.st-wb input,.st-wb select,.st-wb textarea{font-family:var(--pm-fm);color:var(--pm-tx);background:var(--pm-bg-input);border:1px solid var(--pm-border);border-radius:var(--pm-rs);padding:6px 10px;font-size:13px;outline:none;transition:border var(--pm-tr)}
+.st-wb input:focus,.st-wb select:focus,.st-wb textarea:focus{border-color:var(--pm-border-f)}
+.st-wb select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2378768a'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px}
+.st-wb ::-webkit-scrollbar{width:6px;height:6px}
+.st-wb ::-webkit-scrollbar-track{background:transparent}
+.st-wb ::-webkit-scrollbar-thumb{background:var(--pm-border);border-radius:3px}
+.st-wb ::-webkit-scrollbar-thumb:hover{background:#3a3c4e}
 
 /* FAB */
-.pm-fab{position:absolute;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;background:var(--pm-bg-e)!important;border:1px solid rgba(200,149,74,.4)!important;color:var(--pm-ac);font-size:15px;font-weight:700;cursor:pointer;z-index:9999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:all .2s;pointer-events:auto!important;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.pm-fab:hover{transform:scale(1.1);box-shadow:0 0 24px rgba(200,149,74,.3)}
+.wb-fab{position:absolute;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;background:var(--pm-bg-e)!important;border:1px solid rgba(200,149,74,.4)!important;color:var(--pm-ac);font-size:15px;font-weight:700;cursor:pointer;z-index:9999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:all .2s;pointer-events:auto!important;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.wb-fab:hover{transform:scale(1.1);box-shadow:0 0 24px rgba(200,149,74,.3)}
 /* While the long-press-drag is active (see App.vue's onFabPointerDown): no transition (it would
    lag a whole frame behind the pointer), a "grabbing" cursor, and a slightly stronger shadow/scale
    so there's an unambiguous visual "you're moving this now" cue distinct from the plain :hover
    state above. */
-.pm-fab.dragging{transition:none;cursor:grabbing;box-shadow:0 6px 28px rgba(0,0,0,.6);transform:scale(1.08)}
+.wb-fab.dragging{transition:none;cursor:grabbing;box-shadow:0 6px 28px rgba(0,0,0,.6);transform:scale(1.08)}
 
 /* Panel (fullscreen overlay) */
 .pm-panel{position:absolute;inset:0;z-index:100000;display:flex;flex-direction:column;background:var(--pm-bg);color:var(--pm-tx);font-family:var(--pm-fm);overflow:hidden;pointer-events:auto}
@@ -106,11 +106,11 @@
 .pm-block-act{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:13px;color:var(--pm-tx3);transition:all var(--pm-tr)}
 .pm-block-act:hover{background:var(--pm-bg-h);color:var(--pm-tx)}
 .pm-block-act.del:hover{color:var(--pm-dg);background:var(--pm-dg-d)}
-.st-pm .drag-over-top{box-shadow:inset 0 2px 0 var(--pm-ac)!important}
-.st-pm .drag-over-bottom{box-shadow:inset 0 -2px 0 var(--pm-ac)!important}
+.st-wb .drag-over-top{box-shadow:inset 0 2px 0 var(--pm-ac)!important}
+.st-wb .drag-over-bottom{box-shadow:inset 0 -2px 0 var(--pm-ac)!important}
 
 /* Group Header */
-.st-pm .pm-group-header {
+.st-wb .pm-group-header {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -125,17 +125,17 @@
   background: var(--pm-bg-e);
   font-weight: 600;
 }
-.st-pm .pm-group-header:hover {
+.st-wb .pm-group-header:hover {
   background: var(--pm-bg-h);
 }
-.st-pm .pm-group-header.selected {
+.st-wb .pm-group-header.selected {
   background: var(--pm-bg-a);
   border-color: rgba(200, 149, 74, 0.3);
 }
-.st-pm .pm-group-header.disabled {
+.st-wb .pm-group-header.disabled {
   opacity: 0.5;
 }
-.st-pm .pm-group-toggle {
+.st-wb .pm-group-toggle {
   color: var(--pm-tx3);
   width: 28px;
   height: 28px;
@@ -147,17 +147,17 @@
   border-radius: var(--pm-rs);
   transition: all var(--pm-tr);
 }
-.st-pm .pm-group-toggle:hover {
+.st-wb .pm-group-toggle:hover {
   background: var(--pm-bg-h);
   color: var(--pm-tx);
 }
-.st-pm .pm-group-toggle.collapsed svg {
+.st-wb .pm-group-toggle.collapsed svg {
   transform: rotate(-90deg);
 }
-.st-pm .pm-group-toggle svg {
+.st-wb .pm-group-toggle svg {
   transition: transform var(--pm-tr);
 }
-.st-pm .pm-group-name {
+.st-wb .pm-group-name {
   flex: 1;
   font-size: 14px;
   white-space: nowrap;
@@ -165,7 +165,7 @@
   text-overflow: ellipsis;
   min-width: 0;
 }
-.st-pm .pm-group-count {
+.st-wb .pm-group-count {
   font-size: 11px;
   color: var(--pm-tx3);
   background: var(--pm-bg-input);
@@ -174,7 +174,7 @@
   flex-shrink: 0;
 }
 
-.st-pm .pm-group-name-input {
+.st-wb .pm-group-name-input {
   flex: 1;
   font-size: 14px;
   font-weight: 500;
@@ -186,12 +186,12 @@
   min-width: 0;
   outline: none;
 }
-.st-pm .pm-group-name-input:focus {
+.st-wb .pm-group-name-input:focus {
   border-color: var(--pm-ac);
   box-shadow: 0 0 0 2px rgba(200, 149, 74, 0.15);
 }
 
-.st-pm .pm-block-name-input {
+.st-wb .pm-block-name-input {
   flex: 1;
   font-size: 14px;
   font-weight: 500;
@@ -203,21 +203,21 @@
   min-width: 0;
   outline: none;
 }
-.st-pm .pm-block-name-input:focus {
+.st-wb .pm-block-name-input:focus {
   border-color: var(--pm-ac);
   box-shadow: 0 0 0 2px rgba(200, 149, 74, 0.15);
 }
 
 /* Nested block indent */
-.st-pm .pm-block-item.nested {
+.st-wb .pm-block-item.nested {
   background: var(--pm-bg);
   margin-left: 4px;
   border-left: 2px solid var(--pm-border);
 }
 
 /* Multi-select highlight */
-.st-pm .pm-block-item.selected,
-.st-pm .pm-group-header.selected {
+.st-wb .pm-block-item.selected,
+.st-wb .pm-group-header.selected {
   background: var(--pm-bg-a);
   border-color: rgba(200, 149, 74, 0.3);
 }
@@ -264,7 +264,7 @@
 .pm-line-nums .ln.search-cur{color:var(--pm-bg);background:var(--pm-ac);border-radius:2px}
 .pm-editor-wrap{flex:1;position:relative;overflow:hidden}
 /* Qualified with the .pm-editor-wrap ancestor (not just the bare class) so these reliably
-   beat the base ".st-pm textarea{...}" rule above, which has higher specificity (0,1,1) than
+   beat the base ".st-wb textarea{...}" rule above, which has higher specificity (0,1,1) than
    a single class selector (0,1,0) would. Without this, the base rule's opaque background and
    visible text color silently won, leaving a fully-opaque, wrong-font-size textarea sitting on
    top of (z-index 2) and completely hiding the correctly-highlighted <pre> underneath. */
@@ -279,35 +279,35 @@
 .pm-editor-wrap .pm-line-mirror,.pm-editor-wrap .pm-lh-measure{position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;height:auto;padding:0 16px;font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:var(--pm-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
 .pm-statusbar{display:flex;align-items:center;gap:16px;padding:3px 20px;background:var(--pm-bg-s);border-top:1px solid var(--pm-border);font-size:13px;color:var(--pm-tx3);font-family:var(--pm-fc);flex-shrink:0}
 
-/* Syntax Highlight — scoped under .st-pm: these class names (hl-b, hl-k, ...) are short and
+/* Syntax Highlight — scoped under .st-wb: these class names (hl-b, hl-k, ...) are short and
    generic enough that an unscoped rule could collide with or lose to styles defined elsewhere
    on the host SillyTavern page (which loads many extensions into one shared, un-isolated DOM). */
-.st-pm .hl-b{color:var(--hl-b)}
-.st-pm .hl-k{color:var(--hl-k)}
-.st-pm .hl-s{color:var(--hl-s)}
-.st-pm .hl-v{color:var(--hl-v)}
-.st-pm .hl-val{color:var(--hl-c)}
-.st-pm .hl-cm{color:var(--hl-cm);font-style:italic}
-.st-pm .hl-m{color:var(--hl-m)}
-.st-pm .hl-sq{color:var(--hl-sq)}
-.st-pm .hl-dq{color:var(--hl-dq)}
-.st-pm .hl-ab{color:var(--hl-ab)}
-.st-pm .hl-sb{color:var(--hl-sb)}
+.st-wb .hl-b{color:var(--hl-b)}
+.st-wb .hl-k{color:var(--hl-k)}
+.st-wb .hl-s{color:var(--hl-s)}
+.st-wb .hl-v{color:var(--hl-v)}
+.st-wb .hl-val{color:var(--hl-c)}
+.st-wb .hl-cm{color:var(--hl-cm);font-style:italic}
+.st-wb .hl-m{color:var(--hl-m)}
+.st-wb .hl-sq{color:var(--hl-sq)}
+.st-wb .hl-dq{color:var(--hl-dq)}
+.st-wb .hl-ab{color:var(--hl-ab)}
+.st-wb .hl-sb{color:var(--hl-sb)}
 
 
 /* Var click popup — small floating popup near a clicked {{...var...}}, ported from MiMo */
-.st-pm .pm-var-popup{position:absolute;z-index:100003;background:var(--pm-bg-e);border:1px solid rgba(200,149,74,.4);border-radius:var(--pm-r);box-shadow:0 8px 30px rgba(0,0,0,.45);min-width:340px;max-width:520px;display:flex;flex-direction:column;animation:pm-fadeUp .12s ease;pointer-events:auto}
-.st-pm .vp-header{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--pm-border);font-size:12px;flex-shrink:0}
-.st-pm .vp-varname{color:var(--hl-v);font-weight:600;font-family:var(--pm-fc);font-size:14px}
-.st-pm .vp-count{color:var(--pm-tx3);font-size:13px}
-.st-pm .vp-spacer{flex:1}
-.st-pm .vp-btn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:11px;color:var(--pm-tx2);transition:all var(--pm-tr)}
-.st-pm .vp-btn:hover{background:var(--pm-bg-h);color:var(--pm-tx)}
-.st-pm .vp-btn.close-btn:hover{background:var(--pm-dg-d);color:var(--pm-dg)}
-.st-pm .vp-list{overflow-y:auto;padding:3px;max-height:200px}
-.st-pm .vp-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--pm-rs);font-size:11.5px;font-family:var(--pm-fc);cursor:pointer;transition:background var(--pm-tr)}
-.st-pm .vp-item:hover{background:var(--pm-bg-h)}
-.st-pm .vp-item.current{background:var(--pm-ac-d)}
+.st-wb .pm-var-popup{position:absolute;z-index:100003;background:var(--pm-bg-e);border:1px solid rgba(200,149,74,.4);border-radius:var(--pm-r);box-shadow:0 8px 30px rgba(0,0,0,.45);min-width:340px;max-width:520px;display:flex;flex-direction:column;animation:pm-fadeUp .12s ease;pointer-events:auto}
+.st-wb .vp-header{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--pm-border);font-size:12px;flex-shrink:0}
+.st-wb .vp-varname{color:var(--hl-v);font-weight:600;font-family:var(--pm-fc);font-size:14px}
+.st-wb .vp-count{color:var(--pm-tx3);font-size:13px}
+.st-wb .vp-spacer{flex:1}
+.st-wb .vp-btn{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:11px;color:var(--pm-tx2);transition:all var(--pm-tr)}
+.st-wb .vp-btn:hover{background:var(--pm-bg-h);color:var(--pm-tx)}
+.st-wb .vp-btn.close-btn:hover{background:var(--pm-dg-d);color:var(--pm-dg)}
+.st-wb .vp-list{overflow-y:auto;padding:3px;max-height:200px}
+.st-wb .vp-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--pm-rs);font-size:11.5px;font-family:var(--pm-fc);cursor:pointer;transition:background var(--pm-tr)}
+.st-wb .vp-item:hover{background:var(--pm-bg-h)}
+.st-wb .vp-item.current{background:var(--pm-ac-d)}
 
 /* Right panels */
 .pm-right-panel{width:360px;background:var(--pm-bg-s);border-left:1px solid var(--pm-border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
@@ -327,50 +327,50 @@
 .pm-vr-group{margin:7px 4px 3px;padding:4px 6px 2px;border-top:1px solid rgba(40,42,58,.55);color:var(--pm-ac-h);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .pm-vr-val{color:var(--pm-tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .pm-vr-block{color:var(--pm-tx);margin-left:auto;flex-shrink:0;font-size:13px}
-.st-pm .icon-btn{padding:2px 6px}
-.st-pm .icon-btn.active{color:var(--pm-ac);border-color:rgba(200,149,74,.5);background:var(--pm-ac-d)}
+.st-wb .icon-btn{padding:2px 6px}
+.st-wb .icon-btn.active{color:var(--pm-ac);border-color:rgba(200,149,74,.5);background:var(--pm-ac-d)}
 
 /* Preview — embedded by default (pushes/squeezes the editor, like Var Nav), .float switches it
    to a floating overlay drawer instead. Toggled via the 📌 button in the panel header. */
 .pm-preview-panel{background:var(--pm-bg-e);border-left:1px solid rgba(200,149,74,.25);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
 .pm-preview-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:60;box-shadow:-8px 0 40px rgba(0,0,0,.55)}
-.st-pm .pp-tools{padding:10px 16px;border-bottom:1px solid var(--pm-border);flex-shrink:0}
-.st-pm .pp-output-wrap{flex:1;overflow:auto;padding:8px}
-.st-pm .pb-body .phl,.st-pm .pp-raw .phl{background:rgba(200,149,74,.22);color:var(--pm-ac-h);border-radius:2px;padding:0 2px}
+.st-wb .pp-tools{padding:10px 16px;border-bottom:1px solid var(--pm-border);flex-shrink:0}
+.st-wb .pp-output-wrap{flex:1;overflow:auto;padding:8px}
+.st-wb .pb-body .phl,.st-wb .pp-raw .phl{background:rgba(200,149,74,.22);color:var(--pm-ac-h);border-radius:2px;padding:0 2px}
 
 /* Mode tabs (Per-Block vs Full Text) */
-.st-pm .pm-preview-tabs{display:flex;gap:4px;background:var(--pm-bg-input);border:1px solid var(--pm-border);border-radius:var(--pm-rs);padding:3px}
-.st-pm .pm-preview-tab{flex:1;padding:6px 10px;border-radius:3px;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--pm-tx2);transition:all var(--pm-tr)}
-.st-pm .pm-preview-tab:hover{color:var(--pm-tx)}
-.st-pm .pm-preview-tab.active{background:var(--pm-ac-d);color:var(--pm-ac)}
-.st-pm .pp-mode-hint{font-size:12px;line-height:1.5;color:var(--pm-tx3);margin-top:8px}
-.st-pm .pp-error{font-size:12px;color:var(--pm-dg);background:var(--pm-dg-d);border-radius:var(--pm-rs);padding:6px 10px;margin-top:8px;line-height:1.5}
+.st-wb .pm-preview-tabs{display:flex;gap:4px;background:var(--pm-bg-input);border:1px solid var(--pm-border);border-radius:var(--pm-rs);padding:3px}
+.st-wb .pm-preview-tab{flex:1;padding:6px 10px;border-radius:3px;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--pm-tx2);transition:all var(--pm-tr)}
+.st-wb .pm-preview-tab:hover{color:var(--pm-tx)}
+.st-wb .pm-preview-tab.active{background:var(--pm-ac-d);color:var(--pm-ac)}
+.st-wb .pp-mode-hint{font-size:12px;line-height:1.5;color:var(--pm-tx3);margin-top:8px}
+.st-wb .pp-error{font-size:12px;color:var(--pm-dg);background:var(--pm-dg-d);border-radius:var(--pm-rs);padding:6px 10px;margin-top:8px;line-height:1.5}
 
 /* Preview blocks — one card per prompt block, separated & collapsible */
-.st-pm .pb-block{margin-bottom:6px;background:var(--pm-bg);border:1px solid var(--pm-border);border-radius:var(--pm-r);overflow:hidden}
-.st-pm .pb-header{font-size:13px;font-weight:700;padding:10px 14px;border-bottom:1px solid rgba(40,42,58,.6);display:flex;gap:8px;align-items:center;cursor:pointer;transition:background var(--pm-tr);background:var(--pm-bg)}
-.st-pm .pb-header:hover{background:var(--pm-bg-h)}
-.st-pm .pb-role{text-transform:uppercase;letter-spacing:.04em;font-size:12px;padding:2px 7px;border-radius:3px}
-.st-pm .pb-role.pb-sys{background:rgba(160,100,220,.18);color:#c084fc}
-.st-pm .pb-role.pb-user{background:rgba(60,140,255,.18);color:#60a5fa}
-.st-pm .pb-role.pb-asst{background:rgba(74,222,128,.16);color:#4ade80}
-.st-pm .pb-role.pb-marker{background:rgba(200,149,74,.18);color:var(--pm-ac-h)}
-.st-pm .pb-name{color:var(--pm-tx);font-size:13px;font-weight:600}
-.st-pm .pb-msg-count{color:var(--pm-tx3);font-size:11px;font-weight:600}
-.st-pm .pb-body{padding:10px 14px;margin:0}
-.st-pm .pb-block.collapsed .pb-body{display:none}
-.st-pm .pb-block.collapsed{padding-bottom:0}
-.st-pm .pb-toggle{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:11px;color:var(--pm-tx2);transition:all var(--pm-tr);margin-left:auto}
-.st-pm .pb-header:hover .pb-toggle{color:var(--pm-tx)}
-.st-pm .pb-block.collapsed .pb-toggle{transform:rotate(-90deg)}
-.st-pm .pb-msg{padding:6px 0}
-.st-pm .pb-msg + .pb-msg{border-top:1px solid rgba(40,42,58,.5);margin-top:2px}
-.st-pm .pb-msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.st-pm .pb-tokens{font-family:var(--pm-fc);font-size:11px;color:var(--pm-tx3)}
-.st-pm .pb-msg-text{font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--pm-tx);margin:0}
+.st-wb .pb-block{margin-bottom:6px;background:var(--pm-bg);border:1px solid var(--pm-border);border-radius:var(--pm-r);overflow:hidden}
+.st-wb .pb-header{font-size:13px;font-weight:700;padding:10px 14px;border-bottom:1px solid rgba(40,42,58,.6);display:flex;gap:8px;align-items:center;cursor:pointer;transition:background var(--pm-tr);background:var(--pm-bg)}
+.st-wb .pb-header:hover{background:var(--pm-bg-h)}
+.st-wb .pb-role{text-transform:uppercase;letter-spacing:.04em;font-size:12px;padding:2px 7px;border-radius:3px}
+.st-wb .pb-role.pb-sys{background:rgba(160,100,220,.18);color:#c084fc}
+.st-wb .pb-role.pb-user{background:rgba(60,140,255,.18);color:#60a5fa}
+.st-wb .pb-role.pb-asst{background:rgba(74,222,128,.16);color:#4ade80}
+.st-wb .pb-role.pb-marker{background:rgba(200,149,74,.18);color:var(--pm-ac-h)}
+.st-wb .pb-name{color:var(--pm-tx);font-size:13px;font-weight:600}
+.st-wb .pb-msg-count{color:var(--pm-tx3);font-size:11px;font-weight:600}
+.st-wb .pb-body{padding:10px 14px;margin:0}
+.st-wb .pb-block.collapsed .pb-body{display:none}
+.st-wb .pb-block.collapsed{padding-bottom:0}
+.st-wb .pb-toggle{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:var(--pm-rs);font-size:11px;color:var(--pm-tx2);transition:all var(--pm-tr);margin-left:auto}
+.st-wb .pb-header:hover .pb-toggle{color:var(--pm-tx)}
+.st-wb .pb-block.collapsed .pb-toggle{transform:rotate(-90deg)}
+.st-wb .pb-msg{padding:6px 0}
+.st-wb .pb-msg + .pb-msg{border-top:1px solid rgba(40,42,58,.5);margin-top:2px}
+.st-wb .pb-msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.st-wb .pb-tokens{font-family:var(--pm-fc);font-size:11px;color:var(--pm-tx3)}
+.st-wb .pb-msg-text{font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--pm-tx);margin:0}
 
 /* Full-text raw preview */
-.st-pm .pp-raw{font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--pm-tx);margin:0}
+.st-wb .pp-raw{font-family:var(--pm-ff);font-size:var(--pm-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--pm-tx);margin:0}
 
 
 /* Modals */
@@ -439,8 +439,8 @@
 .pm-toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
 /* Animations */
-.pm-fab-enter-active,.pm-fab-leave-active{transition:opacity .2s ease}
-.pm-fab-enter-from,.pm-fab-leave-to{opacity:0}
+.wb-fab-enter-active,.wb-fab-leave-active{transition:opacity .2s ease}
+.wb-fab-enter-from,.wb-fab-leave-to{opacity:0}
 .pm-panel-enter-active,.pm-panel-leave-active{transition:all .25s ease}
 .pm-panel-enter-from{opacity:0;transform:scale(.97)}
 .pm-panel-leave-to{opacity:0;transform:scale(.97)}
@@ -684,7 +684,7 @@
   .pm-header{padding-top:max(6px, env(safe-area-inset-top))}
   .pm-sidebar{padding-bottom:env(safe-area-inset-bottom)}
   .pm-block-list{padding-bottom:calc(3px + env(safe-area-inset-bottom))}
-  .pm-fab{bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right))}
+  .wb-fab{bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right))}
   .pm-right-panel,
   .pm-preview-panel{padding-bottom:env(safe-area-inset-bottom)}
 
@@ -701,5 +701,5 @@
   .pm-editor-meta{flex-wrap:nowrap;gap:8px;padding:8px 12px}
   .pm-rce-name{min-width:0}
 
-  .pm-fab{bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right))}
+  .wb-fab{bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right))}
 }

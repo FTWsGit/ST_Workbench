@@ -31,7 +31,7 @@ export function useUiState() {
 
   function loadSettings(): Settings {
     try {
-      const s = localStorage.getItem('st-pm-settings')
+      const s = localStorage.getItem('st-wb-settings')
       if (s) {
         const p = JSON.parse(s)
         return {
@@ -42,7 +42,7 @@ export function useUiState() {
     } catch {}
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
   }
-  function saveSettings() { localStorage.setItem('st-pm-settings', JSON.stringify(settings.value)) }
+  function saveSettings() { localStorage.setItem('st-wb-settings', JSON.stringify(settings.value)) }
 
   // useI18n reads off the same `settings` ref this composable owns — language is just another
   // Settings field, persisted through the loadSettings/saveSettings path above, not a second

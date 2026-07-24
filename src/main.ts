@@ -19,15 +19,15 @@ function mount() {
   // inject a <style> tag into the iframe's own document and then cloning it over —
   // that had a real race condition (the clone could run before or after injection)
   // and, even when it "worked", was one extra layer of indirection for no benefit.
-  if (!targetDoc.getElementById('st-preset-manager-style')) {
+  if (!targetDoc.getElementById('ST_Workbench-style')) {
     const style = targetDoc.createElement('style')
-    style.id = 'st-preset-manager-style'
+    style.id = 'ST_Workbench-style'
     style.textContent = mainCss
     targetDoc.head!.appendChild(style)
   }
 
   const el = targetDoc.createElement('div')
-  el.id = 'st-preset-manager'
+  el.id = 'ST_Workbench'
   // Appended to <html> (documentElement), not <body>, AND given its own explicit
   // position:fixed + huge z-index here (inline, so nothing in main.css can accidentally lose
   // this cascade fight) rather than leaving it as a plain unstyled div. This spot used to just
@@ -66,7 +66,7 @@ function mount() {
   // and browsers elevate it to a special viewport-layer above <html>'s other
   // children when <html> has a transform. Being INSIDE <body> lets our z-index
   // compete within <body>'s stacking context instead of losing to <body> itself.
-  // Every actual UI element inside (.pm-fab, .pm-panel, the mobile drawers/sheets, etc.) is
+  // Every actual UI element inside (.wb-fab, .pm-panel, the mobile drawers/sheets, etc.) is
   // `position:absolute` in main.css, not `fixed` — they resolve against THIS single positioned,
   // viewport-sized anchor, so there's only one stacking-context boundary to reason about instead
   // of one per element (each of which would otherwise have had to independently win the same
@@ -79,7 +79,7 @@ function mount() {
   el.style.height = '100dvh' // dynamic viewport height for mobile nav-bar safety
   el.style.zIndex = '2147483647' // max valid CSS z-index
   el.style.pointerEvents = 'none' // covers the full screen at all times now — see main.css's
-  // pointer-events:auto on .pm-fab/.pm-panel/.pm-var-popup, the only parts of this that are
+  // pointer-events:auto on .wb-fab/.pm-panel/.pm-var-popup, the only parts of this that are
   // ever actually visible, so clicks anywhere else on the host page still reach it normally.
   targetDoc.body.appendChild(el)
 
@@ -93,7 +93,7 @@ function mount() {
   try {
     const htmlStyle = targetDoc.defaultView?.getComputedStyle(targetDoc.documentElement)
     if (htmlStyle && (htmlStyle.transform !== 'none' || htmlStyle.perspective !== 'none' || htmlStyle.willChange.includes('transform') || htmlStyle.filter !== 'none')) {
-      console.warn('[st-preset-manager] Host <html> has a transform/perspective/filter/will-change set. Sizing (vw/vh) is unaffected, but if that transform includes an actual translation, this UI\'s top-left corner may be offset from the real viewport corner. Host page CSS is the cause, not this extension.')
+      console.warn('[ST_Workbench] Host <html> has a transform/perspective/filter/will-change set. Sizing (vw/vh) is unaffected, but if that transform includes an actual translation, this UI\'s top-left corner may be offset from the real viewport corner. Host page CSS is the cause, not this extension.')
     }
   } catch (e) {
     // getComputedStyle across documents can throw in stricter embedding contexts; this check is

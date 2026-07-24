@@ -100,7 +100,7 @@ export interface Settings {
   language: 'zh-CN' | 'en'
   /** FAB's explicit top-left position (px, in viewport coords — see App.vue's onFabPointerDown),
    *  set the first time the user long-press-drags it. `null` means "use the CSS default"
-   *  (bottom:24px/right:24px, see .pm-fab in main.css), which also stays responsive to the
+   *  (bottom:24px/right:24px, see .wb-fab in main.css), which also stays responsive to the
    *  mobile safe-area media query — an explicit saved position deliberately overrides that. */
   fabPos: { x: number; y: number } | null
 }
