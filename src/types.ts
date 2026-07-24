@@ -34,6 +34,30 @@ export interface FlatNode {
 }
 
 export interface PresetData {
+  openai_max_context: number;
+  openai_max_tokens: number;
+
+  /** 每次生成几个回复 */
+  n: number;
+
+  /** 流式传输 */
+  stream_openai: boolean;
+
+  temperature: number;
+  frequency_penalty: number;
+  presence_penalty: number;
+  top_p: number;
+  repetition_penalty: number;
+  min_p: number;
+  top_k: number;
+  top_a: number;
+
+  /** -1 表示随机 */
+  seed: number;
+
+  /** 压缩系统消息: 将连续的系统消息合并为一条消息 */
+  squash_system_messages: boolean;
+
   prompts: PresetBlock[]
   prompt_order: { order: OrderItem[]; [k: string]: any }[]
   [k: string]: any
