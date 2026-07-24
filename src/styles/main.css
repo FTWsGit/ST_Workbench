@@ -351,9 +351,9 @@
 .st-wb .pr-pb-header{font-size:13px;font-weight:700;padding:10px 14px;border-bottom:1px solid rgba(40,42,58,.6);display:flex;gap:8px;align-items:center;cursor:pointer;transition:background var(--wb-tr);background:var(--wb-bg)}
 .st-wb .pr-pb-header:hover{background:var(--wb-bg-h)}
 .st-wb .pr-pb-role{text-transform:uppercase;letter-spacing:.04em;font-size:12px;padding:2px 7px;border-radius:3px}
-.st-wb .pr-pb-role.pb-sys{background:rgba(160,100,220,.18);color:#c084fc}
-.st-wb .pr-pb-role.pb-user{background:rgba(60,140,255,.18);color:#60a5fa}
-.st-wb .pr-pb-role.pb-asst{background:rgba(74,222,128,.16);color:#4ade80}
+.st-wb .pr-pb-role.pb-sys{background: rgba(236, 72, 153, 0.20);color: #f9a8d4;}
+.st-wb .pr-pb-role.pb-user{background: rgba(0, 178, 255, 0.25);color: #9ad9ff;}
+.st-wb .pr-pb-role.pb-asst{background: rgba(74, 222, 128, 0.18);color: #8af0a9;}
 .st-wb .pr-pb-role.pb-marker{background:rgba(200,149,74,.18);color:var(--wb-ac-h)}
 .st-wb .pr-pb-name{color:var(--wb-tx);font-size:13px;font-weight:600}
 .st-wb .pr-pb-msg-count{color:var(--wb-tx3);font-size:11px;font-weight:600}
