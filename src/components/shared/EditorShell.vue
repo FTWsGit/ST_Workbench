@@ -8,7 +8,9 @@
     </div>
   </div>
   <PresetContentEditor v-else-if="tabsStore.activeTab.domain === 'preset'" />
-  <RegexContentEditor v-else-if="tabsStore.activeTab.domain === 'regex'" />
+  <RegexContentEditor v-else-if="tabsStore.activeTab.domain === 'regex'"
+    :scripts="store.regexScripts" workspace="preset" :t="store.t"
+    :editor-font-size="store.settings.editorFontSize" :editor-font-family="store.settings.editorFontFamily" />
 </template>
 
 <script setup lang="ts">

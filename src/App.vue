@@ -56,7 +56,13 @@
 
         <div class="wb-main">
           <PresetSidebar v-if="tabsStore.sidebarMode === 'preset'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
-          <RegexSidebar v-else-if="tabsStore.sidebarMode === 'regex'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
+          <RegexSidebar v-else-if="tabsStore.sidebarMode === 'regex'"
+            :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'"
+            :scripts="store.regexScripts" workspace="preset" :t="store.t"
+            :on-add="store.addRegexScript" :on-delete="store.deleteRegexScript" :on-reorder="store.reorderRegexScript"
+            :sidebar-width="store.settings.sidebarWidth"
+            :on-sidebar-width-change="setRegexSidebarWidth"
+            :on-sidebar-width-commit="store.saveSettings" />
           <div class="wb-editor-col">
             <TabBar />
             <div class="wb-editor-row">
@@ -330,6 +336,13 @@ function openPanel() {
   store.panelOpen = true
   if (!store.hasData) store.loadFromContext()
 }
+
+/** RegexSidebar.vue（参数化改造后，见 regexProps.ts）拖拽 resize 时的实时宽度回调——这个赋值
+ *  本身很便宜（就是改一个 ref），真正的持久化（localStorage 写入）单独在拖拽结束时通过
+ *  onSidebarWidthCommit（绑的是 store.saveSettings）触发一次，理由见 RegexSidebarProps 里
+ *  两个 prop 各自的 doc comment。 */
+function setRegexSidebarWidth(w: number) { store.settings.sidebarWidth = w }
+
 /** Save 按钮 / Ctrl+S 永远只对当前活跃工作区生效（见 TODO.md 1.6）——现在唯一存在的工作区是
  *  'preset'，这个 if 分支今天恒真，是特意留给阶段1/2的挂载点：worldbookStore/characterStore
  *  落地后这里会加 `else if (tabsStore.activeWorkspace === 'worldbook') worldbookStore.save()`

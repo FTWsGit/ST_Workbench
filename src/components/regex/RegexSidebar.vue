@@ -1,14 +1,14 @@
 <template>
-  <aside class="wb-sidebar" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
+  <aside class="wb-sidebar" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: props.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
-      <span>{{ store.t('regex.sidebar.title', { count: store.regexScripts.length }) }}</span>
-      <ListToolbar :count="store.regexScripts.length">
-        <button class="wb-btn" @click="onAdd">{{ store.t('regex.sidebar.newScript') }}</button>
+      <span>{{ props.t('regex.sidebar.title', { count: props.scripts.length }) }}</span>
+      <ListToolbar :count="props.scripts.length">
+        <button class="wb-btn" @click="onAdd">{{ props.t('regex.sidebar.newScript') }}</button>
       </ListToolbar>
     </div>
     <div class="wb-list">
-      <p v-if="!store.regexScripts.length" class="pr-cp-empty">{{ store.t('regex.sidebar.empty') }}</p>
-      <div v-for="(r, i) in store.regexScripts" :key="r.id"
+      <p v-if="!props.scripts.length" class="pr-cp-empty">{{ props.t('regex.sidebar.empty') }}</p>
+      <div v-for="(r, i) in props.scripts" :key="r.id"
            :ref="(el) => setItemRef(el, i)"
            class="pr-block-item"
            :class="{ selected: tabsStore.activeId === 'regex:' + r.id, disabled: r.disabled, dragging: dragIdx === i,
@@ -17,10 +17,10 @@
            @pointerdown="onDragStart(i, $event)"
            @click="onItemClick(i)">
         <span class="wb-drag-handle">⠿</span>
-        <span class="wb-toggle-sw" :class="{ on: !r.disabled }" :title="store.t('regex.sidebar.toggleTitle')" @click.stop="r.disabled = !r.disabled"></span>
-        <span class="pr-block-name">{{ r.scriptName || store.t('common.unnamed') }}</span>
+        <span class="wb-toggle-sw" :class="{ on: !r.disabled }" :title="props.t('regex.sidebar.toggleTitle')" @click.stop="r.disabled = !r.disabled"></span>
+        <span class="pr-block-name">{{ r.scriptName || props.t('common.unnamed') }}</span>
         <span class="pr-block-actions">
-          <span class="pr-block-act del" :title="store.t('regex.sidebar.deleteTitle')" @click.stop="onDelete(r)">🗑</span>
+          <span class="pr-block-act del" :title="props.t('regex.sidebar.deleteTitle')" @click.stop="onDelete(r)">🗑</span>
         </span>
       </div>
     </div>
@@ -29,51 +29,50 @@
 </template>
 
 <script setup lang="ts">
+/* 正则三件套之一——参数化改造后不再 import usePresetStore()，数据源+CRUD走props，见
+ * regexProps.ts 顶部的 doc comment。tabsStore 是全局单例 store，跟背后是哪个 domain store
+ * 无关，继续直接用；domain 字符串 'regex' 也继续写死（这是"这个组件是什么"，不是"数据从哪来"）。*/
 import { watch } from 'vue'
 import { useDragReorder } from '../../composables/useDragReorder'
 import { useListScrollSync } from '../../composables/useListScrollSync'
 import { usePanelResize } from '../../composables/usePanelResize'
-import { usePresetStore } from '../../stores/presetStore'
 import { useTabsStore } from '../../stores/tabsStore'
 import type { RegexScript } from '../../types'
 import { useConfirmStore } from '../../stores/confirmStore'
 import { esc } from '../../utils'
 import ListToolbar from '../shared/ListToolbar.vue'
+import type { RegexSidebarProps } from './regexProps'
 
-// See PresetSidebar.vue's identical prop for why: this template also has two root nodes
-// (<aside> + the sibling .wb-resize-handle div at the end), so a parent's :class doesn't
-// automatically reach <aside> the way it would for a single-root component.
-const props = defineProps<{ mobileDrawerOpen?: boolean }>()
+const props = defineProps<RegexSidebarProps>()
 
 const confirmStore = useConfirmStore()
-const store = usePresetStore()
 const tabsStore = useTabsStore()
 const { dragIdx, dragOverIdx, dragOverPos, itemEls, setItemRef, onItemMouseDown, consumeSuppressClick } = useDragReorder()
 
 function onAdd() {
-  const id = store.addRegexScript()
+  const id = props.onAdd()
   if (!id) return
-  const s = store.regexScripts.find(r => r.id === id)
-  tabsStore.open({ domain: 'regex', key: id, label: s?.scriptName || store.t('common.unnamed'), workspace: 'preset' })
+  const s = props.scripts.find(r => r.id === id)
+  tabsStore.open({ domain: 'regex', key: id, label: s?.scriptName || props.t('common.unnamed'), workspace: props.workspace })
 }
 
 function onDelete(r: RegexScript) {
   confirmStore.ask({
-    title: store.t('shared.confirm.deleteRegex.title'),
-    message: store.t('shared.confirm.deleteRegex.message', { name: esc(r.scriptName || r.id) }),
-    confirmText: store.t('common.delete'),
-    cancelText: store.t('common.cancel'),
-    onConfirm: () => { store.deleteRegexScript(r.id); tabsStore.close('regex', r.id) },
+    title: props.t('shared.confirm.deleteRegex.title'),
+    message: props.t('shared.confirm.deleteRegex.message', { name: esc(r.scriptName || r.id) }),
+    confirmText: props.t('common.delete'),
+    cancelText: props.t('common.cancel'),
+    onConfirm: () => { props.onDelete(r.id); tabsStore.close('regex', r.id) },
   })
 }
 
 function onItemClick(i: number) {
   if (consumeSuppressClick()) return
-  const r = store.regexScripts[i]
-  if (r) tabsStore.open({ domain: 'regex', key: r.id, label: r.scriptName || store.t('common.unnamed'), workspace: 'preset' })
+  const r = props.scripts[i]
+  if (r) tabsStore.open({ domain: 'regex', key: r.id, label: r.scriptName || props.t('common.unnamed'), workspace: props.workspace })
 }
 function onDragStart(i: number, e: PointerEvent) {
-  onItemMouseDown(i, e, (from, to, after) => store.reorderRegexScript(from, to, after))
+  onItemMouseDown(i, e, (from, to, after) => props.onReorder(from, to, after))
 }
 
 // Scroll the active regex item into view whenever something asks for it (TabBar click, this
@@ -85,16 +84,15 @@ useListScrollSync({
   domain: 'regex',
   itemEls,
   keyOf: () => {
-    const idx = store.regexScripts.findIndex(r => r.id === tabsStore.activeTab?.key)
+    const idx = props.scripts.findIndex(r => r.id === tabsStore.activeTab?.key)
     return idx >= 0 ? idx : null
   },
 })
 
 const resize = usePanelResize({
-  getWidth: () => store.settings.sidebarWidth,
-  setWidth: (w) => { store.settings.sidebarWidth = w },
+  getWidth: () => props.sidebarWidth,
+  setWidth: (w) => props.onSidebarWidthChange(w),
   min: 220, max: 600, dir: 'right',
 })
-watch(() => resize.active.value, (v) => { if (!v) store.saveSettings() })
-
+watch(() => resize.active.value, (v) => { if (!v) props.onSidebarWidthCommit() })
 </script>

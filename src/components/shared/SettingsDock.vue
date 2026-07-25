@@ -9,7 +9,7 @@
       </div>
     </div>
     <div class="wb-settings-dock-body">
-      <component :is="formComponent" />
+      <component :is="formComponent" v-bind="formProps" />
     </div>
   </div>
 </template>
@@ -29,6 +29,18 @@ const tabsStore = useTabsStore()
 // what's actually inside each form.
 const FORMS: Record<string, any> = { regex: RegexSettingsForm, preset: PresetSettingsForm }
 const formComponent = computed(() => tabsStore.activeTab ? FORMS[tabsStore.activeTab.domain] : null)
+
+/** RegexSettingsForm.vue 参数化改造后（见 regexProps.ts）不再自己 import presetStore，这里的
+ *  <component :is> 是动态挂载点，得自己知道当前挂的是哪个表单、该喂给它什么 props。
+ *  PresetSettingsForm 还没参数化（不在这次 TODO 范围内），继续自己硬编 usePresetStore()，
+ *  这里给它传空对象即可（Vue 会把未声明的 props 当 fallthrough attrs 挂到根元素上，传空对象
+ *  就不会有任何 fallthrough，等同于以前"不传任何东西"的效果）。 */
+const formProps = computed<Record<string, any>>(() => {
+  if (tabsStore.activeTab?.domain === 'regex') {
+    return { scripts: store.regexScripts, workspace: 'preset', t: store.t }
+  }
+  return {}
+})
 
 const resize = usePanelResize({
   getWidth: () => store.settings.settingsDockWidth,
