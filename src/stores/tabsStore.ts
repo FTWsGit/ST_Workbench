@@ -10,6 +10,13 @@ export interface OpenTab {
   domain: string
   key: string
   label: string
+  /** 这个标签归属哪个顶层工作区（'preset' | 'character' | 'worldbook'，同样是字符串不是枚举，
+   *  理由跟 domain 一样）。故意跟 domain 分开、由调用方显式指定，不能从 domain 反推：预设工作区
+   *  下的正则标签 domain 是 'regex'，workspace 却是 'preset'（正则是预设工作区内的子模式，不是
+   *  独立工作区，见 TODO.md 1.5/1.6）；以后角色卡工作区里的正则标签 domain 同样是 'regex'，但
+   *  workspace 会是 'character'——同一个 domain 字符串，两种不同的 workspace 归属，只有调用方
+   *  自己知道现在开的是哪个工作区。 */
+  workspace: string
 }
 
 function tabId(t: Pick<OpenTab, 'domain' | 'key'>): string {
@@ -26,6 +33,18 @@ export const useTabsStore = defineStore('tabs', () => {
     
   const settingsDockOpen = ref(true)
   function toggleSettingsDock() { settingsDockOpen.value = !settingsDockOpen.value }
+
+  /** 当前显示的顶层工作区。阶段0先只加这个维度本身和 OpenTab 的归属标记（见上面 OpenTab.workspace
+   *  的 doc comment）——真正的 预设|角色卡|世界书 三态切换 UI、以及这个值该怎么跟 sidebarMode
+   *  配合，是阶段1/2 要做的事（TODO.md 1.4/1.6），现在唯一存在的工作区只有 'preset'，默认值就是
+   *  它。setActiveWorkspace() 先留好函数签名给以后顶层切换按钮直接调用。 */
+  const activeWorkspace = ref('preset')
+  function setActiveWorkspace(ws: string) { activeWorkspace.value = ws }
+
+  /** TabBar 只渲染当前工作区的标签子集——切到角色卡/世界书工作区时不该还看到预设/正则的标签占
+   *  着位置。它们依然原样留在 tabs 数组里，不清空、不销毁（"背景保活"，见 TODO.md 1.6），只是
+   *  不在标签栏露出；切回来的时候原样还在。 */
+  const tabsInActiveWorkspace = computed(() => tabs.value.filter(t => t.workspace === activeWorkspace.value))
 
   const sidebarMode = ref<string>('preset')
   function setSidebarMode(mode: string) { sidebarMode.value = mode }
@@ -88,6 +107,18 @@ export const useTabsStore = defineStore('tabs', () => {
     if (closingActive) activeId.value = tabs.value[0] ? tabId(tabs.value[0]) : null
   }
 
+  /** 同 closeDomain，但按 workspace 清——预设工作区一次重载/切换要连带关掉的是"这个工作区里的
+   *  全部标签"（block + 正则两个 domain 都算，因为正则是预设工作区的子模式，不是独立工作区，见
+   *  上面 OpenTab.workspace 的 doc comment），不是全部 domain。用这个而不是 closeAll()，是因为
+   *  closeAll() 会连带把角色卡/世界书工作区里跟这次预设重载完全无关的标签也清掉——工作区之间要
+   *  "背景保活"（TODO.md 1.6：切换工作区不清空、不丢改动），一个工作区内部的重载动作不该有这种
+   *  跨工作区的副作用。 */
+  function closeWorkspace(workspace: string) {
+    const closingActive = activeTab.value?.workspace === workspace
+    tabs.value = tabs.value.filter(t => t.workspace !== workspace)
+    if (closingActive) activeId.value = tabs.value[0] ? tabId(tabs.value[0]) : null
+  }
+
   /** 只同步某个标签的显示文字，不改 activeId、不触发 requestListScroll——用于"底层数据被
    *  改名了，如果它的标签正开着就把文字同步一下"这种场景（block/regex 改名输入框，逐字触发）。
    *  故意跟 open() 分开：open() 语义是"用户刚导航到这里"，理应顺带滚动侧边栏；改名不是导航，
@@ -111,5 +142,9 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
 
-  return { tabs, activeId, activeTab, open, renameTab, close, closeAll, closeDomain, focus, isOpen, sidebarMode, setSidebarMode, settingsDockOpen, toggleSettingsDock, listScrollToken, requestListScroll }
+  return {
+    tabs, activeId, activeTab, open, renameTab, close, closeAll, closeDomain, closeWorkspace, focus, isOpen,
+    sidebarMode, setSidebarMode, settingsDockOpen, toggleSettingsDock, listScrollToken, requestListScroll,
+    activeWorkspace, setActiveWorkspace, tabsInActiveWorkspace,
+  }
 })

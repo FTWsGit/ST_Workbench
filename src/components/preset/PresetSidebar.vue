@@ -316,7 +316,7 @@ const listSelection = useListSelection<number>({
     } else {
       const item = node.ref as OrderItem
       const block = store.prompts.find(p => p.identifier === item.identifier)
-      tabsStore.open({ domain: 'preset', key: item.identifier, label: block?.name || item.identifier })
+      tabsStore.open({ domain: 'preset', key: item.identifier, label: block?.name || item.identifier, workspace: 'preset' })
     }
   },
 })

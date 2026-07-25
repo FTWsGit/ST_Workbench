@@ -54,7 +54,7 @@ function onAdd() {
   const id = store.addRegexScript()
   if (!id) return
   const s = store.regexScripts.find(r => r.id === id)
-  tabsStore.open({ domain: 'regex', key: id, label: s?.scriptName || store.t('common.unnamed') })
+  tabsStore.open({ domain: 'regex', key: id, label: s?.scriptName || store.t('common.unnamed'), workspace: 'preset' })
 }
 
 function onDelete(r: RegexScript) {
@@ -70,7 +70,7 @@ function onDelete(r: RegexScript) {
 function onItemClick(i: number) {
   if (consumeSuppressClick()) return
   const r = store.regexScripts[i]
-  if (r) tabsStore.open({ domain: 'regex', key: r.id, label: r.scriptName || store.t('common.unnamed') })
+  if (r) tabsStore.open({ domain: 'regex', key: r.id, label: r.scriptName || store.t('common.unnamed'), workspace: 'preset' })
 }
 function onDragStart(i: number, e: PointerEvent) {
   onItemMouseDown(i, e, (from, to, after) => store.reorderRegexScript(from, to, after))

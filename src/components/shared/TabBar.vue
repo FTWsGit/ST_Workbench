@@ -1,6 +1,6 @@
 <template>
-  <div v-if="tabs.tabs.length" class="wb-tabbar">
-    <div v-for="t in tabs.tabs" :key="t.domain + ':' + t.key"
+  <div v-if="tabs.tabsInActiveWorkspace.length" class="wb-tabbar">
+    <div v-for="t in tabs.tabsInActiveWorkspace" :key="t.domain + ':' + t.key"
          class="wb-tab" :class="{ active: tabs.activeId === t.domain + ':' + t.key }"
          @click="tabs.focus(t.domain, t.key)"
          @mousedown.middle="tabs.close(t.domain, t.key)"

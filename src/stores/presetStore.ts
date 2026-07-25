@@ -303,7 +303,7 @@ export const usePresetStore = defineStore('main', () => {
     clearSelection()
     presetName.value = name
     rebuildVarIndex()
-    tabsStore.closeAll() // 旧标签（block、regex都算）指向的都是即将被替换掉的这份数据
+    tabsStore.closeWorkspace('preset') // 旧标签（block、regex都算，两者都属于预设工作区）指向的都是即将被替换掉的这份数据；不用 closeAll()，见 tabsStore.ts closeWorkspace() 的 doc comment
     nextTick(() => { dirty.value = false })
   }
 
@@ -426,7 +426,7 @@ export const usePresetStore = defineStore('main', () => {
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
     insertAfterActive({ identifier: id, enabled: true }, activeId)
     // 直接打开新块的标签——编辑器内容由标签驱动，不再需要桥接
-    tabsStore.open({ domain: 'preset', key: id, label: 'New Block' })
+    tabsStore.open({ domain: 'preset', key: id, label: 'New Block', workspace: 'preset' })
     showToast(t('shared.toast.blockCreated'))
   }
   function deleteBlock(gi: number) {
@@ -488,7 +488,7 @@ export const usePresetStore = defineStore('main', () => {
     insertAfterActive({ identifier, enabled: true }, activeId)
     // 打开标签让编辑器显示新加的块
     const block = prompts.value.find(p => p.identifier === identifier)
-    tabsStore.open({ domain: 'preset', key: identifier, label: block?.name || identifier })
+    tabsStore.open({ domain: 'preset', key: identifier, label: block?.name || identifier, workspace: 'preset' })
     showToast(t('shared.toast.blockAdded'))
   }
 
@@ -551,7 +551,7 @@ export const usePresetStore = defineStore('main', () => {
     // 直接打开标签——编辑器内容、展开折叠组、侧边栏高亮全部由标签驱动（见 revealAndFindGi 上方
     // 那个 watch(tabsStore.activeTab, ...)），这里不用再手动 revealAndFindGi 一次
     const block = prompts.value.find(p => p.identifier === r.blockId)
-    tabsStore.open({ domain: 'preset', key: r.blockId, label: block?.name || r.blockName })
+    tabsStore.open({ domain: 'preset', key: r.blockId, label: block?.name || r.blockName, workspace: 'preset' })
     requestEditorJump(r.line, r.col, r.ml, false)
   }
   function navSearch(dir: number) {
@@ -622,7 +622,7 @@ export const usePresetStore = defineStore('main', () => {
     const v = filteredVarOps.value[i]
     // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理，见 revealAndFindGi 上方
     const block = prompts.value.find(p => p.identifier === v.blockId)
-    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName })
+    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
     requestEditorJump(v.line, v.col, v.varName.length)
   }
   function navVar(dir: number) {
@@ -686,7 +686,7 @@ export const usePresetStore = defineStore('main', () => {
     const v = varPopupOps.value[i]
     // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理，见 revealAndFindGi 上方
     const block = prompts.value.find(p => p.identifier === v.blockId)
-    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName })
+    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
     requestEditorJump(v.line, v.col, v.varName.length)
   }
   function navPopupVar(dir: number) {

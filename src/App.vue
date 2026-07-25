@@ -13,7 +13,7 @@
                .wb-mobile-tools-sheet), since 8+ buttons don't fit a ~360px header no matter how
                much padding gets trimmed. -->
           <template v-if="!isMobile">
-            <button class="wb-btn accent" @click="store.doSavePreset()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
+            <button class="wb-btn accent" @click="onSave()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
             <div class="wb-sep"></div>
             <button class="wb-btn" @click="store.reloadPreset()">{{ store.t('shared.header.reload') }}</button>
             <button class="wb-btn" @click="store.settingsOpen = true">{{ store.t('shared.header.settings') }}</button>
@@ -39,7 +39,7 @@
           </template>
           <template v-else>
             <button class="wb-mobile-hamburger" :title="store.t('shared.mobile.sidebar')" @click="toggleMobileSidebar">☰</button>
-            <button class="wb-btn accent" @click="store.doSavePreset()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
+            <button class="wb-btn accent" @click="onSave()">{{ store.t('shared.header.save', { star: store.dirty ? ' *' : '' }) }}</button>
             <button class="wb-btn" @click="store.reloadPreset()">{{ store.t('shared.header.reload') }}</button>
             <select v-if="store.presetList.length" class="pr-preset-select" :value="store.presetName" @change="onPresetSelect($event)" :title="store.t('shared.header.switchPreset')">
               <option v-if="!store.presetList.some(p => p.name === store.presetName)" :value="store.presetName" disabled>{{ store.presetName || store.t('shared.header.noneLoaded') }}</option>
@@ -311,7 +311,7 @@ function handleKeydown(e: KeyboardEvent) {
   
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault()
-    store.doSavePreset()
+    onSave()
   }
 }
 
@@ -329,6 +329,16 @@ onUnmounted(() => {
 function openPanel() {
   store.panelOpen = true
   if (!store.hasData) store.loadFromContext()
+}
+
+/** Save 按钮 / Ctrl+S 永远只对当前活跃工作区生效（见 TODO.md 1.6）——现在唯一存在的工作区是
+ *  'preset'，这个 if 分支今天恒真，是特意留给阶段1/2的挂载点：worldbookStore/characterStore
+ *  落地后这里会加 `else if (tabsStore.activeWorkspace === 'worldbook') worldbookStore.save()`
+ *  这样的分支，Save 按钮的文案也会跟着 activeWorkspace 换成"保存世界书"/"保存角色卡"。这次先不
+ *  提前为还不存在的 store 发明假分支——阶段0拆 sillytavern.ts 时特意强调过的"不要为将来可能的
+ *  东西预先抽象"，这里同样适用。 */
+function onSave() {
+  if (tabsStore.activeWorkspace === 'preset') store.doSavePreset()
 }
 
 function toggleSearch() {
