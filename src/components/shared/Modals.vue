@@ -76,6 +76,27 @@
     </div>
   </div>
 
+  <!-- Generic Confirm Multi (confirmStore) — "close panel with unsaved changes across
+       workspaces" (see App.vue's onClosePanel()) and any future multi-document confirmation.
+       Reuses .wb-modal-list/.wb-modal-item from the "Add Hidden" dialog below, minus the
+       click-to-add behavior — this list is read-only/informational, the actual decision is the
+       Confirm/Cancel footer, hence the .static modifier (no hover affordance, not clickable). -->
+  <div v-if="confirmStore.multiOpen" class="wb-modal-overlay" @click.self="confirmStore.cancelMulti()">
+    <div class="wb-modal sm">
+      <h3>{{ confirmStore.multiTitle }}</h3>
+      <p v-if="confirmStore.multiMessage" class="wb-confirm-text" v-html="confirmStore.multiMessage"></p>
+      <div class="wb-modal-list">
+        <div v-for="(it, i) in confirmStore.multiItems" :key="i" class="wb-modal-item static">
+          <span class="wb-flex1">{{ it.label }}</span>
+        </div>
+      </div>
+      <div class="wb-modal-footer">
+        <button class="wb-btn" @click="confirmStore.cancelMulti()">{{ confirmStore.multiCancelText }}</button>
+        <button class="wb-btn accent" :class="{ 'wb-confirm-danger': confirmStore.multiDanger }" @click="confirmStore.confirmMulti()">{{ confirmStore.multiConfirmText }}</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Hidden -->
   <div v-if="store.hiddenOpen" class="wb-modal-overlay" @click.self="store.hiddenOpen = false">
     <div class="wb-modal">

@@ -35,7 +35,7 @@
               <option v-for="p in store.presetList" :key="p.name" :value="p.name">{{ p.name }}</option>
             </select>
             <span v-else-if="store.presetName" class="pr-preset-name">{{ store.presetName }}</span>
-            <button class="wb-btn close-btn" @click="store.panelOpen = false">✕</button>
+            <button class="wb-btn close-btn" @click="onClosePanel()">✕</button>
           </template>
           <template v-else>
             <button class="wb-mobile-hamburger" :title="store.t('shared.mobile.sidebar')" @click="toggleMobileSidebar">☰</button>
@@ -48,7 +48,7 @@
             <span v-else-if="store.presetName" class="pr-preset-name">{{ store.presetName }}</span>
             <div class="wb-spacer"></div>
             <button class="wb-mobile-tools-btn" :class="{ active: mobileDrawerVisible === 'tools' }" :title="store.t('shared.mobile.tools')" @click="toggleMobileTools">⋯</button>
-            <button class="wb-btn close-btn" @click="store.panelOpen = false">✕</button>
+            <button class="wb-btn close-btn" @click="onClosePanel()">✕</button>
           </template>
         </div>
 
@@ -330,7 +330,6 @@ function openPanel() {
   store.panelOpen = true
   if (!store.hasData) store.loadFromContext()
 }
-
 /** Save 按钮 / Ctrl+S 永远只对当前活跃工作区生效（见 TODO.md 1.6）——现在唯一存在的工作区是
  *  'preset'，这个 if 分支今天恒真，是特意留给阶段1/2的挂载点：worldbookStore/characterStore
  *  落地后这里会加 `else if (tabsStore.activeWorkspace === 'worldbook') worldbookStore.save()`
@@ -339,6 +338,42 @@ function openPanel() {
  *  东西预先抽象"，这里同样适用。 */
 function onSave() {
   if (tabsStore.activeWorkspace === 'preset') store.doSavePreset()
+}
+
+/** 每个工作区自己的"有没有未保存改动"，键是 workspace 字符串（跟 tabsStore.activeWorkspace/
+ *  OpenTab.workspace 用的是同一套值）。放在这里而不是 tabsStore 里，是因为要汇总的
+ *  `store.dirty`/以后的 `characterStore.dirty`/`worldbookStore.dirty` 分别来自各自的 domain
+ *  store，tabsStore 不认识它们（presetStore 已经反过来 import tabsStore 了，tabsStore 再
+ *  import 回 presetStore 会成环）——App.vue 是当前唯一同时认识所有 store 的地方，这份聚合
+ *  只能长在这儿。等阶段1/2 真的做出顶层三态切换按钮时，"红点该不该亮"直接读这个 computed 就够，
+ *  不用再重新想一遍怎么聚合。 */
+const dirtyWorkspaces = computed<Record<string, boolean>>(() => ({
+  preset: store.dirty,
+  // 阶段1/2 落地后加：character: characterStore.dirty, worldbook: worldbookStore.dirty
+}))
+
+/** 面板右上角 ✕。以前是直接 `store.panelOpen = false`，没有任何脏检查——现在有多个工作区可能
+ *  各自带着未保存改动（TODO.md 1.6：切工作区背景保活，不会自动帮你存），关闭整个面板前汇总提示
+ *  一下，防止用户忘了哪个工作区还有东西没存。注意这不是"关闭会丢数据"的警告——面板关闭只是隐藏
+ *  UI，数据仍在内存里（`openPanel()` 里 `if (!store.hasData)` 那个判断，重开面板不会丢），
+ *  这里纯粹是个提醒，所以默认按钮不走 danger 红色样式。 */
+function onClosePanel() {
+  const items = Object.entries(dirtyWorkspaces.value)
+    .filter(([, isDirty]) => isDirty)
+    .map(([ws]) => {
+      if (ws === 'preset') return { label: store.t('shared.confirm.closePanel.presetItem', { name: store.presetName || '—' }) }
+      return { label: ws } // 阶段1/2 落地后这个兜底分支不会再被走到，届时会加各自的 i18n item 文案
+    })
+  if (!items.length) { store.panelOpen = false; return }
+  confirmStore.askMulti({
+    title: store.t('shared.confirm.closePanel.title'),
+    message: store.t('shared.confirm.closePanel.message'),
+    items,
+    confirmText: store.t('shared.confirm.closePanel.confirm'),
+    cancelText: store.t('common.cancel'),
+    danger: false,
+    onConfirm: () => { store.panelOpen = false },
+  })
 }
 
 function toggleSearch() {

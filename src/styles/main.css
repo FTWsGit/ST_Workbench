@@ -380,6 +380,8 @@
 .wb-modal-list{flex:1;overflow-y:auto;margin-bottom:16px;max-height:300px}
 .wb-modal-item{padding:10px 12px;border-radius:var(--wb-rs);cursor:pointer;transition:background var(--wb-tr);display:flex;align-items:center;gap:8px}
 .wb-modal-item:hover{background:var(--wb-bg-h)}
+.wb-modal-item.static{cursor:default}
+.wb-modal-item.static:hover{background:none}
 .wb-modal-footer{display:flex;justify-content:flex-end;gap:8px}
 .wb-confirm-text{font-size:14px;line-height:1.6;color:var(--wb-tx2);margin:0 0 18px}
 .wb-confirm-text strong{color:var(--wb-tx)}

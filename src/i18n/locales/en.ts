@@ -123,6 +123,10 @@ export default {
   'shared.confirm.closeUnsaved.title': 'Close without saving?',
   'shared.confirm.closeUnsaved.message': 'You have unsaved copy/delete changes on one or both sides.',
   'shared.confirm.closeUnsaved.confirm': 'Close',
+  'shared.confirm.closePanel.title': 'Unsaved changes',
+  'shared.confirm.closePanel.message': "The following workspaces still have unsaved changes. Closing the panel won't discard them (data stays in memory), but remember to save before you come back:",
+  'shared.confirm.closePanel.confirm': 'Close anyway',
+  'shared.confirm.closePanel.presetItem': 'Preset: {name}',
 
   // ---- shared.prompt ----
   'shared.prompt.newPreset.title': 'New Preset Name',
