@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
 import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, FlatNode, SearchResult, VarOp, PreviewBlockGroup, RegexScript } from '../types'
-import * as ST from '../sillytavern'
-import type { PresetListEntry } from '../sillytavern'
+import * as ST from '../api/presetApi'
+import type { PresetListEntry } from '../api/presetApi'
+import * as Host from '../api/hostContext'
 import { macroAwareDiff, applyMultiSelect, findVarOps } from '../utils'
 import { useUiState } from '../composables/useUiState'
 import { useTabsStore } from './tabsStore'
@@ -195,7 +196,7 @@ export const usePresetStore = defineStore('main', () => {
 
   /* ====== Preview ======
    * Two modes, both driven by real SillyTavern rendering (dry-run generate), NOT by our own
-   * client-side macro simulation — see 方案B / GENERATE_AFTER_DATA in sillytavern.ts.
+   * client-side macro simulation — see 方案B / GENERATE_AFTER_DATA in api/presetApi.ts.
    *   'blocks': per-prompt-block cards, via the openai.js promptManager singleton (方案B).
    *   'raw':    one top-to-bottom concatenated prompt, via the GENERATE_AFTER_DATA event.
    */
@@ -339,7 +340,7 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   function loadPresetByName(name: string, opts: { silent?: boolean } = {}) {
-    ST.invalidateCache()
+    Host.invalidateCache()
     let data: PresetData | null
     try { data = ST.getPresetByName(name) }
     catch (e: any) { showToast(t('shared.toast.loadFailed', { msg: e?.message || e })); return }
@@ -352,7 +353,7 @@ export const usePresetStore = defineStore('main', () => {
   /** First load when the panel opens: whatever ST currently has selected. */
   function loadFromContext() {
     refreshPresetList()
-    ST.invalidateCache()
+    Host.invalidateCache()
     let name: string
     try { name = ST.getSelectedPresetName() }
     catch (e: any) { showToast(t('shared.toast.cantLoadContext', { msg: e?.message || e })); return }
@@ -362,7 +363,7 @@ export const usePresetStore = defineStore('main', () => {
 
   function reloadPreset() {
     refreshPresetList()
-    ST.invalidateCache()
+    Host.invalidateCache()
     let name: string
     name = presetName.value
     if (!name) { showToast(t('shared.toast.noPresetSelected')); return }

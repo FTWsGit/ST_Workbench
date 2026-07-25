@@ -1,18 +1,6 @@
-import type { PresetData } from './types'
-
-let cachedCtx: any = null
-
-function getTopWindow(): Window {
-  try { return window.top! } catch { return window }
-}
-
-function getCtx(): any {
-  if (cachedCtx) return cachedCtx
-  const top = getTopWindow()
-  try { cachedCtx = (top as any).SillyTavern?.getContext?.() || {} }
-  catch { cachedCtx = {} }
-  return cachedCtx
-}
+import type { PresetData } from '../types'
+import { getCtx, ensureTopImporter } from './hostContext'
+import { deepClonePlain } from './apiUtils'
 
 /* ====== PresetManager ======
  * Everything here goes through ST's own PresetManager rather than poking at
@@ -76,7 +64,7 @@ export function getPresetByName(name: string): PresetData | null {
   // Deep-clone into a plain object before handing it back — both lookup paths above can return
   // ST's own live (possibly Vue-reactive) object, and we never want to hold or pass around
   // someone else's reactive reference (see savePresetAs() below for why that specifically bites).
-  return JSON.parse(JSON.stringify(preset)) as PresetData
+  return deepClonePlain(preset) as PresetData
 }
 
 /** Select a preset: Can switch the preset that SillyTavern selects.
@@ -109,11 +97,11 @@ export function selectPresetByName(name: string): boolean {
  * 把我们传入的对象引用赋值进了它自己的活跃状态里，我们这边的 Vue Proxy 就会残留在 ST 的内部状态
  * 里（表现为刷新前 `pm.getCompletionPresetByName()` 一直返回一个来自*我们*这个 Vue 实例的
  * `Proxy(Object)`），直到手动刷新页面才会清掉。调用方（store.ts）负责在传进来之前就用
- * `JSON.parse(JSON.stringify(...))` 深拷贝成纯数据——这里再断言一次，双重保险。 */
+ * `deepClonePlain()` 深拷贝成纯数据——这里再断言一次，双重保险。 */
 export async function savePresetAs(name: string, data: PresetData): Promise<void> {
   const pm = getPresetManager()
   if (typeof pm.savePreset !== 'function') throw new Error('SillyTavern context 不可用（savePreset 缺失）')
-  const plain = JSON.parse(JSON.stringify(data)) as PresetData
+  const plain = deepClonePlain(data)
   await Promise.resolve(pm.savePreset(name, plain))
 }
 
@@ -121,42 +109,6 @@ export async function deletePreset(name: string): Promise<void> {
   const pm = getPresetManager()
   if (typeof pm.deletePreset !== 'function') throw new Error('SillyTavern context 不可用（deletePreset 缺失）')
   await Promise.resolve(pm.deletePreset(name))
-}
-
-/** 清除缓存 */
-export function invalidateCache() {
-  cachedCtx = null
-}
-
-/* ====== 精确预览：方案B（读 openai.js 内部真实的 promptManager 单例）======
- * 见《SillyTavern预设块渲染实现文档》第3节。核心限制：`import()` 必须在顶层文档的模块作用域里
- * 执行，否则拿到的不是 ST 页面自己用的那个单例。我们的脚本本身跑在 about:srcdoc 的 iframe 里
- * （见 hostEnv.ts 顶部注释），iframe 自己 dynamic import 一个以 '/' 开头的相对路径会按 iframe
- * 自己的 base URL（about:srcdoc，没有正常 origin）解析，行大概率会失败或指向错误的模块实例。
- * 解决方式：往顶层文档注入一个 <script type="module">，让 import() 在顶层文档的模块作用域里
- * 执行、正确解析相对路径，并把结果挂到顶层 window 上，我们再跨窗口拿这个函数引用来用。 */
-let topImporterPromise: Promise<(spec: string) => Promise<any>> | null = null
-function ensureTopImporter(): Promise<(spec: string) => Promise<any>> {
-  if (topImporterPromise) return topImporterPromise
-  topImporterPromise = (async () => {
-    const top = getTopWindow() as any
-    if (typeof top.__stpmImport === 'function') return top.__stpmImport
-    const doc = top.document as Document
-    if (!doc.getElementById('st-wb-importer')) {
-      const script = doc.createElement('script')
-      script.id = 'st-wb-importer'
-      script.type = 'module'
-      script.textContent = 'window.__stpmImport = (s) => import(s);'
-      doc.head!.appendChild(script)
-    }
-    // module script 是异步执行的（下一个 microtask/task，而不是同步 appendChild 就绪），轮询等它跑完
-    for (let i = 0; i < 100; i++) {
-      if (typeof top.__stpmImport === 'function') return top.__stpmImport
-      await new Promise(r => setTimeout(r, 10))
-    }
-    throw new Error('无法在宿主页面注入动态 import 助手（module script 未在预期时间内执行）')
-  })()
-  return topImporterPromise
 }
 
 export interface RenderedMsg {
