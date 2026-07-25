@@ -124,8 +124,8 @@ export default {
   'shared.confirm.closeUnsaved.message': 'You have unsaved copy/delete changes on one or both sides.',
   'shared.confirm.closeUnsaved.confirm': 'Close',
   'shared.confirm.closePanel.title': 'Unsaved changes',
-  'shared.confirm.closePanel.message': "The following workspaces still have unsaved changes. Closing the panel won't discard them (data stays in memory), but remember to save before you come back:",
-  'shared.confirm.closePanel.confirm': 'Close anyway',
+  'shared.confirm.closePanel.message': "The following workspaces still have unsaved changes. Closing the panel only hides it — your changes stay in memory and are restored automatically next time you open it. But if you refresh or close the SillyTavern page before saving, they'll be lost:",
+  'shared.confirm.closePanel.confirm': 'Close',
   'shared.confirm.closePanel.presetItem': 'Preset: {name}',
 
   // ---- shared.prompt ----

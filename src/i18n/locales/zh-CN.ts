@@ -123,9 +123,9 @@ export default {
   'shared.confirm.closeUnsaved.title': '不保存就关闭？',
   'shared.confirm.closeUnsaved.message': '你在一侧或两侧有未保存的复制/删除更改。',
   'shared.confirm.closeUnsaved.confirm': '关闭',
-  'shared.confirm.closePanel.title': '有未保存的更改',
-  'shared.confirm.closePanel.message': '以下工作区还有未保存的更改，关闭面板不会丢弃它们（数据仍保留在内存中），但下次打开前请记得保存：',
-  'shared.confirm.closePanel.confirm': '仍然关闭',
+  'shared.confirm.closePanel.title': '还有未保存的更改',
+  'shared.confirm.closePanel.message': '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
+  'shared.confirm.closePanel.confirm': '关闭',
   'shared.confirm.closePanel.presetItem': '预设：{name}',
 
   // ---- shared.prompt：通用输入弹窗 ----
