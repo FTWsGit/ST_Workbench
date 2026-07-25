@@ -1,18 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
-import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, FlatNode, SearchResult, VarOp, PreviewBlockGroup, RegexScript } from '../types'
+import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, SearchResult, VarOp, PreviewBlockGroup, RegexScript } from '../types'
 import * as ST from '../api/presetApi'
 import type { PresetListEntry } from '../api/presetApi'
 import * as Host from '../api/hostContext'
-import { macroAwareDiff, applyMultiSelect, findVarOps } from '../utils'
+import { macroAwareDiff, findVarOps } from '../utils'
 import { useUiState } from '../composables/useUiState'
+import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { DEFAULT_PRESET } from '../types'
 
-export function isGroup(node: OrderNode): node is OrderGroup {
-  return 'children' in node && Array.isArray((node as any).children)
-}
+// isGroup 保留原名重新导出（现在只是 useGroupedList 里 isGroupNode 的别名）——虽然目前没有别的
+// 文件 import 它，但这是个纯类型守卫，留着无害，以防以后哪里想直接判断一个 OrderNode 是不是组。
+export { isGroup }
 
 // Was useStore()/defineStore('main', ...). Renamed the export (not the Pinia store id — that
 // stays 'main', changing it would invalidate anyone's persisted devtools state for no benefit)
@@ -28,43 +29,21 @@ export const usePresetStore = defineStore('main', () => {
   const rawData = ref<PresetData | null>(null)
   const prompts = ref<PresetBlock[]>([])
   const order = ref<OrderNode[]>([])
-  const selectedGi = ref<Set<number>>(new Set())
-  const anchorGi = ref(-1)
   const presetName = ref('')
   const presetList = ref<PresetListEntry[]>([])
 
-  const flatNodes = computed<FlatNode[]>(() => {
-    const nodes: FlatNode[] = []
-    function walk(arr: OrderNode[], parent: OrderNode[], depth: number) {
-      arr.forEach((ref, parentIdx) => {
-        const g = isGroup(ref)
-        nodes.push({ ref, parent, parentIdx, depth, isGroup: g })
-        if (g && !ref.collapsed) {
-          walk(ref.children, ref.children as any, depth + 1)
-        }
-      })
-    }
-    walk(order.value, order.value, 0)
-    return nodes
-  })
-
-  /** Resolves a block identifier to its flatNodes gi, auto-expanding its parent group first if
-   *  that group is currently collapsed. flatNodes deliberately excludes children of a collapsed
-   *  group (that's what actually drives the sidebar's collapse/expand rendering — see the `walk`
-   *  above), but search results / var-nav entries / var-popup entries can point at a block
-   *  anywhere in the preset, regardless of what's currently visible in the sidebar. Without this,
-   *  flatNodes.findIndex(...) silently returns -1 for anything inside a collapsed group and the
-   *  jump becomes a no-op (wrong block stays selected, or nothing happens at all).
-   */
-  function revealAndFindGi(identifier: string): number {
-    for (const node of order.value) {
-      if (isGroup(node) && node.collapsed && node.children.some(c => c.identifier === identifier)) {
-        node.collapsed = false
-        break // an item can only belong to one top-level group
-      }
-    }
-    return flatNodes.value.findIndex(n => !n.isGroup && (n.ref as OrderItem).identifier === identifier)
-  }
+  /* flatNodes 构建 + 选择态(selectedGi/anchorGi)/折叠/绑定/拆组/重排这套树形分组机制现在统一由
+   * useGroupedList 提供（domain-agnostic，见该文件顶部doc comment）。这里解构出全部用得到的部分：
+   * toggleBlock/toggleGroupCollapse/reorderBlock/selectBlock/identifierToGi/revealAndFindGi 直接
+   * 原样导出给组件/其它函数用；clearSelection 用在 applyLoadedPreset()（换预设时清空选中态）；
+   * insertAfterActive/removeNode 是纯树操作原语，被下面 addBlock/deleteBlock/hideBlock/
+   * addHiddenBlock 用来处理"插入到哪/删哪"，再自己补上 prompts/tabsStore 那部分；
+   * bindSelected/unbindGroup 被下面同名函数包一层 toast 后重新导出（略作改名避免撞名）。 */
+  const {
+    selectedGi, anchorGi, flatNodes, identifierToGi, revealAndFindGi,
+    clearSelection, selectBlock, toggleBlock, toggleGroupCollapse, reorderBlock,
+    insertAfterActive, removeNode, bindSelected: bindSelectedNodes, unbindGroup: unbindGroupNode,
+  } = useGroupedList(order)
 
   /** Single source of truth for "the active block tab drives the sidebar": whenever the active
    *  tab actually changes to a block, this expands whatever collapsed group contains it (via
@@ -232,11 +211,6 @@ export const usePresetStore = defineStore('main', () => {
     return prompts.value.find(p => p.identifier === tab.key) ?? null
   })
 
-  /** 辅助：根据 block identifier 反查它在 flatNodes 里的 gi（视觉下标），用于侧边栏高亮/滚动 */
-  function identifierToGi(identifier: string | null | undefined): number {
-    if (!identifier) return -1
-    return flatNodes.value.findIndex(n => !n.isGroup && (n.ref as OrderItem).identifier === identifier)
-  }
   const hasData = computed(() => rawData.value !== null)
   const hiddenBlocks = computed(() => {
     // Expand groups: a grouped block's identifier lives in group.children, not at the top
@@ -326,8 +300,7 @@ export const usePresetStore = defineStore('main', () => {
       ? (po.find((p: any) => p.character_id === 100001)?.order ?? [])
       : []
     order.value = importOrderWithGroups(rawOrder)
-    selectedGi.value = new Set()
-    anchorGi.value = -1
+    clearSelection()
     presetName.value = name
     rebuildVarIndex()
     tabsStore.closeAll() // 旧标签（block、regex都算）指向的都是即将被替换掉的这份数据
@@ -435,20 +408,14 @@ export const usePresetStore = defineStore('main', () => {
     } catch (e: any) { showToast(t('shared.toast.deleteFailed', { msg: e?.message || e })) }
   }
 
-  /* ====== Block Ops ====== */
-  function selectBlock(gi: number, opts?: { ctrl?: boolean; shift?: boolean }) {
-    // Shared ctrl/shift/plain multi-select semantics — see applyMultiSelect's doc comment in
-    // utils.ts. `all` is just every valid gi in visual order (0..n-1); for this integer-index
-    // case that reduces to the same plain Math.min/max range this used to do inline.
-    const next = applyMultiSelect(
-      { selected: selectedGi.value, anchor: anchorGi.value >= 0 ? anchorGi.value : null },
-      gi,
-      flatNodes.value.map((_, i) => i),
-      opts || {}
-    )
-    selectedGi.value = next.selected
-    anchorGi.value = next.anchor ?? -1
-  }
+  /* ====== Block Ops ======
+   * selectBlock/toggleBlock/toggleGroupCollapse/reorderBlock are exactly what useGroupedList()
+   * returned above (destructured near the top of this store) — pure tree ops with no
+   * preset-specific behavior, so there's nothing to wrap and no local redefinition here anymore.
+   * addBlock/deleteBlock/hideBlock/addHiddenBlock stay here because they touch things
+   * useGroupedList deliberately doesn't know about: `prompts` (the backing data array),
+   * tabsStore (open/close tabs), confirmStore (the delete confirmation). They call
+   * insertAfterActive()/removeNode() for the tree-shape part and handle the rest themselves. */
   function addBlock() {
     if (!rawData.value) { showToast(t('shared.toast.loadPresetFirst')); return }
     const id = 'custom_' + Date.now()
@@ -456,22 +423,8 @@ export const usePresetStore = defineStore('main', () => {
       identifier: id, name: 'New Block', role: 'system',
       content: '', system_prompt: false, enabled: true, marker: false,
     })
-    const item: OrderItem = { identifier: id, enabled: true }
-    // 插入位置：当前激活的块后面（如果有），否则追加到末尾
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
-    const activeGi = identifierToGi(activeId)
-    if (activeGi >= 0) {
-      const node = flatNodes.value[activeGi]
-      if (node) {
-        const parent = node.isGroup ? (node.ref as OrderGroup).children : node.parent
-        const idx = node.isGroup ? (node.ref as OrderGroup).children.length : node.parentIdx + 1
-        parent.splice(idx, 0, item)
-      } else {
-        order.value.push(item)
-      }
-    } else {
-      order.value.push(item)
-    }
+    insertAfterActive({ identifier: id, enabled: true }, activeId)
     // 直接打开新块的标签——编辑器内容由标签驱动，不再需要桥接
     tabsStore.open({ domain: 'preset', key: id, label: 'New Block' })
     showToast(t('shared.toast.blockCreated'))
@@ -490,29 +443,22 @@ export const usePresetStore = defineStore('main', () => {
     const name = node.isGroup
       ? (node.ref as OrderGroup).name || t('common.unnamed')
       : prompts.value.find(p => p.identifier === (node.ref as OrderItem).identifier)?.name || t('common.new')
+    const wasGroup = node.isGroup
     confirmStore.ask({
       title: t('shared.confirm.deleteBlock.title'),
       message: t('shared.confirm.deleteBlock.message', { name }),
       confirmText: t('shared.confirm.deleteBlock.confirm'),
       cancelText: t('shared.confirm.deleteBlock.cancel'),
       onConfirm: () => {
-        const parent = node.parent
-        const idx = node.parentIdx
-        if (node.isGroup) {
-          // 删除组时关闭组内所有块的标签
-          for (const child of (node.ref as OrderGroup).children) {
-            tabsStore.close('preset', child.identifier)
-          }
-          parent.splice(idx, 1)
-        } else {
-          const id = (node.ref as OrderItem).identifier
-          parent.splice(idx, 1)
-          const pi = prompts.value.findIndex(p => p.identifier === id)
+        const removed = removeNode(gi)
+        if (!removed) return
+        // 组：只关子块的标签，不删 prompts 里的数据——这些块变成"隐藏块"，还能从隐藏块列表里
+        // 找回来，跟原实现行为一致（不是这次重构才有的设计）。叶子块：关自己的标签+真删数据行。
+        for (const id of removed.identifiers) tabsStore.close('preset', id)
+        if (!wasGroup) {
+          const pi = prompts.value.findIndex(p => p.identifier === removed.identifiers[0])
           if (pi >= 0) prompts.value.splice(pi, 1)
-          // 关闭被删除块的标签
-          tabsStore.close('preset', id)
         }
-        selectedGi.value.delete(gi)
         rebuildVarIndex()
         showToast(t('shared.toast.blockDeleted'))
       }
@@ -521,8 +467,6 @@ export const usePresetStore = defineStore('main', () => {
   function hideBlock(gi: number) {
     const node = flatNodes.value[gi]
     if (!node) return
-    const parent = node.parent
-    const idx = node.parentIdx
     if (!node.isGroup) {
       const id = (node.ref as OrderItem).identifier
       const block = prompts.value.find(p => p.identifier === id)
@@ -530,103 +474,35 @@ export const usePresetStore = defineStore('main', () => {
         showToast(t('shared.toast.cannotHideMarker'))
         return
       }
-      tabsStore.close('preset', id)
     }
-    parent.splice(idx, 1)
-    selectedGi.value.delete(gi)
+    const wasGroup = node.isGroup
+    const removed = removeNode(gi)
+    if (!removed) return
+    // 隐藏一个组：只是把整个组（含子块）从 order 里摘掉，不关子块的标签——跟原实现一样，只有
+    // 隐藏单个叶子块时才关它自己的标签。
+    if (!wasGroup) tabsStore.close('preset', removed.identifiers[0])
     showToast(t('shared.toast.blockHidden'))
   }
   function addHiddenBlock(identifier: string) {
-    const item: OrderItem = { identifier, enabled: true }
-    // 插入位置：当前激活的块后面（如果有），否则追加到末尾
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
-    const activeGi = identifierToGi(activeId)
-    if (activeGi >= 0) {
-      const node = flatNodes.value[activeGi]
-      if (node) {
-        const parent = node.isGroup ? (node.ref as OrderGroup).children : node.parent
-        const idx = node.isGroup ? (node.ref as OrderGroup).children.length : node.parentIdx + 1
-        parent.splice(idx, 0, item)
-      } else {
-        order.value.push(item)
-      }
-    } else {
-      order.value.push(item)
-    }
+    insertAfterActive({ identifier, enabled: true }, activeId)
     // 打开标签让编辑器显示新加的块
     const block = prompts.value.find(p => p.identifier === identifier)
     tabsStore.open({ domain: 'preset', key: identifier, label: block?.name || identifier })
     showToast(t('shared.toast.blockAdded'))
   }
-  function toggleBlock(gi: number) {
-    const node = flatNodes.value[gi]
-    if (!node) return
-    if (node.isGroup) {
-      const g = node.ref as OrderGroup
-      g.enabled = !g.enabled
-    } else {
-      const item = node.ref as OrderItem
-      item.enabled = !item.enabled
-    }
-  }
-  function reorderBlock(fromGi: number, toGi: number, after: boolean) {
-    const fromNode = flatNodes.value[fromGi]
-    const toNode = flatNodes.value[toGi]
-    if (!fromNode || !toNode) return
-    if (fromNode.parent !== toNode.parent) return
-    const parent = fromNode.parent
-    const fromIdx = fromNode.parentIdx
-    const toIdx = toNode.parentIdx
-    const item = parent.splice(fromIdx, 1)[0]
-    const ni = fromIdx < toIdx
-      ? (after ? toIdx : toIdx - 1)
-      : (after ? toIdx + 1 : toIdx)
-    parent.splice(ni, 0, item)
-  }
 
-  /* ====== Group Ops ====== */
+  /* ====== Group Ops ======
+   * Thin toast wrappers around useGroupedList()'s bindSelected()/unbindGroup() — the tree
+   * mechanics live there now, this just turns "did it work" into the right showToast() call. */
   function bindSelected() {
-    const topLevelGi = Array.from(selectedGi.value)
-      .filter(gi => flatNodes.value[gi]?.parent === order.value)
-      .sort((a, b) => a - b)
-    if (topLevelGi.length < 2) { showToast(t('shared.toast.select2PlusBlocks')); return }
-    // items 按 gi（视觉顺序）升序取，保持原始顺序
-    const items = topLevelGi.map(gi => order.value[flatNodes.value[gi].parentIdx])
-    // indices 单独降序排序，用于从后往前删除（避免索引漂移）
-    const indices = topLevelGi.map(gi => flatNodes.value[gi].parentIdx).sort((a, b) => b - a)
-    const firstIdx = Math.min(...indices)
-    indices.forEach(idx => order.value.splice(idx, 1))
-    const group: OrderGroup = {
-      id: 'group_' + Date.now(),
-      _gid: '_g' + Math.random().toString(36).slice(2, 9) + '_' + Date.now(),
-      name: 'Group (' + items.length + ')',
-      collapsed: false,
-      enabled: true,
-      children: items.flatMap(item =>
-        isGroup(item) ? [...item.children] : [{ identifier: item.identifier, enabled: item.enabled }]
-      )
-    }
-    order.value.splice(firstIdx, 0, group)
-    selectedGi.value = new Set()
-    anchorGi.value = -1
-    showToast(t('shared.toast.boundBlocks', { count: items.length }))
+    const result = bindSelectedNodes()
+    if (!result) { showToast(t('shared.toast.select2PlusBlocks')); return }
+    showToast(t('shared.toast.boundBlocks', { count: result.itemCount }))
   }
   function unbindGroup(gi: number) {
-    const node = flatNodes.value[gi]
-    if (!node || !node.isGroup) return
-    const parent = node.parent
-    const idx = node.parentIdx
-    const group = node.ref as OrderGroup
-    parent.splice(idx, 1, ...group.children)
-    selectedGi.value = new Set()
-    anchorGi.value = -1
+    if (!unbindGroupNode(gi)) return
     showToast(t('shared.toast.unbound'))
-  }
-  function toggleGroupCollapse(gi: number) {
-    const node = flatNodes.value[gi]
-    if (!node || !node.isGroup) return
-    const group = node.ref as OrderGroup
-    group.collapsed = !group.collapsed
   }
 
   /* ====== Search ====== */
