@@ -87,10 +87,12 @@
           <button class="wb-mobile-tools-item" :disabled="!store.presetName" @click="runTool(onDeletePreset)">{{ store.t('shared.header.deletePreset') }}</button>
         </div>
 
-        <!-- CopyPanel before Modals: CopyPanel is itself a .wb-modal-overlay, and its own
-             confirm/prompt dialogs (reload/remove/close-unsaved) are confirmStore-driven and
-             rendered by Modals below it — Modals needs to be the LATER sibling so its overlay
-             actually paints on top of CopyPanel's overlay instead of underneath it. -->
+        <!-- CopyPanel is now a real floating window (FloatingPanelShell, z-index 100010+, see
+             useFloatingPanel.ts), not a .wb-modal-overlay — DOM order between it and Modals no
+             longer matters for stacking. Modals' own overlay (settings/confirm/prompt/hidden-list)
+             sits at z-index 300000, always above any floating panel regardless of source order,
+             so confirm/prompt dialogs triggered from CopyPanel's own close()/loadSide()/removeBlock()
+             remain reachable instead of getting trapped behind it. -->
         <CopyPanel />
         <Modals />
       </div>
