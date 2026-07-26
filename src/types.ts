@@ -301,3 +301,84 @@ export const WORLDBOOK_ROLE_OPTIONS = [
   { value: 1, labelKey: 'worldbook.role.user' },
   { value: 2, labelKey: 'worldbook.role.assistant' },
 ] as const
+
+/* ====== 角色卡（Character）====== 见 TODO.md 阶段2「数据结构」。
+ * ST 原生结构是 v1CharData（外层）嵌套 v2CharData（`data` 字段），字段名在两层之间经常不一致
+ * （比如 creatorcomment vs data.creator_notes）。工作层这份 Character 是扁平化之后的结构，
+ * 双向转换在 api/characterApi.ts 里完成——store/组件只认这份形状，不知道 v1/v2 原生结构长什么样。
+ *
+ * `greetings`：工作层把 `first_mes`（index 0）和 `alternate_greetings`（其余）合并成一个数组，
+ * 只有这一个字段支持拖拽排序（TODO.md 1.2）——拖到 index 0 就等于把某条候选开场白提升为
+ * "正式"开场白，转换回原生格式时按下标 0/其余重新拆回两个字段。
+ *
+ * `depthPrompt`：对应 v2CharData.extensions.depth_prompt（"角色备注"），跟其它大文本框字段一样
+ * 走虚拟字段 tab（key 为 `field:depthPrompt`）编辑 `.prompt`，但 `.depth`/`.role` 是数值/枚举，
+ * 不适合塞进纯文本编辑器——CharacterContentEditor.vue 给这一个字段单独加一条 meta 栏承载，
+ * 不为此专门开一个 SettingsDock 表单（角色卡故意不接 SettingsDock，见 TODO.md 2.4）。 */
+export interface Character {
+  /** ST 用来定位这个角色的文件名（不含路径，含 .png 后缀）。新建、还没保存过的角色是空字符串，
+   *  characterStore 用"是否为空"判断这是不是一个待创建的新角色（对应 api/characterApi.ts
+   *  createCharacter() 而不是 editCharacter()）。 */
+  avatar: string
+  name: string
+
+  /** 七个"大文本框"虚拟字段，见 TODO.md 1.2、CharacterSidebar.vue 的 CHARACTER_FIELDS 常量
+   *  （固定顺序展示，不可拖拽，跟 greetings 是两种不同的列表语义）。 */
+  description: string
+  scenario: string
+  mesExample: string
+  personality: string
+  systemPrompt: string
+  postHistoryInstructions: string
+  depthPrompt: { prompt: string; depth: number; role: 0 | 1 | 2 }
+
+  /** 开场白：index 0 = 正式开场白（原生 first_mes），其余 = 候选开场白（原生
+   *  alternate_greetings）。仅这个数组支持拖拽排序，见本接口顶部 doc comment。 */
+  greetings: string[]
+
+  /** 角色 Meta（CharacterMetaForm.vue，见 TODO.md 2.5b）专属字段，跟上面的"创作内容"字段分开
+   *  归类，纯粹是方便阅读——工作层没有强制这种分组，取值都是扁平字段。 */
+  creator: string
+  creatorNotes: string
+  version: string
+  tags: string[]
+  talkativeness: number
+  fav: boolean
+  /** 绑定的世界书名字，对应 v2CharData.extensions.world；`null` = 未绑定。CharacterMetaForm 只做
+   *  下拉换绑（见 TODO.md 2.5b），不支持内嵌编辑世界书内容——那是"角色卡内嵌编辑世界书"，TODO.md
+   *  阶段4明确不做。 */
+  worldbook: string | null
+
+  extensions: {
+    /** 绑定在这张角色卡上的正则脚本，跟预设域 `PresetData.extensions.regex_scripts` 是同一个
+     *  概念、同一个字段名，只是宿主换成了角色卡。characterStore 暴露的 live computed 叫
+     *  `regexScripts`（跟 presetStore.regexScripts 同名同模式），指向这里。 */
+    regex_scripts: RegexScript[]
+    [k: string]: any
+  }
+  [k: string]: any
+}
+
+/** 角色列表下拉框用的轻量条目——不含完整内容，只用来给用户选"要切换到哪个角色"。 */
+export interface CharacterListEntry {
+  avatar: string
+  name: string
+}
+
+/** CharacterSidebar.vue 固定字段列表的顺序来源（TODO.md 1.2），`key` 拼成虚拟字段 tab 的
+ *  `field:${key}`（见 Character 接口顶部 doc comment），EditorShell.vue 按这个前缀路由。 */
+export const CHARACTER_FIELDS = [
+  { key: 'description', labelKey: 'character.field.description' },
+  { key: 'scenario', labelKey: 'character.field.scenario' },
+  { key: 'mesExample', labelKey: 'character.field.mesExample' },
+  { key: 'personality', labelKey: 'character.field.personality' },
+  { key: 'systemPrompt', labelKey: 'character.field.systemPrompt' },
+  { key: 'postHistoryInstructions', labelKey: 'character.field.postHistoryInstructions' },
+  { key: 'depthPrompt', labelKey: 'character.field.depthPrompt' },
+] as const
+
+export const CHARACTER_DEPTH_ROLE_OPTIONS = [
+  { value: 0, labelKey: 'worldbook.role.system' },
+  { value: 1, labelKey: 'worldbook.role.user' },
+  { value: 2, labelKey: 'worldbook.role.assistant' },
+] as const
