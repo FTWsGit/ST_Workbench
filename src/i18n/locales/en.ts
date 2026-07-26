@@ -282,4 +282,121 @@ export default {
   'syntax.hl-dq': 'Double Quotes',
   'syntax.hl-ab': 'Angle Brackets < >',
   'syntax.hl-sb': 'Square Brackets [ ]',
+
+  // ---- common additions (worldbook stage) ----
+  'common.on': 'On',
+  'common.off': 'Off',
+
+  // ---- shared.header / shared.confirm / shared.prompt / shared.editorShell: worldbook workspace ----
+  'shared.header.mode.worldbook': 'Worldbook',
+  'shared.header.newWorldbook': 'New Worldbook',
+  'shared.header.deleteWorldbook': 'Delete Worldbook',
+  'shared.header.switchWorldbook': 'Switch Worldbook',
+  'shared.confirm.switchWorldbook.title': 'Switch worldbook?',
+  'shared.confirm.switchWorldbook.message': 'Switch to worldbook <strong>{name}</strong>? Unsaved changes to the current worldbook will be lost.',
+  'shared.confirm.deleteWorldbook.title': 'Delete worldbook?',
+  'shared.confirm.deleteWorldbook.message': 'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
+  'shared.confirm.closePanel.worldbookItem': 'Worldbook: {name}',
+  'shared.prompt.newWorldbook.title': 'New worldbook name',
+  'shared.prompt.newWorldbook.placeholder': 'Worldbook name',
+  'shared.editorShell.emptyWorldbook': 'Loading worldbook list…',
+  'shared.editorShell.emptyWorldbookEntry': 'Select an entry, or create a new one',
+
+  // ---- worldbook.sidebar ----
+  'worldbook.sidebar.title': 'Worldbook Entries',
+  'worldbook.sidebar.newEntry': '+ New',
+  'worldbook.sidebar.empty': 'No worldbook loaded yet — pick one from the top right, or create a new one',
+  'worldbook.sidebar.defaultGroupName': 'Group ({count})',
+  'worldbook.sidebar.tools': '🛠 Batch Tools',
+
+  // ---- worldbook.tools: batch tools floating panel ----
+  'worldbook.tools.title': 'Batch Tools',
+  'worldbook.tools.selectedCount': '{count} entries selected',
+  'worldbook.tools.enableLabel': 'Enabled State',
+  'worldbook.tools.enableSelected': 'Enable Selected',
+  'worldbook.tools.disableSelected': 'Disable Selected',
+  'worldbook.tools.activationLabel': 'Activation',
+  'worldbook.tools.noSelection': 'Select some entries on the left first (Ctrl/Shift for multi-select)',
+  'worldbook.tools.applied': 'Applied to {count} entries',
+
+  // ---- worldbook.toast ----
+  'worldbook.toast.listFailed': 'Failed to fetch worldbook list: {msg}',
+  'worldbook.toast.loadFailed': 'Failed to load worldbook: {msg}',
+  'worldbook.toast.notFound': 'Worldbook {name} not found',
+  'worldbook.toast.loaded': 'Loaded worldbook {name}',
+  'worldbook.toast.noneSelected': 'No worldbook loaded yet',
+  'worldbook.toast.noDataToSave': 'No worldbook to save',
+  'worldbook.toast.saved': 'Saved worldbook {name}',
+  'worldbook.toast.saveFailed': 'Failed to save worldbook: {msg}',
+  'worldbook.toast.duplicateName': 'A worldbook with that name already exists',
+  'worldbook.toast.created': 'Created worldbook {name}',
+  'worldbook.toast.createFailed': 'Failed to create worldbook: {msg}',
+  'worldbook.toast.deleted': 'Deleted worldbook {name}',
+  'worldbook.toast.deleteFailed': 'Failed to delete worldbook: {msg}',
+  'worldbook.toast.loadFirst': 'Load or create a worldbook first',
+  'worldbook.toast.created2': 'New entry created',
+  'worldbook.toast.entryDeleted': 'Deleted',
+
+  // ---- worldbook.confirm ----
+  'worldbook.confirm.deleteEntry.title': 'Delete entry?',
+  'worldbook.confirm.deleteEntry.message': 'This will permanently remove <strong>{name}</strong> from the worldbook.',
+
+  // ---- worldbook.activation: the three mutually-exclusive activation modes ----
+  'worldbook.activation.keyWord': 'Keyword',
+  'worldbook.activation.constant': 'Constant',
+  'worldbook.activation.vectorized': 'Vectorized',
+
+  // ---- worldbook.editor ----
+  'worldbook.editor.placeholder': 'Edit the worldbook entry content here…',
+
+  // ---- worldbook.settings: entry settings form ----
+  'worldbook.settings.enabled': 'Enabled',
+  'worldbook.settings.commentLabel': 'Title / Comment',
+  'worldbook.settings.commentPlaceholder': 'Entry title (for your reference only, not matched against)',
+  'worldbook.settings.keysLabel': 'Primary Keys (one per line)',
+  'worldbook.settings.keysPlaceholder': 'keyword1\nkeyword2',
+  'worldbook.settings.activationLabel': 'Activation',
+  'worldbook.settings.selective': 'Require secondary keys too',
+  'worldbook.settings.keysSecondaryLabel': 'Secondary Keys (one per line)',
+  'worldbook.settings.logicLabel': 'Logic',
+  'worldbook.settings.positionLabel': 'Position',
+  'worldbook.settings.depthLabel': 'Depth',
+  'worldbook.settings.roleLabel': 'Role',
+  'worldbook.settings.orderLabel': 'Insertion Order (lower = earlier)',
+  'worldbook.settings.probabilityLabel': 'Trigger by probability',
+  'worldbook.settings.excludeRecursion': "Don't scan for recursion (other entries can't trigger it)",
+  'worldbook.settings.preventRecursion': "Prevent recursion (won't trigger other entries)",
+  'worldbook.settings.delayUntilRecursion': 'Delay until recursion',
+  'worldbook.settings.scanDepthLabel': 'Scan Depth',
+  'worldbook.settings.sameAsGlobal': 'Same as global',
+  'worldbook.settings.caseSensitiveLabel': 'Case Sensitive',
+  'worldbook.settings.matchWholeWordsLabel': 'Match Whole Words',
+  'worldbook.settings.stickyLabel': 'Sticky',
+  'worldbook.settings.cooldownLabel': 'Cooldown',
+  'worldbook.settings.delayLabel': 'Delay',
+  'worldbook.settings.groupLabel': 'Inclusion Group',
+  'worldbook.settings.groupPlaceholder': 'Only one entry per group wins, by weight/priority',
+  'worldbook.settings.groupPrioritized': 'Prioritize this group',
+
+  // ---- worldbook.position ----
+  'worldbook.position.beforeChar': 'Before Char Defs',
+  'worldbook.position.afterChar': 'After Char Defs',
+  'worldbook.position.beforeExample': 'Before Example Messages',
+  'worldbook.position.afterExample': 'After Example Messages',
+  'worldbook.position.beforeAuthorsNote': "Before Author's Note",
+  'worldbook.position.afterAuthorsNote': "After Author's Note",
+  'worldbook.position.atDepth': 'At Depth ⚙',
+  'worldbook.position.outlet': 'Outlet',
+
+  // ---- worldbook.logic ----
+  'worldbook.logic.andAny': 'AND ANY',
+  'worldbook.logic.notAll': 'NOT ALL',
+  'worldbook.logic.notAny': 'NOT ANY',
+  'worldbook.logic.andAll': 'AND ALL',
+
+  // ---- worldbook.role ----
+  'worldbook.role.default': 'Default',
+  'worldbook.role.system': 'System',
+  'worldbook.role.user': 'User',
+  'worldbook.role.assistant': 'Assistant',
 } satisfies Record<keyof typeof zhCN, string> satisfies LocaleTable

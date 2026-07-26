@@ -25,19 +25,40 @@ function tabId(t: Pick<OpenTab, 'domain' | 'key'>): string {
 
 export const useTabsStore = defineStore('tabs', () => {
   const tabs = ref<OpenTab[]>([])
-  const activeId = ref<string | null>(null)
+
+  /** 【2026-07 重构】每个工作区各自记着自己的"当前激活标签id"，不是像之前那样全局共用一个
+   *  `activeId` 指针。起因是三个工作区（preset/worldbook/character）落地后暴露出两个串台 bug：
+   *    1. 关掉某个工作区最后一个标签时，原来的 close() 直接从"全部标签"这个大数组里找相邻项接棒
+   *       焦点——工作区之间的标签在同一个数组里前后挨着放，选出来的"相邻项"经常是别的工作区的
+   *       标签，导致关光世界书的标签后，编辑器忽然冒出一个预设的标签。
+   *    2. 顶栏切换工作区（switchMode()）本身完全不碰 activeId——只要用户没有手动点开新工作区里
+   *       的某个标签，activeTab 还是切换前那个工作区的标签，EditorShell/SettingsDock 单纯按
+   *       activeTab.domain 路由，看到的还是旧工作区的内容，直到用户点开一个新标签才刷新过来。
+   *  按 workspace 分开存了之后，activeTab 天然只会解析到"当前激活工作区"自己名下的标签，两个问题
+   *  是同一个根因、同一次改动一起解决——不需要在 EditorShell.vue/SettingsDock.vue 里另外加
+   *  "domain 是否属于当前 workspace"这种过滤逻辑。
+   *  各工作区的 activeId 在切走之后依然保留在这个 map 里（"背景保活"，见 TODO.md 1.6），切回来时
+   *  原样还在，不会因为切换工作区就丢了"上次编辑到哪个标签"这件事。 */
+  const activeIdByWorkspace = ref<Record<string, string | null>>({})
+
+  /** 只读——当前激活工作区名下的 activeId。不能做成 external-writable 的 computed 直接代理到
+   *  `activeIdByWorkspace.value[activeWorkspace.value]`：open()/close()/focus() 这些函数操作的
+   *  目标工作区是"这个标签自己归属的 workspace"，不一定等于"当前正在显示的 activeWorkspace"
+   *  （比如 worldbookStore.applyLoaded() 会调 closeWorkspace('worldbook')，这个调用点未必发生在
+   *  用户正显示着世界书工作区的时候）——所以这几个函数内部都显式按目标 tab/domain 自己的
+   *  workspace 去操作 activeIdByWorkspace，不会经过、也不能经过 activeWorkspace 这个"当前显示的
+   *  是哪个工作区"的间接层。 */
+  const activeId = computed<string | null>(() => activeIdByWorkspace.value[activeWorkspace.value] ?? null)
 
   const activeTab = computed<OpenTab | null>(
     () => tabs.value.find(t => tabId(t) === activeId.value) ?? null
   )
-    
+
   const settingsDockOpen = ref(true)
   function toggleSettingsDock() { settingsDockOpen.value = !settingsDockOpen.value }
 
-  /** 当前显示的顶层工作区。阶段0先只加这个维度本身和 OpenTab 的归属标记（见上面 OpenTab.workspace
-   *  的 doc comment）——真正的 预设|角色卡|世界书 三态切换 UI、以及这个值该怎么跟 sidebarMode
-   *  配合，是阶段1/2 要做的事（TODO.md 1.4/1.6），现在唯一存在的工作区只有 'preset'，默认值就是
-   *  它。setActiveWorkspace() 先留好函数签名给以后顶层切换按钮直接调用。 */
+  /** 当前显示的顶层工作区（'preset' | 'worldbook' | 后续的 'character'）。真正的顶层三态切换 UI
+   *  在 App.vue 的 switchMode()，那边会把这个值和 sidebarMode 一起改；这里只管存这个值本身。 */
   const activeWorkspace = ref('preset')
   function setActiveWorkspace(ws: string) { activeWorkspace.value = ws }
 
@@ -70,13 +91,16 @@ export const useTabsStore = defineStore('tabs', () => {
 
   /** 打开一个标签。已经开着就只 focus，不重复插入、也不挪到末尾——不然每次点一个已经打开的
    *  标签，它在标签栏里的位置还会跳来跳去，体验会很怪。label 允许在已存在时刷新（比如 block
-   *  改名之后再从 sidebar 点开，标签上的文字要跟着更新）。 */
+   *  改名之后再从 sidebar 点开，标签上的文字要跟着更新）。
+   *  激活焦点写进 tab.workspace 自己名下，不是当前 activeWorkspace——两者理论上应该一致（打开
+   *  标签的入口只会出现在对应工作区的侧边栏里），这里显式用 tab.workspace 只是不依赖这个"应该
+   *  一致"的假设，多一层保险。 */
   function open(tab: OpenTab) {
     const id = tabId(tab)
     const existing = tabs.value.find(t => tabId(t) === id)
     if (existing) existing.label = tab.label
     else tabs.value.push(tab)
-    activeId.value = id
+    activeIdByWorkspace.value[tab.workspace] = id
     requestListScroll(tab.domain)
   }
 
@@ -84,27 +108,47 @@ export const useTabsStore = defineStore('tabs', () => {
     const id = domain + ':' + key
     const i = tabs.value.findIndex(t => tabId(t) === id)
     if (i < 0) return
-    tabs.value.splice(i, 1)
-    if (activeId.value === id) {
-      // 关掉的是当前激活的标签：焦点交给右边相邻的一个，右边没有就交给左边，都没有就空着——
-      // 跟浏览器/VSCode关标签页的落焦行为一致，用户最不容易"找不到东西"。
-      const next = tabs.value[i] ?? tabs.value[i - 1] ?? null
-      activeId.value = next ? tabId(next) : null
+    const closedTab = tabs.value[i]
+    const ws = closedTab.workspace
+    const wasActive = activeIdByWorkspace.value[ws] === id
+
+    // 焦点候选只在同一个工作区内的标签里找——用 splice 之前的下标在"同工作区子序列"里定位，右边
+    // 优先、没有就退到左边，都没有就空着，跟浏览器/VSCode关标签页的落焦行为一致。故意不用整个
+    // tabs 数组的相邻下标（那是之前"关掉世界书最后一个标签，编辑器却冒出预设标签"那个 bug 的
+    // 根因），只在 workspace 过滤后的子序列里找相邻项。
+    let fallback: OpenTab | null = null
+    if (wasActive) {
+      const siblings = tabs.value.filter(t => t.workspace === ws)
+      const si = siblings.findIndex(t => tabId(t) === id)
+      fallback = siblings[si + 1] ?? siblings[si - 1] ?? null
     }
+
+    tabs.value.splice(i, 1)
+    if (wasActive) activeIdByWorkspace.value[ws] = fallback ? tabId(fallback) : null
   }
 
   function closeAll() {
     tabs.value = []
-    activeId.value = null
+    activeIdByWorkspace.value = {}
   }
 
   /** 只关掉某个 domain 的全部标签——比如切换/重新加载预设时，指向旧数据的 block 标签（引用的
    *  identifier 在新预设里根本不存在了）需要清掉，但正则、世界书这些跟这次预设重载无关的标签
-   *  不该被一起打扫掉，所以按 domain 精确清，不做"全部清空"。 */
+   *  不该被一起打扫掉，所以按 domain 精确清，不做"全部清空"。
+   *  按每个受影响 workspace 各自检查、各自可能清空自己的 activeId——不假设某个 domain 只会出现在
+   *  一个 workspace 下（正则 domain 现在恒属于 workspace='preset'，但角色卡工作区落地后会有另一份
+   *  domain='regex' / workspace='character' 的标签，这里不应该因为清 'preset' 工作区的正则标签就
+   *  连带影响到 'character' 工作区的 activeId，反之亦然）。 */
   function closeDomain(domain: string) {
-    const closingActive = activeTab.value?.domain === domain
+    const closingIds = new Set(tabs.value.filter(t => t.domain === domain).map(tabId))
     tabs.value = tabs.value.filter(t => t.domain !== domain)
-    if (closingActive) activeId.value = tabs.value[0] ? tabId(tabs.value[0]) : null
+    for (const ws of Object.keys(activeIdByWorkspace.value)) {
+      const id = activeIdByWorkspace.value[ws]
+      if (id && closingIds.has(id)) {
+        const next = tabs.value.find(t => t.workspace === ws)
+        activeIdByWorkspace.value[ws] = next ? tabId(next) : null
+      }
+    }
   }
 
   /** 同 closeDomain，但按 workspace 清——预设工作区一次重载/切换要连带关掉的是"这个工作区里的
@@ -112,11 +156,13 @@ export const useTabsStore = defineStore('tabs', () => {
    *  上面 OpenTab.workspace 的 doc comment），不是全部 domain。用这个而不是 closeAll()，是因为
    *  closeAll() 会连带把角色卡/世界书工作区里跟这次预设重载完全无关的标签也清掉——工作区之间要
    *  "背景保活"（TODO.md 1.6：切换工作区不清空、不丢改动），一个工作区内部的重载动作不该有这种
-   *  跨工作区的副作用。 */
+   *  跨工作区的副作用。
+   *  这个工作区的标签已经全部关掉了，activeId 直接清空——不像 close()/closeDomain() 那样还要找
+   *  "同工作区的相邻标签"接棒（这个工作区已经一个不剩了，没有相邻的可接），更不能像重构前那样退回
+   *  到"tabs 数组里随便剩下的第一个"，那正是本次要修的串台 bug 本身。 */
   function closeWorkspace(workspace: string) {
-    const closingActive = activeTab.value?.workspace === workspace
     tabs.value = tabs.value.filter(t => t.workspace !== workspace)
-    if (closingActive) activeId.value = tabs.value[0] ? tabId(tabs.value[0]) : null
+    activeIdByWorkspace.value[workspace] = null
   }
 
   /** 只同步某个标签的显示文字，不改 activeId、不触发 requestListScroll——用于"底层数据被
@@ -131,8 +177,9 @@ export const useTabsStore = defineStore('tabs', () => {
 
   function focus(domain: string, key: string) {
     const id = domain + ':' + key
-    if (tabs.value.some(t => tabId(t) === id)) {
-      activeId.value = id
+    const t = tabs.value.find(x => tabId(x) === id)
+    if (t) {
+      activeIdByWorkspace.value[t.workspace] = id
       requestListScroll(domain)
     }
   }

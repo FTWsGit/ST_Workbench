@@ -282,4 +282,121 @@ export default {
   'syntax.hl-dq': '双引号',
   'syntax.hl-ab': '尖括号 < >',
   'syntax.hl-sb': '方括号 [ ]',
+
+  // ---- common 补充（世界书阶段新增，TODO.md 阶段1） ----
+  'common.on': '开',
+  'common.off': '关',
+
+  // ---- shared.header / shared.confirm / shared.prompt / shared.editorShell：世界书工作区部分 ----
+  'shared.header.mode.worldbook': '世界书',
+  'shared.header.newWorldbook': '新建世界书',
+  'shared.header.deleteWorldbook': '删除世界书',
+  'shared.header.switchWorldbook': '切换世界书',
+  'shared.confirm.switchWorldbook.title': '切换世界书？',
+  'shared.confirm.switchWorldbook.message': '切换到世界书 <strong>{name}</strong>？当前世界书的未保存更改将丢失。',
+  'shared.confirm.deleteWorldbook.title': '删除世界书？',
+  'shared.confirm.deleteWorldbook.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
+  'shared.confirm.closePanel.worldbookItem': '世界书：{name}',
+  'shared.prompt.newWorldbook.title': '新世界书名称',
+  'shared.prompt.newWorldbook.placeholder': '世界书名称',
+  'shared.editorShell.emptyWorldbook': '正在加载世界书列表…',
+  'shared.editorShell.emptyWorldbookEntry': '选一个条目，或者新建一个',
+
+  // ---- worldbook.sidebar ----
+  'worldbook.sidebar.title': '世界书条目',
+  'worldbook.sidebar.newEntry': '+ 新建',
+  'worldbook.sidebar.empty': '还没有加载世界书，从右上角选一个，或者新建一个',
+  'worldbook.sidebar.defaultGroupName': '分组 ({count})',
+  'worldbook.sidebar.tools': '🛠 批量工具',
+
+  // ---- worldbook.tools：批量工具悬浮面板 ----
+  'worldbook.tools.title': '批量工具',
+  'worldbook.tools.selectedCount': '已选中 {count} 个条目',
+  'worldbook.tools.enableLabel': '启用状态',
+  'worldbook.tools.enableSelected': '启用选中',
+  'worldbook.tools.disableSelected': '禁用选中',
+  'worldbook.tools.activationLabel': '激活方式',
+  'worldbook.tools.noSelection': '先在左侧列表里选中一些条目（Ctrl/Shift 多选）',
+  'worldbook.tools.applied': '已应用到 {count} 个条目',
+
+  // ---- worldbook.toast ----
+  'worldbook.toast.listFailed': '获取世界书列表失败：{msg}',
+  'worldbook.toast.loadFailed': '加载世界书失败：{msg}',
+  'worldbook.toast.notFound': '找不到世界书 {name}',
+  'worldbook.toast.loaded': '已加载世界书 {name}',
+  'worldbook.toast.noneSelected': '还没有加载任何世界书',
+  'worldbook.toast.noDataToSave': '没有可保存的世界书',
+  'worldbook.toast.saved': '已保存世界书 {name}',
+  'worldbook.toast.saveFailed': '保存世界书失败：{msg}',
+  'worldbook.toast.duplicateName': '已经有同名的世界书了',
+  'worldbook.toast.created': '已创建世界书 {name}',
+  'worldbook.toast.createFailed': '创建世界书失败：{msg}',
+  'worldbook.toast.deleted': '已删除世界书 {name}',
+  'worldbook.toast.deleteFailed': '删除世界书失败：{msg}',
+  'worldbook.toast.loadFirst': '请先加载或新建一个世界书',
+  'worldbook.toast.created2': '已新建条目',
+  'worldbook.toast.entryDeleted': '已删除',
+
+  // ---- worldbook.confirm ----
+  'worldbook.confirm.deleteEntry.title': '删除条目？',
+  'worldbook.confirm.deleteEntry.message': '这将从世界书中永久移除 <strong>{name}</strong>。',
+
+  // ---- worldbook.activation：三种互斥激活方式（对应 WorldbookEntry.constant/vectorized/keyWord） ----
+  'worldbook.activation.keyWord': '关键词',
+  'worldbook.activation.constant': '恒定',
+  'worldbook.activation.vectorized': '向量化',
+
+  // ---- worldbook.editor ----
+  'worldbook.editor.placeholder': '在这里编辑世界书条目的内容…',
+
+  // ---- worldbook.settings：条目设置表单 ----
+  'worldbook.settings.enabled': '启用',
+  'worldbook.settings.commentLabel': '标题 / 备注',
+  'worldbook.settings.commentPlaceholder': '条目标题（仅用于识别，不会被激活匹配）',
+  'worldbook.settings.keysLabel': '主要关键词（每行一个）',
+  'worldbook.settings.keysPlaceholder': '关键词1\n关键词2',
+  'worldbook.settings.activationLabel': '激活方式',
+  'worldbook.settings.selective': '需要同时满足次要关键词',
+  'worldbook.settings.keysSecondaryLabel': '次要关键词（每行一个）',
+  'worldbook.settings.logicLabel': '逻辑',
+  'worldbook.settings.positionLabel': '插入位置',
+  'worldbook.settings.depthLabel': '深度',
+  'worldbook.settings.roleLabel': '角色',
+  'worldbook.settings.orderLabel': '插入顺序（数值越小越靠前）',
+  'worldbook.settings.probabilityLabel': '按概率触发',
+  'worldbook.settings.excludeRecursion': '不参与递归扫描（不会被其他条目扫到）',
+  'worldbook.settings.preventRecursion': '阻止递归（不会触发其他条目）',
+  'worldbook.settings.delayUntilRecursion': '延迟到递归阶段生效',
+  'worldbook.settings.scanDepthLabel': '扫描深度',
+  'worldbook.settings.sameAsGlobal': '跟随全局设置',
+  'worldbook.settings.caseSensitiveLabel': '区分大小写',
+  'worldbook.settings.matchWholeWordsLabel': '全词匹配',
+  'worldbook.settings.stickyLabel': '粘滞',
+  'worldbook.settings.cooldownLabel': '冷却',
+  'worldbook.settings.delayLabel': '延迟',
+  'worldbook.settings.groupLabel': '互斥组',
+  'worldbook.settings.groupPlaceholder': '同组内按权重/优先级只取一个',
+  'worldbook.settings.groupPrioritized': '组内优先',
+
+  // ---- worldbook.position：插入位置选项（对应 types.ts WORLDBOOK_POSITION_OPTIONS） ----
+  'worldbook.position.beforeChar': '角色定义之前',
+  'worldbook.position.afterChar': '角色定义之后',
+  'worldbook.position.beforeExample': '示例对话之前',
+  'worldbook.position.afterExample': '示例对话之后',
+  'worldbook.position.beforeAuthorsNote': '作者注释之前',
+  'worldbook.position.afterAuthorsNote': '作者注释之后',
+  'worldbook.position.atDepth': '在深度 ⚙',
+  'worldbook.position.outlet': '出口（outlet）',
+
+  // ---- worldbook.logic：次要关键词逻辑选项（对应 types.ts WORLDBOOK_LOGIC_OPTIONS） ----
+  'worldbook.logic.andAny': 'AND 任意',
+  'worldbook.logic.notAll': 'NOT 全部',
+  'worldbook.logic.notAny': 'NOT 任意',
+  'worldbook.logic.andAll': 'AND 全部',
+
+  // ---- worldbook.role：深度插入角色选项（对应 types.ts WORLDBOOK_ROLE_OPTIONS） ----
+  'worldbook.role.default': '默认',
+  'worldbook.role.system': '系统',
+  'worldbook.role.user': '用户',
+  'worldbook.role.assistant': '助手',
 } satisfies LocaleTable

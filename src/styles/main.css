@@ -248,6 +248,18 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* 世界书批量工具悬浮面板（WorldbookToolsPanel.vue）——只需要几行竖排间距，其余全靠已有的
+   .wb-float-body/.rx-label/.rx-surface/.wb-muted，不需要一整套新样式。 */
+.wb-tools-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.wb-tools-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 /* Editor — shared meta/content/statusbar shell for BOTH the preset editor (PresetContentEditor.vue) and the
    regex content editor (RegexContentEditor.vue via .rx-editor below). Keep changes here in sync

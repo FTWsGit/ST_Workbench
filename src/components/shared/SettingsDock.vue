@@ -21,13 +21,15 @@ import { useTabsStore } from '../../stores/tabsStore'
 import { usePanelResize } from '../../composables/usePanelResize'
 import RegexSettingsForm from '../regex/RegexSettingsForm.vue'
 import PresetSettingsForm from '../preset/PresetSettingsForm.vue'
+import WorldbookSettingsForm from '../worldbook/WorldbookSettingsForm.vue'
 
 const store = usePresetStore()
 const tabsStore = useTabsStore()
 // Domain -> settings-form component routing table (see PROJECT_HANDOFF.md 架构总览 2). Adding a
 // new domain's settings form is just one more entry here — this component never needs to know
-// what's actually inside each form.
-const FORMS: Record<string, any> = { regex: RegexSettingsForm, preset: PresetSettingsForm }
+// what's actually inside each form. worldbook 跟 preset 一样没参数化，自己 useWorldbookStore()，
+// 不需要在下面 formProps 里喂任何东西。
+const FORMS: Record<string, any> = { regex: RegexSettingsForm, preset: PresetSettingsForm, worldbook: WorldbookSettingsForm }
 const formComponent = computed(() => tabsStore.activeTab ? FORMS[tabsStore.activeTab.domain] : null)
 
 /** RegexSettingsForm.vue 参数化改造后（见 regexProps.ts）不再自己 import presetStore，这里的

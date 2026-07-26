@@ -205,3 +205,99 @@ export const REGEX_SUBSTITUTE_OPTIONS = [
 
 import defaultPreset from '../default/default_preset.json'
 export const DEFAULT_PRESET = defaultPreset as PresetData  
+
+/* ====== 世界书（Worldbook / Lorebook）====== 见 TODO.md 阶段1「数据结构」。
+ * 工作层结构，跟 ST 原生 STWorldbook（entries 是 Record<uid, entry>）双向转换在 api/worldbookApi.ts
+ * 里完成——store/组件只认这份数组形状的 WorldbookEntry[]，不知道原生格式长什么样。
+ *
+ * _gid/_gname/_gcollapsed/_genabled/_gidx 是「文件夹式分组」的持久化载体，跟 preset 域
+ * OrderItem 上同名字段是同一个模式（见 PresetStore.ts importOrderWithGroups/exportOrder）：
+ * 分组是这个工具自己发明的组织方式，ST 原生 STWorldbookEntry 没有这个概念，存成未知字段让 ST
+ * 原样忽略、下次加载时我们自己再读回来重建分组树。 */
+export interface WorldbookEntry {
+  uid: number
+  comment: string
+  content: string
+  /** 在 UI 里显示的顺序——由 worldbookStore 在每次保存前根据 order 树（含展开折叠组）重新计算
+   *  写回，不是用户直接编辑的字段。 */
+  displayIndex: number
+
+  keys: string[]
+  keysecondary: string[]
+  selective: boolean
+  selectiveLogic: 0 | 1 | 2 | 3
+
+  /** 三种激活方式互斥：constant=恒定激活，vectorized=向量化激活，两者都 false 时代表关键词激活
+   *  （keyWord，ST 原生没有这个字段，是转换时派生出来的工作层字段，方便设置表单直接三选一）。 */
+  constant: boolean
+  keyWord: boolean
+  vectorized: boolean
+
+  disabled: boolean
+
+  position: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+  depth: number
+  order: number
+  role: 0 | 1 | 2 | null
+
+  probability: number
+  useProbability: boolean
+  excludeRecursion: boolean
+  preventRecursion: boolean
+  delayUntilRecursion: boolean | number
+
+  scanDepth: number | null
+  /** null = 跟随全局设置（不是 'same_as_global' 字符串——2026-07 修正，ST 原生就是这么存的，
+   *  工作层直接照抄没有转换）。 */
+  caseSensitive: boolean | null
+  matchWholeWords: boolean | null
+
+  group: string
+  groupPrioritized: boolean
+  groupWeight: number
+
+  sticky: number | null
+  cooldown: number | null
+  delay: number | null
+
+  /** 分组持久化字段，见本接口顶部 doc comment。 */
+  _gid?: string
+  _gname?: string
+  _gcollapsed?: boolean
+  _genabled?: boolean
+  _gidx?: number
+
+  [k: string]: any
+}
+
+export interface Worldbook {
+  name: string
+  entries: WorldbookEntry[]
+}
+
+/** 2026-07 修正：之前这份映射跟 ST 原生 position 枚举值对不上（真实映射见 PROJECT.md「关键设计
+ *  要点」第5条），已按正确顺序重排，并补上之前漏掉的 outlet（7）。 */
+export const WORLDBOOK_POSITION_OPTIONS = [
+  { value: 0, labelKey: 'worldbook.position.beforeChar' },
+  { value: 1, labelKey: 'worldbook.position.afterChar' },
+  { value: 2, labelKey: 'worldbook.position.beforeAuthorsNote' },
+  { value: 3, labelKey: 'worldbook.position.afterAuthorsNote' },
+  { value: 4, labelKey: 'worldbook.position.atDepth' },
+  { value: 5, labelKey: 'worldbook.position.beforeExample' },
+  { value: 6, labelKey: 'worldbook.position.afterExample' },
+  { value: 7, labelKey: 'worldbook.position.outlet' },
+] as const
+
+export const WORLDBOOK_LOGIC_OPTIONS = [
+  { value: 0, labelKey: 'worldbook.logic.andAny' },
+  { value: 1, labelKey: 'worldbook.logic.notAll' },
+  { value: 2, labelKey: 'worldbook.logic.notAny' },
+  { value: 3, labelKey: 'worldbook.logic.andAll' },
+] as const
+
+export const WORLDBOOK_ROLE_OPTIONS = [
+  { value: null as number | null, labelKey: 'worldbook.role.default' },
+  { value: 0, labelKey: 'worldbook.role.system' },
+  { value: 1, labelKey: 'worldbook.role.user' },
+  { value: 2, labelKey: 'worldbook.role.assistant' },
+] as const
