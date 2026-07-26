@@ -399,4 +399,38 @@ export default {
   'worldbook.role.system': '系统',
   'worldbook.role.user': '用户',
   'worldbook.role.assistant': '助手',
+
+  // ---- character.field：CharacterSidebar 固定字段标签（对应 types.ts CHARACTER_FIELDS） ----
+  'character.field.description': '角色描述',
+  'character.field.scenario': '情景',
+  'character.field.mesExample': '对话示例',
+  'character.field.personality': '性格',
+  'character.field.systemPrompt': '系统提示词',
+  'character.field.postHistoryInstructions': '历史后指令',
+  'character.field.depthPrompt': '角色备注',
+
+  // ---- character.sidebar ----
+  'character.sidebar.greetingLabel': '开场白 {n}',
+
+  // ---- character.toast ----
+  'character.toast.listFailed': '获取角色列表失败：{msg}',
+  'character.toast.loadFailed': '加载角色失败：{msg}',
+  'character.toast.notFound': '找不到角色 {name}',
+  'character.toast.loaded': '已加载角色 {name}',
+  'character.toast.noneSelected': '还没有加载任何角色',
+  'character.toast.noDataToSave': '没有可保存的角色',
+  'character.toast.saved': '已保存角色 {name}',
+  'character.toast.saveFailed': '保存角色失败：{msg}',
+  'character.toast.duplicateName': '已经有同名的角色了',
+  'character.toast.created': '已创建角色 {name}',
+  'character.toast.createFailed': '创建角色失败：{msg}',
+  'character.toast.deleted': '已删除角色 {name}',
+  'character.toast.deleteFailed': '删除角色失败：{msg}',
+  'character.toast.loadFirst': '请先加载或新建一个角色',
+  'character.toast.greetingDeleted': '已删除开场白',
+  'character.toast.needAtLeastOneGreeting': '至少要保留一条开场白',
+
+  // ---- character.confirm ----
+  'character.confirm.deleteGreeting.title': '删除开场白？',
+  'character.confirm.deleteGreeting.message': '这将永久移除这条开场白，且不可撤销。',
 } satisfies LocaleTable

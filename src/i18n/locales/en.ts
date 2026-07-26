@@ -399,4 +399,38 @@ export default {
   'worldbook.role.system': 'System',
   'worldbook.role.user': 'User',
   'worldbook.role.assistant': 'Assistant',
+
+  // ---- character.field ----
+  'character.field.description': 'Description',
+  'character.field.scenario': 'Scenario',
+  'character.field.mesExample': 'Example Messages',
+  'character.field.personality': 'Personality',
+  'character.field.systemPrompt': 'System Prompt',
+  'character.field.postHistoryInstructions': "Jailbreak / Post-History Instructions",
+  'character.field.depthPrompt': "Author's Note",
+
+  // ---- character.sidebar ----
+  'character.sidebar.greetingLabel': 'Greeting {n}',
+
+  // ---- character.toast ----
+  'character.toast.listFailed': 'Failed to fetch character list: {msg}',
+  'character.toast.loadFailed': 'Failed to load character: {msg}',
+  'character.toast.notFound': 'Character {name} not found',
+  'character.toast.loaded': 'Loaded character {name}',
+  'character.toast.noneSelected': 'No character loaded yet',
+  'character.toast.noDataToSave': 'No character to save',
+  'character.toast.saved': 'Saved character {name}',
+  'character.toast.saveFailed': 'Failed to save character: {msg}',
+  'character.toast.duplicateName': 'A character with that name already exists',
+  'character.toast.created': 'Created character {name}',
+  'character.toast.createFailed': 'Failed to create character: {msg}',
+  'character.toast.deleted': 'Deleted character {name}',
+  'character.toast.deleteFailed': 'Failed to delete character: {msg}',
+  'character.toast.loadFirst': 'Load or create a character first',
+  'character.toast.greetingDeleted': 'Greeting deleted',
+  'character.toast.needAtLeastOneGreeting': 'At least one greeting must remain',
+
+  // ---- character.confirm ----
+  'character.confirm.deleteGreeting.title': 'Delete this greeting?',
+  'character.confirm.deleteGreeting.message': 'This will permanently remove this greeting. This cannot be undone.',
 } satisfies Record<keyof typeof zhCN, string> satisfies LocaleTable
