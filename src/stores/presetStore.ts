@@ -5,7 +5,7 @@ import * as ST from '../api/presetApi'
 import type { PresetListEntry } from '../api/presetApi'
 import * as Host from '../api/hostContext'
 import { macroAwareDiff, findVarOps } from '../utils'
-import { useUiState } from '../composables/useUiState'
+import { useUiStore } from './uiStore'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
@@ -89,12 +89,12 @@ export const usePresetStore = defineStore('main', () => {
 
 
 
-  /* ====== UI State ====== */
-  const panelOpen = ref(false)
-  // Settings (font/colors/panel widths) + toast notifications — extracted to useUiState() since
-  // neither is actually preset-specific; see that file's doc comment for why this is a
-  // composable rather than a second live Pinia store today.
-  const { settings, cssVars, saveSettings, resetSettings, toastMsg, toastVisible, showToast, t, currentLocale } = useUiState()
+  /* ====== Domain UI State ====== */
+  // panelOpen (the main floating panel) moved to uiStore — it's global, not per-domain.
+  // Settings (font/colors/panel widths) + toast + i18n — owned by the global uiStore singleton
+  // (stores/uiStore.ts). Destructured here for presetStore's own internal use (showToast/t in
+  // IO functions, saveSettings in panel-resize persistence). Components call useUiStore() directly.
+  const { showToast, t } = useUiStore()
 
   /* ====== Bound Regex Scripts ====== */
   const regexScripts = computed<RegexScript[]>(() => {
@@ -188,7 +188,6 @@ export const usePresetStore = defineStore('main', () => {
   const previewRawText = ref('')
 
   /* ====== Modals ====== */
-  const settingsOpen = ref(false)
   const hiddenOpen = ref(false)
   const copyPanelOpen = ref(false) // Cross-preset block copy tool (CopyPanel.vue) — fully self-contained there, this is just the open flag
 
@@ -792,7 +791,6 @@ export const usePresetStore = defineStore('main', () => {
   return {
     rawData, prompts, order, presetName, presetList,
     flatNodes, selectedGi, anchorGi, identifierToGi,
-    panelOpen, toastMsg, toastVisible, settings, cssVars,
     searchOpen, searchQuery, searchReplace, searchResults, searchIdx,
     varNavOpen, varFilterQ, allVarOps, filteredVarOps, varIdx,
     varPopupOpen, varPopupVarName, varPopupOps, varPopupIdx, varPopupPos,
@@ -800,7 +798,7 @@ export const usePresetStore = defineStore('main', () => {
     previewOpen, previewMode, previewLoading, previewError,
     previewCollapsed, previewBlockGroups, previewRawText,
     regexScripts, addRegexScript, deleteRegexScript, reorderRegexScript,
-    settingsOpen, hiddenOpen, copyPanelOpen, dirty, markDirty,
+    hiddenOpen, copyPanelOpen, dirty, markDirty,
     currentBlock, hasData, hiddenBlocks,
     editorJump, requestEditorJump,
     loadFromContext, doSavePreset, refreshPresetList, switchPreset, createPreset, removeCurrentPreset, reloadPreset,
@@ -810,6 +808,5 @@ export const usePresetStore = defineStore('main', () => {
     doSearch, navSearch, jumpToSearchResult, replaceCurrent, replaceAll,
     rebuildVarIndex, filterVarNav, navVar, jumpToVarOp,
     generatePreviewBlocks, generatePreviewRaw, togglePreviewBlock, toggleAllPreviewBlocks, selectPresetByName,
-    saveSettings, resetSettings, showToast, t, currentLocale,
   }
 })

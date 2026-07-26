@@ -150,7 +150,7 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 /** Cap on how many search-result rows SearchPanel.vue renders in the results list — doSearch()
- *  in store.ts still collects every match (used for prev/next/replace-all), this only limits the
+ *  in presetStore.ts still collects every match (used for prev/next/replace-all), this only limits the
  *  DOM list. Lives here instead of a local const in SearchPanel.vue so there's one source of
  *  truth if this ever needs to become a user setting. */
 export const SEARCH_MAX = 200

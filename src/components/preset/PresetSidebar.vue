@@ -1,14 +1,14 @@
-<template>
-  <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
+﻿<template>
+  <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
-      <span>{{ store.t('preset.sidebar.title', { count: store.order.length }) }}</span>
+      <span>{{ uiStore.t('preset.sidebar.title', { count: store.order.length }) }}</span>
       <ListToolbar :count="store.prompts.length">
-        <button class="wb-btn" @click="store.addBlock()">{{ store.t('preset.sidebar.newBlock') }}</button>
-        <button class="wb-btn" @click="store.hiddenOpen = true">{{ store.t('preset.sidebar.hiddenBlock') }}</button>
+        <button class="wb-btn" @click="store.addBlock()">{{ uiStore.t('preset.sidebar.newBlock') }}</button>
+        <button class="wb-btn" @click="store.hiddenOpen = true">{{ uiStore.t('preset.sidebar.hiddenBlock') }}</button>
       </ListToolbar>
       <div class="wb-sidebar-tools">
-        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ store.t('preset.sidebar.bind') }}</button>
-        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ store.t('preset.sidebar.unbind') }}</button>
+        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('preset.sidebar.bind') }}</button>
+        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('preset.sidebar.unbind') }}</button>
       </div>
     </div>
     <div class="wb-list" ref="listRef">
@@ -77,6 +77,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
+import { useUiStore } from '../../stores/uiStore'
 import type { OrderItem, OrderGroup, FlatNode } from '../../types'
 import { usePanelResize } from '../../composables/usePanelResize'
 import { roleClass as roleClassOf } from '../../utils'
@@ -98,6 +99,7 @@ const props = defineProps<{ mobileDrawerOpen?: boolean }>()
 
 const tabsStore = useTabsStore()
 const store = usePresetStore()
+const uiStore = useUiStore()
 const listRef = ref<HTMLElement>()
 
 // Drag-to-reorder mechanics (pointer tracking, auto-scroll-near-edge, throttled drag-over calc,
@@ -213,12 +215,12 @@ function onGroupToggle(gi: number) {
 
 /* ---- Resize ---- */
 const resize = usePanelResize({
-  getWidth: () => store.settings.sidebarWidth,
-  setWidth: (w) => { store.settings.sidebarWidth = w },
+  getWidth: () => uiStore.settings.sidebarWidth,
+  setWidth: (w) => { uiStore.settings.sidebarWidth = w },
   min: 220, max: 600, dir: 'right',
 })
 function onResizeStart(e: PointerEvent) { resize.onPointerDown(e) }
-watch(() => resize.active.value, (v) => { if (!v) store.saveSettings() })
+watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
 
 /* ---- Scroll active item into view on jump requests ----
    Previously scrolled to `store.selectedGi`'s smallest member — wrong once selectedGi and

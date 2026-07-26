@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <div v-if="store.varPopupOpen" class="pr-var-popup" :style="{ top: store.varPopupPos.top + 'px', left: store.varPopupPos.left + 'px' }">
     <div class="pr-vp-header">
       <span class="pr-vp-varname">{{ store.varPopupVarName }}</span>
-      <span class="pr-vp-count">{{ store.t(store.varPopupOps.length !== 1 ? 'preset.varPopup.hit' : 'preset.varPopup.hitSingle', { count: store.varPopupOps.length }) }}</span>
+      <span class="pr-vp-count">{{ uiStore.t(store.varPopupOps.length !== 1 ? 'preset.varPopup.hit' : 'preset.varPopup.hitSingle', { count: store.varPopupOps.length }) }}</span>
       <span class="pr-vp-spacer"></span>
       <button class="pr-vp-btn" @click="store.navPopupVar(-1)">◀</button>
       <button class="pr-vp-btn" @click="store.navPopupVar(1)">▶</button>
@@ -23,10 +23,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
+import { useUiStore } from '../../stores/uiStore'
 import { getHostDocument } from '../../composables/hostEnv'
 import { varOpBadge } from '../../utils'
 
 const store = usePresetStore()
+const uiStore = useUiStore()
 
 // Close on outside click (anywhere that isn't the popup itself or the editor textarea, so
 // clicking a different {{var}} to re-target the popup still works via checkVarClick).

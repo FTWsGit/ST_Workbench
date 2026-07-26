@@ -1,23 +1,23 @@
+import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Settings } from '../types'
 import { DEFAULT_SETTINGS, FONT_OPTIONS } from '../types'
-import { useI18n } from './useI18n'
+import { useI18n } from '../composables/useI18n'
 
 /**
- * Editor settings (font/colors/panel widths) + the toast notification, both currently only used
- * by the preset editor but neither one is actually preset-specific — a future characterStore or
- * worldbookStore will want the exact same "show a toast" / "persisted UI settings" behavior.
+ * Global UI state singleton. Owns:
+ *   - settings (font/colors/panel widths/language/FAB position)
+ *   - toast notifications
+ *   - i18n t() function
+ *   - settings modal open flag (global — settings aren't per-domain)
+ *   - main panel open flag (the whole ST_Workbench floating panel)
  *
- * Pulled out of store.ts as a composable rather than a second live Pinia store for now: turning
- * this into `useUiStore()` would mean every `store.showToast(...)` call site across every .vue
- * component (there are dozens) becomes `uiStore.showToast(...)`, which is real churn for no
- * runtime benefit until there's a second store that actually needs to share it. This composable
- * gets the code organized and ready for that move — store.ts just spreads its return value into
- * its own setup-store scope, so every existing `store.xxx` call site is unaffected. When
- * characterStore/worldbookStore exist, swapping this to a real shared Pinia store is a
- * search-and-replace on `useUiState()` -> `useUiStore()`, not a redesign.
+ * Was a plain composable (composables/useUiState.ts). Now a real Pinia store ('ui') — any
+ * store/component calls `useUiStore()` directly and Pinia guarantees they all share one
+ * instance. `useI18n(settings)` is unchanged — still called inside this setup, reading off
+ * the `settings` ref owned here.
  */
-export function useUiState() {
+export const useUiStore = defineStore('ui', () => {
   const settings = ref<Settings>(loadSettings())
 
   const cssVars = computed(() => {
@@ -28,6 +28,13 @@ export function useUiState() {
       ...Object.fromEntries(Object.entries(settings.value.syntaxColors).map(([k, v]) => ['--' + k, v])),
     }
   })
+
+  // Main panel open flag — the entire ST_Workbench floating panel. Global, not per-domain.
+  const panelOpen = ref(false)
+
+  // Settings modal open flag — global, not per-domain. Settings (font/language/colors) apply
+  // to the whole app, not just the preset editor, so the open/close state lives here.
+  const settingsOpen = ref(false)
 
   function loadSettings(): Settings {
     try {
@@ -44,9 +51,9 @@ export function useUiState() {
   }
   function saveSettings() { localStorage.setItem('st-wb-settings', JSON.stringify(settings.value)) }
 
-  // useI18n reads off the same `settings` ref this composable owns — language is just another
+  // useI18n reads off the same `settings` ref this store owns — language is just another
   // Settings field, persisted through the loadSettings/saveSettings path above, not a second
-  // store.
+  // source of truth.
   const { t, currentLocale } = useI18n(settings)
 
   function resetSettings() {
@@ -65,5 +72,5 @@ export function useUiState() {
     toastTimer = setTimeout(() => { toastVisible.value = false }, ms)
   }
 
-  return { settings, cssVars, loadSettings, saveSettings, resetSettings, toastMsg, toastVisible, showToast, t, currentLocale }
-}
+  return { settings, cssVars, panelOpen, settingsOpen, loadSettings, saveSettings, resetSettings, toastMsg, toastVisible, showToast, t, currentLocale }
+})

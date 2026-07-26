@@ -4,13 +4,13 @@ import type { Settings } from '../types'
 
 /**
  * Thin wrapper around the i18n locale tables — takes the *same* `settings` ref that
- * useUiState.ts already owns (language lives on Settings, persisted through the existing
- * localStorage read/write path in useUiState.ts) rather than creating a second source of
- * truth.
+ * stores/uiStore.ts already owns (language lives on Settings, persisted through the existing
+ * localStorage read/write path in uiStore.ts) rather than creating a second source of truth.
  *
- * Usage: useUiState.ts spreads this composable's return value into its own return object,
- * same pattern as everything else in that file — so `store.t(...)` works in every component
- * without a separate import, exactly like `store.showToast(...)`.
+ * Usage: uiStore.ts spreads this composable's return value into its own return object, same
+ * pattern as everything else in that store — so `store.t(...)` works in every component
+ * without a separate import, exactly like `store.showToast(...)`. presetStore forward-spreads
+ * it one more level so preset-domain call sites keep working untouched.
  */
 export function useI18n(settings: Ref<Settings>) {
   const table = computed(() => locales[settings.value.language])

@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   Was Editor.vue. Renamed for symmetry with RegexContentEditor.vue now that both are thin,
   domain-specific wrappers around the shared HighlightedEditor widget (components/shared/) — see
   that file's header comment for what moved there. Everything block-specific stays here: reading/
@@ -11,7 +11,7 @@
       <span class="rx-editor-name">{{ store.currentBlock?.name || store.currentBlock?.identifier }}</span>
       <span v-if="store.currentBlock" class="pr-block-role" :class="roleClass(store.currentBlock.role)">{{ store.currentBlock.role }}</span>
       <span class="wb-spacer"></span>
-      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('preset.sidebar.settingsPanel')">⚙</button>
+      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="uiStore.t('preset.sidebar.settingsPanel')">⚙</button>
     </div>
     <HighlightedEditor
       ref="editorRef"
@@ -20,9 +20,9 @@
       :jump="store.editorJump"
       :line-class="lineClass"
       enable-var-click
-      :status-cursor-label="store.t('shared.highlightedEditor.cursor')"
-      :status-chars-label="store.t('common.chars')"
-      :status-lines-label="store.t('common.lines')"
+      :status-cursor-label="uiStore.t('shared.highlightedEditor.cursor')"
+      :status-chars-label="uiStore.t('common.chars')"
+      :status-lines-label="uiStore.t('common.lines')"
       @var-click="onVarClick"
       @var-click-miss="store.hideVarPopup()"
     />
@@ -32,11 +32,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
+import { useUiStore } from '../../stores/uiStore'
 import { useTabsStore } from '../../stores/tabsStore'
 import { roleClass } from '../../utils'
 import HighlightedEditor from '../shared/HighlightedEditor.vue'
 
 const store = usePresetStore()
+const uiStore = useUiStore()
 const tabsStore = useTabsStore()
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>()
 
@@ -70,7 +72,7 @@ function onVarClick(payload: { varName: string; cursorPos: number; pos: { top: n
 
 // Settings dialog font-size/family changes don't resize the textarea element itself, so
 // HighlightedEditor's own ResizeObserver won't catch them — nudge it explicitly.
-watch(() => [store.settings.editorFontSize, store.settings.editorFontFamily], () => {
+watch(() => [uiStore.settings.editorFontSize, uiStore.settings.editorFontFamily], () => {
   editorRef.value?.refreshFont()
 })
 </script>

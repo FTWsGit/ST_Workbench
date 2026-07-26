@@ -1,89 +1,89 @@
-<template>
+﻿<template>
   <div v-if="entry" class="rx-form" @change="store.markDirty()" @input="store.markDirty()">
-    <label class="rx-check"><input type="checkbox" v-model="enabled" /> {{ store.t('worldbook.settings.enabled') }}</label>
+    <label class="rx-check"><input type="checkbox" v-model="enabled" /> {{ uiStore.t('worldbook.settings.enabled') }}</label>
 
-    <label class="rx-label">{{ store.t('worldbook.settings.commentLabel') }}</label>
-    <input class="rx-input" v-model="entry.comment" :placeholder="store.t('worldbook.settings.commentPlaceholder')" @input="onCommentInput" />
+    <label class="rx-label">{{ uiStore.t('worldbook.settings.commentLabel') }}</label>
+    <input class="rx-input" v-model="entry.comment" :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')" @input="onCommentInput" />
 
-    <label class="rx-label">{{ store.t('worldbook.settings.keysLabel') }}</label>
-    <textarea class="rx-textarea" rows="2" v-model="keysText" :placeholder="store.t('worldbook.settings.keysPlaceholder')"></textarea>
+    <label class="rx-label">{{ uiStore.t('worldbook.settings.keysLabel') }}</label>
+    <textarea class="rx-textarea" rows="2" v-model="keysText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
 
-    <label class="rx-label">{{ store.t('worldbook.settings.activationLabel') }}</label>
+    <label class="rx-label">{{ uiStore.t('worldbook.settings.activationLabel') }}</label>
     <div class="rx-surface">
-      <button class="wb-btn sm" :class="{ active: activationMode === 'keyWord' }" @click="setActivation('keyWord')">{{ store.t('worldbook.activation.keyWord') }}</button>
-      <button class="wb-btn sm" :class="{ active: activationMode === 'constant' }" @click="setActivation('constant')">{{ store.t('worldbook.activation.constant') }}</button>
-      <button class="wb-btn sm" :class="{ active: activationMode === 'vectorized' }" @click="setActivation('vectorized')">{{ store.t('worldbook.activation.vectorized') }}</button>
+      <button class="wb-btn sm" :class="{ active: activationMode === 'keyWord' }" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
+      <button class="wb-btn sm" :class="{ active: activationMode === 'constant' }" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
+      <button class="wb-btn sm" :class="{ active: activationMode === 'vectorized' }" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>
     </div>
 
     <template v-if="activationMode === 'keyWord'">
-      <label class="rx-check"><input type="checkbox" v-model="entry.selective" /> {{ store.t('worldbook.settings.selective') }}</label>
+      <label class="rx-check"><input type="checkbox" v-model="entry.selective" /> {{ uiStore.t('worldbook.settings.selective') }}</label>
       <template v-if="entry.selective">
-        <label class="rx-label">{{ store.t('worldbook.settings.keysSecondaryLabel') }}</label>
-        <textarea class="rx-textarea" rows="2" v-model="keysSecondaryText" :placeholder="store.t('worldbook.settings.keysPlaceholder')"></textarea>
-        <label class="rx-label">{{ store.t('worldbook.settings.logicLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('worldbook.settings.keysSecondaryLabel') }}</label>
+        <textarea class="rx-textarea" rows="2" v-model="keysSecondaryText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
+        <label class="rx-label">{{ uiStore.t('worldbook.settings.logicLabel') }}</label>
         <select class="wb-select-wide" v-model.number="entry.selectiveLogic">
-          <option v-for="o in LOGIC_OPTIONS" :key="o.value" :value="o.value">{{ store.t(o.labelKey) }}</option>
+          <option v-for="o in LOGIC_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
         </select>
       </template>
     </template>
 
-    <label class="rx-label">{{ store.t('worldbook.settings.positionLabel') }}</label>
+    <label class="rx-label">{{ uiStore.t('worldbook.settings.positionLabel') }}</label>
     <select class="wb-select-wide" v-model.number="entry.position">
-      <option v-for="o in POSITION_OPTIONS" :key="o.value" :value="o.value">{{ store.t(o.labelKey) }}</option>
+      <option v-for="o in POSITION_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
     </select>
     <div v-if="entry.position === 4" class="wb-row">
-      <label class="rx-label" style="margin:0">{{ store.t('worldbook.settings.depthLabel') }}</label>
+      <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
       <input class="rx-input rx-num" type="number" v-model.number="entry.depth" />
-      <label class="rx-label" style="margin:0">{{ store.t('worldbook.settings.roleLabel') }}</label>
+      <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
       <select class="wb-select-wide" v-model="roleModel">
-        <option v-for="o in ROLE_OPTIONS" :key="String(o.value)" :value="o.value">{{ store.t(o.labelKey) }}</option>
+        <option v-for="o in ROLE_OPTIONS" :key="String(o.value)" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
       </select>
     </div>
 
-    <label class="rx-label">{{ store.t('worldbook.settings.orderLabel') }}</label>
+    <label class="rx-label">{{ uiStore.t('worldbook.settings.orderLabel') }}</label>
     <input class="rx-input rx-num" type="number" v-model.number="entry.order" />
 
     <label class="rx-check">
       <input type="checkbox" v-model="entry.useProbability" />
-      {{ store.t('worldbook.settings.probabilityLabel') }}
+      {{ uiStore.t('worldbook.settings.probabilityLabel') }}
     </label>
     <input v-if="entry.useProbability" class="rx-input rx-num" type="number" min="0" max="100" v-model.number="entry.probability" />
 
-    <button class="wb-btn rx-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ store.t('regex.settings.advancedToggle') }}</button>
+    <button class="wb-btn rx-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ uiStore.t('regex.settings.advancedToggle') }}</button>
     <div v-if="advancedOpen" class="rx-advanced">
-      <label class="rx-check"><input type="checkbox" v-model="entry.excludeRecursion" /> {{ store.t('worldbook.settings.excludeRecursion') }}</label>
-      <label class="rx-check"><input type="checkbox" v-model="entry.preventRecursion" /> {{ store.t('worldbook.settings.preventRecursion') }}</label>
-      <label class="rx-check"><input type="checkbox" v-model="delayUntilRecursionModel" /> {{ store.t('worldbook.settings.delayUntilRecursion') }}</label>
+      <label class="rx-check"><input type="checkbox" v-model="entry.excludeRecursion" /> {{ uiStore.t('worldbook.settings.excludeRecursion') }}</label>
+      <label class="rx-check"><input type="checkbox" v-model="entry.preventRecursion" /> {{ uiStore.t('worldbook.settings.preventRecursion') }}</label>
+      <label class="rx-check"><input type="checkbox" v-model="delayUntilRecursionModel" /> {{ uiStore.t('worldbook.settings.delayUntilRecursion') }}</label>
 
-      <label class="rx-label">{{ store.t('worldbook.settings.scanDepthLabel') }}</label>
-      <input class="rx-input rx-num" type="number" v-model.number="scanDepthModel" :placeholder="store.t('worldbook.settings.sameAsGlobal')" />
+      <label class="rx-label">{{ uiStore.t('worldbook.settings.scanDepthLabel') }}</label>
+      <input class="rx-input rx-num" type="number" v-model.number="scanDepthModel" :placeholder="uiStore.t('worldbook.settings.sameAsGlobal')" />
 
-      <label class="rx-label">{{ store.t('worldbook.settings.caseSensitiveLabel') }}</label>
+      <label class="rx-label">{{ uiStore.t('worldbook.settings.caseSensitiveLabel') }}</label>
       <select class="wb-select-wide" v-model="caseSensitiveModel">
-        <option value="same">{{ store.t('worldbook.settings.sameAsGlobal') }}</option>
-        <option value="true">{{ store.t('common.on') }}</option>
-        <option value="false">{{ store.t('common.off') }}</option>
+        <option value="same">{{ uiStore.t('worldbook.settings.sameAsGlobal') }}</option>
+        <option value="true">{{ uiStore.t('common.on') }}</option>
+        <option value="false">{{ uiStore.t('common.off') }}</option>
       </select>
 
-      <label class="rx-label">{{ store.t('worldbook.settings.matchWholeWordsLabel') }}</label>
+      <label class="rx-label">{{ uiStore.t('worldbook.settings.matchWholeWordsLabel') }}</label>
       <select class="wb-select-wide" v-model="matchWholeWordsModel">
-        <option value="same">{{ store.t('worldbook.settings.sameAsGlobal') }}</option>
-        <option value="true">{{ store.t('common.on') }}</option>
-        <option value="false">{{ store.t('common.off') }}</option>
+        <option value="same">{{ uiStore.t('worldbook.settings.sameAsGlobal') }}</option>
+        <option value="true">{{ uiStore.t('common.on') }}</option>
+        <option value="false">{{ uiStore.t('common.off') }}</option>
       </select>
 
       <div class="wb-row">
-        <label class="rx-label" style="margin:0">{{ store.t('worldbook.settings.stickyLabel') }}</label>
+        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.stickyLabel') }}</label>
         <input class="rx-input rx-num" type="number" v-model.number="stickyModel" />
-        <label class="rx-label" style="margin:0">{{ store.t('worldbook.settings.cooldownLabel') }}</label>
+        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.cooldownLabel') }}</label>
         <input class="rx-input rx-num" type="number" v-model.number="cooldownModel" />
-        <label class="rx-label" style="margin:0">{{ store.t('worldbook.settings.delayLabel') }}</label>
+        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.delayLabel') }}</label>
         <input class="rx-input rx-num" type="number" v-model.number="delayModel" />
       </div>
 
-      <label class="rx-label">{{ store.t('worldbook.settings.groupLabel') }}</label>
-      <input class="rx-input" v-model="entry.group" :placeholder="store.t('worldbook.settings.groupPlaceholder')" />
-      <label class="rx-check"><input type="checkbox" v-model="entry.groupPrioritized" /> {{ store.t('worldbook.settings.groupPrioritized') }}</label>
+      <label class="rx-label">{{ uiStore.t('worldbook.settings.groupLabel') }}</label>
+      <input class="rx-input" v-model="entry.group" :placeholder="uiStore.t('worldbook.settings.groupPlaceholder')" />
+      <label class="rx-check"><input type="checkbox" v-model="entry.groupPrioritized" /> {{ uiStore.t('worldbook.settings.groupPrioritized') }}</label>
     </div>
   </div>
 </template>
@@ -108,10 +108,12 @@
 import { ref, computed, watch } from 'vue'
 import { useTabsStore } from '../../stores/tabsStore'
 import { useWorldbookStore } from '../../stores/worldbookStore'
+import { useUiStore } from '../../stores/uiStore'
 import { WORLDBOOK_POSITION_OPTIONS as POSITION_OPTIONS, WORLDBOOK_LOGIC_OPTIONS as LOGIC_OPTIONS, WORLDBOOK_ROLE_OPTIONS as ROLE_OPTIONS } from '../../types'
 
 const tabsStore = useTabsStore()
 const store = useWorldbookStore()
+const uiStore = useUiStore()
 const advancedOpen = ref(false)
 
 const entry = computed(() => store.currentEntry)
@@ -191,6 +193,6 @@ const delayModel = nullableNumberModel('delay')
 // open()，避免每敲一个字都触发一次 sidebar scrollIntoView。
 function onCommentInput() { store.markDirty() }
 watch(() => entry.value?.comment, (name) => {
-  if (entry.value) tabsStore.renameTab('worldbook', String(entry.value.uid), name || store.t('common.unnamed'))
+  if (entry.value) tabsStore.renameTab('worldbook', String(entry.value.uid), name || uiStore.t('common.unnamed'))
 })
 </script>

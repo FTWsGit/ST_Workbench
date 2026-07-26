@@ -71,19 +71,19 @@ export const useTabsStore = defineStore('tabs', () => {
   function setSidebarMode(mode: string) { sidebarMode.value = mode }
 
   /** Per-domain "please scroll your selected item into view" signal — domain-agnostic replacement
-   *  for what used to be store.ts's preset-only `sidebarJumpToken`/`requestSidebarScroll()`. Each
+   *  for what used to be presetStore's preset-only `sidebarJumpToken`/`requestSidebarScroll()`. Each
    *  domain's sidebar list (Sidebar.vue for 'preset', RegexSidebarList.vue for 'regex', ...) watches
    *  only its own `listScrollToken[domain]` counter and scrolls its own currently-active item into
    *  view when it ticks.
    *
-   *  Lives here (tabs store) rather than in store.ts (main) because it's UI-layout state about
+   *  Lives here (tabs store) rather than in presetStore (main) because it's UI-layout state about
    *  tabs/sidebars, not preset data, and because it needs to fire for ANY domain, not just blocks
    *  — see PROJECT_HANDOFF.md 架构总览 1/2. `open()` and `focus()` below both trigger it
    *  automatically, so callers that open/focus a tab never need to remember to request a scroll
    *  themselves: the two are inherently the same user action ("show me this item"). Domain call
    *  sites that jump WITHOUT going through open()/focus() (search-result jump, var-nav jump — both
    *  stay within an already-active preset tab) call requestListScroll('preset') directly from
-   *  store.ts. */
+   *  presetStore. */
   const listScrollToken = ref<Record<string, number>>({})
   function requestListScroll(domain: string) {
     listScrollToken.value[domain] = (listScrollToken.value[domain] || 0) + 1

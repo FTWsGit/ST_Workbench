@@ -1,30 +1,30 @@
-<template>
+﻿<template>
   <FloatingPanelShell
-    :title="store.t('worldbook.tools.title')"
-    :close-title="store.t('common.close')"
+    :title="uiStore.t('worldbook.tools.title')"
+    :close-title="uiStore.t('common.close')"
     :width="380" :height="320" :min-width="300" :min-height="220"
     @close="emit('close')">
     <div class="wb-tools-body">
-      <p class="wb-muted">{{ store.t('worldbook.tools.selectedCount', { count: selectedIds.length }) }}</p>
+      <p class="wb-muted">{{ uiStore.t('worldbook.tools.selectedCount', { count: selectedIds.length }) }}</p>
 
       <div class="wb-tools-section">
-        <label class="rx-label" style="margin:0">{{ store.t('worldbook.tools.enableLabel') }}</label>
+        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.tools.enableLabel') }}</label>
         <div class="rx-surface">
-          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setDisabled(false)">{{ store.t('worldbook.tools.enableSelected') }}</button>
-          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setDisabled(true)">{{ store.t('worldbook.tools.disableSelected') }}</button>
+          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setDisabled(false)">{{ uiStore.t('worldbook.tools.enableSelected') }}</button>
+          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setDisabled(true)">{{ uiStore.t('worldbook.tools.disableSelected') }}</button>
         </div>
       </div>
 
       <div class="wb-tools-section">
-        <label class="rx-label" style="margin:0">{{ store.t('worldbook.tools.activationLabel') }}</label>
+        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.tools.activationLabel') }}</label>
         <div class="rx-surface">
-          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('keyWord')">{{ store.t('worldbook.activation.keyWord') }}</button>
-          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('constant')">{{ store.t('worldbook.activation.constant') }}</button>
-          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('vectorized')">{{ store.t('worldbook.activation.vectorized') }}</button>
+          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
+          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
+          <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>
         </div>
       </div>
 
-      <p v-if="!selectedIds.length" class="wb-muted">{{ store.t('worldbook.tools.noSelection') }}</p>
+      <p v-if="!selectedIds.length" class="wb-muted">{{ uiStore.t('worldbook.tools.noSelection') }}</p>
     </div>
   </FloatingPanelShell>
 </template>
@@ -36,11 +36,13 @@
  * FloatingPanelShell.vue 顶部 doc comment。 */
 import { computed } from 'vue'
 import { useWorldbookStore } from '../../stores/worldbookStore'
+import { useUiStore } from '../../stores/uiStore'
 import type { OrderItem, OrderGroup } from '../../types'
 import FloatingPanelShell from '../shared/FloatingPanelShell.vue'
 
 const emit = defineEmits<{ close: [] }>()
 const store = useWorldbookStore()
+const uiStore = useUiStore()
 
 const selectedIds = computed<string[]>(() => {
   const ids = new Set<string>()
@@ -61,7 +63,7 @@ function selectedEntries() {
 function setDisabled(disabled: boolean) {
   selectedEntries().forEach(e => { e.disabled = disabled })
   store.markDirty()
-  store.showToast(store.t('worldbook.tools.applied', { count: selectedIds.value.length }))
+  uiStore.showToast(uiStore.t('worldbook.tools.applied', { count: selectedIds.value.length }))
 }
 
 function setActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
@@ -71,6 +73,6 @@ function setActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
     e.keyWord = mode === 'keyWord'
   })
   store.markDirty()
-  store.showToast(store.t('worldbook.tools.applied', { count: selectedIds.value.length }))
+  uiStore.showToast(uiStore.t('worldbook.tools.applied', { count: selectedIds.value.length }))
 }
 </script>

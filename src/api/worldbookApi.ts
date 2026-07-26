@@ -91,8 +91,8 @@ export async function listWorldbooks(): Promise<string[]> {
   return Array.isArray(mod.world_names) ? [...mod.world_names] : []
 }
 
-/** 按名字读取一份世界书的完整内容。ST 这边名字不存在时 loadWorldInfo 通常返回空/undefined，
- *  两种都当"不存在"处理，返回 null。 */
+/** 按名字读取一份世界书的完整内容。ST 这边名字不存在时 loadWorldInfo 通常返回一个对象，entries为空，
+ *  返回 null。 */
 export async function getWorldbookByName(name: string): Promise<Worldbook | null> {
   const mod = await getWorldInfoModule()
   const data = await mod.loadWorldInfo(name)
@@ -112,11 +112,7 @@ export async function createWorldbook(name: string): Promise<void> {
 
 /** 保存（覆盖写）到指定名字。`data` 必须是纯对象，不能是 Pinia/Vue 的活跃响应式引用，理由跟
  *  presetApi.ts savePresetAs() 一样（structuredClone 过不了 Vue Proxy），这里用
- *  deepClonePlain() 兜底。
- *  存完之后重新 loadWorldInfo() 一次丢弃结果——纯粹是让 ST 自己模块内部的缓存跟这次写入保持
- *  一致（见 PROJECT.md「关键设计要点」第7条：改完世界书要重新 loadWorldInfo 刷新本地缓存，
- *  不然后续别的地方基于 ST 自己缓存的读操作可能还看到旧数据），失败了也不影响这次保存本身，
- *  所以吞掉错误不抛出。 */
+ *  deepClonePlain() 兜底。 */
 export async function saveWorldbook(data: Worldbook): Promise<void> {
   const mod = await getWorldInfoModule()
   if (typeof mod.saveWorldInfo !== 'function') {
@@ -124,7 +120,6 @@ export async function saveWorldbook(data: Worldbook): Promise<void> {
   }
   const plain = deepClonePlain(data)
   await mod.saveWorldInfo(plain.name, { entries: toSTEntries(plain) })
-  await mod.loadWorldInfo(plain.name).catch(() => {})
 }
 
 export async function deleteWorldbook(name: string): Promise<void> {

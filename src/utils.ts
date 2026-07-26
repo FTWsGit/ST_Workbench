@@ -32,12 +32,12 @@ export function roleClass(role: string | undefined, prefix = ''): string {
 export interface OrderedBlockEntry { block: PresetBlock; hidden: boolean }
 
 /** Flattens a PresetData's prompt_order (which may contain _gid-tagged group entries, see
- *  store.ts's importOrderWithGroups/exportOrder) into a plain, VISUALLY ORDERED list of blocks —
+ *  presetStore's importOrderWithGroups/exportOrder) into a plain, VISUALLY ORDERED list of blocks —
  *  the actual generation order, ignoring group boundaries entirely (callers that only need "top
  *  to bottom order", like CopyPanel.vue, don't care about the group tree itself).
  *
  *  Blocks that exist in `data.prompts` but aren't referenced anywhere in prompt_order (hidden
- *  blocks — same concept as store.ts's `hiddenBlocks` computed) are appended at the end, each
+ *  blocks — same concept as presetStore's `hiddenBlocks` computed) are appended at the end, each
  *  flagged `hidden: true`, in their `prompts` array order.
  *
  *  Dangling order entries that reference a since-deleted prompt identifier are silently skipped
@@ -523,7 +523,7 @@ export interface MultiSelectState<T> {
 
 /**
  * Shared plain/ctrl/shift multi-select semantics — one click model used both by the main
- * editor's block list (Sidebar.vue, via store.ts's selectBlock) and CopyPanel.vue's two
+ * editor's block list (Sidebar.vue, via presetStore's selectBlock) and CopyPanel.vue's two
  * independent block lists, so the two don't drift out of sync with each other over time.
  *
  * `id` is whatever the caller uses to identify a selectable row (a numeric flatNodes index for
@@ -533,7 +533,7 @@ export interface MultiSelectState<T> {
  * ids themselves (which only happens to work when ids ARE consecutive integers, as in the
  * original gi-index-based sidebar implementation; CopyPanel's string identifiers aren't).
  *
- * Semantics (mirrors the original store.ts selectBlock() exactly):
+ * Semantics (mirrors the original presetStore selectBlock() exactly):
  *  - plain click: if this is the only currently-selected row, clicking it again clears the
  *    selection entirely; otherwise the selection becomes just this row, which also becomes the
  *    new anchor.

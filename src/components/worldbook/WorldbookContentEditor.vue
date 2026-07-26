@@ -1,18 +1,18 @@
-<template>
+﻿<template>
   <div class="wb-editor-panel rx-editor" v-if="entry">
     <div class="wb-editor-meta">
-      <span class="rx-editor-name">{{ entry.comment || store.t('common.unnamed') }}</span>
+      <span class="rx-editor-name">{{ entry.comment || uiStore.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
-      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="store.t('regex.editor.settingsPanel')">⚙</button>
+      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="uiStore.t('regex.editor.settingsPanel')">⚙</button>
     </div>
 
     <HighlightedEditor
       ref="editorRef"
       v-model="contentModel"
-      :placeholder="store.t('worldbook.editor.placeholder')"
-      :status-cursor-label="store.t('shared.highlightedEditor.cursor')"
-      :status-chars-label="store.t('common.chars')"
-      :status-lines-label="store.t('common.lines')" />
+      :placeholder="uiStore.t('worldbook.editor.placeholder')"
+      :status-cursor-label="uiStore.t('shared.highlightedEditor.cursor')"
+      :status-chars-label="uiStore.t('common.chars')"
+      :status-lines-label="uiStore.t('common.lines')" />
   </div>
 </template>
 
@@ -22,10 +22,12 @@
  * WorldbookSidebar.vue 顶部同样的理由。 */
 import { ref, computed, watch } from 'vue'
 import { useWorldbookStore } from '../../stores/worldbookStore'
+import { useUiStore } from '../../stores/uiStore'
 import { useTabsStore } from '../../stores/tabsStore'
 import HighlightedEditor from '../shared/HighlightedEditor.vue'
 
 const store = useWorldbookStore()
+const uiStore = useUiStore()
 const tabsStore = useTabsStore()
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>()
 
@@ -39,7 +41,7 @@ const contentModel = computed<string>({
   set: (v) => { if (entry.value) { entry.value.content = v; store.markDirty() } },
 })
 
-watch(() => [store.settings.editorFontSize, store.settings.editorFontFamily], () => {
+watch(() => [uiStore.settings.editorFontSize, uiStore.settings.editorFontFamily], () => {
   editorRef.value?.refreshFont()
 })
 </script>

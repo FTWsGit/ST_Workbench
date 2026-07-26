@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div v-if="store.currentBlock" class="rx-form">
-    <label class="rx-label" style="margin-top:0">{{ store.t('preset.settings.name') }}</label>
-    <input class="rx-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="store.t('preset.settings.namePlaceholder')" />
+    <label class="rx-label" style="margin-top:0">{{ uiStore.t('preset.settings.name') }}</label>
+    <input class="rx-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="uiStore.t('preset.settings.namePlaceholder')" />
 
-    <label class="rx-label">{{ store.t('preset.settings.role') }}</label>
+    <label class="rx-label">{{ uiStore.t('preset.settings.role') }}</label>
     <select class="rx-input" :value="store.currentBlock.role" @change="onRoleChange">
       <option value="system">system</option>
       <option value="user">user</option>
@@ -11,10 +11,10 @@
     </select>
 
     <p v-if="store.currentBlock.marker" class="wb-muted" style="font-size:12px;margin-top:10px">
-      {{ store.t('preset.settings.markerHint', { id: store.currentBlock.identifier }) }}
+      {{ uiStore.t('preset.settings.markerHint', { id: store.currentBlock.identifier }) }}
     </p>
   </div>
-  <p v-else class="wb-empty-note">{{ store.t('preset.settings.empty') }}</p>
+  <p v-else class="wb-empty-note">{{ uiStore.t('preset.settings.empty') }}</p>
 </template>
 
 <script setup lang="ts">
@@ -24,9 +24,11 @@
 // 做防抖/高亮批处理——name/role 不是高频输入的热路径，没有那个必要。
 import { watch } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
+import { useUiStore } from '../../stores/uiStore'
 import { useTabsStore } from '../../stores/tabsStore'
 
 const store = usePresetStore()
+const uiStore = useUiStore()
 const tabsStore = useTabsStore()
 
 function onNameInput(e: Event) {

@@ -6,11 +6,11 @@
   <div class="pr-cp-toolbar">
     <slot />
     <span class="wb-spacer"></span>
-    <span class="wb-muted">{{ store.t('shared.listToolbar.count', { count }) }}</span>
+    <span class="wb-muted">{{ uiStore.t('shared.listToolbar.count', { count }) }}</span>
   </div>
 </template>
 <script setup lang="ts">
-import { usePresetStore } from '../../stores/presetStore'
+import { useUiStore } from '../../stores/uiStore'
 defineProps<{ count: number }>()
-const store = usePresetStore()
+const uiStore = useUiStore()
 </script>

@@ -1,18 +1,18 @@
-<template>
-  <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: store.settings.sidebarWidth + 'px' }">
+﻿<template>
+  <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
-      <span>{{ store.t('worldbook.sidebar.title', { count: store.order.length }) }}</span>
+      <span>{{ uiStore.t('worldbook.sidebar.title', { count: store.order.length }) }}</span>
       <ListToolbar :count="store.entries.length">
-        <button class="wb-btn" @click="store.addEntry()">{{ store.t('worldbook.sidebar.newEntry') }}</button>
+        <button class="wb-btn" @click="store.addEntry()">{{ uiStore.t('worldbook.sidebar.newEntry') }}</button>
       </ListToolbar>
       <div class="wb-sidebar-tools">
-        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ store.t('preset.sidebar.bind') }}</button>
-        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ store.t('preset.sidebar.unbind') }}</button>
-        <button class="wb-btn" :class="{ active: toolsOpen }" @click="toolsOpen = !toolsOpen">{{ store.t('worldbook.sidebar.tools') }}</button>
+        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('preset.sidebar.bind') }}</button>
+        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('preset.sidebar.unbind') }}</button>
+        <button class="wb-btn" :class="{ active: toolsOpen }" @click="toolsOpen = !toolsOpen">{{ uiStore.t('worldbook.sidebar.tools') }}</button>
       </div>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.order.length" class="pr-cp-empty">{{ store.t('worldbook.sidebar.empty') }}</p>
+      <p v-if="!store.order.length" class="pr-cp-empty">{{ uiStore.t('worldbook.sidebar.empty') }}</p>
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">
         <!-- Group Header -->
         <div v-if="node.isGroup"
@@ -51,7 +51,7 @@
           <span class="wb-drag-handle">⠿</span>
           <span class="wb-toggle-sw" :class="{ on: !getEntry((node.ref as OrderItem).identifier)?.disabled }" @click.stop="onToggleEntry((node.ref as OrderItem).identifier)"></span>
           <span v-if="editingBlockGi !== gi" class="pr-block-name" @dblclick.stop="startEditBlockName(gi)">
-            {{ getEntry((node.ref as OrderItem).identifier)?.comment || store.t('common.unnamed') }}
+            {{ getEntry((node.ref as OrderItem).identifier)?.comment || uiStore.t('common.unnamed') }}
           </span>
           <input v-else
                  :ref="(el) => setBlockNameInput(el, gi)"
@@ -76,11 +76,11 @@
 
 <script setup lang="ts">
 /* 世界书侧边栏——不像正则三件套那样参数化（TODO.md 1.5 的参数化只是为了给以后角色工作区复用同一套
- * 正则组件，世界书只有一个 worldbookStore，没有这个复用需求），直接 usePresetStore() 那样直接
- * useWorldbookStore()，跟 PresetSidebar.vue 是同一种耦合方式。 */
+ * 正则组件，世界书只有一个 worldbookStore，没有这个复用需求），直接 useWorldbookStore()，跟
+ * PresetSidebar.vue 是同一种耦合方式。 */
 import { ref, computed, watch } from 'vue'
 import { useWorldbookStore } from '../../stores/worldbookStore'
-import { usePresetStore } from '../../stores/presetStore'
+import { useUiStore } from '../../stores/uiStore'
 import type { OrderItem, OrderGroup, FlatNode, WorldbookEntry } from '../../types'
 import { usePanelResize } from '../../composables/usePanelResize'
 import { useTabsStore } from '../../stores/tabsStore'
@@ -98,9 +98,7 @@ const toolsOpen = ref(false)
 
 const tabsStore = useTabsStore()
 const store = useWorldbookStore()
-// 设置面板（sidebarWidth 持久化）复用 presetStore.saveSettings()——worldbookStore 转发的是同一个
-// settings 响应式对象（见 worldbookStore.ts 顶部 doc comment），但落盘方法没转发，这里直接拿。
-const presetStore = usePresetStore()
+const uiStore = useUiStore()
 const listRef = ref<HTMLElement>()
 
 const { dragIdx, dragOverIdx, dragOverPos, itemEls, setItemRef, onItemMouseDown: onDragPointerDown, consumeSuppressClick: consumeDragSuppressClick } =
@@ -117,9 +115,9 @@ function getEntry(id: string): WorldbookEntry | undefined {
 }
 function activationLabel(entry: WorldbookEntry | undefined) {
   if (!entry) return ''
-  if (entry.constant) return store.t('worldbook.activation.constant')
-  if (entry.vectorized) return store.t('worldbook.activation.vectorized')
-  return store.t('worldbook.activation.keyWord')
+  if (entry.constant) return uiStore.t('worldbook.activation.constant')
+  if (entry.vectorized) return uiStore.t('worldbook.activation.vectorized')
+  return uiStore.t('worldbook.activation.keyWord')
 }
 function onToggleEntry(id: string) {
   const e = getEntry(id)
@@ -173,12 +171,12 @@ function startEditBlockName(gi: number) { const node = store.flatNodes[gi]; if (
 
 /* ---- Resize ---- */
 const resize = usePanelResize({
-  getWidth: () => store.settings.sidebarWidth,
-  setWidth: (w) => { store.settings.sidebarWidth = w },
+  getWidth: () => uiStore.settings.sidebarWidth,
+  setWidth: (w) => { uiStore.settings.sidebarWidth = w },
   min: 220, max: 600, dir: 'right',
 })
 function onResizeStart(e: PointerEvent) { resize.onPointerDown(e) }
-watch(() => resize.active.value, (v) => { if (!v) presetStore.saveSettings() })
+watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
 
 /* ---- Scroll active item into view ---- */
 useListScrollSync({
@@ -213,7 +211,7 @@ const listSelection = useListSelection<number>({
     } else {
       const item = node.ref as OrderItem
       const entry = getEntry(item.identifier)
-      tabsStore.open({ domain: 'worldbook', key: item.identifier, label: entry?.comment || store.t('common.unnamed'), workspace: 'worldbook' })
+      tabsStore.open({ domain: 'worldbook', key: item.identifier, label: entry?.comment || uiStore.t('common.unnamed'), workspace: 'worldbook' })
     }
   },
 })

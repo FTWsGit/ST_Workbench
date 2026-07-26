@@ -96,7 +96,7 @@ export function selectPresetByName(name: string): boolean {
  * （"structuredClone ... could not be cloned"）；更麻烦的是，如果 ST 在触发这次克隆之前就已经
  * 把我们传入的对象引用赋值进了它自己的活跃状态里，我们这边的 Vue Proxy 就会残留在 ST 的内部状态
  * 里（表现为刷新前 `pm.getCompletionPresetByName()` 一直返回一个来自*我们*这个 Vue 实例的
- * `Proxy(Object)`），直到手动刷新页面才会清掉。调用方（store.ts）负责在传进来之前就用
+ * `Proxy(Object)`），直到手动刷新页面才会清掉。调用方（presetStore.ts）负责在传进来之前就用
  * `deepClonePlain()` 深拷贝成纯数据——这里再断言一次，双重保险。 */
 export async function savePresetAs(name: string, data: PresetData): Promise<void> {
   const pm = getPresetManager()

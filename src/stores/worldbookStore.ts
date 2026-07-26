@@ -5,24 +5,21 @@ import * as WB from '../api/worldbookApi'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
-import { usePresetStore } from './presetStore'
+import { useUiStore } from './uiStore'
 
 /** 独立文档 store（TODO.md 阶段1）：世界书是三个工作区里第一个不挂靠 presetStore 的——不共享
  *  rawData/prompts 那套，自己维护一份 entries + order。
  *
- *  t()/showToast()/settings 不新建一份 useUiState()，直接借 usePresetStore() 已经持有的那份——
- *  跟 regexProps.ts 顶部 doc comment、ListToolbar.vue 里的做法是同一个理由：useUiState() 是
- *  composable 不是单例 store，谁调用谁拿到独立一份、互不同步（语言切换不会同步过来）。presetStore
- *  是当前唯一真正持有这份共享 UI 状态的实例，Pinia 保证 usePresetStore() 在整个 app 里永远拿到
- *  同一个实例（App.vue 无条件挂载它），worldbookStore 借用它没有额外依赖顺序问题。等真的需要
- *  升级成 uiStore 单例（多个 store 都要改设置面板/toast，且不想都绕道 presetStore）时再动，
- *  这次不提前抽象。 */
+ *  t()/showToast()/settings 直接 useUiStore()——uiStore 是真正的全局单例（TODO-useUiState.md
+ *  落地后从 composable 升级成 defineStore('ui')），Pinia 保证整个 app 里永远拿到同一个实例，
+ *  语言/字体切换会同步过来，不再需要绕道 presetStore 借这份共享 UI 状态。saveSettings 也一并
+ *  转发，供 WorldbookSidebar.vue 拖拽 resize 后落盘用。 */
 export const useWorldbookStore = defineStore('worldbook', () => {
   const tabsStore = useTabsStore()
   const confirmStore = useConfirmStore()
-  const presetStore = usePresetStore()
-  const t = presetStore.t
-  const showToast = presetStore.showToast
+  const uiStore = useUiStore()
+  const t = uiStore.t
+  const showToast = uiStore.showToast
 
   /* ====== Core State ====== */
   const entries = ref<WorldbookEntry[]>([])
@@ -280,6 +277,5 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     doSaveWorldbook, createNewWorldbook, removeCurrentWorldbook,
     selectBlock, addEntry, deleteEntry, toggleEntryDisabled,
     toggleGroupCollapse, reorderBlock, bindSelected, unbindGroup,
-    t, showToast, settings: presetStore.settings,
   }
 })
