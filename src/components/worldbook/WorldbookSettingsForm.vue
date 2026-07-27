@@ -138,12 +138,12 @@ function setActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
 }
 
 const keysText = computed({
-  get: () => (entry.value?.keys || []).join('\n'),
-  set: (v: string) => { if (entry.value) { entry.value.keys = v.split('\n').map(s => s.trim()).filter(Boolean); store.markDirty() } },
+  get: () => (entry.value?.keys || []).join(', '),
+  set: (v: string) => { if (entry.value) { entry.value.keys = v.replace(/[\n\t]/g, ',').split(',').map(s => s.trim()).filter(Boolean); store.markDirty() } },
 })
 const keysSecondaryText = computed({
-  get: () => (entry.value?.keysecondary || []).join('\n'),
-  set: (v: string) => { if (entry.value) { entry.value.keysecondary = v.split('\n').map(s => s.trim()).filter(Boolean); store.markDirty() } },
+  get: () => (entry.value?.keysecondary || []).join(', '),
+  set: (v: string) => { if (entry.value) { entry.value.keysecondary = v.replace(/[\n\t]/g, ',').split(',').map(s => s.trim()).filter(Boolean); store.markDirty() } },
 })
 
 const roleModel = computed({
