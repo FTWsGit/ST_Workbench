@@ -5,6 +5,10 @@
       <ListToolbar :count="props.scripts.length">
         <button class="wb-btn" @click="onAdd">{{ props.t('regex.sidebar.newScript') }}</button>
       </ListToolbar>
+      <!-- 空插槽，预设工作区（App.vue 挂载点）不传内容时什么都不渲染，行为跟改造前完全一样。
+           角色工作区的 CharacterSidebar.vue 在 regex 子模式下用它插入一个"切回字段列表"的按钮
+           （见 CharacterSidebar.vue 顶部 doc comment），这是这个组件唯一为了角色工作区新增的口子。 -->
+      <slot name="modeToggle" />
     </div>
     <div class="wb-list">
       <p v-if="!props.scripts.length" class="pr-cp-empty">{{ props.t('regex.sidebar.empty') }}</p>

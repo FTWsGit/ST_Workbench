@@ -41,6 +41,7 @@ export default {
   'shared.header.settings': '⚙ Settings',
   'shared.header.varNav': '📊 Var Nav',
   'shared.header.preview': '👁 Preview',
+  'shared.header.meta': 'ℹ️ Meta',
   'shared.header.newPreset': 'New preset',
   'shared.header.deletePreset': 'Delete preset',
   'shared.header.switchPreset': 'Switch preset',
@@ -218,6 +219,25 @@ export default {
   'preset.copyPanel.loadBothFirst': 'Load both sides first',
   'preset.copyPanel.selectBlocksFirst': 'Select block(s) to copy first',
 
+  // ---- preset.metaForm: preset meta (model parameters, TODO.md stage 2b) ----
+  'preset.metaForm.title': 'ℹ️ Preset Parameters',
+  'preset.metaForm.contextLabel': 'Max Context (Tokens)',
+  'preset.metaForm.maxTokensLabel': 'Max Reply Length (Tokens)',
+  'preset.metaForm.repliesLabel': 'Reply Count',
+  'preset.metaForm.streamLabel': 'Streaming',
+  'preset.metaForm.squashLabel': 'Squash Consecutive System Messages',
+  'preset.metaForm.samplingToggle': 'Sampling Parameters',
+  'preset.metaForm.temperatureLabel': 'Temperature',
+  'preset.metaForm.topPLabel': 'Top P',
+  'preset.metaForm.freqPenaltyLabel': 'Frequency Penalty',
+  'preset.metaForm.presPenaltyLabel': 'Presence Penalty',
+  'preset.metaForm.repPenaltyLabel': 'Repetition Penalty',
+  'preset.metaForm.minPLabel': 'Min P',
+  'preset.metaForm.topKLabel': 'Top K',
+  'preset.metaForm.topALabel': 'Top A',
+  'preset.metaForm.seedLabel': 'Seed',
+  'preset.metaForm.seedHint': '-1 for random',
+
   // ---- regex.sidebar ----
   'regex.sidebar.title': 'Regex Scripts',
   'regex.sidebar.newScript': '+ New',
@@ -301,6 +321,21 @@ export default {
   'shared.prompt.newWorldbook.placeholder': 'Worldbook name',
   'shared.editorShell.emptyWorldbook': 'Loading worldbook list…',
   'shared.editorShell.emptyWorldbookEntry': 'Select an entry, or create a new one',
+
+  // ---- shared.header / shared.confirm / shared.prompt / shared.editorShell: character workspace (TODO.md stage 2) ----
+  'shared.header.mode.character': 'Character',
+  'shared.header.newCharacter': 'New Character',
+  'shared.header.deleteCharacter': 'Delete Character',
+  'shared.header.switchCharacter': 'Switch Character',
+  'shared.confirm.switchCharacter.title': 'Switch character?',
+  'shared.confirm.switchCharacter.message': 'Switch to character <strong>{name}</strong>? Unsaved changes to the current character will be lost.',
+  'shared.confirm.deleteCharacter.title': 'Delete character?',
+  'shared.confirm.deleteCharacter.message': 'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
+  'shared.confirm.closePanel.characterItem': 'Character: {name}',
+  'shared.prompt.newCharacter.title': 'New character name',
+  'shared.prompt.newCharacter.placeholder': 'Character name',
+  'shared.editorShell.emptyCharacter': 'No character loaded yet — create or select one',
+  'shared.editorShell.emptyCharacterField': 'Select a field to edit',
 
   // ---- worldbook.sidebar ----
   'worldbook.sidebar.title': 'Worldbook Entries',
@@ -410,7 +445,20 @@ export default {
   'character.field.depthPrompt': "Author's Note",
 
   // ---- character.sidebar ----
+  'character.sidebar.title': 'Character',
+  'character.sidebar.empty': 'No character loaded yet — create or select one',
+  'character.sidebar.fieldsLabel': 'Content Fields',
+  'character.sidebar.greetingsLabel': 'Greetings',
+  'character.sidebar.addGreeting': '+ Greeting',
+  'character.sidebar.regexMode': 'Regex',
+  'character.sidebar.fieldsMode': '← Fields',
+  'character.sidebar.deleteGreetingTitle': 'Delete this greeting',
   'character.sidebar.greetingLabel': 'Greeting {n}',
+
+  // ---- character.editor ----
+  'character.editor.placeholder': 'Edit content here…',
+  'character.editor.depthLabel': 'Depth',
+  'character.editor.roleLabel': 'Role',
 
   // ---- character.toast ----
   'character.toast.listFailed': 'Failed to fetch character list: {msg}',
@@ -433,4 +481,16 @@ export default {
   // ---- character.confirm ----
   'character.confirm.deleteGreeting.title': 'Delete this greeting?',
   'character.confirm.deleteGreeting.message': 'This will permanently remove this greeting. This cannot be undone.',
+
+  // ---- character.metaForm: creator info/tags/talkativeness/worldbook rebind, TODO.md stage 2b ----
+  'character.metaForm.title': 'ℹ️ Character Info',
+  'character.metaForm.favLabel': '⭐ Favorite',
+  'character.metaForm.creatorLabel': 'Creator',
+  'character.metaForm.versionLabel': 'Version',
+  'character.metaForm.creatorNotesLabel': "Creator's Notes",
+  'character.metaForm.tagsLabel': 'Tags',
+  'character.metaForm.tagsPlaceholder': 'Comma-separated, e.g.: fantasy, oc',
+  'character.metaForm.talkativenessLabel': 'Talkativeness',
+  'character.metaForm.worldbookLabel': 'Bound Worldbook',
+  'character.metaForm.worldbookNone': '(Not bound)',
 } satisfies Record<keyof typeof zhCN, string> satisfies LocaleTable

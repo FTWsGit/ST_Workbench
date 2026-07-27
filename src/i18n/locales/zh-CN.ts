@@ -41,6 +41,7 @@ export default {
   'shared.header.settings': '⚙ 设置',
   'shared.header.varNav': '📊 变量导航',
   'shared.header.preview': '👁 预览',
+  'shared.header.meta': 'ℹ️ 元信息',
   'shared.header.newPreset': '新建预设',
   'shared.header.deletePreset': '删除预设',
   'shared.header.switchPreset': '切换预设',
@@ -218,6 +219,26 @@ export default {
   'preset.copyPanel.loadBothFirst': '请先加载两侧预设',
   'preset.copyPanel.selectBlocksFirst': '请先选择要复制的块',
 
+  // ---- preset.metaForm：预设 Meta（模型参数，TODO.md 2.5b） ----
+  'preset.metaForm.title': 'ℹ️ 预设参数',
+  'preset.metaForm.contextLabel': '最大上下文 (Token)',
+  'preset.metaForm.maxTokensLabel': '最大回复长度 (Token)',
+  'preset.metaForm.repliesLabel': '回复条数',
+  'preset.metaForm.streamLabel': '流式传输',
+  'preset.metaForm.squashLabel': '压缩连续系统消息',
+  'preset.metaForm.samplingToggle': '采样参数',
+  'preset.metaForm.temperatureLabel': 'Temperature',
+  'preset.metaForm.topPLabel': 'Top P',
+  'preset.metaForm.freqPenaltyLabel': 'Frequency Penalty',
+  'preset.metaForm.presPenaltyLabel': 'Presence Penalty',
+  'preset.metaForm.repPenaltyLabel': 'Repetition Penalty',
+  'preset.metaForm.minPLabel': 'Min P',
+  'preset.metaForm.topKLabel': 'Top K',
+  'preset.metaForm.topALabel': 'Top A',
+  'preset.metaForm.seedLabel': 'Seed',
+  'preset.metaForm.seedHint': '-1 表示随机',
+
+
   // ---- regex.sidebar：正则侧边栏 ----
   'regex.sidebar.title': '正则脚本',
   'regex.sidebar.newScript': '+ 新建',
@@ -301,6 +322,21 @@ export default {
   'shared.prompt.newWorldbook.placeholder': '世界书名称',
   'shared.editorShell.emptyWorldbook': '正在加载世界书列表…',
   'shared.editorShell.emptyWorldbookEntry': '选一个条目，或者新建一个',
+
+  // ---- shared.header / shared.confirm / shared.prompt / shared.editorShell：角色卡工作区部分（TODO.md 阶段2） ----
+  'shared.header.mode.character': '角色卡',
+  'shared.header.newCharacter': '新建角色',
+  'shared.header.deleteCharacter': '删除角色',
+  'shared.header.switchCharacter': '切换角色',
+  'shared.confirm.switchCharacter.title': '切换角色？',
+  'shared.confirm.switchCharacter.message': '切换到角色 <strong>{name}</strong>？当前角色的未保存更改将丢失。',
+  'shared.confirm.deleteCharacter.title': '删除角色？',
+  'shared.confirm.deleteCharacter.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
+  'shared.confirm.closePanel.characterItem': '角色卡：{name}',
+  'shared.prompt.newCharacter.title': '新角色名称',
+  'shared.prompt.newCharacter.placeholder': '角色名称',
+  'shared.editorShell.emptyCharacter': '还没有加载任何角色，新建或选择一个',
+  'shared.editorShell.emptyCharacterField': '选一个字段进行编辑',
 
   // ---- worldbook.sidebar ----
   'worldbook.sidebar.title': '世界书条目',
@@ -410,7 +446,20 @@ export default {
   'character.field.depthPrompt': '角色备注',
 
   // ---- character.sidebar ----
+  'character.sidebar.title': '角色卡',
+  'character.sidebar.empty': '还没有加载任何角色，新建或选择一个',
+  'character.sidebar.fieldsLabel': '内容字段',
+  'character.sidebar.greetingsLabel': '开场白',
+  'character.sidebar.addGreeting': '+ 开场白',
+  'character.sidebar.regexMode': '正则',
+  'character.sidebar.fieldsMode': '← 字段',
+  'character.sidebar.deleteGreetingTitle': '删除这条开场白',
   'character.sidebar.greetingLabel': '开场白 {n}',
+
+  // ---- character.editor ----
+  'character.editor.placeholder': '在这里编辑内容…',
+  'character.editor.depthLabel': '深度',
+  'character.editor.roleLabel': '角色',
 
   // ---- character.toast ----
   'character.toast.listFailed': '获取角色列表失败：{msg}',
@@ -433,4 +482,16 @@ export default {
   // ---- character.confirm ----
   'character.confirm.deleteGreeting.title': '删除开场白？',
   'character.confirm.deleteGreeting.message': '这将永久移除这条开场白，且不可撤销。',
+
+  // ---- character.metaForm：角色卡 Meta（创作者信息/tags/talkativeness/世界书换绑，TODO.md 2.5b） ----
+  'character.metaForm.title': 'ℹ️ 角色信息',
+  'character.metaForm.favLabel': '⭐ 收藏',
+  'character.metaForm.creatorLabel': '创作者',
+  'character.metaForm.versionLabel': '版本',
+  'character.metaForm.creatorNotesLabel': '创作者备注',
+  'character.metaForm.tagsLabel': '标签',
+  'character.metaForm.tagsPlaceholder': '用逗号分隔，例如：奇幻, 原创',
+  'character.metaForm.talkativenessLabel': '话痨度',
+  'character.metaForm.worldbookLabel': '绑定世界书',
+  'character.metaForm.worldbookNone': '（未绑定）',
 } satisfies LocaleTable

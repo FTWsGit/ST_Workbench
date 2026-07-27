@@ -22,11 +22,16 @@
               <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="switchMode('preset')">{{ uiStore.t('shared.header.mode.preset') }}</button>
               <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="switchMode('regex')">{{ uiStore.t('shared.header.mode.regex') }}</button>
               <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="switchMode('worldbook')">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="switchMode('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
             </div>
             <div class="wb-sep"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <button class="wb-btn" @click="presetStore.copyPanelOpen = true">{{ uiStore.t('shared.header.copyBlocks') }}</button>
               <button class="wb-btn" :class="{ active: presetStore.searchOpen }" @click="toggleSearch">{{ uiStore.t('shared.header.search') }}</button>
+              <button class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
+            </template>
+            <template v-else-if="tabsStore.activeWorkspace === 'character'">
+              <button class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
             </template>
             <div class="wb-spacer"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -49,6 +54,15 @@
               </select>
               <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
             </template>
+            <template v-else-if="tabsStore.activeWorkspace === 'character'">
+              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.newCharacter')" @click="onNewCharacter">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.deleteCharacter')" @click="onDeleteCharacter" :disabled="!characterStore.character?.avatar">🗑</button>
+              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onCharacterSelect($event)" :title="uiStore.t('shared.header.switchCharacter')">
+                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('shared.header.noneLoaded') }}</option>
+                <option v-for="c in characterStore.characterList" :key="c.avatar" :value="c.avatar">{{ c.name }}</option>
+              </select>
+              <span v-else-if="characterStore.character?.name" class="pr-preset-name">{{ characterStore.character.name }}</span>
+            </template>
             <button class="wb-btn close-btn" @click="onClosePanel()">✕</button>
           </template>
           <template v-else>
@@ -69,6 +83,13 @@
               </select>
               <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
             </template>
+            <template v-else-if="tabsStore.activeWorkspace === 'character'">
+              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onCharacterSelect($event)" :title="uiStore.t('shared.header.switchCharacter')">
+                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('shared.header.noneLoaded') }}</option>
+                <option v-for="c in characterStore.characterList" :key="c.avatar" :value="c.avatar">{{ c.name }}</option>
+              </select>
+              <span v-else-if="characterStore.character?.name" class="pr-preset-name">{{ characterStore.character.name }}</span>
+            </template>
             <div class="wb-spacer"></div>
             <button class="wb-mobile-tools-btn" :class="{ active: mobileDrawerVisible === 'tools' }" :title="uiStore.t('shared.mobile.tools')" @click="toggleMobileTools">⋯</button>
             <button class="wb-btn close-btn" @click="onClosePanel()">✕</button>
@@ -87,6 +108,7 @@
             :on-sidebar-width-change="setRegexSidebarWidth"
             :on-sidebar-width-commit="uiStore.saveSettings" />
           <WorldbookSidebar v-else-if="tabsStore.sidebarMode === 'worldbook'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
+          <CharacterSidebar v-else-if="tabsStore.sidebarMode === 'character'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
           <div class="wb-editor-col">
             <TabBar />
             <div class="wb-editor-row">
@@ -109,9 +131,14 @@
           <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="runTool(() => switchMode('preset'))">{{ uiStore.t('shared.header.mode.preset') }}</button>
           <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="runTool(() => switchMode('regex'))">{{ uiStore.t('shared.header.mode.regex') }}</button>
           <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="runTool(() => switchMode('worldbook'))">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="runTool(() => switchMode('character'))">{{ uiStore.t('shared.header.mode.character') }}</button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
             <button class="wb-mobile-tools-item" @click="runTool(() => { presetStore.copyPanelOpen = true })">{{ uiStore.t('shared.header.copyBlocks') }}</button>
             <button class="wb-mobile-tools-item" :class="{ active: presetStore.searchOpen }" @click="runTool(toggleSearch)">{{ uiStore.t('shared.header.search') }}</button>
+            <button class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
+          </template>
+          <template v-else-if="tabsStore.activeWorkspace === 'character'">
+            <button class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
           </template>
           <button class="wb-mobile-tools-item" @click="runTool(() => { uiStore.settingsOpen = true })">{{ uiStore.t('shared.header.settings') }}</button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -124,6 +151,10 @@
             <button class="wb-mobile-tools-item" @click="runTool(onNewWorldbook)">{{ uiStore.t('shared.header.newWorldbook') }}</button>
             <button class="wb-mobile-tools-item" :disabled="!worldbookStore.worldbookName" @click="runTool(onDeleteWorldbook)">{{ uiStore.t('shared.header.deleteWorldbook') }}</button>
           </template>
+          <template v-else-if="tabsStore.activeWorkspace === 'character'">
+            <button class="wb-mobile-tools-item" @click="runTool(onNewCharacter)">{{ uiStore.t('shared.header.newCharacter') }}</button>
+            <button class="wb-mobile-tools-item" :disabled="!characterStore.character?.avatar" @click="runTool(onDeleteCharacter)">{{ uiStore.t('shared.header.deleteCharacter') }}</button>
+          </template>
         </div>
 
         <!-- CopyPanel is now a real floating window (FloatingPanelShell, z-index 100010+, see
@@ -133,6 +164,7 @@
              so confirm/prompt dialogs triggered from CopyPanel's own close()/loadSide()/removeBlock()
              remain reachable instead of getting trapped behind it. -->
         <CopyPanel />
+        <MetaPanel />
         <Modals />
       </div>
     </Transition>
@@ -149,9 +181,12 @@ import VarPanel from './components/preset/VarPanel.vue'
 import PreviewPanel from './components/preset/PreviewPanel.vue'
 import VarPopup from './components/preset/VarPopup.vue'
 import CopyPanel from './components/preset/CopyPanel.vue'
+import MetaPanel from './components/shared/MetaPanel.vue'
 import RegexSidebar from './components/regex/RegexSidebar.vue'
 import WorldbookSidebar from './components/worldbook/WorldbookSidebar.vue'
 import { useWorldbookStore } from './stores/worldbookStore'
+import CharacterSidebar from './components/character/CharacterSidebar.vue'
+import { useCharacterStore } from './stores/characterStore'
 import Modals from './components/shared/Modals.vue'
 import TabBar from './components/shared/TabBar.vue'
 import EditorShell from './components/shared/EditorShell.vue'
@@ -167,14 +202,18 @@ const tabsStore = useTabsStore()
 const presetStore = usePresetStore()
 const uiStore = useUiStore()
 const worldbookStore = useWorldbookStore()
+const characterStore = useCharacterStore()
 
 /** sidebarMode 'preset'/'regex' 都属于 'preset' 工作区（正则是预设工作区内的子模式，不是独立
- *  工作区，见 tabsStore.ts OpenTab.workspace 的 doc comment）；'worldbook' 是独立工作区。切模式
- *  的同时把 activeWorkspace 也切过去——目前 sidebarMode 顶栏切换按钮就是唯一的顶层工作区切换 UI
- *  （TODO.md 1.4 提到的三态切换真正落地前，这俩概念先在这一个函数里合并着用）。 */
+ *  工作区，见 tabsStore.ts OpenTab.workspace 的 doc comment）；'worldbook'/'character' 各自是独立
+ *  工作区。切模式的同时把 activeWorkspace 也切过去——目前 sidebarMode 顶栏切换按钮就是唯一的顶层
+ *  工作区切换 UI（TODO.md 1.4 提到的三态切换真正落地前，这俩概念先在这一个函数里合并着用）。
+ *  角色卡工作区内部的 fields|regex 子切换（characterSidebarMode，TODO.md 1.5）不经过这个函数、
+ *  不碰 tabsStore.sidebarMode——那是 CharacterSidebar.vue 自己的本地状态，见该文件顶部 doc
+ *  comment，跟预设的 preset|regex 子切换（走这里的 sidebarMode）是两条独立的路。 */
 function switchMode(mode: string) {
   tabsStore.setSidebarMode(mode)
-  tabsStore.setActiveWorkspace(mode === 'worldbook' ? 'worldbook' : 'preset')
+  tabsStore.setActiveWorkspace(mode === 'worldbook' ? 'worldbook' : mode === 'character' ? 'character' : 'preset')
 }
 
 // Mobile layout: sidebar/varNav/preview/settingsDock render as off-canvas overlays (left drawer
@@ -382,9 +421,10 @@ onUnmounted(() => {
 function openPanel() {
   uiStore.panelOpen = true
   if (!presetStore.hasData) presetStore.loadFromContext()
-  // 世界书列表比较轻（只是个名字数组），面板一打开就顺带拉一次，这样用户第一次切到世界书模式时
-  // 顶栏下拉框已经有数据，不用切过去才现拉、白等一次网络请求。
+  // 世界书/角色卡列表都比较轻（只是名字/头像数组），面板一打开就顺带拉一次，这样用户第一次切到
+  // 对应工作区时顶栏下拉框已经有数据，不用切过去才现拉、白等一次网络请求。
   worldbookStore.refreshWorldbookList()
+  characterStore.refreshCharacterList()
 }
 
 /** RegexSidebar.vue（参数化改造后，见 regexProps.ts）拖拽 resize 时的实时宽度回调——这个赋值
@@ -393,32 +433,35 @@ function openPanel() {
  *  两个 prop 各自的 doc comment。 */
 function setRegexSidebarWidth(w: number) { uiStore.settings.sidebarWidth = w }
 
-/** Save 按钮 / Ctrl+S 永远只对当前活跃工作区生效（见 TODO.md 1.6）。阶段1落地世界书，加上
- *  worldbook 分支——角色卡工作区落地时（阶段2）再加 character 分支。 */
+/** Save 按钮 / Ctrl+S 永远只对当前活跃工作区生效（见 TODO.md 1.6）。阶段1落地世界书、阶段2落地
+ *  角色卡，各加一个分支——三个工作区的判断完全并列，没有谁是默认兜底。 */
 function onSave() {
   if (tabsStore.activeWorkspace === 'preset') presetStore.doSavePreset()
   else if (tabsStore.activeWorkspace === 'worldbook') worldbookStore.doSaveWorldbook()
+  else if (tabsStore.activeWorkspace === 'character') characterStore.doSaveCharacter()
 }
 function onReload() {
   if (tabsStore.activeWorkspace === 'preset') presetStore.reloadPreset()
   else if (tabsStore.activeWorkspace === 'worldbook') worldbookStore.reloadWorldbook()
+  else if (tabsStore.activeWorkspace === 'character') characterStore.reloadCharacter()
 }
 const saveLabel = computed(() => {
-  const dirty = tabsStore.activeWorkspace === 'worldbook' ? worldbookStore.dirty : presetStore.dirty
+  const dirty = tabsStore.activeWorkspace === 'worldbook' ? worldbookStore.dirty
+    : tabsStore.activeWorkspace === 'character' ? characterStore.dirty
+    : presetStore.dirty
   return uiStore.t('shared.header.save', { star: dirty ? ' *' : '' })
 })
 
 /** 每个工作区自己的"有没有未保存改动"，键是 workspace 字符串（跟 tabsStore.activeWorkspace/
  *  OpenTab.workspace 用的是同一套值）。放在这里而不是 tabsStore 里，是因为要汇总的
- *  `presetStore.dirty`/以后的 `characterStore.dirty`/`worldbookStore.dirty` 分别来自各自的 domain
+ *  `presetStore.dirty`/`characterStore.dirty`/`worldbookStore.dirty` 分别来自各自的 domain
  *  store，tabsStore 不认识它们（presetStore 已经反过来 import tabsStore 了，tabsStore 再
  *  import 回 presetStore 会成环）——App.vue 是当前唯一同时认识所有 store 的地方，这份聚合
- *  只能长在这儿。等阶段1/2 真的做出顶层三态切换按钮时，"红点该不该亮"直接读这个 computed 就够，
- *  不用再重新想一遍怎么聚合。 */
+ *  只能长在这儿。 */
 const dirtyWorkspaces = computed<Record<string, boolean>>(() => ({
   preset: presetStore.dirty,
   worldbook: worldbookStore.dirty,
-  // 阶段2 落地角色卡后加：character: characterStore.dirty
+  character: characterStore.dirty,
 }))
 
 /** 面板右上角 ✕。以前是直接 `uiStore.panelOpen = false`，没有任何脏检查——现在有多个工作区可能
@@ -432,7 +475,8 @@ function onClosePanel() {
     .map(([ws]) => {
       if (ws === 'preset') return { label: uiStore.t('shared.confirm.closePanel.presetItem', { name: presetStore.presetName || '—' }) }
       if (ws === 'worldbook') return { label: uiStore.t('shared.confirm.closePanel.worldbookItem', { name: worldbookStore.worldbookName || '—' }) }
-      return { label: ws } // 阶段2 落地角色卡后这个兜底分支不会再被走到，届时会加对应的 i18n item 文案
+      if (ws === 'character') return { label: uiStore.t('shared.confirm.closePanel.characterItem', { name: characterStore.character?.name || '—' }) }
+      return { label: ws } // 兜底：以后再加新工作区时，忘了在这里补一行也不会直接崩，只是标签不好看
     })
   if (!items.length) { uiStore.panelOpen = false; return }
   confirmStore.askMulti({
@@ -524,6 +568,43 @@ function onDeleteWorldbook() {
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => worldbookStore.removeCurrentWorldbook(),
+  })
+}
+
+/* ====== 角色卡：新建/删除/切换，跟上面世界书那三个是同一套模式。切换角色用 avatar（文件名）
+ * 当选中值——角色列表条目（CharacterListEntry）没有像世界书那样天然唯一的"名字"可以直接当 key
+ * （重名角色在 ST 里是允许的，avatar 文件名才是真正唯一的标识）。 */
+function onCharacterSelect(e: Event) {
+  const select = e.target as HTMLSelectElement
+  const avatar = select.value
+  if (!avatar || avatar === characterStore.character?.avatar) return
+  confirmStore.ask({
+    title: uiStore.t('shared.confirm.switchCharacter.title'),
+    message: uiStore.t('shared.confirm.switchCharacter.message', { name: esc(characterStore.characterList.find(c => c.avatar === avatar)?.name || avatar) }),
+    confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
+    cancelText: uiStore.t('common.cancel'),
+    danger: false,
+    onConfirm: () => characterStore.switchCharacter(avatar),
+    onCancel: () => { select.value = characterStore.character?.avatar || '' },
+  })
+}
+function onNewCharacter() {
+  confirmStore.askInput({
+    title: uiStore.t('shared.prompt.newCharacter.title'),
+    placeholder: uiStore.t('shared.prompt.newCharacter.placeholder'),
+    confirmText: uiStore.t('shared.prompt.newPreset.confirm'),
+    cancelText: uiStore.t('shared.prompt.newPreset.cancel'),
+    onConfirm: (name) => { characterStore.createNewCharacter(name) },
+  })
+}
+function onDeleteCharacter() {
+  if (!characterStore.character?.avatar) return
+  confirmStore.ask({
+    title: uiStore.t('shared.confirm.deleteCharacter.title'),
+    message: uiStore.t('shared.confirm.deleteCharacter.message', { name: esc(characterStore.character.name) }),
+    confirmText: uiStore.t('common.delete'),
+    cancelText: uiStore.t('common.cancel'),
+    onConfirm: () => characterStore.removeCurrentCharacter(),
   })
 }
 </script>

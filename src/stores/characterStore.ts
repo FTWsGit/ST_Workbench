@@ -213,7 +213,7 @@ export const useCharacterStore = defineStore('character', () => {
 
   async function removeCurrentCharacter() {
     const avatar = character.value?.avatar
-    const name = character.value?.name || avatar
+    const name = character.value?.name || avatar || ''
     if (!avatar) return // 还没保存过的新角色没有 avatar，本地直接清空即可，不需要调删除接口
     try {
       await CH.deleteCharacter(avatar)
@@ -225,10 +225,6 @@ export const useCharacterStore = defineStore('character', () => {
     } catch (e: any) { showToast(t('character.toast.deleteFailed', { msg: e?.message || e })) }
   }
 
-  /** 见「保存后刷新本地缓存」（TODO.md「关键设计要点」第7条）：create/edit 成功之后不直接假设
-   *  内存里这份 `character.value` 就是权威状态，重新 getCharacterByAvatar() 读一次——ST 后端
-   *  可能补全了默认字段，`oldRaw` 也需要刷新成最新的原始数据，否则下一次保存的字段级回退会
-   *  基于一份过期快照。 */
   async function doSaveCharacter() {
     if (!character.value) { showToast(t('character.toast.noDataToSave')); return }
     const isNew = !character.value.avatar
@@ -241,8 +237,6 @@ export const useCharacterStore = defineStore('character', () => {
         await CH.editCharacter(character.value, oldRaw.value, pendingAvatarFile.value ?? undefined)
       }
       refreshCharacterList()
-      const reloaded = await CH.getCharacterByAvatar(avatar).catch(() => null)
-      if (reloaded) applyLoaded(reloaded.character, reloaded.raw)
       dirty.value = false
       showToast(t('character.toast.saved', { name: character.value?.name || avatar }))
     } catch (e: any) { showToast(t('character.toast.saveFailed', { msg: e?.message || e })) }

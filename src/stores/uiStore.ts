@@ -36,6 +36,12 @@ export const useUiStore = defineStore('ui', () => {
   // to the whole app, not just the preset editor, so the open/close state lives here.
   const settingsOpen = ref(false)
 
+  // MetaPanel（TODO.md 2.5b）打开状态——横跨 preset/character 两个工作区（MetaPanel.vue 自己按
+  // tabsStore.activeWorkspace 查 META_FORMS 表决定渲染哪个表单），不属于任何一个 domain store，
+  // 跟 copyPanelOpen（纯 preset 专属，留在 presetStore 里）不是一回事，理由跟 panelOpen/
+  // settingsOpen 一样：这是"整个 app 的一块 UI 状态"，不是某个 domain 的数据。
+  const metaPanelOpen = ref(false)
+
   function loadSettings(): Settings {
     try {
       const s = localStorage.getItem('st-wb-settings')
@@ -72,5 +78,5 @@ export const useUiStore = defineStore('ui', () => {
     toastTimer = setTimeout(() => { toastVisible.value = false }, ms)
   }
 
-  return { settings, cssVars, panelOpen, settingsOpen, loadSettings, saveSettings, resetSettings, toastMsg, toastVisible, showToast, t, currentLocale }
+  return { settings, cssVars, panelOpen, settingsOpen, metaPanelOpen, loadSettings, saveSettings, resetSettings, toastMsg, toastVisible, showToast, t, currentLocale }
 })

@@ -148,7 +148,7 @@ const keysSecondaryText = computed({
 
 const roleModel = computed({
   get: () => entry.value?.role ?? null,
-  set: (v: any) => { if (entry.value) { entry.value.role = v === '' ? null : Number(v); store.markDirty() } },
+  set: (v: any) => { if (entry.value) { entry.value.role = v === '' ? null : (Number(v) as 0 | 1 | 2); store.markDirty() } },
 })
 
 const delayUntilRecursionModel = computed({

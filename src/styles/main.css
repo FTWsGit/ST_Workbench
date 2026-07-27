@@ -248,6 +248,26 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* CharacterSidebar.vue 固定字段列表 / 开场白子区域的小标题行——跟 .wb-sidebar-header 是同一视觉
+   语言（大写、字距、弱化色），但用在列表内部区分两个子区域，不是整个侧边栏的头。 */
+.wb-list-section-label {
+  padding: 10px 14px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wb-tx3);
+}
+.wb-list-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px 4px 14px;
+}
+.wb-list-section-header .wb-list-section-label {
+  padding: 0;
+}
+
 /* 世界书批量工具悬浮面板（WorldbookToolsPanel.vue）——只需要几行竖排间距，其余全靠已有的
    .wb-float-body/.rx-label/.rx-surface/.wb-muted，不需要一整套新样式。 */
 .wb-tools-body {

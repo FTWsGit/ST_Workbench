@@ -60,6 +60,12 @@ export interface PresetData {
 
   prompts: PresetBlock[]
   prompt_order: { order: OrderItem[]; [k: string]: any }[]
+  /** presetStore.ts 的 regexScripts computed（阶段0之前就有）读写的就是这里——之前完全靠下面
+   *  `[k: string]: any` 兜底，`extensions.regex_scripts` 全程是隐式 any，TODO.md 要求给它一个
+   *  明确类型。`regex_scripts` 可选是因为老预设文件可能压根没有 extensions 这个键，或者有
+   *  extensions 但没存过正则（presetStore.ts 的 regexScripts computed 会在读的时候补上空数组，
+   *  这里的类型只是如实反映"文件里可能没有"这个事实，不是说运行时可以不管）。 */
+  extensions?: { regex_scripts?: RegexScript[]; [k: string]: any }
   [k: string]: any
 }
 

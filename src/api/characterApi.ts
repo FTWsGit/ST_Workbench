@@ -151,18 +151,26 @@ export async function listCharacters(): Promise<CharacterListEntry[]> {
   return (mod.characters as any[]).map(c => ({ avatar: c.avatar, name: c.data?.name || c.name || '' }))
 }
 
-/** 按头像文件名读取一张角色卡的完整数据。浅数据（`shallow === true`）先 `unshallowCharacter()`
- *  展开成完整数据、再重新从 `characters` 数组里取一次（展开是原地修改 `characters[index]`，不
- *  是返回值，见 TODO.md「ST 原生 API」2.1 的函数说明），避免拿到还没展开的半份数据。
- *  返回值里额外带一个不对外暴露类型的 `__raw`，供 characterStore 存起来做保存时的 oldRaw 回退——
- *  跟 fromRaw() 转换是同一份数据，这里不用调用方再读一次原始数组。 */
+/** 按头像文件名读取一张角色卡的完整数据。用 `getOneCharacter(avatar)` 从服务端重新拉一次
+ *  （TODO.md「ST 原生 API」2.1：会发起网络请求，拉到之后顺带更新 ST 自己的前端状态），不再指望
+ *  `unshallowCharacter()`——那个函数内部第一步就是 `if (!shallow) return`，是纯本地操作，只有
+ *  在懒加载路径下真的有一份"没展开的浅数据"时才有意义。而 `shallow` 这个标志位只有 ST 管理员在
+ *  `config.yaml` 里手动打开 `performance.lazyLoadCharacters`（默认关闭，非常冷门的选项）才会被
+ *  置为 `true`——绝大多数部署压根不会走到这条路，`unshallowCharacter()` 在这种情况下调不调都是
+ *  空操作，之前"每次保存后无条件调用它"那版修复实际上什么都没解决：编辑保存成功后紧接着再读一次
+ *  （见 characterStore.ts doSaveCharacter() 的「保存后刷新本地缓存」），`mod.characters[index]`
+ *  拿到的还是编辑前的内存快照，`getOneCharacter()` 才是真正会打一次 `GET` 请求、把服务端最新
+ *  内容同步回 `characters[index]` 的那个函数，同时也会让 ST 自己的角色编辑面板跟着刷新（它读的
+ *  是同一份 `characters` 数组）。这是个真实网络请求，但 `getCharacterByAvatar()` 的每个调用方
+ *  （初始加载/切换角色/reload/保存后刷新）本来就是希望拿到"服务端权威最新数据"的场景，用一次
+ *  网络往返换正确性是划算的，没有必要为了省这一次请求去猜 ST 内存状态是否已经最新。 */
 export async function getCharacterByAvatar(avatar: string): Promise<{ character: Character; raw: any } | null> {
   const mod = await getScriptModule()
+  if (typeof mod.getOneCharacter === 'function') {
+    await mod.getOneCharacter(avatar)
+  }
   const index = (mod.characters as any[]).findIndex(c => c.avatar === avatar)
   if (index < 0) return null
-  if (mod.characters[index]?.shallow && typeof mod.unshallowCharacter === 'function') {
-    await mod.unshallowCharacter(String(index))
-  }
   const raw = mod.characters[index]
   if (!raw) return null
   return { character: fromRaw(raw), raw: deepClonePlain(raw) }
