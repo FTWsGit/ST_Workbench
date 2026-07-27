@@ -300,10 +300,10 @@ export const usePresetStore = defineStore('main', () => {
     Host.invalidateCache()
     let data: PresetData | null
     try { data = ST.getPresetByName(name) }
-    catch (e: any) { showToast(t('toast.loadFailed', { msg: e?.message || e })); return }
+    catch (e: any) { showToast(t('preset.toast.loadFailed', { msg: e?.message || e })); return }
     if (!data) { showToast(t('preset.toast.notFound', { name })); return }
     applyLoadedPreset(data, name)
-    if (!opts.silent) showToast(t('toast.loaded', { name }))
+    if (!opts.silent) showToast(t('preset.toast.loaded', { name }))
   }
   
 
@@ -336,7 +336,7 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   async function doSavePreset() {
-    if (!rawData.value) { showToast(t('toast.noDataToSave')); return }
+    if (!rawData.value) { showToast(t('preset.toast.noDataToSave')); return }
     rawData.value.prompts = [...prompts.value]
     if (rawData.value.prompt_order?.length) {
       let entry = rawData.value.prompt_order.find((p: any) => p.character_id === 100001)
@@ -363,8 +363,8 @@ export const usePresetStore = defineStore('main', () => {
       presetName.value = name
       refreshPresetList() // saving under a new name adds an entry — keep the picker in sync
       dirty.value = false
-      showToast(t('toast.saved', { name }))
-    } catch (e: any) { showToast(t('toast.saveFailed', { msg: e.message })) }
+      showToast(t('preset.toast.saved', { name }))
+    } catch (e: any) { showToast(t('preset.toast.saveFailed', { msg: e.message })) }
   }
 
   async function createPreset(name: string) {
@@ -376,8 +376,8 @@ export const usePresetStore = defineStore('main', () => {
       await ST.savePresetAs(name, newPreset)
       refreshPresetList()
       applyLoadedPreset(newPreset, name)
-      showToast(t('toast.created', { name }))
-    } catch (e: any) { showToast(t('toast.createFailed', { msg: e?.message || e })) }
+      showToast(t('preset.toast.created', { name }))
+    } catch (e: any) { showToast(t('preset.toast.createFailed', { msg: e?.message || e })) }
   }
   async function removeCurrentPreset() {
     const name = presetName.value
@@ -388,8 +388,8 @@ export const usePresetStore = defineStore('main', () => {
       const next = presetList.value[0]?.name
       if (next) loadPresetByName(next, { silent: true })
       else { rawData.value = null as any; presetName.value = '' }
-      showToast(t('toast.deleted', { name }))
-    } catch (e: any) { showToast(t('toast.deleteFailed', { msg: e?.message || e })) }
+      showToast(t('preset.toast.deleted', { name }))
+    } catch (e: any) { showToast(t('preset.toast.deleteFailed', { msg: e?.message || e })) }
   }
 
   /* ====== Block Ops ======
@@ -431,8 +431,8 @@ export const usePresetStore = defineStore('main', () => {
     confirmStore.ask({
       title: t('preset.confirm.deleteBlock.title'),
       message: t('preset.confirm.deleteBlock.message', { name }),
-      confirmText: t('preset.confirm.deleteBlock.confirm'),
-      cancelText: t('preset.confirm.deleteBlock.cancel'),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       onConfirm: () => {
         const removed = removeNode(gi)
         if (!removed) return

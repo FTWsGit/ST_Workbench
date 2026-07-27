@@ -2,7 +2,7 @@
   <FloatingPanelShell
     v-if="store.copyPanelOpen"
     :title="uiStore.t('preset.copyPanel.title')"
-    :close-title="uiStore.t('preset.copyPanel.close')"
+    :close-title="uiStore.t('common.close')"
     :width="1040"
     :height="620"
     :min-width="560"
@@ -258,12 +258,12 @@ async function saveSide(side: Side) {
     await ST.savePresetAs(s.name, JSON.parse(JSON.stringify(s.data)))
     s.dirty = false
     store.refreshPresetList()
-    uiStore.showToast(uiStore.t('toast.saved', { name: s.name }))
+    uiStore.showToast(uiStore.t('preset.toast.saved', { name: s.name }))
     // This tool operates on its own independently-loaded copy of the preset data, not on the
     // main editor's live store — if this happens to be the same preset currently open there,
     // that in-memory copy is now stale relative to what was just written to disk.
     if (s.name === store.presetName) uiStore.showToast(uiStore.t('preset.toast.reloadNote'))
-  } catch (e: any) { uiStore.showToast(uiStore.t('toast.saveFailed', { msg: e?.message || e })) }
+  } catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.saveFailed', { msg: e?.message || e })) }
 }
 
 function close() {
@@ -271,7 +271,7 @@ function close() {
   confirmStore.ask({
     title: uiStore.t('preset.confirm.closeUnsaved.title'),
     message: uiStore.t('preset.confirm.closeUnsaved.message'),
-    confirmText: uiStore.t('preset.confirm.closeUnsaved.confirm'),
+    confirmText: uiStore.t('common.close'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => { store.copyPanelOpen = false },
   })

@@ -4,7 +4,7 @@
     <div class="wb-rp-header">
       <span>{{ uiStore.t('shared.settingsDock.title') }}</span>
       <div class="wb-row-tight">
-        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.settingsDockFloat }" :title="uiStore.t('shared.settingsDock.toggleFloat')" @click="toggleFloat">📌</button>
+        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.settingsDockFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
         <button class="wb-btn close-btn compact" @click="tabsStore.settingsDockOpen = false">✕</button>
       </div>
     </div>

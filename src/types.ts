@@ -171,10 +171,10 @@ export const FONT_OPTIONS = [
 ]
 
 export const SYNTAX_LABEL_KEYS = {
-  'hl-b': 'syntax.hl-b', 'hl-k': 'syntax.hl-k', 'hl-s': 'syntax.hl-s',
-  'hl-v': 'syntax.hl-v', 'hl-c': 'syntax.hl-c', 'hl-cm': 'syntax.hl-cm',
-  'hl-m': 'syntax.hl-m', 'hl-sq': 'syntax.hl-sq', 'hl-dq': 'syntax.hl-dq',
-  'hl-ab': 'syntax.hl-ab', 'hl-sb': 'syntax.hl-sb',
+  'hl-b': 'shared.syntax.hl-b', 'hl-k': 'shared.syntax.hl-k', 'hl-s': 'shared.syntax.hl-s',
+  'hl-v': 'shared.syntax.hl-v', 'hl-c': 'shared.syntax.hl-c', 'hl-cm': 'shared.syntax.hl-cm',
+  'hl-m': 'shared.syntax.hl-m', 'hl-sq': 'shared.syntax.hl-sq', 'hl-dq': 'shared.syntax.hl-dq',
+  'hl-ab': 'shared.syntax.hl-ab', 'hl-sb': 'shared.syntax.hl-sb',
 } as const
 
 export interface RegexScript {

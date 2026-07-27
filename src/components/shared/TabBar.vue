@@ -7,7 +7,7 @@
          :title="t.label">
       <span class="wb-tab-domain-dot" :class="'domain-' + t.domain"></span>
       <span class="wb-tab-label">{{ t.label }}</span>
-      <span class="wb-tab-close" :title="uiStore.t('shared.tabBar.close')" @click.stop="tabsStore.close(t.domain, t.key)">×</span>
+      <span class="wb-tab-close" :title="uiStore.t('common.close')" @click.stop="tabsStore.close(t.domain, t.key)">×</span>
     </div>
   </div>
 </template>

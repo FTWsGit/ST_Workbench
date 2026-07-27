@@ -1,30 +1,25 @@
 import type { LocaleTable } from '../types'
-
 // zh-CN 是这份 locale 表的"参照表"——index.ts 用 `keyof typeof zhCN` 反推出 LocaleKey 联合类型，
 // en.ts 漏翻译某个 key 会在编译期直接报错（见 i18n/index.ts 顶部注释）。所以新增文案时，
 // 永远先加在这份表里，再去 en.ts 补对应英文，顺序反过来 TS 不会帮你查漏。
 //
-// key 命名规范（域.场景.用途）、common vs 域内 key 怎么选，见 I18N_DESIGN.md 第 2 节，这里不重复。
+// key 命名规范：域.场景.用途，按域分块排列，zh-CN.ts 与 en.ts 严格保持顺序一一对应。
+// - common.*：跨域原子词，所有域通用、文字不随上下文变化的按钮/标签
+// - shared.*：跨域复用的通用组件/逻辑文案
+// - preset/regex/worldbook/character.*：各业务域专属文案，同场景key结构保持一致
 export default {
-  // ---- common：跨域复用、且语义不随上下文变化的通用词 ----
+  // ========================================
+  // common：跨域原子词
+  // ========================================
   'common.save': '保存',
   'common.cancel': '取消',
   'common.delete': '删除',
   'common.close': '关闭',
   'common.confirm': '确认',
-  'common.ok': '确定',
+  'common.create': '创建',
+  'common.switch': '切换',
   'common.new': '新建',
   'common.load': '加载',
-  'common.all': '全部',
-  'common.search': '搜索',
-  'common.replace': '替换',
-  'common.results': '结果',
-  'common.prev': '上',
-  'common.next': '下',
-  'common.filter': '筛选',
-  'common.generate': '生成',
-  'common.copy': '复制',
-  'common.generating': '生成中…',
   'common.hidden': '隐藏',
   'common.unnamed': '(未命名)',
   'common.messages': '消息',
@@ -34,24 +29,24 @@ export default {
   'common.on': '开',
   'common.off': '关',
 
-  // ---- header：顶部工具栏 ----
+  // ========================================
+  // shared：跨域通用组件/逻辑
+  // ========================================
+  // ---- 顶部工具栏 ----
   'shared.header.save': '💾 保存{star}',
   'shared.header.reload': '↻ 重新加载',
   'shared.header.settings': '⚙ 设置',
   'shared.header.meta': 'ℹ️ 元信息',
-  'header.mode.preset': '预设',
-  'header.mode.regex': '正则',
-  'header.mode.character': '角色卡',
-  'header.mode.worldbook': '世界书',
+  'shared.header.mode.preset': '预设',
+  'shared.header.mode.regex': '正则',
+  'shared.header.mode.worldbook': '世界书',
+  'shared.header.mode.character': '角色卡',
 
-  // Mobile-only header controls (App.vue) — ☰ opens the sidebar as a left drawer, ⋯ opens the
-  // tools action sheet. Everything the action sheet lists reuses the existing shared.header.*
-  // labels above (mode.preset/mode.regex/reload/copyBlocks/search/settings/varNav/preview/
-  // newPreset/deletePreset), so only these two container labels are new.
+  // ---- 移动端专属 ----
   'shared.mobile.sidebar': '侧边栏',
   'shared.mobile.tools': '更多工具',
 
-  // ---- shared.settings：设置弹窗 ----
+  // ---- 全局设置弹窗 ----
   'shared.settings.title': '编辑器设置',
   'shared.settings.language': '界面语言',
   'shared.settings.resetDefaults': '恢复默认',
@@ -59,21 +54,38 @@ export default {
   'shared.settings.fontFamily': '字体',
   'shared.settings.syntaxColors': '语法高亮颜色',
 
-  // ---- toast：跨域通用的 toast 文案 ----
-  'toast.settingsReset': '设置已重置',
-  'toast.loadFailed': '加载失败：{msg}',
-  'toast.noDataToSave': '没有可保存的数据',
-  'toast.saved': '已保存：{name}',
-  'toast.saveFailed': '保存失败：{msg}',
-  'toast.created': '已创建：{name}',
-  'toast.createFailed': '创建失败：{msg}',
-  'toast.deleted': '已删除：{name}',
-  'toast.deleteFailed': '删除失败：{msg}',
-  'toast.nothingToCopy': '没有可复制的内容',
-  'toast.copied': '已复制',
-  'toast.copyFailed': '复制失败，请查看控制台',
+  // ---- 跨域通用toast ----
+  'shared.toast.settingsReset': '设置已重置',
 
-  // ---- preset.header：预设域工具栏 ----
+  // ---- 通用确认弹窗 ----
+  'shared.confirm.unsaved.title': '未保存的更改',
+  'shared.confirm.unsaved.message': '当前有未保存的更改，确定要放弃吗？',
+  'shared.confirm.closePanel.title': '还有未保存的更改',
+  'shared.confirm.closePanel.message': '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
+
+  // ---- 通用组件 ----
+  'shared.settingsDock.title': '⚙ 设置',
+  'shared.floatingPanel.toggleFloat': '切换悬浮模式',
+  'shared.listToolbar.count': '{count} 条',
+  'shared.highlightedEditor.cursor': '行 {line}，列 {col}',
+
+  // ---- 语法高亮标签 ----
+  'shared.syntax.hl-b': '花括号 {{ }}',
+  'shared.syntax.hl-k': '关键字',
+  'shared.syntax.hl-s': '分隔符 (::)',
+  'shared.syntax.hl-v': '变量名',
+  'shared.syntax.hl-c': '变量值',
+  'shared.syntax.hl-cm': '注释',
+  'shared.syntax.hl-m': '宏内容',
+  'shared.syntax.hl-sq': '单引号',
+  'shared.syntax.hl-dq': '双引号',
+  'shared.syntax.hl-ab': '尖括号 < >',
+  'shared.syntax.hl-sb': '方括号 [ ]',
+
+  // ========================================
+  // preset：预设域
+  // ========================================
+  // ---- 头部工具栏 ----
   'preset.header.copyBlocks': '⇆ 复制块',
   'preset.header.search': '🔍 搜索',
   'preset.header.varNav': '📊 变量导航',
@@ -83,7 +95,18 @@ export default {
   'preset.header.switch': '切换预设',
   'preset.header.noneLoaded': '(未加载任何预设)',
 
-  // ---- preset.toast：预设域 toast ----
+  // ---- 提示 ----
+  'preset.toast.loadFailed': '加载失败：{msg}',
+  'preset.toast.noDataToSave': '没有可保存的数据',
+  'preset.toast.saved': '已保存：{name}',
+  'preset.toast.saveFailed': '保存失败：{msg}',
+  'preset.toast.created': '已创建：{name}',
+  'preset.toast.createFailed': '创建失败：{msg}',
+  'preset.toast.deleted': '已删除：{name}',
+  'preset.toast.deleteFailed': '删除失败：{msg}',
+  'preset.toast.nothingToCopy': '没有可复制的内容',
+  'preset.toast.copied': '已复制',
+  'preset.toast.copyFailed': '复制失败，请查看控制台',
   'preset.toast.loadFirst': '请先加载一份预设',
   'preset.toast.listFailed': '无法获取预设列表：{msg}',
   'preset.toast.notFound': '未找到预设：{name}',
@@ -110,20 +133,13 @@ export default {
   'preset.toast.cannotHideMarker': '不能隐藏Marker',
   'preset.toast.selectPresetFailed': '切换ST主菜单预设失败，可能导致显示数据不精确',
 
-  // ---- confirm：通用确认弹窗 ----
-  'shared.confirm.unsaved.title': '未保存的更改',
-  'shared.confirm.unsaved.message': '当前有未保存的更改，确定要放弃吗？',
-
-  // ---- preset.confirm：预设域确认弹窗 ----
+  // ---- 确认弹窗 ----
   'preset.confirm.switch.title': '切换预设？',
   'preset.confirm.switch.message': '切换到预设 <strong>{name}</strong>？当前预设的未保存更改将丢失。',
-  'preset.confirm.switch.confirm': '切换',
   'preset.confirm.delete.title': '删除预设？',
   'preset.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
   'preset.confirm.deleteBlock.title': '删除提示词块？',
   'preset.confirm.deleteBlock.message': '这将从预设中永久移除 <strong>{name}</strong>。',
-  'preset.confirm.deleteBlock.confirm': '删除',
-  'preset.confirm.deleteBlock.cancel': '取消',
   'preset.confirm.reload.title': '重新加载预设？',
   'preset.confirm.reload.message': '重新加载预设 <strong>{name}</strong>？当前预设的未保存更改将丢失。',
   'preset.confirm.reload.confirm': '重新加载',
@@ -132,51 +148,13 @@ export default {
   'preset.confirm.removeBlock.confirm': '移除',
   'preset.confirm.closeUnsaved.title': '不保存就关闭？',
   'preset.confirm.closeUnsaved.message': '你在一侧或两侧有未保存的复制/删除更改。',
-  'preset.confirm.closeUnsaved.confirm': '关闭',
   'preset.confirm.closePanel.item': '预设：{name}',
 
-  // ---- regex.confirm：正则域确认弹窗 ----
-  'regex.confirm.delete.title': '删除正则脚本？',
-  'regex.confirm.delete.message': '这将从预设中永久移除 <strong>{name}</strong>。',
-
-  // ---- worldbook.confirm：世界书域确认弹窗 ----
-  'worldbook.confirm.closePanel.item': '世界书：{name}',
-
-  // ---- character.confirm：角色卡域确认弹窗 ----
-  'character.confirm.closePanel.item': '角色卡：{name}',
-
-  // ---- 面板关闭确认弹窗 ----
-  'shared.confirm.closePanel.title': '还有未保存的更改',
-  'shared.confirm.closePanel.message': '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
-  'shared.confirm.closePanel.confirm': '关闭',
-
-  // ---- preset.prompt：预设输入弹窗 ----
+  // ---- 输入弹窗 ----
   'preset.prompt.new.title': '新预设名称',
   'preset.prompt.new.placeholder': '预设名称',
-  'preset.prompt.new.confirm': '创建',
-  'preset.prompt.new.cancel': '取消',
 
-  // ---- shared.tabBar：标签栏 ----
-  'shared.tabBar.close': '关闭',
-
-  // ---- shared.settingsDock：设置面板 ----
-  'shared.settingsDock.title': '⚙ 设置',
-  'shared.settingsDock.toggleFloat': '切换悬浮模式',
-
-  // ---- shared.listToolbar：列表工具条 ----
-  'shared.listToolbar.count': '{count} 条',
-
-  // ---- regex.editorShell：正则编辑区空状态 ----
-  'regex.editorShell.empty': '选一条正则，或者新建一条',
-
-  // ---- preset.editorShell：预设编辑区空状态 ----
-  'preset.editorShell.empty': '选择一个块进行编辑',
-  'preset.editorShell.loading': '正在从上下文加载预设…',
-
-  // ---- shared.highlightedEditor：编辑器状态栏 ----
-  'shared.highlightedEditor.cursor': '行 {line}，列 {col}',
-
-  // ---- preset.sidebar：预设侧边栏 ----
+  // ---- 侧边栏 ----
   'preset.sidebar.title': '提示词块',
   'preset.sidebar.newBlock': '+ 新建',
   'preset.sidebar.hiddenBlock': '+ 隐藏块',
@@ -185,30 +163,28 @@ export default {
   'preset.sidebar.hiddenTitle': '不在当前生效顺序里',
   'preset.sidebar.settingsPanel': '设置面板（名称/角色）',
 
-  // ---- preset.settingsForm：预设块设置表单 ----
+  // ---- 块设置表单 ----
   'preset.settings.name': '名称',
   'preset.settings.namePlaceholder': '给这个块起个名字',
   'preset.settings.role': '角色',
   'preset.settings.markerHint': '这是一个 marker 块（{id}），内容由 SillyTavern 内部生成，这里的角色/名称改动可能不影响实际渲染。',
   'preset.settings.empty': '选择一个块以编辑其设置',
 
-  // ---- preset.search：搜索替换 ----
+  // ---- 搜索替换 ----
   'preset.search.placeholder': '搜索所有块…',
   'preset.search.replacePlaceholder': '替换…',
   'preset.search.replace': '替换',
   'preset.search.replaceAll': '替换全部',
   'preset.search.results': '{count} 个结果',
 
-  // ---- preset.varPanel：变量导航面板 ----
+  // ---- 变量导航面板 ----
   'preset.varPanel.title': '📊 变量',
-  'preset.varPanel.toggleFloat': '切换悬浮模式',
   'preset.varPanel.filter': '筛选…',
   'preset.varPanel.prev': '◀ 上',
   'preset.varPanel.next': '下 ▶',
 
-  // ---- preset.preview：预览面板 ----
+  // ---- 预览面板 ----
   'preset.preview.title': '👁 提示词预览',
-  'preset.preview.toggleFloat': '切换悬浮模式',
   'preset.preview.collapseExpand': '折叠/展开全部',
   'preset.preview.modeBlocks': '逐块',
   'preset.preview.modeRaw': '最终请求',
@@ -221,14 +197,13 @@ export default {
   'preset.preview.emptyBlocks': '点击"生成"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。',
   'preset.preview.emptyRaw': '点击"生成"捕获最终请求——这会短暂启动一次真实生成并立即取消。',
 
-  // ---- preset.varPopup：变量弹窗 ----
+  // ---- 变量弹窗 ----
   'preset.varPopup.hit': '{count} 处匹配',
   'preset.varPopup.hitSingle': '{count} 处匹配',
 
-  // ---- preset.copyPanel：跨预设复制 ----
+  // ---- 跨预设复制面板 ----
   'preset.copyPanel.title': '🔀 跨预设复制提示词块',
   'preset.copyPanel.selectPreset': '选择预设…',
-  'preset.copyPanel.load': '加载',
   'preset.copyPanel.selectAll': '全部',
   'preset.copyPanel.clearAll': '无',
   'preset.copyPanel.noBlocks': '没有块',
@@ -236,13 +211,12 @@ export default {
   'preset.copyPanel.copyRight': '复制选中项 → 右侧',
   'preset.copyPanel.copyLeft': '复制选中项 → 左侧',
   'preset.copyPanel.removeBlock': '从此列表中移除',
-  'preset.copyPanel.close': '关闭',
   'preset.copyPanel.dirRight': '→ 右侧',
   'preset.copyPanel.dirLeft': '→ 左侧',
   'preset.copyPanel.loadBothFirst': '请先加载两侧预设',
   'preset.copyPanel.selectBlocksFirst': '请先选择要复制的块',
 
-  // ---- preset.metaForm：预设 Meta（模型参数，TODO.md 2.5b） ----
+  // ---- 预设元信息（模型参数） ----
   'preset.metaForm.title': 'ℹ️ 预设参数',
   'preset.metaForm.contextLabel': '最大上下文 (Token)',
   'preset.metaForm.maxTokensLabel': '最大回复长度 (Token)',
@@ -261,15 +235,21 @@ export default {
   'preset.metaForm.seedLabel': 'Seed',
   'preset.metaForm.seedHint': '-1 表示随机',
 
+  // ---- 编辑区空状态 ----
+  'preset.editorShell.empty': '选择一个块进行编辑',
+  'preset.editorShell.loading': '正在从上下文加载预设…',
 
-  // ---- regex.sidebar：正则侧边栏 ----
+  // ========================================
+  // regex：正则域
+  // ========================================
+  // ---- 侧边栏 ----
   'regex.sidebar.title': '正则脚本',
   'regex.sidebar.newScript': '+ 新建',
   'regex.sidebar.empty': '还没有绑定的正则',
   'regex.sidebar.toggleTitle': '启用/禁用',
   'regex.sidebar.deleteTitle': '删除',
 
-  // ---- regex.contentEditor：正则内容编辑 ----
+  // ---- 内容编辑 ----
   'regex.editor.edit': '✏️ 编辑',
   'regex.editor.preview': '👁 预览',
   'regex.editor.plainText': '纯文本',
@@ -282,7 +262,7 @@ export default {
   'regex.editor.previewLimitation': '预览只做本地查找/替换/修剪，不解析宏、不代表作用范围与深度限制。',
   'regex.editor.previewError': '预览出错: {msg}',
 
-  // ---- regex.settingsForm：正则设置表单 ----
+  // ---- 设置表单 ----
   'regex.settings.enabled': '启用',
   'regex.settings.findRegexLabel': '查找正则表达式',
   'regex.settings.findRegexPlaceholder': '/pattern/flags',
@@ -302,76 +282,33 @@ export default {
   'regex.settings.maxDepth': '最大深度',
   'regex.settings.depthPlaceholder': '无限',
 
-  // ---- regex.placement：作用范围选项（对应 types.ts REGEX_PLACEMENT_OPTIONS） ----
+  // ---- 选项枚举 ----
   'regex.placement.userInput': '用户输入',
   'regex.placement.aiOutput': 'AI 输出',
   'regex.placement.quickCommand': '快捷命令',
   'regex.placement.worldInfo': '世界书',
   'regex.placement.reasoning': '推理',
-
-  // ---- regex.substitute：表层替换选项（对应 types.ts REGEX_SUBSTITUTE_OPTIONS） ----
   'regex.substitute.none': '不替换',
   'regex.substitute.raw': '替换（原始）',
   'regex.substitute.escaped': '替换（转义）',
 
-  // ---- syntax highlight labels（对应 types.ts SYNTAX_LABELS） ----
-  'syntax.hl-b': '花括号 {{ }}',
-  'syntax.hl-k': '关键字',
-  'syntax.hl-s': '分隔符 (::)',
-  'syntax.hl-v': '变量名',
-  'syntax.hl-c': '变量值',
-  'syntax.hl-cm': '注释',
-  'syntax.hl-m': '宏内容',
-  'syntax.hl-sq': '单引号',
-  'syntax.hl-dq': '双引号',
-  'syntax.hl-ab': '尖括号 < >',
-  'syntax.hl-sb': '方括号 [ ]',
+  // ---- 确认弹窗 ----
+  'regex.confirm.delete.title': '删除正则脚本？',
+  'regex.confirm.delete.message': '这将永久移除 <strong>{name}</strong>。',
 
-  // ---- worldbook.header / worldbook.confirm / worldbook.prompt / worldbook.editorShell：世界书工作区部分 ----
+  // ---- 编辑区空状态 ----
+  'regex.editorShell.empty': '选一条正则，或者新建一条',
+
+  // ========================================
+  // worldbook：世界书域
+  // ========================================
+  // ---- 头部工具栏 ----
   'worldbook.header.new': '新建世界书',
   'worldbook.header.delete': '删除世界书',
   'worldbook.header.switch': '切换世界书',
-  'worldbook.confirm.switch.title': '切换世界书？',
-  'worldbook.confirm.switch.message': '切换到世界书 <strong>{name}</strong>？当前世界书的未保存更改将丢失。',
-  'worldbook.confirm.delete.title': '删除世界书？',
-  'worldbook.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
-  'worldbook.prompt.new.title': '新世界书名称',
-  'worldbook.prompt.new.placeholder': '世界书名称',
-  'worldbook.editorShell.empty': '正在加载世界书列表…',
-  'worldbook.editorShell.emptyEntry': '选一个条目，或者新建一个',
+  'worldbook.header.noneLoaded': '(未加载世界书)',
 
-  // ---- character.header / character.confirm / character.prompt / character.editorShell：角色卡工作区部分 ----
-
-  'character.header.new': '新建角色',
-  'character.header.delete': '删除角色',
-  'character.header.switch': '切换角色',
-  'character.confirm.switch.title': '切换角色？',
-  'character.confirm.switch.message': '切换到角色 <strong>{name}</strong>？当前角色的未保存更改将丢失。',
-  'character.confirm.delete.title': '删除角色？',
-  'character.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
-  'character.prompt.new.title': '新角色名称',
-  'character.prompt.new.placeholder': '角色名称',
-  'character.editorShell.empty': '还没有加载任何角色，新建或选择一个',
-  'character.editorShell.emptyField': '选一个字段进行编辑',
-
-  // ---- worldbook.sidebar ----
-  'worldbook.sidebar.title': '世界书条目',
-  'worldbook.sidebar.newEntry': '+ 新建',
-  'worldbook.sidebar.empty': '还没有加载世界书，从右上角选一个，或者新建一个',
-  'worldbook.sidebar.defaultGroupName': '分组 ({count})',
-  'worldbook.sidebar.tools': '🛠 批量工具',
-
-  // ---- worldbook.tools：批量工具悬浮面板 ----
-  'worldbook.tools.title': '批量工具',
-  'worldbook.tools.selectedCount': '已选中 {count} 个条目',
-  'worldbook.tools.enableLabel': '启用状态',
-  'worldbook.tools.enableSelected': '启用选中',
-  'worldbook.tools.disableSelected': '禁用选中',
-  'worldbook.tools.activationLabel': '激活方式',
-  'worldbook.tools.noSelection': '先在左侧列表里选中一些条目（Ctrl/Shift 多选）',
-  'worldbook.tools.applied': '已应用到 {count} 个条目',
-
-  // ---- worldbook.toast ----
+  // ---- 提示 ----
   'worldbook.toast.listFailed': '获取世界书列表失败：{msg}',
   'worldbook.toast.loadFailed': '加载世界书失败：{msg}',
   'worldbook.toast.notFound': '找不到世界书 {name}',
@@ -389,19 +326,61 @@ export default {
   'worldbook.toast.created2': '已新建条目',
   'worldbook.toast.entryDeleted': '已删除',
 
-  // ---- worldbook.confirm ----
+  // ---- 确认弹窗 ----
+  'worldbook.confirm.switch.title': '切换世界书？',
+  'worldbook.confirm.switch.message': '切换到世界书 <strong>{name}</strong>？当前世界书的未保存更改将丢失。',
+  'worldbook.confirm.delete.title': '删除世界书？',
+  'worldbook.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
   'worldbook.confirm.deleteEntry.title': '删除条目？',
   'worldbook.confirm.deleteEntry.message': '这将从世界书中永久移除 <strong>{name}</strong>。',
+  'worldbook.confirm.closePanel.item': '世界书：{name}',
 
-  // ---- worldbook.activation：三种互斥激活方式（对应 WorldbookEntry.constant/vectorized/keyWord） ----
+  // ---- 输入弹窗 ----
+  'worldbook.prompt.new.title': '新世界书名称',
+  'worldbook.prompt.new.placeholder': '世界书名称',
+
+  // ---- 侧边栏 ----
+  'worldbook.sidebar.title': '世界书条目',
+  'worldbook.sidebar.newEntry': '+ 新建',
+  'worldbook.sidebar.empty': '还没有加载世界书，从右上角选一个，或者新建一个',
+  'worldbook.sidebar.defaultGroupName': '分组 ({count})',
+  'worldbook.sidebar.tools': '🛠 批量工具',
+
+  // ---- 批量工具面板 ----
+  'worldbook.tools.title': '批量工具',
+  'worldbook.tools.selectedCount': '已选中 {count} 个条目',
+  'worldbook.tools.enableLabel': '启用状态',
+  'worldbook.tools.enableSelected': '启用选中',
+  'worldbook.tools.disableSelected': '禁用选中',
+  'worldbook.tools.activationLabel': '激活方式',
+  'worldbook.tools.noSelection': '先在左侧列表里选中一些条目（Ctrl/Shift 多选）',
+  'worldbook.tools.applied': '已应用到 {count} 个条目',
+
+  // ---- 选项枚举 ----
   'worldbook.activation.keyWord': '关键词',
   'worldbook.activation.constant': '恒定',
   'worldbook.activation.vectorized': '向量化',
+  'worldbook.position.beforeChar': '角色定义之前',
+  'worldbook.position.afterChar': '角色定义之后',
+  'worldbook.position.beforeExample': '示例对话之前',
+  'worldbook.position.afterExample': '示例对话之后',
+  'worldbook.position.beforeAuthorsNote': '作者注释之前',
+  'worldbook.position.afterAuthorsNote': '作者注释之后',
+  'worldbook.position.atDepth': '在深度 ⚙',
+  'worldbook.position.outlet': '出口（outlet）',
+  'worldbook.logic.andAny': 'AND 任意',
+  'worldbook.logic.notAll': 'NOT 全部',
+  'worldbook.logic.notAny': 'NOT 任意',
+  'worldbook.logic.andAll': 'AND 全部',
+  'worldbook.role.default': '默认',
+  'worldbook.role.system': '系统',
+  'worldbook.role.user': '用户',
+  'worldbook.role.assistant': '助手',
 
-  // ---- worldbook.editor ----
+  // ---- 编辑器 ----
   'worldbook.editor.placeholder': '在这里编辑世界书条目的内容…',
 
-  // ---- worldbook.settings：条目设置表单 ----
+  // ---- 条目设置表单 ----
   'worldbook.settings.enabled': '启用',
   'worldbook.settings.commentLabel': '标题 / 备注',
   'worldbook.settings.commentPlaceholder': '条目标题（仅用于识别，不会被激活匹配）',
@@ -430,54 +409,20 @@ export default {
   'worldbook.settings.groupPlaceholder': '同组内按权重/优先级只取一个',
   'worldbook.settings.groupPrioritized': '组内优先',
 
-  // ---- worldbook.position：插入位置选项（对应 types.ts WORLDBOOK_POSITION_OPTIONS） ----
-  'worldbook.position.beforeChar': '角色定义之前',
-  'worldbook.position.afterChar': '角色定义之后',
-  'worldbook.position.beforeExample': '示例对话之前',
-  'worldbook.position.afterExample': '示例对话之后',
-  'worldbook.position.beforeAuthorsNote': '作者注释之前',
-  'worldbook.position.afterAuthorsNote': '作者注释之后',
-  'worldbook.position.atDepth': '在深度 ⚙',
-  'worldbook.position.outlet': '出口（outlet）',
+  // ---- 编辑区空状态 ----
+  'worldbook.editorShell.empty': '正在加载世界书列表…',
+  'worldbook.editorShell.emptyEntry': '选一个条目，或者新建一个',
 
-  // ---- worldbook.logic：次要关键词逻辑选项（对应 types.ts WORLDBOOK_LOGIC_OPTIONS） ----
-  'worldbook.logic.andAny': 'AND 任意',
-  'worldbook.logic.notAll': 'NOT 全部',
-  'worldbook.logic.notAny': 'NOT 任意',
-  'worldbook.logic.andAll': 'AND 全部',
+  // ========================================
+  // character：角色卡域
+  // ========================================
+  // ---- 头部工具栏 ----
+  'character.header.new': '新建角色',
+  'character.header.delete': '删除角色',
+  'character.header.switch': '切换角色',
+  'character.header.noneLoaded': '(未加载角色)',
 
-  // ---- worldbook.role：深度插入角色选项（对应 types.ts WORLDBOOK_ROLE_OPTIONS） ----
-  'worldbook.role.default': '默认',
-  'worldbook.role.system': '系统',
-  'worldbook.role.user': '用户',
-  'worldbook.role.assistant': '助手',
-
-  // ---- character.field：CharacterSidebar 固定字段标签（对应 types.ts CHARACTER_FIELDS） ----
-  'character.field.description': '角色描述',
-  'character.field.scenario': '情景',
-  'character.field.mesExample': '对话示例',
-  'character.field.personality': '性格',
-  'character.field.systemPrompt': '系统提示词',
-  'character.field.postHistoryInstructions': '历史后指令',
-  'character.field.depthPrompt': '角色备注',
-
-  // ---- character.sidebar ----
-  'character.sidebar.title': '角色卡',
-  'character.sidebar.empty': '还没有加载任何角色，新建或选择一个',
-  'character.sidebar.fieldsLabel': '内容字段',
-  'character.sidebar.greetingsLabel': '开场白',
-  'character.sidebar.addGreeting': '+ 开场白',
-  'character.sidebar.regexMode': '正则',
-  'character.sidebar.fieldsMode': '← 字段',
-  'character.sidebar.deleteGreetingTitle': '删除这条开场白',
-  'character.sidebar.greetingLabel': '开场白 {n}',
-
-  // ---- character.editor ----
-  'character.editor.placeholder': '在这里编辑内容…',
-  'character.editor.depthLabel': '深度',
-  'character.editor.roleLabel': '角色',
-
-  // ---- character.toast ----
+  // ---- 提示 ----
   'character.toast.listFailed': '获取角色列表失败：{msg}',
   'character.toast.loadFailed': '加载角色失败：{msg}',
   'character.toast.notFound': '找不到角色 {name}',
@@ -495,12 +440,46 @@ export default {
   'character.toast.greetingDeleted': '已删除开场白',
   'character.toast.needAtLeastOneGreeting': '至少要保留一条开场白',
 
-  // ---- character.confirm ----
+  // ---- 确认弹窗 ----
+  'character.confirm.switch.title': '切换角色？',
+  'character.confirm.switch.message': '切换到角色 <strong>{name}</strong>？当前角色的未保存更改将丢失。',
+  'character.confirm.delete.title': '删除角色？',
+  'character.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
   'character.confirm.deleteGreeting.title': '删除开场白？',
   'character.confirm.deleteGreeting.message': '这将永久移除这条开场白，且不可撤销。',
   'character.confirm.newCharacter.message': '创建新角色将丢弃当前未保存的更改，确定要继续吗？',
+  'character.confirm.closePanel.item': '角色卡：{name}',
 
-  // ---- character.metaForm：角色卡 Meta ----
+  // ---- 输入弹窗 ----
+  'character.prompt.new.title': '新角色名称',
+  'character.prompt.new.placeholder': '角色名称',
+
+  // ---- 侧边栏 ----
+  'character.sidebar.title': '角色卡',
+  'character.sidebar.empty': '还没有加载任何角色，新建或选择一个',
+  'character.sidebar.fieldsLabel': '内容字段',
+  'character.sidebar.greetingsLabel': '开场白',
+  'character.sidebar.addGreeting': '+ 开场白',
+  'character.sidebar.regexMode': '正则',
+  'character.sidebar.fieldsMode': '← 字段',
+  'character.sidebar.deleteGreetingTitle': '删除这条开场白',
+  'character.sidebar.greetingLabel': '开场白 {n}',
+
+  // ---- 编辑器 ----
+  'character.editor.placeholder': '在这里编辑内容…',
+  'character.editor.depthLabel': '深度',
+  'character.editor.roleLabel': '角色',
+
+  // ---- 固定字段标签 ----
+  'character.field.description': '角色描述',
+  'character.field.scenario': '情景',
+  'character.field.mesExample': '对话示例',
+  'character.field.personality': '性格',
+  'character.field.systemPrompt': '系统提示词',
+  'character.field.postHistoryInstructions': '历史后指令',
+  'character.field.depthPrompt': '角色备注',
+
+  // ---- 角色元信息 ----
   'character.metaForm.title': 'ℹ️ 角色信息',
   'character.metaForm.favLabel': '⭐ 收藏',
   'character.metaForm.creatorLabel': '创作者',
@@ -511,4 +490,8 @@ export default {
   'character.metaForm.talkativenessLabel': '话痨度',
   'character.metaForm.worldbookLabel': '绑定世界书',
   'character.metaForm.worldbookNone': '（未绑定）',
+
+  // ---- 编辑区空状态 ----
+  'character.editorShell.empty': '还没有加载任何角色，新建或选择一个',
+  'character.editorShell.emptyField': '选一个字段进行编辑',
 } satisfies LocaleTable

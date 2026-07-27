@@ -65,7 +65,7 @@ export const useUiStore = defineStore('ui', () => {
   function resetSettings() {
     settings.value = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
     saveSettings()
-    showToast(t('toast.settingsReset'))
+    showToast(t('shared.toast.settingsReset'))
   }
 
   const toastMsg = ref('')

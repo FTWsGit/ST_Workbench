@@ -5,7 +5,7 @@
       <span>{{ uiStore.t('preset.preview.title') }}</span>
       <div class="wb-row-tight">
         <button v-if="store.previewMode === 'blocks'" class="wb-btn icon-btn" :title="uiStore.t('preset.preview.collapseExpand')" @click="store.toggleAllPreviewBlocks()">▾</button>
-        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.previewFloat }" :title="uiStore.t('preset.preview.toggleFloat')" @click="toggleFloat">📌</button>
+        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.previewFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
         <button class="wb-btn close-btn compact" @click="store.previewOpen = false">✕</button>
       </div>
     </div>
@@ -100,8 +100,8 @@ async function copyPreview() {
   const text = store.previewMode === 'blocks'
     ? store.previewBlockGroups.flatMap(g => g.messages.map(m => m.segments.map(s => s.text).join(''))).join('\n\n')
     : store.previewRawText
-  if (!text.trim()) { uiStore.showToast(uiStore.t('toast.nothingToCopy')); return }
+  if (!text.trim()) { uiStore.showToast(uiStore.t('preset.toast.nothingToCopy')); return }
   const ok = await copyToHostClipboard(text)
-  uiStore.showToast(ok ? uiStore.t('toast.copied') : uiStore.t('toast.copyFailed'))
+  uiStore.showToast(ok ? uiStore.t('preset.toast.copied') : uiStore.t('preset.toast.copyFailed'))
 }
 </script>

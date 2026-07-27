@@ -17,8 +17,8 @@ export function useI18n(settings: Ref<Settings>) {
 
   /**
    * `key` must exist in zh-CN.ts (LocaleKey is derived from it). `params` fills named
-   * placeholders in the string, e.g. `t('toast.saveFailed', { msg: e.message })`
-   * against a table entry `'toast.saveFailed': '保存失败：{msg}'`.
+   * placeholders in the string, e.g. `t('preset.toast.saveFailed', { msg: e.message })`
+   * against a table entry `'preset.toast.saveFailed': '保存失败：{msg}'`.
    *
    * Fallback order: current language -> zh-CN -> the raw key itself. Falling back to the key
    * (instead of throwing) means a missing translation shows up as an obviously-wrong string
