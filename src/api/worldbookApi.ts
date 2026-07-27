@@ -129,3 +129,76 @@ export async function deleteWorldbook(name: string): Promise<void> {
   }
   await mod.deleteWorldInfo(name)
 }
+
+interface CharacterBookEntryLike {
+  id?: number
+  keys?: string[]
+  secondary_keys?: string[]
+  comment?: string
+  content?: string
+  constant?: boolean
+  selective?: boolean
+  insertion_order?: number
+  enabled?: boolean
+  position?: string // 'before_char' | 'after_char'，规范字段，只有两档
+  extensions?: Record<string, any>
+  [k: string]: any
+}
+
+function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number): WorldbookEntry {
+  const ext = raw.extensions ?? {}
+  const constant = !!(ext.constant ?? raw.constant)
+  const vectorized = !!ext.vectorized
+  // 规范 position 只有 before_char(0)/after_char(1) 两档，extensions.position 有 ST 精确数值
+  // （0~7，见 types.ts WORLDBOOK_POSITION_OPTIONS）时优先用它。
+  const specPosition = raw.position === 'after_char' ? 1 : 0
+  return {
+    uid: typeof raw.id === 'number' ? raw.id : fallbackUid,
+    comment: raw.comment ?? '',
+    content: raw.content ?? '',
+    displayIndex: typeof ext.display_index === 'number' ? ext.display_index : fallbackUid,
+    keys: Array.isArray(raw.keys) ? [...raw.keys] : [],
+    keysecondary: Array.isArray(raw.secondary_keys) ? [...raw.secondary_keys] : [],
+    selective: !!(ext.selective ?? raw.selective),
+    selectiveLogic: (typeof ext.selectiveLogic === 'number' ? ext.selectiveLogic : 0) as 0 | 1 | 2 | 3,
+    constant, keyWord: !constant && !vectorized, vectorized,
+    disabled: raw.enabled === false || !!ext.disable,
+    position: (typeof ext.position === 'number' ? ext.position : specPosition) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
+    depth: typeof ext.depth === 'number' ? ext.depth : 4,
+    order: typeof ext.order === 'number' ? ext.order : (typeof raw.insertion_order === 'number' ? raw.insertion_order : 100),
+    role: (ext.role === 0 || ext.role === 1 || ext.role === 2) ? ext.role : null,
+    probability: typeof ext.probability === 'number' ? ext.probability : 100,
+    useProbability: ext.useProbability !== false,
+    excludeRecursion: !!ext.excludeRecursion,
+    preventRecursion: !!ext.preventRecursion,
+    delayUntilRecursion: ext.delayUntilRecursion ?? false,
+    scanDepth: typeof ext.scanDepth === 'number' ? ext.scanDepth : null,
+    caseSensitive: typeof ext.caseSensitive === 'boolean' ? ext.caseSensitive : null,
+    matchWholeWords: typeof ext.matchWholeWords === 'boolean' ? ext.matchWholeWords : null,
+    group: typeof ext.group === 'string' ? ext.group : '',
+    groupPrioritized: !!ext.groupOverride,
+    groupWeight: typeof ext.groupWeight === 'number' ? ext.groupWeight : 100,
+    sticky: typeof ext.sticky === 'number' ? ext.sticky : null,
+    cooldown: typeof ext.cooldown === 'number' ? ext.cooldown : null,
+    delay: typeof ext.delay === 'number' ? ext.delay : null,
+  }
+}
+
+/** 纯转换，不碰 ST——单独导出方便脱离 Vue 用 `npx tsx` 写测试用例（PROJECT.md 对 `utils.ts`/
+ *  `regexEngine.ts` 这类纯函数文件的要求，这个转换同样属于"高频改错、需要独立验证"的那一类）。
+ *  `fallbackUid` 用条目在数组里的下标兜底——只有当规范字段里没有 `id` 时才会用到，不影响正常
+ *  已带 `id` 的条目。 */
+export function importCharacterBookEntries(entries: CharacterBookEntryLike[] | undefined | null): WorldbookEntry[] {
+  return (entries ?? []).map((raw, idx) => fromCharacterBookEntry(raw, idx))
+}
+
+/** 把角色卡内嵌世界书导入成一份新的独立世界书文件。只负责 ST 端注册名字 + 写入转换后的内容，
+ *  不负责把结果加载进 worldbookStore——调用方（worldbookStore.importFromCharacterBook()）自己
+ *  决定导入后是否紧接着 getWorldbookByName() 读一次权威数据，跟 createWorldbook() 的分工是
+ *  同一个模式（PROJECT.md「关键设计要点」第7条：真正加载前以 ST 返回的为准，不假设转换结果就是
+ *  最终存到磁盘的样子）。 */
+export async function importCharacterBook(name: string, book: { entries?: CharacterBookEntryLike[] } | null | undefined): Promise<void> {
+  await createWorldbook(name)
+  const entries = importCharacterBookEntries(book?.entries)
+  await saveWorldbook({ name, entries })
+}

@@ -301,6 +301,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'worldbook.header.new': 'New Worldbook',
+  'worldbook.header.importFromCharacter': 'Import from character',
   'worldbook.header.delete': 'Delete Worldbook',
   'worldbook.header.switch': 'Switch Worldbook',
   'worldbook.header.noneLoaded': '(No Worldbook Loaded)',
@@ -320,6 +321,9 @@ export default {
   'worldbook.toast.deleted': 'Deleted worldbook {name}',
   'worldbook.toast.deleteFailed': 'Failed to delete worldbook: {msg}',
   'worldbook.toast.loadFirst': 'Load or create a worldbook first',
+  'worldbook.toast.importNoBook': 'This character has no embedded worldbook',
+  'worldbook.toast.imported': 'Imported {count} entries into worldbook {name}',
+  'worldbook.toast.importFailed': 'Failed to import from character: {msg}',
   'worldbook.toast.created2': 'Entry created',
   'worldbook.toast.entryDeleted': 'Deleted',
 
@@ -335,6 +339,8 @@ export default {
   // ---- 输入弹窗 ----
   'worldbook.prompt.new.title': 'New Worldbook Name',
   'worldbook.prompt.new.placeholder': 'Worldbook name',
+  'worldbook.prompt.import.title': 'Import as new worldbook',
+  'worldbook.prompt.import.suffix': "'s Worldbook",
 
   // ---- 侧边栏 ----
   'worldbook.sidebar.title': 'Worldbook Entries',

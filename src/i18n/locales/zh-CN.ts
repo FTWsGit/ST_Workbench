@@ -304,6 +304,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'worldbook.header.new': '新建世界书',
+  'worldbook.header.importFromCharacter': '从角色卡导入',
   'worldbook.header.delete': '删除世界书',
   'worldbook.header.switch': '切换世界书',
   'worldbook.header.noneLoaded': '(未加载世界书)',
@@ -323,6 +324,9 @@ export default {
   'worldbook.toast.deleted': '已删除世界书 {name}',
   'worldbook.toast.deleteFailed': '删除世界书失败：{msg}',
   'worldbook.toast.loadFirst': '请先加载或新建一个世界书',
+  'worldbook.toast.importNoBook': '当前角色卡没有内嵌世界书',
+  'worldbook.toast.imported': '已从角色卡导入 {count} 条条目到世界书 {name}',
+  'worldbook.toast.importFailed': '从角色卡导入失败：{msg}',
   'worldbook.toast.created2': '已新建条目',
   'worldbook.toast.entryDeleted': '已删除',
 
@@ -338,6 +342,8 @@ export default {
   // ---- 输入弹窗 ----
   'worldbook.prompt.new.title': '新世界书名称',
   'worldbook.prompt.new.placeholder': '世界书名称',
+  'worldbook.prompt.import.title': '导入为新世界书',
+  'worldbook.prompt.import.suffix': '的世界书',
 
   // ---- 侧边栏 ----
   'worldbook.sidebar.title': '世界书条目',

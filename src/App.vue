@@ -47,6 +47,7 @@
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
               <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.new')" @click="onNewWorldbook">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.importFromCharacter')" :disabled="!embeddedCharacterBook" @click="onImportFromCharacterBook">📥</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.delete')" @click="onDeleteWorldbook" :disabled="!worldbookStore.worldbookName">🗑</button>
               <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('worldbook.header.switch')">
                 <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('worldbook.header.noneLoaded') }}</option>
@@ -149,6 +150,7 @@
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
             <button class="wb-mobile-tools-item" @click="runTool(onNewWorldbook)">{{ uiStore.t('worldbook.header.new') }}</button>
+            <button class="wb-mobile-tools-item" :disabled="!embeddedCharacterBook" @click="runTool(onImportFromCharacterBook)">{{ uiStore.t('worldbook.header.importFromCharacter') }}</button>
             <button class="wb-mobile-tools-item" :disabled="!worldbookStore.worldbookName" @click="runTool(onDeleteWorldbook)">{{ uiStore.t('worldbook.header.delete') }}</button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'character'">
@@ -598,6 +600,28 @@ function onNewWorldbook() {
     confirmText: uiStore.t('common.create'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: (name) => { worldbookStore.createNewWorldbook(name) },
+  })
+}
+
+/* ====== "从角色卡导入"世界书（TODO.md 阶段3）======
+ * 唯一的跨 domain 集成点：只读 characterStore.oldRaw（getCharacterByAvatar() 返回的原始
+ * v1CharData，见 characterApi.ts），不摸 worldbookStore 以外的任何东西去改世界书数据——
+ * worldbookStore.importFromCharacterBook() 本身不认识 characterStore，两个 domain store 互相
+ * 独立（PROJECT.md「六个 Pinia store」的边界纪律），App.vue 是唯一允许"同时知道两边"的地方。
+ * character_book 只在 v2CharData 里（`oldRaw.data.character_book`），v1 顶层没有这个字段。 */
+const embeddedCharacterBook = computed<{ name?: string; entries?: any[] } | null>(() => characterStore.oldRaw?.data?.character_book ?? null)
+function onImportFromCharacterBook() {
+  const book = embeddedCharacterBook.value
+  if (!book) { uiStore.showToast(uiStore.t('worldbook.toast.importNoBook')); return }
+  const suggested = (typeof book.name === 'string' && book.name.trim())
+    || `${characterStore.character?.name || ''}${uiStore.t('worldbook.prompt.import.suffix')}`
+  confirmStore.askInput({
+    title: uiStore.t('worldbook.prompt.import.title'),
+    placeholder: uiStore.t('worldbook.prompt.new.placeholder'),
+    initialValue: suggested,
+    confirmText: uiStore.t('common.create'),
+    cancelText: uiStore.t('common.cancel'),
+    onConfirm: (name) => { worldbookStore.importFromCharacterBook(book, name) },
   })
 }
 function onDeleteWorldbook() {

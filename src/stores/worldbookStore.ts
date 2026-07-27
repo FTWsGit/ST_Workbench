@@ -192,6 +192,25 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     } catch (e: any) { showToast(t('worldbook.toast.createFailed', { msg: e?.message || e })) }
   }
 
+  /** 从角色卡内嵌世界书导入（TODO.md 阶段3）。`book` 是调用方从 characterStore.oldRaw.data
+   *  .character_book 读出来的原始 v2WorldInfoBook——worldbookStore 故意不 useCharacterStore()，
+   *  不直接摸另一个 domain store 的内部状态（PROJECT.md「六个 Pinia store」的边界纪律：谁的数据
+   *  谁负责，跨 store 的读发生在调用方那一层，这里是 App.vue 的 onImportFromCharacterBook()）。
+   *  跟 createNewWorldbook() 是同一套模式：查重名 → 建空文件 → 写入内容 → 用 ST 返回的权威数据
+   *  重新加载进 store，不直接把转换结果当成"已经存在于 ST 里的样子"。 */
+  async function importFromCharacterBook(book: { entries?: any[] } | null | undefined, name: string) {
+    if (!book) { showToast(t('worldbook.toast.importNoBook')); return }
+    refreshWorldbookList()
+    if (worldbookList.value.includes(name)) { showToast(t('worldbook.toast.duplicateName')); return }
+    try {
+      await WB.importCharacterBook(name, book)
+      refreshWorldbookList()
+      const loaded = await WB.getWorldbookByName(name).catch(() => null)
+      applyLoaded(loaded ?? { name, entries: [] })
+      showToast(t('worldbook.toast.imported', { name, count: book.entries?.length ?? 0 }))
+    } catch (e: any) { showToast(t('worldbook.toast.importFailed', { msg: e?.message || e })) }
+  }
+
   async function removeCurrentWorldbook() {
     const name = worldbookName.value
     if (!name) return
@@ -274,7 +293,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     flatNodes, selectedGi, anchorGi, identifierToGi,
     dirty, markDirty, currentEntry, hasData,
     refreshWorldbookList, loadWorldbookByName, switchWorldbook, reloadWorldbook,
-    doSaveWorldbook, createNewWorldbook, removeCurrentWorldbook,
+    doSaveWorldbook, createNewWorldbook, removeCurrentWorldbook, importFromCharacterBook,
     selectBlock, addEntry, deleteEntry, toggleEntryDisabled,
     toggleGroupCollapse, reorderBlock, bindSelected, unbindGroup,
   }
