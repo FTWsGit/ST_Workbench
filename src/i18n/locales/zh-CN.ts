@@ -116,8 +116,6 @@ export default {
   'shared.confirm.deleteRegex.title': '删除正则脚本？',
   'shared.confirm.deleteRegex.message': '这将从预设中永久移除 <strong>{name}</strong>。',
   'shared.confirm.reloadPreset.title': '重新加载预设？',
-  'shared.confirm.reloadPreset.message': '重新加载 <strong>{name}</strong> 将丢弃此侧未保存的复制/删除更改。',
-  'shared.confirm.reloadPreset.confirm': '重新加载',
   'shared.confirm.removeBlock.title': '移除块？',
   'shared.confirm.removeBlock.message': '从列表中移除 <strong>{name}</strong>？这仅影响当前复制会话——不会写入磁盘，直到你点击保存。',
   'shared.confirm.removeBlock.confirm': '移除',
@@ -128,6 +126,8 @@ export default {
   'shared.confirm.closePanel.message': '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
   'shared.confirm.closePanel.confirm': '关闭',
   'shared.confirm.closePanel.presetItem': '预设：{name}',
+  'shared.unsavedChanges.title': '未保存的更改',
+  'shared.unsavedChanges.message': '当前有未保存的更改，确定要放弃吗？',
 
   // ---- shared.prompt：通用输入弹窗 ----
   'shared.prompt.newPreset.title': '新预设名称',
@@ -482,6 +482,9 @@ export default {
   // ---- character.confirm ----
   'character.confirm.deleteGreeting.title': '删除开场白？',
   'character.confirm.deleteGreeting.message': '这将永久移除这条开场白，且不可撤销。',
+  'character.confirm.delete.title': '删除角色？',
+  'character.confirm.delete.message': '这将永久移除角色 <strong>{name}</strong>，无法撤销。',
+  'character.confirm.newCharacter.message': '创建新角色将丢弃当前未保存的更改，确定要继续吗？',
 
   // ---- character.metaForm：角色卡 Meta（创作者信息/tags/talkativeness/世界书换绑，TODO.md 2.5b） ----
   'character.metaForm.title': 'ℹ️ 角色信息',

@@ -116,8 +116,6 @@ export default {
   'shared.confirm.deleteRegex.title': 'Delete regex script?',
   'shared.confirm.deleteRegex.message': 'This will permanently remove <strong>{name}</strong> from the preset.',
   'shared.confirm.reloadPreset.title': 'Reload preset?',
-  'shared.confirm.reloadPreset.message': 'Reloading <strong>{name}</strong> will discard unsaved copy/delete changes on this side.',
-  'shared.confirm.reloadPreset.confirm': 'Reload',
   'shared.confirm.removeBlock.title': 'Remove block?',
   'shared.confirm.removeBlock.message': 'Remove <strong>{name}</strong> from this list? This only affects the in-progress copy session — nothing is written to disk until you hit Save.',
   'shared.confirm.removeBlock.confirm': 'Remove',
@@ -128,6 +126,8 @@ export default {
   'shared.confirm.closePanel.message': "The following workspaces still have unsaved changes. Closing the panel only hides it — your changes stay in memory and are restored automatically next time you open it. But if you refresh or close the SillyTavern page before saving, they'll be lost:",
   'shared.confirm.closePanel.confirm': 'Close',
   'shared.confirm.closePanel.presetItem': 'Preset: {name}',
+  'shared.unsavedChanges.title': 'Unsaved changes',
+  'shared.unsavedChanges.message': 'You have unsaved changes. Are you sure you want to discard them?',
 
   // ---- shared.prompt ----
   'shared.prompt.newPreset.title': 'New Preset Name',
@@ -481,6 +481,9 @@ export default {
   // ---- character.confirm ----
   'character.confirm.deleteGreeting.title': 'Delete this greeting?',
   'character.confirm.deleteGreeting.message': 'This will permanently remove this greeting. This cannot be undone.',
+  'character.confirm.delete.title': 'Delete character?',
+  'character.confirm.delete.message': 'This will permanently remove character <strong>{name}</strong>. This cannot be undone.',
+  'character.confirm.newCharacter.message': 'Creating a new character will discard all unsaved changes. Are you sure you want to continue?',
 
   // ---- character.metaForm: creator info/tags/talkativeness/worldbook rebind, TODO.md stage 2b ----
   'character.metaForm.title': 'ℹ️ Character Info',

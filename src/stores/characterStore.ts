@@ -1,13 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref, computed, nextTick } from 'vue'
-import type { Character, CharacterListEntry, RegexScript } from '../types'
+import { type Character, type CharacterListEntry, type RegexScript, CHARACTER_FIELDS } from '../types'
 import * as CH from '../api/characterApi'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { useUiStore } from './uiStore'
+import { useRegexScripts } from '../composables/useRegexScripts'
+function genLocalId(prefix: string): string {
+  return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+}
 
 function genGreetingId(): string {
-  return 'g_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+  return genLocalId('g_')
+}
+
+function reorderArray<T>(arr: T[], fromIdx: number, toIdx: number, after: boolean) {
+  if (fromIdx < 0 || toIdx < 0 || fromIdx >= arr.length || toIdx >= arr.length) return
+  const item = arr.splice(fromIdx, 1)[0]
+  const insertIdx = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : (after ? toIdx + 1 : toIdx)
+  arr.splice(insertIdx, 0, item)
 }
 
 function emptyCharacter(name: string): Character {
@@ -35,7 +46,7 @@ export const useCharacterStore = defineStore('character', () => {
   const tabsStore = useTabsStore()
   const confirmStore = useConfirmStore()
   const uiStore = useUiStore()
-  const t = uiStore.t
+  const t: (key: string, params?: any) => string = (key, params) => uiStore.t(key as any, params)
   const showToast = uiStore.showToast
 
   /* ====== Core State ====== */
@@ -84,8 +95,13 @@ export const useCharacterStore = defineStore('character', () => {
       if (idx >= 0) character.value.greetings[idx] = value
     } else {
       const fieldKey = key.slice('field:'.length)
-      if (fieldKey === 'depthPrompt') character.value.depthPrompt.prompt = value
-      else (character.value as any)[fieldKey] = value
+      if (fieldKey === 'depthPrompt') {
+        character.value.depthPrompt.prompt = value
+      } else if (CHARACTER_FIELDS.some(f => f.key === fieldKey)) {
+        (character.value as any)[fieldKey] = value
+      } else {
+        return // 非法字段直接忽略，避免污染对象
+      }
     }
     markDirty()
   }
@@ -97,31 +113,21 @@ export const useCharacterStore = defineStore('character', () => {
     if (!Array.isArray(character.value.extensions.regex_scripts)) character.value.extensions.regex_scripts = []
     return character.value.extensions.regex_scripts
   })
-  function addRegexScript(): string | null {
-    if (!character.value) { showToast(t('character.toast.loadFirst')); return null }
-    const script: RegexScript = {
-      id: 'regex_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-      scriptName: 'New Regex', findRegex: '', replaceString: '', trimStrings: [],
-      placement: [2],
-      disabled: false, markdownOnly: false, promptOnly: false, runOnEdit: false,
-      substituteRegex: 0, minDepth: null, maxDepth: null,
-    }
-    regexScripts.value.push(script)
-    markDirty()
-    return script.id
+
+  function getRegexScripts(): RegexScript[] | null {
+    if (!character.value) return null
+    if (!character.value.extensions) character.value.extensions = { regex_scripts: [] }
+    if (!Array.isArray(character.value.extensions.regex_scripts)) character.value.extensions.regex_scripts = []
+    return character.value.extensions.regex_scripts
   }
-  function deleteRegexScript(id: string) {
-    const i = regexScripts.value.findIndex(r => r.id === id)
-    if (i >= 0) { regexScripts.value.splice(i, 1); markDirty() }
-  }
-  function reorderRegexScript(fromIdx: number, toIdx: number, after: boolean) {
-    const arr = regexScripts.value
-    if (fromIdx < 0 || toIdx < 0 || fromIdx >= arr.length || toIdx >= arr.length) return
-    const item = arr.splice(fromIdx, 1)[0]
-    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : (after ? toIdx + 1 : toIdx)
-    arr.splice(ni, 0, item)
-    markDirty()
-  }
+
+  const { addRegexScript, deleteRegexScript, reorderRegexScript } = useRegexScripts(getRegexScripts, {
+    markDirty,
+    showToast,
+    t,
+    loadFirstMessageKey: 'character.toast.loadFirst',
+    defaultPlacement: [2],
+  })
 
   /* ====== Greetings：增删拖拽 ====== */
   function addGreeting() {
@@ -156,14 +162,9 @@ export const useCharacterStore = defineStore('character', () => {
    *  拖拽发生在同一次渲染帧内，下标不会失效），greetings 和 greetingIds 两个数组永远同步 splice，
    *  谁也不会跟丢。 */
   function reorderGreeting(fromIdx: number, toIdx: number, after: boolean) {
-    if (!character.value) return
-    const arr = character.value.greetings
-    if (fromIdx < 0 || toIdx < 0 || fromIdx >= arr.length || toIdx >= arr.length) return
-    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : (after ? toIdx + 1 : toIdx)
-    const item = arr.splice(fromIdx, 1)[0]
-    arr.splice(ni, 0, item)
-    const idItem = greetingIds.value.splice(fromIdx, 1)[0]
-    greetingIds.value.splice(ni, 0, idItem)
+    if (!character.value) { showToast(t('character.toast.loadFirst')); return }
+    reorderArray(character.value.greetings, fromIdx, toIdx, after)
+    reorderArray(greetingIds.value, fromIdx, toIdx, after)
     markDirty()
   }
 
@@ -201,33 +202,37 @@ export const useCharacterStore = defineStore('character', () => {
     loadCharacterByAvatar(character.value.avatar, { silent: true })
   }
 
-  /** 新建一个还没提交给 ST 的空角色——只在内存里存在，`avatar` 是空字符串，doSaveCharacter()
-   *  第一次保存时据此走 create 分支（同 worldbookStore.createNewWorldbook() 的"先注册名字，
-   *  真正数据靠调用方后续操作"不完全一样：角色卡新建不需要先跟 ST 打招呼，直接给一份空白工作层
-   *  数据即可，POST /api/characters/create 本身就是"新建+写入初始内容"一步到位）。 */
-  function createNewCharacter(name: string) {
+  async function createNewCharacter(name: string) {
     if (characterList.value.some(c => c.name === name)) { showToast(t('character.toast.duplicateName')); return }
-    applyLoaded(emptyCharacter(name), null)
-    showToast(t('character.toast.created', { name }))
+    try {
+      const newChar = emptyCharacter(name)
+      const avatar = await CH.createCharacter(newChar)
+      if (!avatar) { showToast(t('character.toast.createFailed')); return }
+      refreshCharacterList()
+      await loadCharacterByAvatar(avatar, { silent: true })
+      showToast(t('character.toast.created', { name }))
+    } catch (e: any) {
+      showToast(t('character.toast.createFailed', { msg: e?.message || e }))
+    }
   }
 
   async function removeCurrentCharacter() {
     const avatar = character.value?.avatar
     const name = character.value?.name || avatar || ''
-    if (!avatar) return // 还没保存过的新角色没有 avatar，本地直接清空即可，不需要调删除接口
+    if (!avatar) { showToast(t('character.toast.deleteFailed')); return; }
     try {
       await CH.deleteCharacter(avatar)
       refreshCharacterList()
       const next = characterList.value[0]
       if (next) await loadCharacterByAvatar(next.avatar, { silent: true })
-      else { character.value = null; oldRaw.value = null; greetingIds.value = []; tabsStore.closeWorkspace('character') }
+      else { character.value = null; oldRaw.value = null; greetingIds.value = []; pendingAvatarFile.value = null; tabsStore.closeWorkspace('character') }
       showToast(t('character.toast.deleted', { name }))
     } catch (e: any) { showToast(t('character.toast.deleteFailed', { msg: e?.message || e })) }
   }
 
   async function doSaveCharacter() {
     if (!character.value) { showToast(t('character.toast.noDataToSave')); return }
-    const isNew = !character.value.avatar
+    const isNew = !oldRaw.value
     try {
       let avatar: string
       if (isNew) {
@@ -236,6 +241,13 @@ export const useCharacterStore = defineStore('character', () => {
         avatar = character.value.avatar
         await CH.editCharacter(character.value, oldRaw.value, pendingAvatarFile.value ?? undefined)
       }
+      // 保存后重新拉取最新原始数据，用于下次编辑的字段回退
+      const latest = await CH.getCharacterByAvatar(avatar)
+      if (latest) {
+        character.value.avatar = avatar
+        oldRaw.value = latest.raw
+      }
+      pendingAvatarFile.value = null
       refreshCharacterList()
       dirty.value = false
       showToast(t('character.toast.saved', { name: character.value?.name || avatar }))

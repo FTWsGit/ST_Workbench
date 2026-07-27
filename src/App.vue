@@ -441,9 +441,39 @@ function onSave() {
   else if (tabsStore.activeWorkspace === 'character') characterStore.doSaveCharacter()
 }
 function onReload() {
-  if (tabsStore.activeWorkspace === 'preset') presetStore.reloadPreset()
-  else if (tabsStore.activeWorkspace === 'worldbook') worldbookStore.reloadWorldbook()
-  else if (tabsStore.activeWorkspace === 'character') characterStore.reloadCharacter()
+  if (tabsStore.activeWorkspace === 'preset') {
+    if (presetStore.dirty) {
+      confirmStore.ask({
+        title: uiStore.t('shared.unsavedChanges.title'),
+        message: uiStore.t('shared.unsavedChanges.message'),
+        confirmText: uiStore.t('common.confirm'),
+        cancelText: uiStore.t('common.cancel'),
+        onConfirm: () => presetStore.reloadPreset(),
+      })
+    } else { presetStore.reloadPreset() }
+  }
+  else if (tabsStore.activeWorkspace === 'worldbook') {
+    if (worldbookStore.dirty) {
+      confirmStore.ask({
+        title: uiStore.t('shared.unsavedChanges.title'),
+        message: uiStore.t('shared.unsavedChanges.message'),
+        confirmText: uiStore.t('common.confirm'),
+        cancelText: uiStore.t('common.cancel'),
+        onConfirm: () => worldbookStore.reloadWorldbook(),
+      })
+    } else { worldbookStore.reloadWorldbook() }
+  }
+  else if (tabsStore.activeWorkspace === 'character') {
+    if (characterStore.dirty) {
+      confirmStore.ask({
+        title: uiStore.t('shared.unsavedChanges.title'),
+        message: uiStore.t('shared.unsavedChanges.message'),
+        confirmText: uiStore.t('common.confirm'),
+        cancelText: uiStore.t('common.cancel'),
+        onConfirm: () => characterStore.reloadCharacter(),
+      })
+    } else { characterStore.reloadCharacter() }
+  }
 }
 const saveLabel = computed(() => {
   const dirty = tabsStore.activeWorkspace === 'worldbook' ? worldbookStore.dirty
@@ -501,18 +531,23 @@ function onPresetSelect(e: Event) {
   const select = e.target as HTMLSelectElement
   const name = select.value
   if (!name || name === presetStore.presetName) return
-  confirmStore.ask({
-    title: uiStore.t('shared.confirm.switchPreset.title'),
-    message: uiStore.t('shared.confirm.switchPreset.message', { name: esc(name) }),
-    confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
-    cancelText: uiStore.t('common.cancel'),
-    danger: false,
-    onConfirm: () => presetStore.switchPreset(name),
-    // The <select> isn't v-model two-way bound, so the browser already visually switched to
-    // `name` the moment @change fired — if the user cancels, snap it back to what's actually
-    // loaded (nothing else is guaranteed to trigger a re-render in the meantime).
-    onCancel: () => { select.value = presetStore.presetName },
-  })
+  const doSwitch = () => presetStore.switchPreset(name)
+  if (presetStore.dirty) {
+    confirmStore.ask({
+      title: uiStore.t('shared.confirm.switchPreset.title'),
+      message: uiStore.t('shared.confirm.switchPreset.message', { name: esc(name) }),
+      confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
+      cancelText: uiStore.t('common.cancel'),
+      danger: false,
+      onConfirm: doSwitch,
+      // The <select> isn't v-model two-way bound, so the browser already visually switched to
+      // `name` the moment @change fired — if the user cancels, snap it back to what's actually
+      // loaded (nothing else is guaranteed to trigger a re-render in the meantime).
+      onCancel: () => { select.value = presetStore.presetName },
+    })
+  } else {
+    doSwitch()
+  }
 }
 
 function onNewPreset() {
@@ -541,15 +576,20 @@ function onWorldbookSelect(e: Event) {
   const select = e.target as HTMLSelectElement
   const name = select.value
   if (!name || name === worldbookStore.worldbookName) return
-  confirmStore.ask({
-    title: uiStore.t('shared.confirm.switchWorldbook.title'),
-    message: uiStore.t('shared.confirm.switchWorldbook.message', { name: esc(name) }),
-    confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
-    cancelText: uiStore.t('common.cancel'),
-    danger: false,
-    onConfirm: () => worldbookStore.switchWorldbook(name),
-    onCancel: () => { select.value = worldbookStore.worldbookName },
-  })
+  const doSwitch = () => worldbookStore.switchWorldbook(name)
+  if (worldbookStore.dirty) {
+    confirmStore.ask({
+      title: uiStore.t('shared.confirm.switchWorldbook.title'),
+      message: uiStore.t('shared.confirm.switchWorldbook.message', { name: esc(name) }),
+      confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
+      cancelText: uiStore.t('common.cancel'),
+      danger: false,
+      onConfirm: doSwitch,
+      onCancel: () => { select.value = worldbookStore.worldbookName },
+    })
+  } else {
+    doSwitch()
+  }
 }
 function onNewWorldbook() {
   confirmStore.askInput({
@@ -578,24 +618,40 @@ function onCharacterSelect(e: Event) {
   const select = e.target as HTMLSelectElement
   const avatar = select.value
   if (!avatar || avatar === characterStore.character?.avatar) return
-  confirmStore.ask({
-    title: uiStore.t('shared.confirm.switchCharacter.title'),
-    message: uiStore.t('shared.confirm.switchCharacter.message', { name: esc(characterStore.characterList.find(c => c.avatar === avatar)?.name || avatar) }),
-    confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
-    cancelText: uiStore.t('common.cancel'),
-    danger: false,
-    onConfirm: () => characterStore.switchCharacter(avatar),
-    onCancel: () => { select.value = characterStore.character?.avatar || '' },
-  })
+  const doSwitch = () => characterStore.switchCharacter(avatar)
+  if (characterStore.dirty) {
+    confirmStore.ask({
+      title: uiStore.t('shared.confirm.switchCharacter.title'),
+      message: uiStore.t('shared.confirm.switchCharacter.message', { name: esc(characterStore.characterList.find(c => c.avatar === avatar)?.name || avatar) }),
+      confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
+      cancelText: uiStore.t('common.cancel'),
+      danger: false,
+      onConfirm: doSwitch,
+      onCancel: () => { select.value = characterStore.character?.avatar || '' },
+    })
+  } else {
+    doSwitch()
+  }
 }
 function onNewCharacter() {
-  confirmStore.askInput({
+  const doCreate = () => confirmStore.askInput({
     title: uiStore.t('shared.prompt.newCharacter.title'),
     placeholder: uiStore.t('shared.prompt.newCharacter.placeholder'),
     confirmText: uiStore.t('shared.prompt.newPreset.confirm'),
     cancelText: uiStore.t('shared.prompt.newPreset.cancel'),
     onConfirm: (name) => { characterStore.createNewCharacter(name) },
   })
+  if (characterStore.dirty) {
+    confirmStore.ask({
+      title: uiStore.t('shared.unsavedChanges.title'),
+      message: uiStore.t('character.confirm.newCharacter.message'),
+      confirmText: uiStore.t('common.confirm'),
+      cancelText: uiStore.t('common.cancel'),
+      onConfirm: doCreate,
+    })
+  } else {
+    doCreate()
+  }
 }
 function onDeleteCharacter() {
   if (!characterStore.character?.avatar) return

@@ -7,6 +7,7 @@ import * as Host from '../api/hostContext'
 import { macroAwareDiff, findVarOps } from '../utils'
 import { useUiStore } from './uiStore'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
+import { useRegexScripts } from '../composables/useRegexScripts'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { DEFAULT_PRESET } from '../types'
@@ -24,6 +25,9 @@ export { isGroup }
 export const usePresetStore = defineStore('main', () => {
   const tabsStore = useTabsStore()
   const confirmStore = useConfirmStore()
+  const uiStore = useUiStore()
+  const t: (key: string, params?: any) => string = (key, params) => uiStore.t(key as any, params)
+  const showToast = uiStore.showToast
 
   /* ====== Core State ====== */
   const rawData = ref<PresetData | null>(null)
@@ -87,15 +91,6 @@ export const usePresetStore = defineStore('main', () => {
     anchorGi.value = gi
   }, { immediate: true, flush: 'sync' })
 
-
-
-  /* ====== Domain UI State ====== */
-  // panelOpen (the main floating panel) moved to uiStore — it's global, not per-domain.
-  // Settings (font/colors/panel widths) + toast + i18n — owned by the global uiStore singleton
-  // (stores/uiStore.ts). Destructured here for presetStore's own internal use (showToast/t in
-  // IO functions, saveSettings in panel-resize persistence). Components call useUiStore() directly.
-  const { showToast, t } = useUiStore()
-
   /* ====== Bound Regex Scripts ====== */
   const regexScripts = computed<RegexScript[]>(() => {
     if (!rawData.value) return []
@@ -104,30 +99,20 @@ export const usePresetStore = defineStore('main', () => {
     return rawData.value.extensions.regex_scripts
   })
 
-  function addRegexScript(): string | null {
-    if (!rawData.value) { showToast(t('shared.toast.loadPresetFirst')); return null }
-    const script: RegexScript = {
-      id: 'regex_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-      scriptName: 'New Regex', findRegex: '', replaceString: '', trimStrings: [],
-      placement: [2], // 默认只勾 AI 输出
-      disabled: false, markdownOnly: false, promptOnly: false, runOnEdit: false,
-      substituteRegex: 0, minDepth: null, maxDepth: null,
-    }
-    regexScripts.value.push(script)
-    return script.id
-  }
-  function deleteRegexScript(id: string) {
-    const i = regexScripts.value.findIndex(r => r.id === id)
-    if (i >= 0) regexScripts.value.splice(i, 1)
+  function getRegexScripts(): RegexScript[] | null {
+    if (!rawData.value) return null
+    if (!rawData.value.extensions) rawData.value.extensions = {}
+    if (!Array.isArray(rawData.value.extensions.regex_scripts)) rawData.value.extensions.regex_scripts = []
+    return rawData.value.extensions.regex_scripts
   }
 
-  function reorderRegexScript(fromIdx: number, toIdx: number, after: boolean) {
-    const arr = regexScripts.value
-    if (fromIdx < 0 || toIdx < 0 || fromIdx >= arr.length || toIdx >= arr.length) return
-    const item = arr.splice(fromIdx, 1)[0]
-    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : (after ? toIdx + 1 : toIdx)
-    arr.splice(ni, 0, item)
-  }
+  const { addRegexScript, deleteRegexScript, reorderRegexScript } = useRegexScripts(getRegexScripts, {
+    markDirty,
+    showToast,
+    t,
+    loadFirstMessageKey: 'shared.toast.loadPresetFirst',
+    defaultPlacement: [2],
+  })
 
   /* ====== Dirty tracking (drives the `*` on the header Save button) ======
    * `order`/`regexScripts` stay deep-watched: every explicit block/group op below (add/delete/

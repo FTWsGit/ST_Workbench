@@ -152,16 +152,8 @@ export async function listCharacters(): Promise<CharacterListEntry[]> {
 }
 
 /** 按头像文件名读取一张角色卡的完整数据。用 `getOneCharacter(avatar)` 从服务端重新拉一次
- *  （TODO.md「ST 原生 API」2.1：会发起网络请求，拉到之后顺带更新 ST 自己的前端状态），不再指望
- *  `unshallowCharacter()`——那个函数内部第一步就是 `if (!shallow) return`，是纯本地操作，只有
- *  在懒加载路径下真的有一份"没展开的浅数据"时才有意义。而 `shallow` 这个标志位只有 ST 管理员在
- *  `config.yaml` 里手动打开 `performance.lazyLoadCharacters`（默认关闭，非常冷门的选项）才会被
- *  置为 `true`——绝大多数部署压根不会走到这条路，`unshallowCharacter()` 在这种情况下调不调都是
- *  空操作，之前"每次保存后无条件调用它"那版修复实际上什么都没解决：编辑保存成功后紧接着再读一次
- *  （见 characterStore.ts doSaveCharacter() 的「保存后刷新本地缓存」），`mod.characters[index]`
- *  拿到的还是编辑前的内存快照，`getOneCharacter()` 才是真正会打一次 `GET` 请求、把服务端最新
- *  内容同步回 `characters[index]` 的那个函数，同时也会让 ST 自己的角色编辑面板跟着刷新（它读的
- *  是同一份 `characters` 数组）。这是个真实网络请求，但 `getCharacterByAvatar()` 的每个调用方
+ *  （TODO.md「ST 原生 API」2.1：会发起网络请求，拉到之后顺带更新 ST 自己的前端状态）。
+ *  这是个真实网络请求，但 `getCharacterByAvatar()` 的每个调用方
  *  （初始加载/切换角色/reload/保存后刷新）本来就是希望拿到"服务端权威最新数据"的场景，用一次
  *  网络往返换正确性是划算的，没有必要为了省这一次请求去猜 ST 内存状态是否已经最新。 */
 export async function getCharacterByAvatar(avatar: string): Promise<{ character: Character; raw: any } | null> {
@@ -184,18 +176,24 @@ export async function createCharacter(data: Character, avatarFile?: File | Blob)
   const fd = buildFormData(data, null, avatarFile)
   const res = await postMultipart('/api/characters/create', fd)
   const text = (await res.text()).trim()
-  // 后端可能返回纯文件名，也可能返回带引号的 JSON 字符串（不同 ST 版本行为不完全一致），两种都
-  // 兼容一下，拿不到就退回调用方自己传入的 name（不保证一定对，但比抛错更能继续往下走）。
-  try { return JSON.parse(text) || data.name } catch { return text || data.name }
+  // 创建后刷新ST前端
+  const mod = await getScriptModule()
+  await mod.getCharacters()
+  return text
 }
 
 /** 保存（编辑）已有角色卡。`oldRaw` 必须是 getCharacterByAvatar() 返回的那份 `raw`，用于字段级
  *  回退（见 buildFormData 的 doc comment）——不能凭空构造一个假的 oldRaw，否则回退的字段全是
  *  undefined，等于没有回退保护。 */
 export async function editCharacter(data: Character, oldRaw: any, avatarFile?: File | Blob): Promise<void> {
+  const mod = await getScriptModule()
   if (!oldRaw) throw new Error('缺少 oldRaw（characterStore 内部错误：编辑角色卡必须先成功加载过一次）')
   const fd = buildFormData(data, oldRaw, avatarFile)
   await postMultipart('/api/characters/edit', fd)
+  /** 同步ST的前端显示 */
+  if (typeof mod.getOneCharacter === 'function') {
+    await mod.getOneCharacter(data.avatar)
+  }
 }
 
 export async function deleteCharacter(avatar: string, opts: { deleteChats?: boolean } = {}): Promise<void> {
@@ -204,4 +202,8 @@ export async function deleteCharacter(avatar: string, opts: { deleteChats?: bool
     throw new Error('SillyTavern 角色卡模块不可用（deleteCharacter 缺失）')
   }
   await mod.deleteCharacter(avatar, opts)
+  /** 同步ST的前端显示 */
+  if (typeof mod.getOneCharacter === 'function') {
+    await mod.getOneCharacter(avatar)
+  }
 }
