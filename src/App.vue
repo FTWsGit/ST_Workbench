@@ -19,15 +19,15 @@
              <button class="wb-btn" @click="uiStore.settingsOpen = true">{{ uiStore.t('shared.header.settings') }}</button>
             <div class="wb-sep"></div>
             <div class="wb-mode-switch">
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="switchMode('preset')">{{ uiStore.t('shared.header.mode.preset') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="switchMode('regex')">{{ uiStore.t('shared.header.mode.regex') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="switchMode('worldbook')">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="switchMode('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="switchMode('preset')">{{ uiStore.t('header.mode.preset') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="switchMode('regex')">{{ uiStore.t('header.mode.regex') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="switchMode('worldbook')">{{ uiStore.t('header.mode.worldbook') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="switchMode('character')">{{ uiStore.t('header.mode.character') }}</button>
             </div>
             <div class="wb-sep"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
-              <button class="wb-btn" @click="presetStore.copyPanelOpen = true">{{ uiStore.t('shared.header.copyBlocks') }}</button>
-              <button class="wb-btn" :class="{ active: presetStore.searchOpen }" @click="toggleSearch">{{ uiStore.t('shared.header.search') }}</button>
+              <button class="wb-btn" @click="presetStore.copyPanelOpen = true">{{ uiStore.t('preset.header.copyBlocks') }}</button>
+              <button class="wb-btn" :class="{ active: presetStore.searchOpen }" @click="toggleSearch">{{ uiStore.t('preset.header.search') }}</button>
               <button class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
@@ -35,30 +35,30 @@
             </template>
             <div class="wb-spacer"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
-              <button class="wb-btn" :class="{ active: presetStore.varNavOpen }" @click="presetStore.varNavOpen = !presetStore.varNavOpen">{{ uiStore.t('shared.header.varNav') }}</button>
-              <button class="wb-btn" :class="{ active: presetStore.previewOpen }" @click="presetStore.previewOpen = !presetStore.previewOpen">{{ uiStore.t('shared.header.preview') }}</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.newPreset')" @click="onNewPreset">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.deletePreset')" @click="onDeletePreset" :disabled="!presetStore.presetName">🗑</button>
-              <select v-if="presetStore.presetList.length" class="pr-preset-select" :value="presetStore.presetName" @change="onPresetSelect($event)" :title="uiStore.t('shared.header.switchPreset')">
-                <option v-if="!presetStore.presetList.some(p => p.name === presetStore.presetName)" :value="presetStore.presetName" disabled>{{ presetStore.presetName || uiStore.t('shared.header.noneLoaded') }}</option>
+              <button class="wb-btn" :class="{ active: presetStore.varNavOpen }" @click="presetStore.varNavOpen = !presetStore.varNavOpen">{{ uiStore.t('preset.header.varNav') }}</button>
+              <button class="wb-btn" :class="{ active: presetStore.previewOpen }" @click="presetStore.previewOpen = !presetStore.previewOpen">{{ uiStore.t('preset.header.preview') }}</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.new')" @click="onNewPreset">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.delete')" @click="onDeletePreset" :disabled="!presetStore.presetName">🗑</button>
+              <select v-if="presetStore.presetList.length" class="pr-preset-select" :value="presetStore.presetName" @change="onPresetSelect($event)" :title="uiStore.t('preset.header.switch')">
+                <option v-if="!presetStore.presetList.some(p => p.name === presetStore.presetName)" :value="presetStore.presetName" disabled>{{ presetStore.presetName || uiStore.t('preset.header.noneLoaded') }}</option>
                 <option v-for="p in presetStore.presetList" :key="p.name" :value="p.name">{{ p.name }}</option>
               </select>
               <span v-else-if="presetStore.presetName" class="pr-preset-name">{{ presetStore.presetName }}</span>
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.newWorldbook')" @click="onNewWorldbook">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.deleteWorldbook')" @click="onDeleteWorldbook" :disabled="!worldbookStore.worldbookName">🗑</button>
-              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('shared.header.switchWorldbook')">
-                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('shared.header.noneLoaded') }}</option>
+              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.new')" @click="onNewWorldbook">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.delete')" @click="onDeleteWorldbook" :disabled="!worldbookStore.worldbookName">🗑</button>
+              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('worldbook.header.switch')">
+                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('preset.header.noneLoaded') }}</option>
                 <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
               </select>
               <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
-              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.newCharacter')" @click="onNewCharacter">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('shared.header.deleteCharacter')" @click="onDeleteCharacter" :disabled="!characterStore.character?.avatar">🗑</button>
-              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onCharacterSelect($event)" :title="uiStore.t('shared.header.switchCharacter')">
-                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('shared.header.noneLoaded') }}</option>
+              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.new')" @click="onNewCharacter">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.delete')" @click="onDeleteCharacter" :disabled="!characterStore.character?.avatar">🗑</button>
+              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onCharacterSelect($event)" :title="uiStore.t('character.header.switch')">
+                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('preset.header.noneLoaded') }}</option>
                 <option v-for="c in characterStore.characterList" :key="c.avatar" :value="c.avatar">{{ c.name }}</option>
               </select>
               <span v-else-if="characterStore.character?.name" class="pr-preset-name">{{ characterStore.character.name }}</span>
@@ -70,22 +70,22 @@
             <button class="wb-btn accent" @click="onSave()">{{ saveLabel }}</button>
             <button class="wb-btn" @click="onReload()">{{ uiStore.t('shared.header.reload') }}</button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
-              <select v-if="presetStore.presetList.length" class="pr-preset-select" :value="presetStore.presetName" @change="onPresetSelect($event)" :title="uiStore.t('shared.header.switchPreset')">
-                <option v-if="!presetStore.presetList.some(p => p.name === presetStore.presetName)" :value="presetStore.presetName" disabled>{{ presetStore.presetName || uiStore.t('shared.header.noneLoaded') }}</option>
+              <select v-if="presetStore.presetList.length" class="pr-preset-select" :value="presetStore.presetName" @change="onPresetSelect($event)" :title="uiStore.t('preset.header.switch')">
+                <option v-if="!presetStore.presetList.some(p => p.name === presetStore.presetName)" :value="presetStore.presetName" disabled>{{ presetStore.presetName || uiStore.t('preset.header.noneLoaded') }}</option>
                 <option v-for="p in presetStore.presetList" :key="p.name" :value="p.name">{{ p.name }}</option>
               </select>
               <span v-else-if="presetStore.presetName" class="pr-preset-name">{{ presetStore.presetName }}</span>
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('shared.header.switchWorldbook')">
-                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('shared.header.noneLoaded') }}</option>
+              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('worldbook.header.switch')">
+                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('preset.header.noneLoaded') }}</option>
                 <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
               </select>
               <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
-              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onCharacterSelect($event)" :title="uiStore.t('shared.header.switchCharacter')">
-                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('shared.header.noneLoaded') }}</option>
+              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onCharacterSelect($event)" :title="uiStore.t('character.header.switch')">
+                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('preset.header.noneLoaded') }}</option>
                 <option v-for="c in characterStore.characterList" :key="c.avatar" :value="c.avatar">{{ c.name }}</option>
               </select>
               <span v-else-if="characterStore.character?.name" class="pr-preset-name">{{ characterStore.character.name }}</span>
@@ -128,13 +128,13 @@
         <!-- Mobile-only action sheet for everything that didn't fit the compact header row. -->
         <div v-if="isMobile" class="wb-mobile-tools-sheet" :class="{ 'wb-mobile-drawer-open': mobileDrawerVisible === 'tools' }">
           <div class="wb-mobile-tools-grip"></div>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="runTool(() => switchMode('preset'))">{{ uiStore.t('shared.header.mode.preset') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="runTool(() => switchMode('regex'))">{{ uiStore.t('shared.header.mode.regex') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="runTool(() => switchMode('worldbook'))">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="runTool(() => switchMode('character'))">{{ uiStore.t('shared.header.mode.character') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="runTool(() => switchMode('preset'))">{{ uiStore.t('header.mode.preset') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="runTool(() => switchMode('regex'))">{{ uiStore.t('header.mode.regex') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="runTool(() => switchMode('worldbook'))">{{ uiStore.t('header.mode.worldbook') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="runTool(() => switchMode('character'))">{{ uiStore.t('header.mode.character') }}</button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
-            <button class="wb-mobile-tools-item" @click="runTool(() => { presetStore.copyPanelOpen = true })">{{ uiStore.t('shared.header.copyBlocks') }}</button>
-            <button class="wb-mobile-tools-item" :class="{ active: presetStore.searchOpen }" @click="runTool(toggleSearch)">{{ uiStore.t('shared.header.search') }}</button>
+            <button class="wb-mobile-tools-item" @click="runTool(() => { presetStore.copyPanelOpen = true })">{{ uiStore.t('preset.header.copyBlocks') }}</button>
+            <button class="wb-mobile-tools-item" :class="{ active: presetStore.searchOpen }" @click="runTool(toggleSearch)">{{ uiStore.t('preset.header.search') }}</button>
             <button class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'character'">
@@ -142,18 +142,18 @@
           </template>
           <button class="wb-mobile-tools-item" @click="runTool(() => { uiStore.settingsOpen = true })">{{ uiStore.t('shared.header.settings') }}</button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
-            <button class="wb-mobile-tools-item" :class="{ active: presetStore.varNavOpen }" @click="runTool(() => { presetStore.varNavOpen = !presetStore.varNavOpen })">{{ uiStore.t('shared.header.varNav') }}</button>
-            <button class="wb-mobile-tools-item" :class="{ active: presetStore.previewOpen }" @click="runTool(() => { presetStore.previewOpen = !presetStore.previewOpen })">{{ uiStore.t('shared.header.preview') }}</button>
-            <button class="wb-mobile-tools-item" @click="runTool(onNewPreset)">{{ uiStore.t('shared.header.newPreset') }}</button>
-            <button class="wb-mobile-tools-item" :disabled="!presetStore.presetName" @click="runTool(onDeletePreset)">{{ uiStore.t('shared.header.deletePreset') }}</button>
+            <button class="wb-mobile-tools-item" :class="{ active: presetStore.varNavOpen }" @click="runTool(() => { presetStore.varNavOpen = !presetStore.varNavOpen })">{{ uiStore.t('preset.header.varNav') }}</button>
+            <button class="wb-mobile-tools-item" :class="{ active: presetStore.previewOpen }" @click="runTool(() => { presetStore.previewOpen = !presetStore.previewOpen })">{{ uiStore.t('preset.header.preview') }}</button>
+            <button class="wb-mobile-tools-item" @click="runTool(onNewPreset)">{{ uiStore.t('preset.header.new') }}</button>
+            <button class="wb-mobile-tools-item" :disabled="!presetStore.presetName" @click="runTool(onDeletePreset)">{{ uiStore.t('preset.header.delete') }}</button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-            <button class="wb-mobile-tools-item" @click="runTool(onNewWorldbook)">{{ uiStore.t('shared.header.newWorldbook') }}</button>
-            <button class="wb-mobile-tools-item" :disabled="!worldbookStore.worldbookName" @click="runTool(onDeleteWorldbook)">{{ uiStore.t('shared.header.deleteWorldbook') }}</button>
+            <button class="wb-mobile-tools-item" @click="runTool(onNewWorldbook)">{{ uiStore.t('worldbook.header.new') }}</button>
+            <button class="wb-mobile-tools-item" :disabled="!worldbookStore.worldbookName" @click="runTool(onDeleteWorldbook)">{{ uiStore.t('worldbook.header.delete') }}</button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'character'">
-            <button class="wb-mobile-tools-item" @click="runTool(onNewCharacter)">{{ uiStore.t('shared.header.newCharacter') }}</button>
-            <button class="wb-mobile-tools-item" :disabled="!characterStore.character?.avatar" @click="runTool(onDeleteCharacter)">{{ uiStore.t('shared.header.deleteCharacter') }}</button>
+            <button class="wb-mobile-tools-item" @click="runTool(onNewCharacter)">{{ uiStore.t('character.header.new') }}</button>
+            <button class="wb-mobile-tools-item" :disabled="!characterStore.character?.avatar" @click="runTool(onDeleteCharacter)">{{ uiStore.t('character.header.delete') }}</button>
           </template>
         </div>
 
@@ -444,8 +444,8 @@ function onReload() {
   if (tabsStore.activeWorkspace === 'preset') {
     if (presetStore.dirty) {
       confirmStore.ask({
-        title: uiStore.t('shared.unsavedChanges.title'),
-        message: uiStore.t('shared.unsavedChanges.message'),
+        title: uiStore.t('shared.confirm.unsaved.title'),
+        message: uiStore.t('shared.confirm.unsaved.message'),
         confirmText: uiStore.t('common.confirm'),
         cancelText: uiStore.t('common.cancel'),
         onConfirm: () => presetStore.reloadPreset(),
@@ -455,8 +455,8 @@ function onReload() {
   else if (tabsStore.activeWorkspace === 'worldbook') {
     if (worldbookStore.dirty) {
       confirmStore.ask({
-        title: uiStore.t('shared.unsavedChanges.title'),
-        message: uiStore.t('shared.unsavedChanges.message'),
+        title: uiStore.t('shared.confirm.unsaved.title'),
+        message: uiStore.t('shared.confirm.unsaved.message'),
         confirmText: uiStore.t('common.confirm'),
         cancelText: uiStore.t('common.cancel'),
         onConfirm: () => worldbookStore.reloadWorldbook(),
@@ -466,8 +466,8 @@ function onReload() {
   else if (tabsStore.activeWorkspace === 'character') {
     if (characterStore.dirty) {
       confirmStore.ask({
-        title: uiStore.t('shared.unsavedChanges.title'),
-        message: uiStore.t('shared.unsavedChanges.message'),
+        title: uiStore.t('shared.confirm.unsaved.title'),
+        message: uiStore.t('shared.confirm.unsaved.message'),
         confirmText: uiStore.t('common.confirm'),
         cancelText: uiStore.t('common.cancel'),
         onConfirm: () => characterStore.reloadCharacter(),
@@ -503,9 +503,9 @@ function onClosePanel() {
   const items = Object.entries(dirtyWorkspaces.value)
     .filter(([, isDirty]) => isDirty)
     .map(([ws]) => {
-      if (ws === 'preset') return { label: uiStore.t('shared.confirm.closePanel.presetItem', { name: presetStore.presetName || '—' }) }
-      if (ws === 'worldbook') return { label: uiStore.t('shared.confirm.closePanel.worldbookItem', { name: worldbookStore.worldbookName || '—' }) }
-      if (ws === 'character') return { label: uiStore.t('shared.confirm.closePanel.characterItem', { name: characterStore.character?.name || '—' }) }
+      if (ws === 'preset') return { label: uiStore.t('preset.confirm.closePanel.item', { name: presetStore.presetName || '—' }) }
+      if (ws === 'worldbook') return { label: uiStore.t('worldbook.confirm.closePanel.item', { name: worldbookStore.worldbookName || '—' }) }
+      if (ws === 'character') return { label: uiStore.t('character.confirm.closePanel.item', { name: characterStore.character?.name || '—' }) }
       return { label: ws } // 兜底：以后再加新工作区时，忘了在这里补一行也不会直接崩，只是标签不好看
     })
   if (!items.length) { uiStore.panelOpen = false; return }
@@ -534,9 +534,9 @@ function onPresetSelect(e: Event) {
   const doSwitch = () => presetStore.switchPreset(name)
   if (presetStore.dirty) {
     confirmStore.ask({
-      title: uiStore.t('shared.confirm.switchPreset.title'),
-      message: uiStore.t('shared.confirm.switchPreset.message', { name: esc(name) }),
-      confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
+      title: uiStore.t('preset.confirm.switch.title'),
+      message: uiStore.t('preset.confirm.switch.message', { name: esc(name) }),
+      confirmText: uiStore.t('preset.confirm.switch.confirm'),
       cancelText: uiStore.t('common.cancel'),
       danger: false,
       onConfirm: doSwitch,
@@ -552,18 +552,18 @@ function onPresetSelect(e: Event) {
 
 function onNewPreset() {
   confirmStore.askInput({
-    title: uiStore.t('shared.prompt.newPreset.title'),
-    placeholder: uiStore.t('shared.prompt.newPreset.placeholder'),
-    confirmText: uiStore.t('shared.prompt.newPreset.confirm'), 
-    cancelText: uiStore.t('shared.prompt.newPreset.cancel'),
+    title: uiStore.t('preset.prompt.new.title'),
+    placeholder: uiStore.t('preset.prompt.new.placeholder'),
+    confirmText: uiStore.t('preset.prompt.new.confirm'), 
+    cancelText: uiStore.t('preset.prompt.new.cancel'),
     onConfirm: (name) => { presetStore.createPreset(name) },
   })
 }
 function onDeletePreset() {
   if (!presetStore.presetName) return
   confirmStore.ask({
-    title: uiStore.t('shared.confirm.deletePreset.title'),
-    message: uiStore.t('shared.confirm.deletePreset.message', { name: esc(presetStore.presetName) }),
+    title: uiStore.t('preset.confirm.delete.title'),
+    message: uiStore.t('preset.confirm.delete.message', { name: esc(presetStore.presetName) }),
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => presetStore.removeCurrentPreset(),
@@ -579,9 +579,9 @@ function onWorldbookSelect(e: Event) {
   const doSwitch = () => worldbookStore.switchWorldbook(name)
   if (worldbookStore.dirty) {
     confirmStore.ask({
-      title: uiStore.t('shared.confirm.switchWorldbook.title'),
-      message: uiStore.t('shared.confirm.switchWorldbook.message', { name: esc(name) }),
-      confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
+      title: uiStore.t('worldbook.confirm.switch.title'),
+      message: uiStore.t('worldbook.confirm.switch.message', { name: esc(name) }),
+      confirmText: uiStore.t('preset.confirm.switch.confirm'),
       cancelText: uiStore.t('common.cancel'),
       danger: false,
       onConfirm: doSwitch,
@@ -593,18 +593,18 @@ function onWorldbookSelect(e: Event) {
 }
 function onNewWorldbook() {
   confirmStore.askInput({
-    title: uiStore.t('shared.prompt.newWorldbook.title'),
-    placeholder: uiStore.t('shared.prompt.newWorldbook.placeholder'),
-    confirmText: uiStore.t('shared.prompt.newPreset.confirm'),
-    cancelText: uiStore.t('shared.prompt.newPreset.cancel'),
+    title: uiStore.t('worldbook.prompt.new.title'),
+    placeholder: uiStore.t('worldbook.prompt.new.placeholder'),
+    confirmText: uiStore.t('preset.prompt.new.confirm'),
+    cancelText: uiStore.t('preset.prompt.new.cancel'),
     onConfirm: (name) => { worldbookStore.createNewWorldbook(name) },
   })
 }
 function onDeleteWorldbook() {
   if (!worldbookStore.worldbookName) return
   confirmStore.ask({
-    title: uiStore.t('shared.confirm.deleteWorldbook.title'),
-    message: uiStore.t('shared.confirm.deleteWorldbook.message', { name: esc(worldbookStore.worldbookName) }),
+    title: uiStore.t('worldbook.confirm.delete.title'),
+    message: uiStore.t('worldbook.confirm.delete.message', { name: esc(worldbookStore.worldbookName) }),
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => worldbookStore.removeCurrentWorldbook(),
@@ -621,9 +621,9 @@ function onCharacterSelect(e: Event) {
   const doSwitch = () => characterStore.switchCharacter(avatar)
   if (characterStore.dirty) {
     confirmStore.ask({
-      title: uiStore.t('shared.confirm.switchCharacter.title'),
-      message: uiStore.t('shared.confirm.switchCharacter.message', { name: esc(characterStore.characterList.find(c => c.avatar === avatar)?.name || avatar) }),
-      confirmText: uiStore.t('shared.confirm.switchPreset.confirm'),
+      title: uiStore.t('character.confirm.switch.title'),
+      message: uiStore.t('character.confirm.switch.message', { name: esc(characterStore.characterList.find(c => c.avatar === avatar)?.name || avatar) }),
+      confirmText: uiStore.t('preset.confirm.switch.confirm'),
       cancelText: uiStore.t('common.cancel'),
       danger: false,
       onConfirm: doSwitch,
@@ -635,15 +635,15 @@ function onCharacterSelect(e: Event) {
 }
 function onNewCharacter() {
   const doCreate = () => confirmStore.askInput({
-    title: uiStore.t('shared.prompt.newCharacter.title'),
-    placeholder: uiStore.t('shared.prompt.newCharacter.placeholder'),
-    confirmText: uiStore.t('shared.prompt.newPreset.confirm'),
-    cancelText: uiStore.t('shared.prompt.newPreset.cancel'),
+    title: uiStore.t('character.prompt.new.title'),
+    placeholder: uiStore.t('character.prompt.new.placeholder'),
+    confirmText: uiStore.t('preset.prompt.new.confirm'),
+    cancelText: uiStore.t('preset.prompt.new.cancel'),
     onConfirm: (name) => { characterStore.createNewCharacter(name) },
   })
   if (characterStore.dirty) {
     confirmStore.ask({
-      title: uiStore.t('shared.unsavedChanges.title'),
+      title: uiStore.t('shared.confirm.unsaved.title'),
       message: uiStore.t('character.confirm.newCharacter.message'),
       confirmText: uiStore.t('common.confirm'),
       cancelText: uiStore.t('common.cancel'),
@@ -656,8 +656,8 @@ function onNewCharacter() {
 function onDeleteCharacter() {
   if (!characterStore.character?.avatar) return
   confirmStore.ask({
-    title: uiStore.t('shared.confirm.deleteCharacter.title'),
-    message: uiStore.t('shared.confirm.deleteCharacter.message', { name: esc(characterStore.character.name) }),
+    title: uiStore.t('character.confirm.delete.title'),
+    message: uiStore.t('character.confirm.delete.message', { name: esc(characterStore.character.name) }),
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => characterStore.removeCurrentCharacter(),

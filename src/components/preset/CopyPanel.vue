@@ -125,7 +125,7 @@ const rightOrdered = computed(() => sides.right.data ? orderedPromptsWithHidden(
 watch(() => store.copyPanelOpen, (open) => {
   if (!open) return
   try { presetOptions.value = ST.listPresets() }
-  catch (e: any) { uiStore.showToast(uiStore.t('shared.toast.listPresetsCopyPanel', { msg: e?.message || e })) }
+  catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.listFailedCopyPanel', { msg: e?.message || e })) }
 })
 
 function genId() {
@@ -138,15 +138,15 @@ function loadSide(side: Side) {
   const doLoad = () => {
     try {
       const data = ST.getPresetByName(s.name)
-      if (!data) { uiStore.showToast(uiStore.t('shared.toast.presetNotFound', { name: s.name })); return }
+      if (!data) { uiStore.showToast(uiStore.t('preset.toast.notFound', { name: s.name })); return }
       s.data = data; s.sel = new Set(); s.anchor = null; s.dirty = false
-    } catch (e: any) { uiStore.showToast(uiStore.t('shared.toast.loadFailedCopyPanel', { msg: e?.message || e })) }
+    } catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.loadFailedCopyPanel', { msg: e?.message || e })) }
   }
   if (!s.dirty) { doLoad(); return }
   confirmStore.ask({
-    title: uiStore.t('shared.confirm.reloadPreset.title'),
-    message: uiStore.t('shared.confirm.reloadPreset.message', { name: esc(s.name) }),
-    confirmText: uiStore.t('shared.confirm.reloadPreset.confirm'),
+    title: uiStore.t('preset.confirm.reload.title'),
+    message: uiStore.t('preset.confirm.reload.message', { name: esc(s.name) }),
+    confirmText: uiStore.t('preset.confirm.reload.confirm'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: doLoad,
   })
@@ -224,7 +224,7 @@ function copy(from: Side) {
     n++
   }
   dst.dirty = true
-  uiStore.showToast(uiStore.t('shared.toast.copiedBlocks', { n, dir: uiStore.t(from === 'left' ? 'preset.copyPanel.dirRight' : 'preset.copyPanel.dirLeft') }))
+  uiStore.showToast(uiStore.t('preset.toast.copiedBlocks', { n, dir: uiStore.t(from === 'left' ? 'preset.copyPanel.dirRight' : 'preset.copyPanel.dirLeft') }))
 }
 
 function removeBlock(side: Side, id: string) {
@@ -232,9 +232,9 @@ function removeBlock(side: Side, id: string) {
   if (!s.data) return
   const block = s.data.prompts.find(p => p.identifier === id)
   confirmStore.ask({
-    title: uiStore.t('shared.confirm.removeBlock.title'),
-    message: uiStore.t('shared.confirm.removeBlock.message', { name: esc(block?.name || id) }),
-    confirmText: uiStore.t('shared.confirm.removeBlock.confirm'),
+    title: uiStore.t('preset.confirm.removeBlock.title'),
+    message: uiStore.t('preset.confirm.removeBlock.message', { name: esc(block?.name || id) }),
+    confirmText: uiStore.t('preset.confirm.removeBlock.confirm'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => {
       const data = s.data!
@@ -258,20 +258,20 @@ async function saveSide(side: Side) {
     await ST.savePresetAs(s.name, JSON.parse(JSON.stringify(s.data)))
     s.dirty = false
     store.refreshPresetList()
-    uiStore.showToast(uiStore.t('shared.toast.saved', { name: s.name }))
+    uiStore.showToast(uiStore.t('toast.saved', { name: s.name }))
     // This tool operates on its own independently-loaded copy of the preset data, not on the
     // main editor's live store — if this happens to be the same preset currently open there,
     // that in-memory copy is now stale relative to what was just written to disk.
-    if (s.name === store.presetName) uiStore.showToast(uiStore.t('shared.toast.presetReloadNote'))
-  } catch (e: any) { uiStore.showToast(uiStore.t('shared.toast.saveFailed', { msg: e?.message || e })) }
+    if (s.name === store.presetName) uiStore.showToast(uiStore.t('preset.toast.reloadNote'))
+  } catch (e: any) { uiStore.showToast(uiStore.t('toast.saveFailed', { msg: e?.message || e })) }
 }
 
 function close() {
   if (!sides.left.dirty && !sides.right.dirty) { store.copyPanelOpen = false; return }
   confirmStore.ask({
-    title: uiStore.t('shared.confirm.closeUnsaved.title'),
-    message: uiStore.t('shared.confirm.closeUnsaved.message'),
-    confirmText: uiStore.t('shared.confirm.closeUnsaved.confirm'),
+    title: uiStore.t('preset.confirm.closeUnsaved.title'),
+    message: uiStore.t('preset.confirm.closeUnsaved.message'),
+    confirmText: uiStore.t('preset.confirm.closeUnsaved.confirm'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => { store.copyPanelOpen = false },
   })

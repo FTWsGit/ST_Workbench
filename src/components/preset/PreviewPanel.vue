@@ -100,8 +100,8 @@ async function copyPreview() {
   const text = store.previewMode === 'blocks'
     ? store.previewBlockGroups.flatMap(g => g.messages.map(m => m.segments.map(s => s.text).join(''))).join('\n\n')
     : store.previewRawText
-  if (!text.trim()) { uiStore.showToast(uiStore.t('shared.toast.nothingToCopy')); return }
+  if (!text.trim()) { uiStore.showToast(uiStore.t('toast.nothingToCopy')); return }
   const ok = await copyToHostClipboard(text)
-  uiStore.showToast(ok ? uiStore.t('shared.toast.copied') : uiStore.t('shared.toast.copyFailed'))
+  uiStore.showToast(ok ? uiStore.t('toast.copied') : uiStore.t('toast.copyFailed'))
 }
 </script>

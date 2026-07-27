@@ -262,11 +262,11 @@ export const useWorldbookStore = defineStore('worldbook', () => {
 
   function bindSelected() {
     const result = bindSelectedNodes()
-    if (!result) { showToast(t('shared.toast.select2PlusBlocks')); return }
-    showToast(t('shared.toast.boundBlocks', { count: result.itemCount }))
+    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
   }
   function unbindGroup(gi: number) {
-    if (unbindGroupNode(gi)) showToast(t('shared.toast.unbound'))
+    if (unbindGroupNode(gi)) showToast(t('preset.toast.unbound'))
   }
 
   return {

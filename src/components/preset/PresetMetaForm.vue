@@ -42,7 +42,7 @@
       <input class="rx-input rx-num" type="number" v-model.number="seed" :placeholder="uiStore.t('preset.metaForm.seedHint')" />
     </div>
   </div>
-  <p v-else class="pr-cp-empty">{{ uiStore.t('shared.toast.loadPresetFirst') }}</p>
+  <p v-else class="pr-cp-empty">{{ uiStore.t('preset.toast.loadFirst') }}</p>
 </template>
 
 <script setup lang="ts">

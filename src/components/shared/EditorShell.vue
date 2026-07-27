@@ -2,11 +2,11 @@
   <div class="wb-editor-panel" v-if="!tabsStore.activeTab">
     <div class="wb-editor-empty">
       <div class="icon">📝</div>
-      <p v-if="tabsStore.sidebarMode === 'regex'">{{ uiStore.t('shared.editorShell.emptyRegex') }}</p>
-      <p v-else-if="tabsStore.sidebarMode === 'worldbook'">{{ worldbookStore.hasData ? uiStore.t('shared.editorShell.emptyWorldbookEntry') : uiStore.t('shared.editorShell.emptyWorldbook') }}</p>
-      <p v-else-if="tabsStore.sidebarMode === 'character'">{{ characterStore.hasData ? uiStore.t('shared.editorShell.emptyCharacterField') : uiStore.t('shared.editorShell.emptyCharacter') }}</p>
-      <p v-else-if="presetStore.hasData">{{ uiStore.t('shared.editorShell.emptyBlock') }}</p>
-      <p v-else>{{ uiStore.t('shared.editorShell.loading') }}</p>
+      <p v-if="tabsStore.sidebarMode === 'regex'">{{ uiStore.t('regex.editorShell.empty') }}</p>
+      <p v-else-if="tabsStore.sidebarMode === 'worldbook'">{{ worldbookStore.hasData ? uiStore.t('worldbook.editorShell.emptyEntry') : uiStore.t('worldbook.editorShell.empty') }}</p>
+      <p v-else-if="tabsStore.sidebarMode === 'character'">{{ characterStore.hasData ? uiStore.t('character.editorShell.emptyField') : uiStore.t('character.editorShell.empty') }}</p>
+      <p v-else-if="presetStore.hasData">{{ uiStore.t('preset.editorShell.empty') }}</p>
+      <p v-else>{{ uiStore.t('preset.editorShell.loading') }}</p>
     </div>
   </div>
   <PresetContentEditor v-else-if="tabsStore.activeTab.domain === 'preset'" />

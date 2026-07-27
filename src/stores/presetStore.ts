@@ -110,7 +110,7 @@ export const usePresetStore = defineStore('main', () => {
     markDirty,
     showToast,
     t,
-    loadFirstMessageKey: 'shared.toast.loadPresetFirst',
+    loadFirstMessageKey: 'preset.toast.loadFirst',
     defaultPlacement: [2],
   })
 
@@ -293,17 +293,17 @@ export const usePresetStore = defineStore('main', () => {
 
   function refreshPresetList() {
     try { presetList.value = ST.listPresets() }
-    catch (e: any) { showToast(t('shared.toast.listPresetsFailed', { msg: e?.message || e })) }
+    catch (e: any) { showToast(t('preset.toast.listFailed', { msg: e?.message || e })) }
   }
 
   function loadPresetByName(name: string, opts: { silent?: boolean } = {}) {
     Host.invalidateCache()
     let data: PresetData | null
     try { data = ST.getPresetByName(name) }
-    catch (e: any) { showToast(t('shared.toast.loadFailed', { msg: e?.message || e })); return }
-    if (!data) { showToast(t('shared.toast.presetNotFound', { name })); return }
+    catch (e: any) { showToast(t('toast.loadFailed', { msg: e?.message || e })); return }
+    if (!data) { showToast(t('preset.toast.notFound', { name })); return }
     applyLoadedPreset(data, name)
-    if (!opts.silent) showToast(t('shared.toast.loaded', { name }))
+    if (!opts.silent) showToast(t('toast.loaded', { name }))
   }
   
 
@@ -313,8 +313,8 @@ export const usePresetStore = defineStore('main', () => {
     Host.invalidateCache()
     let name: string
     try { name = ST.getSelectedPresetName() }
-    catch (e: any) { showToast(t('shared.toast.cantLoadContext', { msg: e?.message || e })); return }
-    if (!name) { showToast(t('shared.toast.noPresetSelected')); return }
+    catch (e: any) { showToast(t('preset.toast.cantLoadContext', { msg: e?.message || e })); return }
+    if (!name) { showToast(t('preset.toast.noSelected')); return }
     loadPresetByName(name)
   }
 
@@ -323,7 +323,7 @@ export const usePresetStore = defineStore('main', () => {
     Host.invalidateCache()
     let name: string
     name = presetName.value
-    if (!name) { showToast(t('shared.toast.noPresetSelected')); return }
+    if (!name) { showToast(t('preset.toast.noSelected')); return }
     loadPresetByName(name)
   }
 
@@ -336,7 +336,7 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   async function doSavePreset() {
-    if (!rawData.value) { showToast(t('shared.toast.noDataToSave')); return }
+    if (!rawData.value) { showToast(t('toast.noDataToSave')); return }
     rawData.value.prompts = [...prompts.value]
     if (rawData.value.prompt_order?.length) {
       let entry = rawData.value.prompt_order.find((p: any) => p.character_id === 100001)
@@ -363,21 +363,21 @@ export const usePresetStore = defineStore('main', () => {
       presetName.value = name
       refreshPresetList() // saving under a new name adds an entry — keep the picker in sync
       dirty.value = false
-      showToast(t('shared.toast.saved', { name }))
-    } catch (e: any) { showToast(t('shared.toast.saveFailed', { msg: e.message })) }
+      showToast(t('toast.saved', { name }))
+    } catch (e: any) { showToast(t('toast.saveFailed', { msg: e.message })) }
   }
 
   async function createPreset(name: string) {
     refreshPresetList()
-    if (presetList.value.some(p => p.name === name)) { showToast(t('shared.toast.duplicatePresetName')); return }
+    if (presetList.value.some(p => p.name === name)) { showToast(t('preset.toast.duplicateName')); return }
 
     const newPreset: PresetData = JSON.parse(JSON.stringify(DEFAULT_PRESET))
     try {
       await ST.savePresetAs(name, newPreset)
       refreshPresetList()
       applyLoadedPreset(newPreset, name)
-      showToast(t('shared.toast.created', { name }))
-    } catch (e: any) { showToast(t('shared.toast.createFailed', { msg: e?.message || e })) }
+      showToast(t('toast.created', { name }))
+    } catch (e: any) { showToast(t('toast.createFailed', { msg: e?.message || e })) }
   }
   async function removeCurrentPreset() {
     const name = presetName.value
@@ -388,8 +388,8 @@ export const usePresetStore = defineStore('main', () => {
       const next = presetList.value[0]?.name
       if (next) loadPresetByName(next, { silent: true })
       else { rawData.value = null as any; presetName.value = '' }
-      showToast(t('shared.toast.deleted', { name }))
-    } catch (e: any) { showToast(t('shared.toast.deleteFailed', { msg: e?.message || e })) }
+      showToast(t('toast.deleted', { name }))
+    } catch (e: any) { showToast(t('toast.deleteFailed', { msg: e?.message || e })) }
   }
 
   /* ====== Block Ops ======
@@ -401,7 +401,7 @@ export const usePresetStore = defineStore('main', () => {
    * tabsStore (open/close tabs), confirmStore (the delete confirmation). They call
    * insertAfterActive()/removeNode() for the tree-shape part and handle the rest themselves. */
   function addBlock() {
-    if (!rawData.value) { showToast(t('shared.toast.loadPresetFirst')); return }
+    if (!rawData.value) { showToast(t('preset.toast.loadFirst')); return }
     const id = 'custom_' + Date.now()
     prompts.value.push({
       identifier: id, name: 'New Block', role: 'system',
@@ -411,7 +411,7 @@ export const usePresetStore = defineStore('main', () => {
     insertAfterActive({ identifier: id, enabled: true }, activeId)
     // 直接打开新块的标签——编辑器内容由标签驱动，不再需要桥接
     tabsStore.open({ domain: 'preset', key: id, label: 'New Block', workspace: 'preset' })
-    showToast(t('shared.toast.blockCreated'))
+    showToast(t('preset.toast.blockCreated'))
   }
   function deleteBlock(gi: number) {
     const node = flatNodes.value[gi]
@@ -420,7 +420,7 @@ export const usePresetStore = defineStore('main', () => {
       const id = (node.ref as OrderItem).identifier
       const block = prompts.value.find(p => p.identifier === id)
       if (block?.marker) {
-        showToast(t('shared.toast.cannotDeleteMarker'))
+        showToast(t('preset.toast.cannotDeleteMarker'))
         return
       }
     }
@@ -429,10 +429,10 @@ export const usePresetStore = defineStore('main', () => {
       : prompts.value.find(p => p.identifier === (node.ref as OrderItem).identifier)?.name || t('common.new')
     const wasGroup = node.isGroup
     confirmStore.ask({
-      title: t('shared.confirm.deleteBlock.title'),
-      message: t('shared.confirm.deleteBlock.message', { name }),
-      confirmText: t('shared.confirm.deleteBlock.confirm'),
-      cancelText: t('shared.confirm.deleteBlock.cancel'),
+      title: t('preset.confirm.deleteBlock.title'),
+      message: t('preset.confirm.deleteBlock.message', { name }),
+      confirmText: t('preset.confirm.deleteBlock.confirm'),
+      cancelText: t('preset.confirm.deleteBlock.cancel'),
       onConfirm: () => {
         const removed = removeNode(gi)
         if (!removed) return
@@ -444,7 +444,7 @@ export const usePresetStore = defineStore('main', () => {
           if (pi >= 0) prompts.value.splice(pi, 1)
         }
         rebuildVarIndex()
-        showToast(t('shared.toast.blockDeleted'))
+        showToast(t('preset.toast.blockDeleted'))
       }
     })
   }
@@ -455,7 +455,7 @@ export const usePresetStore = defineStore('main', () => {
       const id = (node.ref as OrderItem).identifier
       const block = prompts.value.find(p => p.identifier === id)
       if (block?.marker) {
-        showToast(t('shared.toast.cannotHideMarker'))
+        showToast(t('preset.toast.cannotHideMarker'))
         return
       }
     }
@@ -465,7 +465,7 @@ export const usePresetStore = defineStore('main', () => {
     // 隐藏一个组：只是把整个组（含子块）从 order 里摘掉，不关子块的标签——跟原实现一样，只有
     // 隐藏单个叶子块时才关它自己的标签。
     if (!wasGroup) tabsStore.close('preset', removed.identifiers[0])
-    showToast(t('shared.toast.blockHidden'))
+    showToast(t('preset.toast.blockHidden'))
   }
   function addHiddenBlock(identifier: string) {
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
@@ -473,7 +473,7 @@ export const usePresetStore = defineStore('main', () => {
     // 打开标签让编辑器显示新加的块
     const block = prompts.value.find(p => p.identifier === identifier)
     tabsStore.open({ domain: 'preset', key: identifier, label: block?.name || identifier, workspace: 'preset' })
-    showToast(t('shared.toast.blockAdded'))
+    showToast(t('preset.toast.blockAdded'))
   }
 
   /* ====== Group Ops ======
@@ -481,12 +481,12 @@ export const usePresetStore = defineStore('main', () => {
    * mechanics live there now, this just turns "did it work" into the right showToast() call. */
   function bindSelected() {
     const result = bindSelectedNodes()
-    if (!result) { showToast(t('shared.toast.select2PlusBlocks')); return }
-    showToast(t('shared.toast.boundBlocks', { count: result.itemCount }))
+    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
   }
   function unbindGroup(gi: number) {
     if (!unbindGroupNode(gi)) return
-    showToast(t('shared.toast.unbound'))
+    showToast(t('preset.toast.unbound'))
   }
 
   /* ====== Search ====== */
@@ -554,7 +554,7 @@ export const usePresetStore = defineStore('main', () => {
     p.content = ls.join('\n')
     markDirty() // nested field mutation — the shallow `prompts` watch above won't catch this
     doSearch()
-    showToast(t('shared.toast.replaced1'))
+    showToast(t('preset.toast.replaced1'))
   }
   function replaceAll() {
     const q = searchQuery.value
@@ -696,7 +696,7 @@ export const usePresetStore = defineStore('main', () => {
    * when the selected preset in main Menu is different with the chosen preset in script.*/
   function selectPresetByName(name: string) {
     if (!name || ST.getSelectedPresetName() === name) return
-    if (!ST.selectPresetByName(name)) showToast(t('shared.toast.selectPresetFailed'))
+    if (!ST.selectPresetByName(name)) showToast(t('preset.toast.selectPresetFailed'))
   }
 
   /** Per-block precise preview (方案B): each card shows the block's REAL rendered text — after
@@ -733,10 +733,10 @@ export const usePresetStore = defineStore('main', () => {
       }
       previewBlockGroups.value = groups
       previewMode.value = 'blocks'
-      showToast(t('shared.toast.renderedBlocks', { count: groups.length }))
+      showToast(t('preset.toast.renderedBlocks', { count: groups.length }))
     } catch (e: any) {
       previewError.value = e?.message || String(e)
-      showToast(t('shared.toast.previewFailed', { msg: previewError.value }))
+      showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
     } finally {
       previewLoading.value = false
     }
@@ -755,10 +755,10 @@ export const usePresetStore = defineStore('main', () => {
       const msgs = await ST.getFinalRequestMessages()
       previewRawText.value = msgs.map(m => `[${(m.role || '?').toUpperCase()}]\n${m.content}`).join('\n\n')
       previewMode.value = 'raw'
-      showToast(t('shared.toast.renderedFullPrompt'))
+      showToast(t('preset.toast.renderedFullPrompt'))
     } catch (e: any) {
       previewError.value = e?.message || String(e)
-      showToast(t('shared.toast.previewFailed', { msg: previewError.value }))
+      showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
     } finally {
       previewLoading.value = false
     }

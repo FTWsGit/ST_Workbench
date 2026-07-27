@@ -62,8 +62,8 @@ function onAdd() {
 
 function onDelete(r: RegexScript) {
   confirmStore.ask({
-    title: props.t('shared.confirm.deleteRegex.title'),
-    message: props.t('shared.confirm.deleteRegex.message', { name: esc(r.scriptName || r.id) }),
+    title: props.t('regex.confirm.delete.title'),
+    message: props.t('regex.confirm.delete.message', { name: esc(r.scriptName || r.id) }),
     confirmText: props.t('common.delete'),
     cancelText: props.t('common.cancel'),
     onConfirm: () => { props.onDelete(r.id); tabsStore.close('regex', r.id) },

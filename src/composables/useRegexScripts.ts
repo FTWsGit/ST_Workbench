@@ -8,7 +8,7 @@ import type { RegexScript } from '../types'
  * @param options.markDirty - 标记脏数据的函数（可选）
  * @param options.showToast - 显示 toast 的函数
  * @param options.t - i18n 翻译函数
- * @param options.loadFirstMessageKey - "请先加载"的翻译 key（默认 'shared.toast.loadPresetFirst'）
+ * @param options.loadFirstMessageKey - "请先加载"的翻译 key（默认 'preset.toast.loadFirst'）
  * @param options.defaultPlacement - 新脚本的默认 placement（默认 [2]）
  */
 export function useRegexScripts(
@@ -22,7 +22,7 @@ export function useRegexScripts(
   }
 ) {
   const { markDirty, showToast, t } = options
-  const loadFirstKey = options.loadFirstMessageKey || 'shared.toast.loadPresetFirst'
+  const loadFirstKey = options.loadFirstMessageKey || 'preset.toast.loadFirst'
   const defaultPlacement = options.defaultPlacement || [2]
 
   function genRegexId(): string {
