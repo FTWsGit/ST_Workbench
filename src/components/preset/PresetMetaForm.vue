@@ -12,7 +12,7 @@
     <label class="rx-check"><input type="checkbox" v-model="streamOpenai" /> {{ uiStore.t('preset.metaForm.streamLabel') }}</label>
     <label class="rx-check"><input type="checkbox" v-model="squashSystemMessages" /> {{ uiStore.t('preset.metaForm.squashLabel') }}</label>
 
-    <button class="wb-btn rx-advanced-toggle" @click="samplingOpen = !samplingOpen">{{ samplingOpen ? '▾' : '▸' }} {{ uiStore.t('preset.metaForm.samplingToggle') }}</button>
+    <button class="wb-btn wb-advanced-toggle" @click="samplingOpen = !samplingOpen">{{ samplingOpen ? '▾' : '▸' }} {{ uiStore.t('preset.metaForm.samplingToggle') }}</button>
     <div v-if="samplingOpen" class="rx-advanced">
       <div class="wb-row">
         <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.temperatureLabel') }}</label>

@@ -2,7 +2,7 @@
   <aside class="wb-sidebar" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: props.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
       <span>{{ props.t('regex.sidebar.title', { count: props.scripts.length }) }}</span>
-      <ListToolbar :count="props.scripts.length">
+      <ListToolbar>
         <button class="wb-btn" @click="onAdd">{{ props.t('regex.sidebar.newScript') }}</button>
       </ListToolbar>
       <!-- 空插槽，预设工作区（App.vue 挂载点）不传内容时什么都不渲染，行为跟改造前完全一样。

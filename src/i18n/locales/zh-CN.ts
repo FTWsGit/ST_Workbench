@@ -36,11 +36,16 @@ export default {
   'shared.header.save': '💾 保存{star}',
   'shared.header.reload': '↻ 重新加载',
   'shared.header.settings': '⚙ 设置',
-  'shared.header.meta': 'ℹ️ 元信息',
+  'shared.header.meta': 'ⓘ 元信息',
   'shared.header.mode.preset': '预设',
   'shared.header.mode.regex': '正则',
   'shared.header.mode.worldbook': '世界书',
   'shared.header.mode.character': '角色卡',
+
+  // ---- 侧边栏 ----
+  'shared.sidebar.bind': '🔗 绑定',
+  'shared.sidebar.unbind': '🔓 解绑',
+
 
   // ---- 移动端专属 ----
   'shared.mobile.sidebar': '侧边栏',
@@ -66,7 +71,6 @@ export default {
   // ---- 通用组件 ----
   'shared.settingsDock.title': '⚙ 设置',
   'shared.floatingPanel.toggleFloat': '切换悬浮模式',
-  'shared.listToolbar.count': '{count} 条',
   'shared.highlightedEditor.cursor': '行 {line}，列 {col}',
 
   // ---- 语法高亮标签 ----
@@ -87,7 +91,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'preset.header.copyBlocks': '⇆ 复制块',
-  'preset.header.search': '🔍 搜索',
+  'preset.header.search': '🔎 搜索',
   'preset.header.varNav': '📊 变量导航',
   'preset.header.preview': '👁 预览',
   'preset.header.new': '新建预设',
@@ -155,11 +159,9 @@ export default {
   'preset.prompt.new.placeholder': '预设名称',
 
   // ---- 侧边栏 ----
-  'preset.sidebar.title': '提示词块',
+  'preset.sidebar.title': '提示词块 ({count})',
   'preset.sidebar.newBlock': '+ 新建',
   'preset.sidebar.hiddenBlock': '+ 隐藏块',
-  'preset.sidebar.bind': '🔗 绑定分组',
-  'preset.sidebar.unbind': '🔓 解除绑定',
   'preset.sidebar.hiddenTitle': '不在当前生效顺序里',
   'preset.sidebar.settingsPanel': '设置面板（名称/角色）',
 
@@ -202,7 +204,7 @@ export default {
   'preset.varPopup.hitSingle': '{count} 处匹配',
 
   // ---- 跨预设复制面板 ----
-  'preset.copyPanel.title': '🔀 跨预设复制提示词块',
+  'preset.copyPanel.title': '⇆ 跨预设复制提示词块',
   'preset.copyPanel.selectPreset': '选择预设…',
   'preset.copyPanel.selectAll': '全部',
   'preset.copyPanel.clearAll': '无',
@@ -217,7 +219,7 @@ export default {
   'preset.copyPanel.selectBlocksFirst': '请先选择要复制的块',
 
   // ---- 预设元信息（模型参数） ----
-  'preset.metaForm.title': 'ℹ️ 预设参数',
+  'preset.metaForm.title': 'ⓘ 预设参数',
   'preset.metaForm.contextLabel': '最大上下文 (Token)',
   'preset.metaForm.maxTokensLabel': '最大回复长度 (Token)',
   'preset.metaForm.repliesLabel': '回复条数',
@@ -243,7 +245,7 @@ export default {
   // regex：正则域
   // ========================================
   // ---- 侧边栏 ----
-  'regex.sidebar.title': '正则脚本',
+  'regex.sidebar.title': '正则脚本 ({count})',
   'regex.sidebar.newScript': '+ 新建',
   'regex.sidebar.empty': '还没有绑定的正则',
   'regex.sidebar.toggleTitle': '启用/禁用',
@@ -346,11 +348,11 @@ export default {
   'worldbook.prompt.import.suffix': '的世界书',
 
   // ---- 侧边栏 ----
-  'worldbook.sidebar.title': '世界书条目',
+  'worldbook.sidebar.title': '世界书条目 ({count})',
   'worldbook.sidebar.newEntry': '+ 新建',
   'worldbook.sidebar.empty': '还没有加载世界书，从右上角选一个，或者新建一个',
   'worldbook.sidebar.defaultGroupName': '分组 ({count})',
-  'worldbook.sidebar.tools': '🛠 批量工具',
+  'worldbook.sidebar.tools': '🛠 批量',
 
   // ---- 批量工具面板 ----
   'worldbook.tools.title': '批量工具',
@@ -478,22 +480,23 @@ export default {
 
   // ---- 固定字段标签 ----
   'character.field.description': '角色描述',
+  'character.field.systemPrompt': '主要提示词',
+  'character.field.postHistoryInstructions': '历史后置指令',
+  'character.field.personality': '角色设定摘要',
   'character.field.scenario': '情景',
-  'character.field.mesExample': '对话示例',
-  'character.field.personality': '性格',
-  'character.field.systemPrompt': '系统提示词',
-  'character.field.postHistoryInstructions': '历史后指令',
   'character.field.depthPrompt': '角色备注',
+  'character.field.mesExample': '对话示例',
 
   // ---- 角色元信息 ----
-  'character.metaForm.title': 'ℹ️ 角色信息',
+  'character.metaForm.title': 'ⓘ 角色信息',
   'character.metaForm.favLabel': '⭐ 收藏',
   'character.metaForm.creatorLabel': '创作者',
-  'character.metaForm.versionLabel': '版本',
-  'character.metaForm.creatorNotesLabel': '创作者备注',
+  'character.metaForm.versionLabel': '角色版本',
+  'character.metaForm.creatorNotesLabel': '创作者的注释',
   'character.metaForm.tagsLabel': '标签',
   'character.metaForm.tagsPlaceholder': '用逗号分隔，例如：奇幻, 原创',
   'character.metaForm.talkativenessLabel': '话痨度',
+  'character.metaForm.creatorToggle': '创作者元数据',
   'character.metaForm.worldbookLabel': '绑定世界书',
   'character.metaForm.worldbookNone': '（未绑定）',
 

@@ -2,21 +2,6 @@
   <div v-if="store.character" class="rx-form">
     <label class="rx-check"><input type="checkbox" v-model="fav" /> {{ uiStore.t('character.metaForm.favLabel') }}</label>
 
-    <label class="rx-label">{{ uiStore.t('character.metaForm.creatorLabel') }}</label>
-    <input class="rx-input" v-model="creator" />
-
-    <label class="rx-label">{{ uiStore.t('character.metaForm.versionLabel') }}</label>
-    <input class="rx-input" v-model="version" />
-
-    <label class="rx-label">{{ uiStore.t('character.metaForm.creatorNotesLabel') }}</label>
-    <textarea class="rx-textarea" rows="4" v-model="creatorNotes"></textarea>
-
-    <label class="rx-label">{{ uiStore.t('character.metaForm.tagsLabel') }}</label>
-    <input class="rx-input" v-model="tagsText" :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')" />
-
-    <label class="rx-label">{{ uiStore.t('character.metaForm.talkativenessLabel') }}</label>
-    <input class="rx-input rx-num" type="number" step="0.1" min="0" max="1" v-model.number="talkativeness" />
-
     <!-- 只做下拉换绑，不支持内嵌编辑世界书内容——那是"角色卡内嵌编辑世界书"，TODO.md 阶段4明确
          不做，见 types.ts Character 接口里 worldbook 字段的 doc comment。 -->
     <label class="rx-label">{{ uiStore.t('character.metaForm.worldbookLabel') }}</label>
@@ -24,6 +9,26 @@
       <option :value="null">{{ uiStore.t('character.metaForm.worldbookNone') }}</option>
       <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
     </select>
+
+    <label class="rx-label">{{ uiStore.t('character.metaForm.talkativenessLabel') }}</label>
+    <input class="rx-input rx-num" type="number" step="0.1" min="0" max="1" v-model.number="talkativeness" />
+
+    <button class="wb-btn wb-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ uiStore.t('character.metaForm.creatorToggle') }}</button>
+    <div v-if="advancedOpen" class="rx-advanced">
+      <label class="rx-label">{{ uiStore.t('character.metaForm.creatorLabel') }}</label>
+      <input class="rx-input" v-model="creator" />
+
+      <label class="rx-label">{{ uiStore.t('character.metaForm.versionLabel') }}</label>
+      <input class="rx-input" v-model="version" />
+
+      <label class="rx-label">{{ uiStore.t('character.metaForm.creatorNotesLabel') }}</label>
+      <textarea class="rx-textarea" rows="4" v-model="creatorNotes"></textarea>
+
+      <label class="rx-label">{{ uiStore.t('character.metaForm.tagsLabel') }}</label>
+      <input class="rx-input" v-model="tagsText" :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')" />
+    </div>
+
+
   </div>
   <p v-else class="pr-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
 </template>
@@ -38,7 +43,9 @@
  * 另一个 store 的地方，只读列表（拿名字），不读 worldbookStore 的其它任何状态，也不会因为
  * 角色卡面板打开就顺带把世界书数据拉起来（App.vue 的 openPanel() 已经在面板打开时统一拉过
  * worldbookStore.refreshWorldbookList() 了，这里不用重复拉）。 */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+
+const advancedOpen = ref(false)
 import { useCharacterStore } from '../../stores/characterStore'
 import { useWorldbookStore } from '../../stores/worldbookStore'
 import { useUiStore } from '../../stores/uiStore'

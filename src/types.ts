@@ -60,11 +60,6 @@ export interface PresetData {
 
   prompts: PresetBlock[]
   prompt_order: { order: OrderItem[]; [k: string]: any }[]
-  /** presetStore.ts 的 regexScripts computed（阶段0之前就有）读写的就是这里——之前完全靠下面
-   *  `[k: string]: any` 兜底，`extensions.regex_scripts` 全程是隐式 any，TODO.md 要求给它一个
-   *  明确类型。`regex_scripts` 可选是因为老预设文件可能压根没有 extensions 这个键，或者有
-   *  extensions 但没存过正则（presetStore.ts 的 regexScripts computed 会在读的时候补上空数组，
-   *  这里的类型只是如实反映"文件里可能没有"这个事实，不是说运行时可以不管）。 */
   extensions?: { regex_scripts?: RegexScript[]; [k: string]: any }
   [k: string]: any
 }
@@ -375,12 +370,12 @@ export interface CharacterListEntry {
  *  `field:${key}`（见 Character 接口顶部 doc comment），EditorShell.vue 按这个前缀路由。 */
 export const CHARACTER_FIELDS = [
   { key: 'description', labelKey: 'character.field.description' },
-  { key: 'scenario', labelKey: 'character.field.scenario' },
-  { key: 'mesExample', labelKey: 'character.field.mesExample' },
-  { key: 'personality', labelKey: 'character.field.personality' },
   { key: 'systemPrompt', labelKey: 'character.field.systemPrompt' },
   { key: 'postHistoryInstructions', labelKey: 'character.field.postHistoryInstructions' },
+  { key: 'personality', labelKey: 'character.field.personality' },
+  { key: 'scenario', labelKey: 'character.field.scenario' },
   { key: 'depthPrompt', labelKey: 'character.field.depthPrompt' },
+  { key: 'mesExample', labelKey: 'character.field.mesExample' },
 ] as const
 
 export const CHARACTER_DEPTH_ROLE_OPTIONS = [

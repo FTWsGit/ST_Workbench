@@ -3,7 +3,7 @@
     <label class="rx-check"><input type="checkbox" v-model="enabled" /> {{ props.t('regex.settings.enabled') }}</label>
 
     <label class="rx-label">{{ props.t('regex.settings.findRegexLabel') }}</label>
-    <input class="rx-input rx-mono" :class="{ invalid: !findValid }" v-model="script.findRegex" :placeholder="props.t('regex.settings.findRegexPlaceholder')" />
+    <textarea class="rx-textarea" :class="{ invalid: !findValid }" rows="2" v-model="script.findRegex" :placeholder="props.t('regex.settings.findRegexPlaceholder')"></textarea>
     <p v-if="!findValid" class="rx-err">{{ props.t('regex.settings.findRegexInvalid') }}</p>
 
     <label class="rx-label">{{ props.t('regex.settings.scriptNameLabel') }}</label>
@@ -24,7 +24,7 @@
       <button class="wb-btn sm" :class="{ active: script.markdownOnly && script.promptOnly }" @click="setSurfaceMode('both')">{{ props.t('regex.settings.both') }}</button>
     </div>
 
-    <button class="wb-btn rx-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ props.t('regex.settings.advancedToggle') }}</button>
+    <button class="wb-btn wb-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ props.t('regex.settings.advancedToggle') }}</button>
     <div v-if="advancedOpen" class="rx-advanced">
       <label class="rx-label" style="margin:0">{{ props.t('regex.settings.trimLabel') }}</label>
       <textarea class="rx-textarea" rows="3" v-model="trimStringsText"></textarea>

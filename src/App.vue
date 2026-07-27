@@ -21,8 +21,8 @@
             <div class="wb-mode-switch">
               <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="switchMode('preset')">{{ uiStore.t('shared.header.mode.preset') }}</button>
               <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="switchMode('regex')">{{ uiStore.t('shared.header.mode.regex') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="switchMode('worldbook')">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
               <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="switchMode('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="switchMode('worldbook')">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
             </div>
             <div class="wb-sep"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -47,7 +47,7 @@
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
               <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.new')" @click="onNewWorldbook">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.importFromCharacter')" :disabled="!embeddedCharacterBook" @click="onImportFromCharacterBook">📥</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.importFromCharacter')" :disabled="!embeddedCharacterBook" @click="onImportFromCharacterBook"> ⤓ </button>
               <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.delete')" @click="onDeleteWorldbook" :disabled="!worldbookStore.worldbookName">🗑</button>
               <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('worldbook.header.switch')">
                 <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('worldbook.header.noneLoaded') }}</option>
@@ -77,19 +77,19 @@
               </select>
               <span v-else-if="presetStore.presetName" class="pr-preset-name">{{ presetStore.presetName }}</span>
             </template>
-            <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('worldbook.header.switch')">
-                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('preset.header.noneLoaded') }}</option>
-                <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
-              </select>
-              <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
-            </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
               <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onCharacterSelect($event)" :title="uiStore.t('character.header.switch')">
                 <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('preset.header.noneLoaded') }}</option>
                 <option v-for="c in characterStore.characterList" :key="c.avatar" :value="c.avatar">{{ c.name }}</option>
               </select>
               <span v-else-if="characterStore.character?.name" class="pr-preset-name">{{ characterStore.character.name }}</span>
+            </template>
+            <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
+              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorldbookSelect($event)" :title="uiStore.t('worldbook.header.switch')">
+                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('preset.header.noneLoaded') }}</option>
+                <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
+              </select>
+              <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
             </template>
             <div class="wb-spacer"></div>
             <button class="wb-mobile-tools-btn" :class="{ active: mobileDrawerVisible === 'tools' }" :title="uiStore.t('shared.mobile.tools')" @click="toggleMobileTools">⋯</button>

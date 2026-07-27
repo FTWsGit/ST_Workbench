@@ -49,7 +49,7 @@
     </label>
     <input v-if="entry.useProbability" class="rx-input rx-num" type="number" min="0" max="100" v-model.number="entry.probability" />
 
-    <button class="wb-btn rx-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ uiStore.t('regex.settings.advancedToggle') }}</button>
+    <button class="wb-btn wb-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ uiStore.t('regex.settings.advancedToggle') }}</button>
     <div v-if="advancedOpen" class="rx-advanced">
       <label class="rx-check"><input type="checkbox" v-model="entry.excludeRecursion" /> {{ uiStore.t('worldbook.settings.excludeRecursion') }}</label>
       <label class="rx-check"><input type="checkbox" v-model="entry.preventRecursion" /> {{ uiStore.t('worldbook.settings.preventRecursion') }}</label>

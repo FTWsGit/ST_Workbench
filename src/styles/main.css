@@ -469,7 +469,7 @@
 .pr-cp-col{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--wb-bg);border:1px solid var(--wb-border);border-radius:var(--wb-r);overflow:hidden}
 .pr-cp-col-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .pr-cp-sel{flex:1;min-width:0;font-size:13px}
-.pr-cp-toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.pr-cp-toolbar{display:flex;align-items:center;gap:2px;padding:2px 2px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .pr-cp-list{flex:1;overflow-y:auto;padding:4px 6px;user-select:none;-webkit-user-select:none}
 .pr-cp-empty{color:var(--wb-tx3);font-size:13px;padding:16px;text-align:center}
 .pr-cp-mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;flex-shrink:0}
@@ -559,14 +559,13 @@
 .rx-form{display:flex;flex-direction:column;gap:4px}
 .rx-label{font-size:12px;color:var(--wb-tx3);margin-top:10px}
 .rx-form .rx-input,.rx-form textarea,.rx-form select{width:100%}
-.rx-mono{font-family:'JetBrains Mono','Fira Code',monospace;font-size:13px}
-.rx-input.invalid{border-color:var(--wb-dg)}
+.rx-textarea.invalid{border-color:var(--wb-dg)}
 .rx-err{color:var(--wb-dg);font-size:12px;margin-top:2px}
 .rx-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
 .rx-check{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap}
 .rx-check input[type=checkbox]{width:1em;height:1em;margin:0;flex-shrink:0;background-color: #5f5f5f;}
 .rx-surface{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.rx-advanced-toggle{align-self:flex-start;margin-top:12px;background:transparent;border-color:transparent;padding-left:0}
+.wb-advanced-toggle{align-self:flex-start;margin-top:12px;background:transparent;border-color:transparent;padding-left:0}
 .rx-advanced{display:flex;flex-direction:column;gap:8px;padding:10px;margin-top:6px;border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg)}
 .rx-num{width:90px !important}
 .wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;overflow-x:hidden;padding:12px;min-width:0}

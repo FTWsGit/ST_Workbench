@@ -33,11 +33,16 @@ export default {
   'shared.header.save': '💾 Save{star}',
   'shared.header.reload': '↻ Reload',
   'shared.header.settings': '⚙ Settings',
-  'shared.header.meta': 'ℹ️ Meta',
+  'shared.header.meta': 'ⓘ Meta',
   'shared.header.mode.preset': 'Preset',
   'shared.header.mode.regex': 'Regex',
   'shared.header.mode.worldbook': 'Worldbook',
   'shared.header.mode.character': 'Character',
+
+  // ---- Sidebar ListTools ----
+  'shared.sidebar.bind': '🔗 Bind',
+  'shared.sidebar.unbind': '🔓 Unbind',
+
 
   // ---- 移动端专属 ----
   'shared.mobile.sidebar': 'Sidebar',
@@ -63,7 +68,6 @@ export default {
   // ---- 通用组件 ----
   'shared.settingsDock.title': '⚙ Settings',
   'shared.floatingPanel.toggleFloat': 'Toggle floating mode',
-  'shared.listToolbar.count': '{count} items',
   'shared.highlightedEditor.cursor': 'Line {line}, Col {col}',
 
   // ---- 语法高亮标签 ----
@@ -84,7 +88,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'preset.header.copyBlocks': '⇆ Copy Blocks',
-  'preset.header.search': '🔍 Search',
+  'preset.header.search': '🔎 Search',
   'preset.header.varNav': '📊 Variable Navigator',
   'preset.header.preview': '👁 Preview',
   'preset.header.new': 'New Preset',
@@ -152,11 +156,9 @@ export default {
   'preset.prompt.new.placeholder': 'Preset name',
 
   // ---- 侧边栏 ----
-  'preset.sidebar.title': 'Prompt Blocks',
+  'preset.sidebar.title': 'Prompt Blocks ({count})',
   'preset.sidebar.newBlock': '+ New',
   'preset.sidebar.hiddenBlock': '+ Hidden Blocks',
-  'preset.sidebar.bind': '🔗 Bind Group',
-  'preset.sidebar.unbind': '🔓 Unbind',
   'preset.sidebar.hiddenTitle': 'Not in current active order',
   'preset.sidebar.settingsPanel': 'Settings Panel (Name/Role)',
 
@@ -199,7 +201,7 @@ export default {
   'preset.varPopup.hitSingle': '{count} match',
 
   // ---- 跨预设复制面板 ----
-  'preset.copyPanel.title': '🔀 Copy Prompt Blocks Between Presets',
+  'preset.copyPanel.title': '⇆ Copy Prompt Blocks Between Presets',
   'preset.copyPanel.selectPreset': 'Select preset…',
   'preset.copyPanel.selectAll': 'All',
   'preset.copyPanel.clearAll': 'None',
@@ -214,7 +216,7 @@ export default {
   'preset.copyPanel.selectBlocksFirst': 'Select blocks to copy first',
 
   // ---- 预设元信息（模型参数） ----
-  'preset.metaForm.title': 'ℹ️ Preset Parameters',
+  'preset.metaForm.title': 'ⓘ Preset Parameters',
   'preset.metaForm.contextLabel': 'Max Context (Tokens)',
   'preset.metaForm.maxTokensLabel': 'Max Response Length (Tokens)',
   'preset.metaForm.repliesLabel': 'Number of Replies',
@@ -240,7 +242,7 @@ export default {
   // regex：正则域
   // ========================================
   // ---- 侧边栏 ----
-  'regex.sidebar.title': 'Regex Scripts',
+  'regex.sidebar.title': 'Regex Scripts ({count})',
   'regex.sidebar.newScript': '+ New',
   'regex.sidebar.empty': 'No bound regex scripts yet',
   'regex.sidebar.toggleTitle': 'Enable/Disable',
@@ -343,11 +345,11 @@ export default {
   'worldbook.prompt.import.suffix': "'s Worldbook",
 
   // ---- 侧边栏 ----
-  'worldbook.sidebar.title': 'Worldbook Entries',
+  'worldbook.sidebar.title': 'Worldbook Entries ({count})',
   'worldbook.sidebar.newEntry': '+ New',
   'worldbook.sidebar.empty': 'No worldbook loaded yet. Select one from the top right, or create a new one',
   'worldbook.sidebar.defaultGroupName': 'Group ({count})',
-  'worldbook.sidebar.tools': '🛠 Bulk Tools',
+  'worldbook.sidebar.tools': '🛠 Bulk',
 
   // ---- 批量工具面板 ----
   'worldbook.tools.title': 'Bulk Tools',
@@ -475,15 +477,15 @@ export default {
 
   // ---- 固定字段标签 ----
   'character.field.description': 'Description',
-  'character.field.scenario': 'Scenario',
-  'character.field.mesExample': 'Example Messages',
-  'character.field.personality': 'Personality',
-  'character.field.systemPrompt': 'System Prompt',
+  'character.field.systemPrompt': 'Main Prompt',
   'character.field.postHistoryInstructions': 'Post-History Instructions',
-  'character.field.depthPrompt': 'Character Notes',
+  'character.field.personality': 'Personality summary',
+  'character.field.scenario': 'Scenario',
+  'character.field.depthPrompt': 'Character\'s Note',
+  'character.field.mesExample': 'Examples of dialogue',
 
   // ---- 角色元信息 ----
-  'character.metaForm.title': 'ℹ️ Character Info',
+  'character.metaForm.title': 'ⓘ Character Info',
   'character.metaForm.favLabel': '⭐ Favorite',
   'character.metaForm.creatorLabel': 'Creator',
   'character.metaForm.versionLabel': 'Version',
@@ -491,6 +493,7 @@ export default {
   'character.metaForm.tagsLabel': 'Tags',
   'character.metaForm.tagsPlaceholder': 'Comma-separated, e.g.: fantasy, original',
   'character.metaForm.talkativenessLabel': 'Talkativeness',
+  'character.metaForm.creatorToggle': 'Creator Meta',
   'character.metaForm.worldbookLabel': 'Bound Worldbook',
   'character.metaForm.worldbookNone': '(None bound)',
 

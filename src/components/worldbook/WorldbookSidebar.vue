@@ -2,12 +2,12 @@
   <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
       <span>{{ uiStore.t('worldbook.sidebar.title', { count: store.order.length }) }}</span>
-      <ListToolbar :count="store.entries.length">
+      <ListToolbar>
         <button class="wb-btn" @click="store.addEntry()">{{ uiStore.t('worldbook.sidebar.newEntry') }}</button>
       </ListToolbar>
       <div class="wb-sidebar-tools">
-        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('preset.sidebar.bind') }}</button>
-        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('preset.sidebar.unbind') }}</button>
+        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('shared.sidebar.bind') }}</button>
+        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('shared.sidebar.unbind') }}</button>
         <button class="wb-btn" :class="{ active: toolsOpen }" @click="toolsOpen = !toolsOpen">{{ uiStore.t('worldbook.sidebar.tools') }}</button>
       </div>
     </div>

@@ -2,13 +2,13 @@
   <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
       <span>{{ uiStore.t('preset.sidebar.title', { count: store.order.length }) }}</span>
-      <ListToolbar :count="store.prompts.length">
+      <ListToolbar>
         <button class="wb-btn" @click="store.addBlock()">{{ uiStore.t('preset.sidebar.newBlock') }}</button>
         <button class="wb-btn" @click="store.hiddenOpen = true">{{ uiStore.t('preset.sidebar.hiddenBlock') }}</button>
       </ListToolbar>
       <div class="wb-sidebar-tools">
-        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('preset.sidebar.bind') }}</button>
-        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('preset.sidebar.unbind') }}</button>
+        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('shared.sidebar.bind') }}</button>
+        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('shared.sidebar.unbind') }}</button>
       </div>
     </div>
     <div class="wb-list" ref="listRef">
