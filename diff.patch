@@ -1,0 +1,683 @@
+diff --git a/src/components/regex/RegexSettingsForm.vue b/src/components/regex/RegexSettingsForm.vue
+index 68754cb..dcc68c7 100644
+--- a/src/components/regex/RegexSettingsForm.vue
++++ b/src/components/regex/RegexSettingsForm.vue
+@@ -1,6 +1,9 @@
+ <template>
+   <div v-if="script" class="rx-form">
+-    <label class="rx-check"><input type="checkbox" v-model="enabled" /> {{ props.t('regex.settings.enabled') }}</label>
++    <div class="wb-field-row" style="margin-top:0">
++      <span class="rx-label" style="margin:0">{{ props.t('regex.settings.enabled') }}</span>
++      <span class="wb-toggle-sw" :class="{ on: enabled }" @click="enabled = !enabled"></span>
++    </div>
+ 
+     <label class="rx-label">{{ props.t('regex.settings.findRegexLabel') }}</label>
+     <textarea class="rx-textarea" :class="{ invalid: !findValid }" rows="2" v-model="script.findRegex" :placeholder="props.t('regex.settings.findRegexPlaceholder')"></textarea>
+@@ -24,39 +27,50 @@
+       <button class="wb-btn sm" :class="{ active: script.markdownOnly && script.promptOnly }" @click="setSurfaceMode('both')">{{ props.t('regex.settings.both') }}</button>
+     </div>
+ 
+-    <button class="wb-btn wb-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ props.t('regex.settings.advancedToggle') }}</button>
+-    <div v-if="advancedOpen" class="rx-advanced">
+-      <label class="rx-label" style="margin:0">{{ props.t('regex.settings.trimLabel') }}</label>
++    <AdvancedGroup :title="props.t('regex.settings.advancedToggle')">
++      <label class="rx-label" style="margin-top:0">{{ props.t('regex.settings.trimLabel') }}</label>
+       <textarea class="rx-textarea" rows="3" v-model="trimStringsText"></textarea>
+       <label class="rx-check"><input type="checkbox" v-model="script.runOnEdit" /> {{ props.t('regex.settings.runOnEdit') }}</label>
+-      <label class="rx-label" style="margin:0">{{ props.t('regex.settings.substituteLabel') }}</label>
+-      <select class="wb-select-wide" v-model.number="script.substituteRegex">
+-        <option v-for="o in SUBSTITUTE_OPTIONS" :key="o.value" :value="o.value">{{ props.t(o.labelKey) }}</option>
+-      </select>
++
++      <div class="wb-field-row">
++        <label class="rx-label" style="margin:0">{{ props.t('regex.settings.substituteLabel') }}</label>
++        <SegmentedControl v-model="substituteModel" :options="substituteOptions" />
++      </div>
++
+       <div class="wb-row">
+         <label class="rx-label" style="margin:0">{{ props.t('regex.settings.minDepth') }}</label>
+-        <input class="rx-input rx-num" type="number" v-model.number="minDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
++        <NumberInput v-model="minDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
+         <label class="rx-label" style="margin:0">{{ props.t('regex.settings.maxDepth') }}</label>
+-        <input class="rx-input rx-num" type="number" v-model.number="maxDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
++        <NumberInput v-model="maxDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
+       </div>
+-    </div>
++    </AdvancedGroup>
+   </div>
+ </template>
+ 
+ <script setup lang="ts">
+ /* 正则三件套之一——参数化改造后不再 import usePresetStore()，见 regexProps.ts 顶部的
+  * doc comment。tabsStore 是全局单例 store，跟背后是哪个 domain store 无关，继续直接用，
+- * renameTab() 的 domain 参数也继续写死 'regex'（这是"这个组件是什么"，不是"数据从哪来"）。 */
+-import { ref, computed, watch } from 'vue'
++ * renameTab() 的 domain 参数也继续写死 'regex'（这是"这个组件是什么"，不是"数据从哪来"）。
++ *
++ * 【2026-07 UI 重构】"高级选项" 换成共享的 AdvancedGroup.vue（跟 WorldbookSettingsForm.vue
++ * 用的是同一个组件），去掉了本地的 advancedOpen ref + 手写的 wb-advanced-toggle 按钮。
++ * substituteRegex 的 <select> 换成 SegmentedControl（3 个短选项，横排按钮比下拉框更直观），
++ * minDepth/maxDepth 换成 NumberInput（拖拽手柄）。"启用" 换成跟侧边栏同款的 .wb-toggle-sw
++ * 滑块。这些都只是换了外层控件，各字段原来是"裸 v-model"还是"包了 computed 的 v-model"
++ * 一律不变，之前有没有调 markDirty() 现在也还是有没有——这个表单本来就不是靠根节点事件委托
++ * 兜底脏检查的（不像 WorldbookSettingsForm.vue），没必要借这次重构顺带改这块逻辑。 */
++import { computed, watch } from 'vue'
+ import { useTabsStore } from '../../stores/tabsStore'
+ import { REGEX_PLACEMENT_OPTIONS as PLACEMENT_OPTIONS, REGEX_SUBSTITUTE_OPTIONS as SUBSTITUTE_OPTIONS } from '../../types'
+ import { parseFindRegex } from '../../regexEngine'
+ import type { RegexSettingsFormProps } from './regexProps'
++import AdvancedGroup from '../shared/AdvancedGroup.vue'
++import SegmentedControl from '../shared/SegmentedControl.vue'
++import NumberInput from '../shared/NumberInput.vue'
+ 
+ const props = defineProps<RegexSettingsFormProps>()
+ 
+ const tabsStore = useTabsStore()
+-const advancedOpen = ref(false)
+ 
+ const script = computed(() => props.scripts.find(r => r.id === tabsStore.activeTab?.key) ?? null)
+ const findValid = computed(() => !script.value || !script.value.findRegex || !!parseFindRegex(script.value.findRegex))
+@@ -76,6 +90,11 @@ const maxDepthModel = computed({
+   get: () => script.value?.maxDepth ?? null,
+   set: (v: any) => { if (script.value) script.value.maxDepth = (v === null || v === '' || Number.isNaN(v)) ? null : v }
+ })
++const substituteOptions = computed(() => SUBSTITUTE_OPTIONS.map(o => ({ value: o.value, label: props.t(o.labelKey) })))
++const substituteModel = computed({
++  get: () => script.value?.substituteRegex ?? 0,
++  set: (v: any) => { if (script.value) script.value.substituteRegex = Number(v) }
++})
+ function togglePlacement(v: number) {
+   if (!script.value) return
+   const p = script.value.placement
+diff --git a/src/components/shared/AdvancedGroup.vue b/src/components/shared/AdvancedGroup.vue
+new file mode 100644
+index 0000000..9198ec0
+--- /dev/null
++++ b/src/components/shared/AdvancedGroup.vue
+@@ -0,0 +1,31 @@
++<template>
++  <div class="wb-group" :class="{ open }">
++    <button type="button" class="wb-group-head" @click="open = !open">
++      <span class="wb-group-chevron">▸</span>
++      <span class="wb-group-title">{{ title }}</span>
++    </button>
++    <div v-if="open" class="wb-group-body">
++      <slot />
++    </div>
++  </div>
++</template>
++
++<script setup lang="ts">
++/* 可折叠设置分组——原来 WorldbookSettingsForm.vue / RegexSettingsForm.vue 各自手写一份
++ * "wb-advanced-toggle 按钮 + advancedOpen ref + v-if rx-advanced" 的三件套，且都只用一次
++ * （整坨"高级选项"堆一起）。抽出来是因为 worldbook 那边要拆成 4 个分组（激活策略/插入位置/
++ * 递归与匹配/特殊效果），照抄 3 份没意义；regex 那边继续只用 1 个，直接换皮不改行为。
++ *
++ * 不做全局单例展开状态管理（比如"记住上次哪个组是展开的"），每个实例自己持有 open 这个 ref，
++ * 组件销毁就重置——跟原来 advancedOpen 的行为一致（切换条目=组件重新渲染=重新收起），没有
++ * 理由在这层加持久化，加了反而是没人要求的行为变化。 */
++import { ref } from 'vue'
++
++const props = withDefaults(defineProps<{
++  title: string
++  /** 默认是否展开，默认 false（跟原来 advancedOpen 初始值一致） */
++  defaultOpen?: boolean
++}>(), { defaultOpen: false })
++
++const open = ref(props.defaultOpen)
++</script>
+diff --git a/src/components/shared/NumberInput.vue b/src/components/shared/NumberInput.vue
+new file mode 100644
+index 0000000..9b6a70c
+--- /dev/null
++++ b/src/components/shared/NumberInput.vue
+@@ -0,0 +1,67 @@
++<template>
++  <div class="wb-num-wrap" :class="{ dragging }">
++    <input
++      ref="inputEl"
++      class="rx-input rx-num"
++      type="number"
++      :value="modelValue ?? ''"
++      :placeholder="placeholder"
++      :min="min"
++      :max="max"
++      :step="step ?? 1"
++      @input="onNativeInput"
++    />
++    <span class="wb-num-handle" title="拖拽调整数值（按住 Shift 精细调整）" @pointerdown="onPointerDown">⠿</span>
++  </div>
++</template>
++
++<script setup lang="ts">
++/* 原生 number input 之外叠一个拖拽手柄，不是替换原生输入——键盘输入/上下箭头/滚轮该怎么用
++ * 还怎么用，拖拽只是多一种改数值的方式。
++ *
++ * 关于 markDirty 委托：WorldbookSettingsForm.vue 的字段脏检查是靠表单根节点的 @change/@input
++ * 事件委托兜底的（见那个文件顶部的大段 doc comment），拖拽改值是 useNumberDragScrub 直接调
++ * set()，不经过用户在 <input> 上打字这条路，如果只 emit('update:modelValue') 而不摸那个
++ * <input> 元素本身，这次改动永远不会以一个真实 DOM input 事件的身份出现，委托会漏掉。所以
++ * set() 里手动改 inputEl.value 的值 + dispatchEvent(new Event('input', {bubbles:true}))，
++ * 让拖拽出来的改动跟手打的改动走同一条路径（都触发 onNativeInput → 都会冒泡到 rx-form 根
++ * 节点），而不是维护两条平行的"改值"逻辑。 */
++import { ref } from 'vue'
++import { useNumberDragScrub } from '../../composables/useNumberDragScrub'
++
++const props = withDefaults(defineProps<{
++  modelValue: number | null
++  step?: number
++  min?: number
++  max?: number
++  placeholder?: string
++  /** 是否允许清空为 null（比如"跟随全局设置"用 null 占位），默认允许；关掉后清空回落到 0 */
++  nullable?: boolean
++}>(), { nullable: true })
++
++const emit = defineEmits<{ 'update:modelValue': [v: number | null] }>()
++
++const inputEl = ref<HTMLInputElement | null>(null)
++
++function parse(raw: string): number | null {
++  if (raw === '') return props.nullable ? null : 0
++  const n = Number(raw)
++  return Number.isNaN(n) ? (props.nullable ? null : 0) : n
++}
++
++function onNativeInput(e: Event) {
++  emit('update:modelValue', parse((e.target as HTMLInputElement).value))
++}
++
++const { dragging, onPointerDown } = useNumberDragScrub({
++  get: () => props.modelValue,
++  set: (v) => {
++    if (!inputEl.value) return
++    inputEl.value.value = String(v)
++    inputEl.value.dispatchEvent(new Event('input', { bubbles: true }))
++  },
++  step: props.step,
++  min: props.min,
++  max: props.max,
++})
++</script>
+diff --git a/src/components/shared/SegmentedControl.vue b/src/components/shared/SegmentedControl.vue
+new file mode 100644
+index 0000000..fe81431
+--- /dev/null
++++ b/src/components/shared/SegmentedControl.vue
+@@ -0,0 +1,30 @@
++<template>
++  <div class="rx-surface">
++    <button
++      v-for="opt in options"
++      :key="String(opt.value)"
++      type="button"
++      class="wb-btn sm"
++      :class="{ active: opt.value === modelValue }"
++      @click="emit('update:modelValue', opt.value)"
++    >{{ opt.label }}</button>
++  </div>
++</template>
++
++<script setup lang="ts">
++/* 短选项 select 换成分段按钮——.rx-surface + .wb-btn.sm 这个组合样式在同一批表单里已经用在
++ * "激活方式"（关键词/恒定/向量化）和"表层替换"（仅显示/仅提示词/两者）上了，这里只是把它
++ * 抽成一个通用组件，故意不新增任何 CSS 类，完全复用现成样式，跟已有的视觉语言零差异。
++ *
++ * 只用于选项数量少（2-4 个）且标签短的字段（区分大小写/全词匹配/正则替换宏这种）。选项多的
++ * （插入位置 8 项、逻辑 4 项标签偏长）继续用 <select>，硬塞进分段按钮只会换个方式挤成一团，
++ * 不是"选项少就一定要用按钮"，是"按钮排得下才用按钮"。 */
++type OptionValue = string | number | boolean | null
++
++defineProps<{
++  modelValue: OptionValue
++  options: { value: OptionValue; label: string }[]
++}>()
++
++const emit = defineEmits<{ 'update:modelValue': [v: OptionValue] }>()
++</script>
+diff --git a/src/components/worldbook/WorldbookSettingsForm.vue b/src/components/worldbook/WorldbookSettingsForm.vue
+index ca7c853..25e958b 100644
+--- a/src/components/worldbook/WorldbookSettingsForm.vue
++++ b/src/components/worldbook/WorldbookSettingsForm.vue
+@@ -1,120 +1,151 @@
+ ﻿<template>
+   <div v-if="entry" class="rx-form" @change="store.markDirty()" @input="store.markDirty()">
+-    <label class="rx-check"><input type="checkbox" v-model="enabled" /> {{ uiStore.t('worldbook.settings.enabled') }}</label>
++    <div class="wb-field-row" style="margin-top:0">
++      <span class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.enabled') }}</span>
++      <span class="wb-toggle-sw" :class="{ on: enabled }" @click="enabled = !enabled"></span>
++    </div>
+ 
+     <label class="rx-label">{{ uiStore.t('worldbook.settings.commentLabel') }}</label>
+     <input class="rx-input" v-model="entry.comment" :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')" @input="onCommentInput" />
+ 
+-    <label class="rx-label">{{ uiStore.t('worldbook.settings.keysLabel') }}</label>
+-    <textarea class="rx-textarea" rows="2" v-model="keysText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
++    <!-- 除了名字和启用，其余字段全部塞进下面 4 个可折叠分组，不再无差别摊平成一整条竖列 -->
+ 
+-    <label class="rx-label">{{ uiStore.t('worldbook.settings.activationLabel') }}</label>
+-    <div class="rx-surface">
+-      <button class="wb-btn sm" :class="{ active: activationMode === 'keyWord' }" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
+-      <button class="wb-btn sm" :class="{ active: activationMode === 'constant' }" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
+-      <button class="wb-btn sm" :class="{ active: activationMode === 'vectorized' }" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>
+-    </div>
++    <AdvancedGroup :title="uiStore.t('worldbook.settings.groupActivation')" default-open>
++      <label class="rx-label" style="margin-top:0">{{ uiStore.t('worldbook.settings.activationLabel') }}</label>
++      <div class="rx-surface">
++        <button class="wb-btn sm" :class="{ active: activationMode === 'keyWord' }" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
++        <button class="wb-btn sm" :class="{ active: activationMode === 'constant' }" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
++        <button class="wb-btn sm" :class="{ active: activationMode === 'vectorized' }" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>
++      </div>
+ 
+-    <template v-if="activationMode === 'keyWord'">
+-      <label class="rx-check"><input type="checkbox" v-model="entry.selective" /> {{ uiStore.t('worldbook.settings.selective') }}</label>
+-      <template v-if="entry.selective">
+-        <label class="rx-label">{{ uiStore.t('worldbook.settings.keysSecondaryLabel') }}</label>
+-        <textarea class="rx-textarea" rows="2" v-model="keysSecondaryText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
+-        <label class="rx-label">{{ uiStore.t('worldbook.settings.logicLabel') }}</label>
+-        <select class="wb-select-wide" v-model.number="entry.selectiveLogic">
+-          <option v-for="o in LOGIC_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
+-        </select>
++      <!-- 关键词框只在"关键词"激活方式下才有意义（constant/vectorized 不参与关键词匹配），
++           之前无条件显示是在误导人——恒定/向量化模式下填了也不会生效。 -->
++      <template v-if="activationMode === 'keyWord'">
++        <label class="rx-label">{{ uiStore.t('worldbook.settings.keysLabel') }}</label>
++        <textarea class="rx-textarea" rows="2" v-model="keysText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
++
++        <label class="rx-check"><input type="checkbox" v-model="entry.selective" /> {{ uiStore.t('worldbook.settings.selective') }}</label>
++        <template v-if="entry.selective">
++          <label class="rx-label">{{ uiStore.t('worldbook.settings.keysSecondaryLabel') }}</label>
++          <textarea class="rx-textarea" rows="2" v-model="keysSecondaryText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
++          <div class="wb-field-row">
++            <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.logicLabel') }}</label>
++            <select v-model.number="entry.selectiveLogic">
++              <option v-for="o in LOGIC_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
++            </select>
++          </div>
++        </template>
+       </template>
+-    </template>
+-
+-    <label class="rx-label">{{ uiStore.t('worldbook.settings.positionLabel') }}</label>
+-    <select class="wb-select-wide" v-model.number="entry.position">
+-      <option v-for="o in POSITION_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
+-    </select>
+-    <div v-if="entry.position === 4" class="wb-row">
+-      <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
+-      <input class="rx-input rx-num" type="number" v-model.number="entry.depth" />
+-      <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
+-      <select class="wb-select-wide" v-model="roleModel">
+-        <option v-for="o in ROLE_OPTIONS" :key="String(o.value)" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
+-      </select>
+-    </div>
+ 
+-    <label class="rx-label">{{ uiStore.t('worldbook.settings.orderLabel') }}</label>
+-    <input class="rx-input rx-num" type="number" v-model.number="entry.order" />
+-
+-    <label class="rx-check">
+-      <input type="checkbox" v-model="entry.useProbability" />
+-      {{ uiStore.t('worldbook.settings.probabilityLabel') }}
+-    </label>
+-    <input v-if="entry.useProbability" class="rx-input rx-num" type="number" min="0" max="100" v-model.number="entry.probability" />
++      <label class="rx-check">
++        <input type="checkbox" v-model="entry.useProbability" />
++        {{ uiStore.t('worldbook.settings.probabilityLabel') }}
++      </label>
++      <NumberInput v-if="entry.useProbability" v-model="entry.probability" :min="0" :max="100" :nullable="false" />
++    </AdvancedGroup>
++
++    <AdvancedGroup :title="uiStore.t('worldbook.settings.groupPosition')">
++      <div class="wb-field-row" style="margin-top:0">
++        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.positionLabel') }}</label>
++        <select v-model.number="entry.position">
++          <option v-for="o in POSITION_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
++        </select>
++      </div>
++      <div v-if="entry.position === 4" class="wb-row">
++        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
++        <NumberInput v-model="entry.depth" :nullable="false" />
++        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
++        <select v-model="roleModel">
++          <option v-for="o in ROLE_OPTIONS" :key="String(o.value)" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
++        </select>
++      </div>
++      <div class="wb-field-row">
++        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.orderLabel') }}</label>
++        <NumberInput v-model="entry.order" :nullable="false" />
++      </div>
++    </AdvancedGroup>
+ 
+-    <button class="wb-btn wb-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ uiStore.t('regex.settings.advancedToggle') }}</button>
+-    <div v-if="advancedOpen" class="rx-advanced">
++    <AdvancedGroup :title="uiStore.t('worldbook.settings.groupRecursion')">
+       <label class="rx-check"><input type="checkbox" v-model="entry.excludeRecursion" /> {{ uiStore.t('worldbook.settings.excludeRecursion') }}</label>
+       <label class="rx-check"><input type="checkbox" v-model="entry.preventRecursion" /> {{ uiStore.t('worldbook.settings.preventRecursion') }}</label>
+       <label class="rx-check"><input type="checkbox" v-model="delayUntilRecursionModel" /> {{ uiStore.t('worldbook.settings.delayUntilRecursion') }}</label>
+ 
+-      <label class="rx-label">{{ uiStore.t('worldbook.settings.scanDepthLabel') }}</label>
+-      <input class="rx-input rx-num" type="number" v-model.number="scanDepthModel" :placeholder="uiStore.t('worldbook.settings.sameAsGlobal')" />
+-
+-      <label class="rx-label">{{ uiStore.t('worldbook.settings.caseSensitiveLabel') }}</label>
+-      <select class="wb-select-wide" v-model="caseSensitiveModel">
+-        <option value="same">{{ uiStore.t('worldbook.settings.sameAsGlobal') }}</option>
+-        <option value="true">{{ uiStore.t('common.on') }}</option>
+-        <option value="false">{{ uiStore.t('common.off') }}</option>
+-      </select>
++      <div class="wb-field-row">
++        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.scanDepthLabel') }}</label>
++        <NumberInput v-model="scanDepthModel" :placeholder="uiStore.t('worldbook.settings.sameAsGlobal')" />
++      </div>
+ 
+-      <label class="rx-label">{{ uiStore.t('worldbook.settings.matchWholeWordsLabel') }}</label>
+-      <select class="wb-select-wide" v-model="matchWholeWordsModel">
+-        <option value="same">{{ uiStore.t('worldbook.settings.sameAsGlobal') }}</option>
+-        <option value="true">{{ uiStore.t('common.on') }}</option>
+-        <option value="false">{{ uiStore.t('common.off') }}</option>
+-      </select>
++      <!-- 大小写/全词匹配只在关键词激活方式下才参与匹配，同样的理由，同样地按 activationMode 收起来 -->
++      <template v-if="activationMode === 'keyWord'">
++        <div class="wb-field-row">
++          <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.caseSensitiveLabel') }}</label>
++          <SegmentedControl v-model="caseSensitiveModel" :options="tristateOptions" />
++        </div>
++        <div class="wb-field-row">
++          <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.matchWholeWordsLabel') }}</label>
++          <SegmentedControl v-model="matchWholeWordsModel" :options="tristateOptions" />
++        </div>
++      </template>
++    </AdvancedGroup>
+ 
++    <AdvancedGroup :title="uiStore.t('worldbook.settings.groupEffects')">
+       <div class="wb-row">
+         <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.stickyLabel') }}</label>
+-        <input class="rx-input rx-num" type="number" v-model.number="stickyModel" />
++        <NumberInput v-model="stickyModel" />
+         <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.cooldownLabel') }}</label>
+-        <input class="rx-input rx-num" type="number" v-model.number="cooldownModel" />
++        <NumberInput v-model="cooldownModel" />
+         <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.delayLabel') }}</label>
+-        <input class="rx-input rx-num" type="number" v-model.number="delayModel" />
++        <NumberInput v-model="delayModel" />
+       </div>
+ 
+       <label class="rx-label">{{ uiStore.t('worldbook.settings.groupLabel') }}</label>
+       <input class="rx-input" v-model="entry.group" :placeholder="uiStore.t('worldbook.settings.groupPlaceholder')" />
+       <label class="rx-check"><input type="checkbox" v-model="entry.groupPrioritized" /> {{ uiStore.t('worldbook.settings.groupPrioritized') }}</label>
+-    </div>
++    </AdvancedGroup>
+   </div>
+ </template>
+ 
+ <script setup lang="ts">
+ /* 世界书条目设置表单——不参数化，直接 useWorldbookStore()，跟 WorldbookSidebar.vue 顶部同样的
+  * 理由。字段比正则脚本多不少（ST 原生世界书条目本来就是所有 domain 里字段最多的），主表单只放
+- * 高频字段，其余塞进"高级"折叠区，跟 RegexSettingsForm.vue 的 rx-advanced 是同一个模式。
++ * 名字/启用两个字段，其余全部按语义分到 4 个 AdvancedGroup 里（激活策略/插入位置/递归与匹配/
++ * 特殊效果），取代原来"一个 rx-advanced 大杂烩塞剩下所有字段"的做法。
+  *
+- * 【2026-07 修正】markDirty 靠表单根节点的 @change/@input 事件委托兜底，不是靠每个字段各自的
+- * computed setter——worldbookStore.ts 里 entries 是浅监听（watch(entries, markDirty)，不带
+- * deep），原因跟 presetStore.ts 的 prompts 一样：entry.content 是高频编辑热路径，深度监听整个
+- * entries 数组开销大。但这就意味着 `v-model="entry.position"` 这种直接改 entry 嵌套字段的写法，
+- * 浅监听根本捕捉不到，之前只有 keys/keysecondary/role/scanDepth 等几个包了 computed 的字段会
+- * markDirty，Position/Depth/Order/selective/useProbability/probability/excludeRecursion/
+- * preventRecursion/group/groupPrioritized 这些直接 v-model 的字段全都漏了，改了也不会提示未保存。
+- * 深度监听 entries 又会把 content 热路径的性能问题带回来，所以选了原生 change/input 事件委托这条
+- * 路——checkbox/select 走 change，text/number 走 input，冒泡到表单根节点统一兜底，跟字段数量/
+- * 以后加不加新字段无关，一次性解决，不用每加一个字段就记得手动 markDirty()。少数已经包了
+- * computed 的字段（比如下面的 enabled/keysText）会跟着 change/input 委托重复调用一次
+- * markDirty()，是无害的幂等操作，不用特意去重。 */
+-import { ref, computed, watch } from 'vue'
++ * 【2026-07 UI 重构】除了分组，还做了几件事：
++ *   1. 关键词框（主/次）、大小写/全词匹配 都改成只在 activationMode === 'keyWord' 下显示——
++ *      ST 原生这些字段在 constant/vectorized 模式下本来就不参与匹配，之前无条件显示纯属误导。
++ *   2. order/depth/probability/scanDepth/sticky/cooldown/delay 全部换成 NumberInput.vue
++ *      （原生 input 基础上加一个拖拽手柄），caseSensitive/matchWholeWords 换成 SegmentedControl
++ *      （3 选项：跟随全局/开/关），position/role/logic 保留原生 select（选项多或标签偏长，
++ *      分段按钮装不下），但配 .wb-field-row 让 label 和 select 同一行，不再各占一整行。
++ *   3. "启用" 换成跟 WorldbookSidebar.vue / RegexSidebar.vue 里同款的 .wb-toggle-sw 滑块，
++ *      而不是原生 checkbox——这是整个应用里已经在用的"重要开关"视觉语言，跟侧边栏保持一致。
++ *
++ * 【2026-07 修正，早于本次重构】markDirty 靠表单根节点的 @change/@input 事件委托兜底，不是靠
++ * 每个字段各自的 computed setter——worldbookStore.ts 里 entries 是浅监听（watch(entries,
++ * markDirty)，不带 deep），原因跟 presetStore.ts 的 prompts 一样：entry.content 是高频编辑
++ * 热路径，深度监听整个 entries 数组开销大。这次重构没有改这套机制，只是多了两层考量：
++ *   - AdvancedGroup/SegmentedControl 只是包了一层 Vue 组件，不影响原生 DOM 事件冒泡（Vue
++ *     组件不是 Shadow DOM 边界），select/checkbox 的 change 事件照样能冒泡到 .rx-form 根节点。
++ *   - SegmentedControl 是按钮不是 select/checkbox，点击不会触发 change/input，所以只用在
++ *     caseSensitiveModel/matchWholeWordsModel 这种"setter 里已经手动 markDirty() 的
++ *     computed 包装字段"上，不用在依赖委托兜底的裸字段上（比如 selectiveLogic 这种直接
++ *     v-model entry 字段的，继续留在原生 select 上，不换控件类型）。
++ *   - NumberInput.vue 内部会在拖拽结束时手动对真实 <input> 派发一次原生 input 事件（见该
++ *     组件内的 doc comment），所以哪怕是拖拽出来的改动，也照样会被这里的委托抓到，不用额外
++ *     处理。 */
++import { computed, watch } from 'vue'
+ import { useTabsStore } from '../../stores/tabsStore'
+ import { useWorldbookStore } from '../../stores/worldbookStore'
+ import { useUiStore } from '../../stores/uiStore'
+ import { WORLDBOOK_POSITION_OPTIONS as POSITION_OPTIONS, WORLDBOOK_LOGIC_OPTIONS as LOGIC_OPTIONS, WORLDBOOK_ROLE_OPTIONS as ROLE_OPTIONS } from '../../types'
++import AdvancedGroup from '../shared/AdvancedGroup.vue'
++import SegmentedControl from '../shared/SegmentedControl.vue'
++import NumberInput from '../shared/NumberInput.vue'
+ 
+ const tabsStore = useTabsStore()
+ const store = useWorldbookStore()
+ const uiStore = useUiStore()
+-const advancedOpen = ref(false)
+ 
+ const entry = computed(() => store.currentEntry)
+ 
+@@ -159,6 +190,14 @@ const scanDepthModel = computed({
+   get: () => entry.value?.scanDepth ?? null,
+   set: (v: any) => { if (entry.value) { entry.value.scanDepth = (v === null || v === '' || Number.isNaN(v)) ? null : v; store.markDirty() } },
+ })
++
++// 跟随全局设置(same)/开(true)/关(false) 三态，caseSensitive/matchWholeWords 共用同一套逻辑，
++// 现在直接喂给 SegmentedControl 当 modelValue（string 类型），组件本身不关心具体是哪个字段
++const tristateOptions = computed(() => [
++  { value: 'same', label: uiStore.t('worldbook.settings.sameAsGlobal') },
++  { value: 'true', label: uiStore.t('common.on') },
++  { value: 'false', label: uiStore.t('common.off') },
++])
+ function tristateModel(field: 'caseSensitive' | 'matchWholeWords') {
+   return computed<string>({
+     get: () => {
+diff --git a/src/composables/useNumberDragScrub.ts b/src/composables/useNumberDragScrub.ts
+new file mode 100644
+index 0000000..6791e88
+--- /dev/null
++++ b/src/composables/useNumberDragScrub.ts
+@@ -0,0 +1,79 @@
++/* 数字输入的"拖拽微调"——参考 Figma/AE 那种：按住数字往左右拖，横向位移映射成数值增量。
++ * 不用原生 <input type=range>，理由见 WorldbookSettingsForm.vue 重构时的讨论：order/depth/
++ * sticky/cooldown/delay 这些字段值域大多无界或没有"该被拖满一条轨道"的自然上限，range 语义在
++ * 这种场景下要么范围设小了不够用，要么设大了每像素精度差。drag-scrub 不依赖 min/max，拖多远
++ * 都行，跟原生 <input type=number> 共存（不是替换），键盘输入/上下箭头/滚轮该怎么用还怎么用。
++ *
++ * 用法（NumberInput.vue 里）：
++ *   const { onPointerDown } = useNumberDragScrub({
++ *     get: () => props.modelValue,
++ *     set: (v) => emit('update:modelValue', v),
++ *     step: props.step,
++ *   })
++ *   <span @pointerdown="onPointerDown">拖拽手柄</span>
++ *
++ * 按住 Shift 精细调整（每像素 0.1x step），跟大多数同类实现（Figma 等）的修饰键习惯一致。
++ * 用 Pointer Events + setPointerCapture，风格上跟 usePanelResize.ts／useDragReorder.ts 一致，
++ * 拖拽过程中还会给 body 加一个 no-select 类，避免拖的时候选中旁边的文字。 */
++import { ref } from 'vue'
++
++export interface NumberDragScrubOptions {
++  get: () => number | null
++  set: (v: number) => void
++  step?: number
++  /** 每拖动多少像素相当于一个 step，默认 4px（越小越灵敏） */
++  pxPerStep?: number
++  min?: number
++  max?: number
++}
++
++export function useNumberDragScrub(opts: NumberDragScrubOptions) {
++  const dragging = ref(false)
++
++  function clamp(v: number) {
++    let out = v
++    if (opts.min !== undefined) out = Math.max(opts.min, out)
++    if (opts.max !== undefined) out = Math.min(opts.max, out)
++    return out
++  }
++
++  function onPointerDown(e: PointerEvent) {
++    // 只响应主键，避免右键/中键触发拖拽
++    if (e.button !== 0) return
++    const startX = e.clientX
++    const startVal = opts.get() ?? 0
++    const step = opts.step ?? 1
++    const pxPerStep = opts.pxPerStep ?? 4
++    const target = e.currentTarget as HTMLElement
++    let moved = false
++
++    target.setPointerCapture(e.pointerId)
++    document.body.classList.add('wb-no-select')
++
++    function onMove(ev: PointerEvent) {
++      const dx = ev.clientX - startX
++      if (Math.abs(dx) > 2) moved = true
++      const fine = ev.shiftKey ? 0.1 : 1
++      const delta = Math.round((dx / pxPerStep) * fine * step * 100) / 100
++      const raw = startVal + delta
++      // 整数 step 时结果也保持整数，避免出现 100.00000001 这种浮点尾巴
++      const snapped = step >= 1 && Number.isInteger(step) ? Math.round(raw) : raw
++      opts.set(clamp(snapped))
++    }
++    function onUp() {
++      dragging.value = false
++      document.body.classList.remove('wb-no-select')
++      window.removeEventListener('pointermove', onMove)
++      window.removeEventListener('pointerup', onUp)
++      // 没有实际拖动（只是点了一下）就别拦截，让原生 input 照常获得焦点/光标
++      if (!moved) return
++      e.preventDefault()
++    }
++
++    dragging.value = true
++    window.addEventListener('pointermove', onMove)
++    window.addEventListener('pointerup', onUp, { once: true })
++  }
++
++  return { dragging, onPointerDown }
++}
+diff --git a/src/i18n/locales/en.ts b/src/i18n/locales/en.ts
+index 3fa0851..cb83323 100644
+--- a/src/i18n/locales/en.ts
++++ b/src/i18n/locales/en.ts
+@@ -389,6 +389,10 @@ export default {
+   'worldbook.settings.enabled': 'Enabled',
+   'worldbook.settings.commentLabel': 'Title / Comment',
+   'worldbook.settings.commentPlaceholder': 'Entry title (for identification only, not matched for activation)',
++  'worldbook.settings.groupActivation': 'Activation Strategy',
++  'worldbook.settings.groupPosition': 'Insertion Position',
++  'worldbook.settings.groupRecursion': 'Recursion & Matching',
++  'worldbook.settings.groupEffects': 'Special Effects',
+   'worldbook.settings.keysLabel': 'Primary Keywords (comma separated list)',
+   'worldbook.settings.keysPlaceholder': 'keyword1, keyword2',
+   'worldbook.settings.activationLabel': 'Activation Type',
+diff --git a/src/i18n/locales/zh-CN.ts b/src/i18n/locales/zh-CN.ts
+index bda395e..64ac340 100644
+--- a/src/i18n/locales/zh-CN.ts
++++ b/src/i18n/locales/zh-CN.ts
+@@ -392,6 +392,10 @@ export default {
+   'worldbook.settings.enabled': '启用',
+   'worldbook.settings.commentLabel': '标题 / 备注',
+   'worldbook.settings.commentPlaceholder': '条目标题（仅用于识别，不会被激活匹配）',
++  'worldbook.settings.groupActivation': '激活策略',
++  'worldbook.settings.groupPosition': '插入位置',
++  'worldbook.settings.groupRecursion': '递归与匹配',
++  'worldbook.settings.groupEffects': '特殊效果',
+   'worldbook.settings.keysLabel': '主要关键词（英文逗号分隔）',
+   'worldbook.settings.keysPlaceholder': '关键词1, 关键词2',
+   'worldbook.settings.activationLabel': '激活方式',
+diff --git a/src/styles/main.css b/src/styles/main.css
+index 27aad5a..eb75e96 100644
+--- a/src/styles/main.css
++++ b/src/styles/main.css
+@@ -558,16 +558,77 @@
+ 
+ .rx-form{display:flex;flex-direction:column;gap:4px}
+ .rx-label{font-size:12px;color:var(--wb-tx3);margin-top:10px}
+-.rx-form .rx-input,.rx-form textarea,.rx-form select{width:100%}
++.rx-form .rx-input,.rx-form textarea{width:100%}
++/* select 不再强制 100% 宽——大多数 select 里就 2-4 个字的短选项（AND 任意/跟随全局设置这种），
++ * 撑满一整行纯粹是浪费，改成随内容宽度 + 下限，配合 .wb-field-row 让 label 和 select 同一行。
++ * 选项本来就多的（插入位置 8 个）会自然撑到 max-width，不受影响。 */
++.rx-form select{width:auto;min-width:120px;max-width:100%}
+ .rx-textarea.invalid{border-color:var(--wb-dg)}
+ .rx-err{color:var(--wb-dg);font-size:12px;margin-top:2px}
+ .rx-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
+ .rx-check{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap}
+-.rx-check input[type=checkbox]{width:1em;height:1em;margin:0;flex-shrink:0;background-color: #5f5f5f;}
++/* 之前用 accent-color 想省事，但 .st-wb input{padding:6px 10px;background:...;border:...}
++ * 这条全局规则同时也套在了 checkbox 上（复选框也是 input 元素），accent-color 只接管了勾选态
++ * 的填充色，padding/background/border 这些没被 accent-color 覆盖的属性还是从那条全局规则来的——
++ * checkbox 被撑成了长方形（padding 6px 10px），背景色又跟 accent-color 想画的勾选态背景打架，
++ * 结果就是勾选后对号看起来"融进背景里"。改成 appearance:none 完全自己画，不再依赖浏览器/
++ * WebView2 对 accent-color 和自定义 background 混用时的处理差异，方框尺寸、边框、勾选态颜色
++ * 全部自己定，跨平台表现一致。 */
++.rx-check input[type=checkbox]{
++  appearance:none;-webkit-appearance:none;
++  width:14px;height:14px;margin:0;flex-shrink:0;box-sizing:border-box;
++  padding:0;border:1px solid var(--wb-tx3);border-radius:3px;background:var(--wb-bg-input);
++  cursor:pointer;position:relative;transition:all var(--wb-tr);
++}
++.rx-check input[type=checkbox]:hover{border-color:var(--wb-ac)}
++.rx-check input[type=checkbox]:checked{background:var(--wb-ac);border-color:var(--wb-ac)}
++.rx-check input[type=checkbox]:checked::after{
++  content:'';position:absolute;left:4px;top:1px;width:3px;height:7px;
++  border:solid var(--wb-bg);border-width:0 2px 2px 0;transform:rotate(45deg);
++}
+ .rx-surface{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+ .wb-advanced-toggle{align-self:flex-start;margin-top:12px;background:transparent;border-color:transparent;padding-left:0}
+ .rx-advanced{display:flex;flex-direction:column;gap:8px;padding:10px;margin-top:6px;border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg)}
+ .rx-num{width:90px !important}
++
++/* label 和短控件（select/segmented）同一行，取代过去 label 独占一行 + select 独占一行的堆叠 */
++.wb-field-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
++.wb-field-row .rx-label{margin-top:0;flex-shrink:0}
++.wb-field-row select{flex-shrink:0}
++
++/* AdvancedGroup.vue：可折叠分组卡片，取代单个 .rx-advanced 大杂烩，一个表单里可以放好几个 */
++.wb-group{border:1px solid var(--wb-border);border-radius:var(--wb-rs);overflow:hidden;margin-top:8px}
++.wb-group-head{display:flex;align-items:center;gap:7px;width:100%;padding:8px 12px;background:var(--wb-bg-h);border:none;font-size:13px;font-weight:600;text-align:left;cursor:pointer;color:var(--wb-tx)}
++.wb-group-head:hover{background:var(--wb-bg-a)}
++.wb-group.open .wb-group-head{color:var(--wb-ac)}
++.wb-group-chevron{display:inline-block;font-size:10px;color:var(--wb-tx3);transition:transform var(--wb-tr);flex-shrink:0}
++.wb-group.open .wb-group-chevron{transform:rotate(90deg);color:var(--wb-ac)}
++.wb-group-body{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-top:1px solid var(--wb-border)}
++.wb-group-body .rx-label:first-child{margin-top:0}
++
++/* NumberInput.vue：原生 number input 右边接一个拖拽手柄按钮，横向拖动=改数值，不影响原本的
++ * 键盘输入/上下箭头/滚轮。
++ *
++ * 【修正】最初是把手柄用 position:absolute 叠在输入框右边缘——正好是浏览器原生 number
++ * spin button（上下箭头）所在的位置。那两个箭头是 ::-webkit-inner-spin-button 这类内部
++ * 伪元素，就算视觉上手柄叠在上面，点击也可能被原生 spinner 先接住，落不到我自己的 <span>
++ * 上，导致"拖了没反应"。现在把手柄和输入框分开摆成两块拼在一起的样子（像原生 spinner 的
++ * 替代品），手柄有自己独立的、不重叠的点击区域，同时隐藏输入框自带的 spin button 腾出空间。 */
++.wb-num-wrap{display:inline-flex;align-items:stretch;width:auto}
++.wb-num-wrap .rx-num{width:68px !important;border-top-right-radius:0;border-bottom-right-radius:0;border-right:none}
++.wb-num-wrap .rx-num::-webkit-inner-spin-button,.wb-num-wrap .rx-num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
++.wb-num-wrap .rx-num{-moz-appearance:textfield}
++.wb-num-handle{
++  display:flex;align-items:center;justify-content:center;width:22px;flex-shrink:0;
++  background:var(--wb-bg-h);border:1px solid var(--wb-border);border-left:none;
++  border-top-right-radius:var(--wb-rs);border-bottom-right-radius:var(--wb-rs);
++  color:var(--wb-tx3);font-size:13px;cursor:ew-resize;user-select:none;touch-action:none;
++  transition:all var(--wb-tr);
++}
++.wb-num-handle:hover{background:var(--wb-bg-a);color:var(--wb-ac)}
++.wb-num-wrap.dragging .rx-num{border-color:var(--wb-ac)}
++.wb-num-wrap.dragging .wb-num-handle{background:var(--wb-ac-d);color:var(--wb-ac);border-color:rgba(200,149,74,.4)}
++body.wb-no-select{user-select:none !important;-webkit-user-select:none !important}
+ .wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;overflow-x:hidden;padding:12px;min-width:0}
+ .wb-settings-dock-header{font-size:12px;color:var(--wb-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+ .wb-settings-dock-body{padding:12px;overflow-y:auto}

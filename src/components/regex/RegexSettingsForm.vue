@@ -1,6 +1,9 @@
 <template>
   <div v-if="script" class="rx-form">
-    <label class="rx-check"><input type="checkbox" v-model="enabled" /> {{ props.t('regex.settings.enabled') }}</label>
+    <div class="wb-field-row" style="margin-top:0">
+      <span class="rx-label" style="margin:0">{{ props.t('regex.settings.enabled') }}</span>
+      <span class="wb-toggle-sw" :class="{ on: enabled }" @click="enabled = !enabled"></span>
+    </div>
 
     <label class="rx-label">{{ props.t('regex.settings.findRegexLabel') }}</label>
     <textarea class="rx-textarea" :class="{ invalid: !findValid }" rows="2" v-model="script.findRegex" :placeholder="props.t('regex.settings.findRegexPlaceholder')"></textarea>
@@ -24,39 +27,50 @@
       <button class="wb-btn sm" :class="{ active: script.markdownOnly && script.promptOnly }" @click="setSurfaceMode('both')">{{ props.t('regex.settings.both') }}</button>
     </div>
 
-    <button class="wb-btn wb-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ props.t('regex.settings.advancedToggle') }}</button>
-    <div v-if="advancedOpen" class="rx-advanced">
-      <label class="rx-label" style="margin:0">{{ props.t('regex.settings.trimLabel') }}</label>
+    <AdvancedGroup :title="props.t('regex.settings.advancedToggle')">
+      <label class="rx-label" style="margin-top:0">{{ props.t('regex.settings.trimLabel') }}</label>
       <textarea class="rx-textarea" rows="3" v-model="trimStringsText"></textarea>
       <label class="rx-check"><input type="checkbox" v-model="script.runOnEdit" /> {{ props.t('regex.settings.runOnEdit') }}</label>
-      <label class="rx-label" style="margin:0">{{ props.t('regex.settings.substituteLabel') }}</label>
-      <select class="wb-select-wide" v-model.number="script.substituteRegex">
-        <option v-for="o in SUBSTITUTE_OPTIONS" :key="o.value" :value="o.value">{{ props.t(o.labelKey) }}</option>
-      </select>
+
+      <div class="wb-field-row">
+        <label class="rx-label" style="margin:0">{{ props.t('regex.settings.substituteLabel') }}</label>
+        <SegmentedControl v-model="substituteModel" :options="substituteOptions" />
+      </div>
+
       <div class="wb-row">
         <label class="rx-label" style="margin:0">{{ props.t('regex.settings.minDepth') }}</label>
-        <input class="rx-input rx-num" type="number" v-model.number="minDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
+        <NumberInput v-model="minDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
         <label class="rx-label" style="margin:0">{{ props.t('regex.settings.maxDepth') }}</label>
-        <input class="rx-input rx-num" type="number" v-model.number="maxDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
+        <NumberInput v-model="maxDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
       </div>
-    </div>
+    </AdvancedGroup>
   </div>
 </template>
 
 <script setup lang="ts">
 /* 正则三件套之一——参数化改造后不再 import usePresetStore()，见 regexProps.ts 顶部的
  * doc comment。tabsStore 是全局单例 store，跟背后是哪个 domain store 无关，继续直接用，
- * renameTab() 的 domain 参数也继续写死 'regex'（这是"这个组件是什么"，不是"数据从哪来"）。 */
-import { ref, computed, watch } from 'vue'
+ * renameTab() 的 domain 参数也继续写死 'regex'（这是"这个组件是什么"，不是"数据从哪来"）。
+ *
+ * 【2026-07 UI 重构】"高级选项" 换成共享的 AdvancedGroup.vue（跟 WorldbookSettingsForm.vue
+ * 用的是同一个组件），去掉了本地的 advancedOpen ref + 手写的 wb-advanced-toggle 按钮。
+ * substituteRegex 的 <select> 换成 SegmentedControl（3 个短选项，横排按钮比下拉框更直观），
+ * minDepth/maxDepth 换成 NumberInput（拖拽手柄）。"启用" 换成跟侧边栏同款的 .wb-toggle-sw
+ * 滑块。这些都只是换了外层控件，各字段原来是"裸 v-model"还是"包了 computed 的 v-model"
+ * 一律不变，之前有没有调 markDirty() 现在也还是有没有——这个表单本来就不是靠根节点事件委托
+ * 兜底脏检查的（不像 WorldbookSettingsForm.vue），没必要借这次重构顺带改这块逻辑。 */
+import { computed, watch } from 'vue'
 import { useTabsStore } from '../../stores/tabsStore'
 import { REGEX_PLACEMENT_OPTIONS as PLACEMENT_OPTIONS, REGEX_SUBSTITUTE_OPTIONS as SUBSTITUTE_OPTIONS } from '../../types'
 import { parseFindRegex } from '../../regexEngine'
 import type { RegexSettingsFormProps } from './regexProps'
+import AdvancedGroup from '../shared/AdvancedGroup.vue'
+import SegmentedControl from '../shared/SegmentedControl.vue'
+import NumberInput from '../shared/NumberInput.vue'
 
 const props = defineProps<RegexSettingsFormProps>()
 
 const tabsStore = useTabsStore()
-const advancedOpen = ref(false)
 
 const script = computed(() => props.scripts.find(r => r.id === tabsStore.activeTab?.key) ?? null)
 const findValid = computed(() => !script.value || !script.value.findRegex || !!parseFindRegex(script.value.findRegex))
@@ -75,6 +89,11 @@ const minDepthModel = computed({
 const maxDepthModel = computed({
   get: () => script.value?.maxDepth ?? null,
   set: (v: any) => { if (script.value) script.value.maxDepth = (v === null || v === '' || Number.isNaN(v)) ? null : v }
+})
+const substituteOptions = computed(() => SUBSTITUTE_OPTIONS.map(o => ({ value: o.value, label: props.t(o.labelKey) })))
+const substituteModel = computed({
+  get: () => script.value?.substituteRegex ?? 0,
+  set: (v: any) => { if (script.value) script.value.substituteRegex = Number(v) }
 })
 function togglePlacement(v: number) {
   if (!script.value) return

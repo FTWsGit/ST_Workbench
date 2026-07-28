@@ -57,7 +57,7 @@ const formProps = computed<Record<string, any>>(() => {
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.settingsDockWidth,
   setWidth: (w) => { uiStore.settings.settingsDockWidth = w },
-  min: 240, max: 520, dir: 'left',
+  min: 240, max: 600, dir: 'left',
 })
 watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
 function toggleFloat() { uiStore.settings.settingsDockFloat = !uiStore.settings.settingsDockFloat; uiStore.saveSettings() }

@@ -557,20 +557,77 @@
 .rx-editor-testinput{width:100%;resize:vertical}
 
 .rx-form{display:flex;flex-direction:column;gap:4px}
-.rx-label{font-size:12px;color:var(--wb-tx3);margin-top:10px}
-.rx-form .rx-input,.rx-form textarea,.rx-form select{width:100%}
+.rx-label{font-size:14px;color:var(--wb-tx);margin-top:10px}
+.rx-form .rx-input,.rx-form textarea{width:100%}
+/* select 不再强制 100% 宽——大多数 select 里就 2-4 个字的短选项（AND 任意/跟随全局设置这种），
+ * 撑满一整行纯粹是浪费，改成随内容宽度 + 下限，配合 .wb-field-row 让 label 和 select 同一行。
+ * 选项本来就多的（插入位置 8 个）会自然撑到 max-width，不受影响。 */
+.rx-form select{width:auto;min-width:120px;max-width:100%}
 .rx-textarea.invalid{border-color:var(--wb-dg)}
 .rx-err{color:var(--wb-dg);font-size:12px;margin-top:2px}
 .rx-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
 .rx-check{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap}
-.rx-check input[type=checkbox]{width:1em;height:1em;margin:0;flex-shrink:0;background-color: #5f5f5f;}
+/* 之前用 accent-color 想省事，但 .st-wb input{padding:6px 10px;background:...;border:...}
+ * 这条全局规则同时也套在了 checkbox 上（复选框也是 input 元素），accent-color 只接管了勾选态
+ * 的填充色，padding/background/border 这些没被 accent-color 覆盖的属性还是从那条全局规则来的——
+ * checkbox 被撑成了长方形（padding 6px 10px），背景色又跟 accent-color 想画的勾选态背景打架，
+ * 结果就是勾选后对号看起来"融进背景里"。改成 appearance:none 完全自己画，不再依赖浏览器/
+ * WebView2 对 accent-color 和自定义 background 混用时的处理差异，方框尺寸、边框、勾选态颜色
+ * 全部自己定，跨平台表现一致。 */
+.rx-check input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;
+  width:14px;height:14px;margin:0;flex-shrink:0;box-sizing:border-box;
+  padding:0;border:1px solid var(--wb-tx3);border-radius:3px;background:var(--wb-bg-input);
+  cursor:pointer;position:relative;transition:all var(--wb-tr);
+}
+.rx-check input[type=checkbox]:hover{border-color:var(--wb-ac)}
+.rx-check input[type=checkbox]:checked{background:var(--wb-ac);border-color:var(--wb-ac)}
+.rx-check input[type=checkbox]:checked::after{
+  content:'';position:absolute;left:4px;top:1px;width:3px;height:7px;
+  border:solid var(--wb-bg);border-width:0 2px 2px 0;transform:rotate(45deg);
+}
 .rx-surface{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .wb-advanced-toggle{align-self:flex-start;margin-top:12px;background:transparent;border-color:transparent;padding-left:0}
 .rx-advanced{display:flex;flex-direction:column;gap:8px;padding:10px;margin-top:6px;border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg)}
 .rx-num{width:90px !important}
+
+/* label 和控件同一行布局，标签固定宽度左对齐，控件紧跟标签后，不再两端对齐 */
+.wb-field-row{display:flex;align-items:center;gap:12px;margin-top:10px}
+.wb-field-row .rx-label{margin-top:0;flex-shrink:0;min-width:120px}
+.wb-field-row select{flex-shrink:0}
+.wb-field-row .rx-input,.wb-field-row .rx-textarea{flex:1}
+.wb-field-row .wb-num-wrap{flex-shrink:0}
+
+/* AdvancedGroup.vue：可折叠分组卡片，取代单个 .rx-advanced 大杂烩，一个表单里可以放好几个 */
+.wb-group{border:1px solid var(--wb-border);border-radius:var(--wb-rs);overflow:hidden;margin-top:8px}
+.wb-group-head{display:flex;align-items:center;gap:7px;width:100%;padding:8px 12px;background:var(--wb-bg-h);border:none;font-size:13px;font-weight:600;text-align:left;cursor:pointer;color:var(--wb-tx)}
+.wb-group-head:hover{background:var(--wb-bg-a)}
+.wb-group.open .wb-group-head{color:var(--wb-ac)}
+.wb-group-chevron{display:inline-block;font-size:13px;color:var(--wb-tx3);transition:transform var(--wb-tr);flex-shrink:0}
+.wb-group.open .wb-group-chevron{transform:rotate(90deg);color:var(--wb-ac)}
+.wb-group-body{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-top:1px solid var(--wb-border)}
+.wb-group-body .rx-label:first-child{margin-top:0}
+
+/* NumberInput.vue：原生 number input 右边接一个拖拽手柄按钮，横向拖动=改数值，不影响原本的
+ * 键盘输入/上下箭头/滚轮。 */
+.wb-num-wrap{display:inline-flex;align-items:stretch;width:auto}
+.wb-num-wrap .rx-num{width:68px !important;border-top-right-radius:0;border-bottom-right-radius:0;border-right:none}
+.wb-num-wrap .rx-num::-webkit-inner-spin-button,.wb-num-wrap .rx-num::-webkit-outer-spin-button{-webkit-appearance:none;appearance:none;margin:0}
+.wb-num-wrap .rx-num{-moz-appearance:textfield;appearance:textfield}
+.wb-num-handle{
+  display:flex;align-items:center;justify-content:center;width:22px;flex-shrink:0;
+  background:var(--wb-bg-h);border:1px solid var(--wb-border);border-left:none;
+  border-top-right-radius:var(--wb-rs);border-bottom-right-radius:var(--wb-rs);
+  color:var(--wb-tx3);font-size:13px;cursor:ew-resize;user-select:none;touch-action:none;
+  transition:all var(--wb-tr);
+}
+.wb-num-handle:hover{background:var(--wb-bg-a);color:var(--wb-ac)}
+.wb-num-wrap.dragging .rx-num{border-color:var(--wb-ac)}
+.wb-num-wrap.dragging .wb-num-handle{background:var(--wb-ac-d);color:var(--wb-ac);border-color:rgba(200,149,74,.4)}
+body.wb-no-select{user-select:none !important;-webkit-user-select:none !important}
 .wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;overflow-x:hidden;padding:12px;min-width:0}
 .wb-settings-dock-header{font-size:12px;color:var(--wb-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-.wb-settings-dock-body{padding:12px;overflow-y:auto}
+.wb-settings-dock-body{padding:6px;overflow-y:auto}
 
 .wb-editor-col{display:flex;flex-direction:column;flex:1;min-width:0}
 .wb-editor-row{display:flex;flex:1;overflow:hidden;min-height:0}
