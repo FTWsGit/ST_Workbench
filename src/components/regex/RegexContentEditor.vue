@@ -26,7 +26,7 @@
     </div>
 
     <div class="rx-editor-testbar">
-      <label class="rx-label" style="margin:0">{{ props.t('regex.editor.testText') }}</label>
+      <label class="rx-label">{{ props.t('regex.editor.testText') }}</label>
       <textarea class="rx-editor-testinput" rows="3" v-model="testInput" :placeholder="props.t('regex.editor.testPlaceholder')"></textarea>
       <p v-if="!findValid" class="rx-err">{{ props.t('regex.editor.invalidFindRegex') }}</p>
       <p class="wb-muted" style="font-size:12px">{{ props.t('regex.editor.previewLimitation') }}</p>

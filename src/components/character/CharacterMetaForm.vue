@@ -4,31 +4,34 @@
 
     <!-- 只做下拉换绑，不支持内嵌编辑世界书内容——那是"角色卡内嵌编辑世界书"，TODO.md 阶段4明确
          不做，见 types.ts Character 接口里 worldbook 字段的 doc comment。 -->
-    <label class="rx-label">{{ uiStore.t('character.metaForm.worldbookLabel') }}</label>
-    <select class="wb-select-wide" v-model="worldbookModel">
-      <option :value="null">{{ uiStore.t('character.metaForm.worldbookNone') }}</option>
-      <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
-    </select>
+    <FormField :label="uiStore.t('character.metaForm.worldbookLabel')">
+      <select class="wb-select-wide" v-model="worldbookModel">
+        <option :value="null">{{ uiStore.t('character.metaForm.worldbookNone') }}</option>
+        <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
+      </select>
+    </FormField>
 
-    <label class="rx-label">{{ uiStore.t('character.metaForm.talkativenessLabel') }}</label>
-    <input class="rx-input rx-num" type="number" step="0.1" min="0" max="1" v-model.number="talkativeness" />
+    <FormField :label="uiStore.t('character.metaForm.talkativenessLabel')">
+      <input class="rx-input rx-num" type="number" step="0.1" min="0" max="1" v-model.number="talkativeness" />
+    </FormField>
 
-    <button class="wb-btn wb-advanced-toggle" @click="advancedOpen = !advancedOpen">{{ advancedOpen ? '▾' : '▸' }} {{ uiStore.t('character.metaForm.creatorToggle') }}</button>
-    <div v-if="advancedOpen" class="rx-advanced">
-      <label class="rx-label">{{ uiStore.t('character.metaForm.creatorLabel') }}</label>
-      <input class="rx-input" v-model="creator" />
+    <AdvancedGroup :title="uiStore.t('character.metaForm.creatorToggle')">
+      <FormField :label="uiStore.t('character.metaForm.creatorLabel')">
+        <input class="rx-input" v-model="creator" />
+      </FormField>
 
-      <label class="rx-label">{{ uiStore.t('character.metaForm.versionLabel') }}</label>
-      <input class="rx-input" v-model="version" />
+      <FormField :label="uiStore.t('character.metaForm.versionLabel')">
+        <input class="rx-input" v-model="version" />
+      </FormField>
 
-      <label class="rx-label">{{ uiStore.t('character.metaForm.creatorNotesLabel') }}</label>
-      <textarea class="rx-textarea" rows="4" v-model="creatorNotes"></textarea>
+      <FormField :label="uiStore.t('character.metaForm.creatorNotesLabel')">
+        <textarea class="rx-textarea" rows="4" v-model="creatorNotes"></textarea>
+      </FormField>
 
-      <label class="rx-label">{{ uiStore.t('character.metaForm.tagsLabel') }}</label>
-      <input class="rx-input" v-model="tagsText" :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')" />
-    </div>
-
-
+      <FormField :label="uiStore.t('character.metaForm.tagsLabel')">
+        <input class="rx-input" v-model="tagsText" :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')" />
+      </FormField>
+    </AdvancedGroup>
   </div>
   <p v-else class="pr-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
 </template>
@@ -42,13 +45,19 @@
  * 世界书下拉列表读 worldbookStore.worldbookList——这是本次改动里第一处角色卡组件跨 domain 读
  * 另一个 store 的地方，只读列表（拿名字），不读 worldbookStore 的其它任何状态，也不会因为
  * 角色卡面板打开就顺带把世界书数据拉起来（App.vue 的 openPanel() 已经在面板打开时统一拉过
- * worldbookStore.refreshWorldbookList() 了，这里不用重复拉）。 */
-import { computed, ref } from 'vue'
-
-const advancedOpen = ref(false)
+ * worldbookStore.refreshWorldbookList() 了，这里不用重复拉）。
+ *
+ * 【2026-07 二次重构】"创作者信息" 折叠区换成共享的 AdvancedGroup.vue——这个文件写在
+ * AdvancedGroup 被抽出来之前，一直没跟着换，是全项目最后一处还在手写
+ * "wb-advanced-toggle 按钮 + advancedOpen ref + v-if" 三件套的地方，这次一并换掉，
+ * 三个正则/世界书/角色卡的"高级选项"折叠区终于用的是同一个组件。字段本身也换成 FormField，
+ * 理由和改法跟 WorldbookSettingsForm.vue/RegexSettingsForm.vue 一致。 */
+import { computed } from 'vue'
 import { useCharacterStore } from '../../stores/characterStore'
 import { useWorldbookStore } from '../../stores/worldbookStore'
 import { useUiStore } from '../../stores/uiStore'
+import AdvancedGroup from '../shared/AdvancedGroup.vue'
+import FormField from '../shared/FormField.vue'
 
 const store = useCharacterStore()
 const worldbookStore = useWorldbookStore()

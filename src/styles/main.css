@@ -13,6 +13,22 @@
   --wb-fs:14.5px;--wb-lh:1.65;--wb-ff:'JetBrains Mono','Fira Code',monospace;
   --hl-b:#58b8c0;--hl-k:#a078c0;--hl-s:#555570;--hl-v:#c8a045;--hl-c:#68b868;
   --hl-cm:#555570;--hl-m:#6090c0;--hl-sq:#c89850;--hl-dq:#78b0c0;--hl-ab:#60a870;--hl-sb:#d08a5c;
+
+  /* ---- Design tokens (spacing / control sizing) ----------------------------------------
+   * 之前散落在各处的 4px/6px/10px/12px/14px 这些魔法数字，很多其实是同一套"间距刻度"的不同
+   * 名字。这里把它们收成一条命名刻度，规则：
+   *   - 新写 CSS 一律引用 --wb-sp-*，不再手写 px 数值。
+   *   - 已有规则里，数值与某个刻度完全相等的，原样替换成对应变量（不改变现有视觉效果，纯粹
+   *     把"重复出现的魔法数字"变成"一个可统一改的变量"）。
+   *   - 数值是刻度之外的（比如某处特意要 7px 去对齐一个视觉细节），不强行凑整，保留手写数值——
+   *     令牌是用来消灭"重复的魔法数字"，不是用来消灭"所有数字"。
+   * --wb-ctrl-h / --wb-icon-btn 是控件尺寸令牌，用来解决"顶栏 add/import/delete 图标、下拉框
+   * 显得小"这个问题：改这一处，所有引用它的控件跟着变，不用再逐个组件调 padding。 */
+  --wb-sp-1:4px;--wb-sp-2:6px;--wb-sp-3:10px;--wb-sp-4:14px;--wb-sp-5:20px;
+  --wb-ctrl-h:34px;      /* 桌面端标准控件高度（按钮/下拉框），之前 .wb-btn 靠 padding 撑出来的高度约 29px，偏矮 */
+  --wb-icon-btn:34px;    /* 纯图标按钮（+ / 🗑 / ⤓）的正方形尺寸，desktop 和 mobile 共用同一个变量，
+                            mobile 端在 720px 断点里覆盖成更大的触摸尺寸，见文件底部 media query */
+
   font-family:var(--wb-fm);color:var(--wb-tx);font-size:16px;line-height:1.5;
   position:relative;width:100%;height:100%;
 }
@@ -49,6 +65,16 @@
 .wb-btn.close-btn:hover{background:var(--wb-dg-d);color:var(--wb-dg)}
 .wb-sep{width:1px;height:20px;background:var(--wb-border);margin:0 4px;flex-shrink:0}
 .wb-spacer{flex:1}
+
+/* 顶栏第二行——"当前工作区内部在看哪个集合"（预设的 条目/正则、角色卡的 字段/正则）。
+ * 故意跟第一行（.wb-header/.wb-mode-switch）拉开视觉差异，而不是简单地再摆一排一样的按钮：
+ * 背景更浅、没有底部分隔线的强对比、字号更小、padding 更紧——第一行是"选工作区"，分量重；
+ * 这一行是"工作区内部换个集合看"，分量应该明显更轻，用户扫一眼就能看出这两排不是同一件事的
+ * 选项，不用读文字也能感觉到层级差。 */
+.wb-collection-switch{display:flex;align-items:center;gap:2px;padding:4px 16px;background:var(--wb-bg);border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.wb-collection-switch .wb-btn{padding:3px 11px;font-size:12.5px;font-weight:500;background:transparent;border-color:transparent;color:var(--wb-tx2)}
+.wb-collection-switch .wb-btn:hover{background:var(--wb-bg-h);color:var(--wb-tx)}
+.wb-collection-switch .wb-btn.active{background:var(--wb-ac-d);border-color:transparent;color:var(--wb-ac)}
 .pr-preset-sel{max-width:200px;font-size:13px}
 
 /* Search Panel */
@@ -359,7 +385,11 @@
 .pr-vr-group{margin:7px 4px 3px;padding:4px 6px 2px;border-top:1px solid rgba(40,42,58,.55);color:var(--wb-ac-h);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .pr-vr-val{color:var(--wb-tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .pr-vr-block{color:var(--wb-tx);margin-left:auto;flex-shrink:0;font-size:13px}
-.st-wb .icon-btn{padding:2px 6px}
+/* 之前 padding:2px 6px 撑出来的图标按钮视觉上明显比旁边的 .wb-btn 矮小（这批按钮承担的是
+ * "新建/导入/删除"这种有实际后果的操作，太不起眼容易被忽略，也不好点中）。改成固定的正方形
+ * --wb-icon-btn 尺寸 + flex 居中，图标字符本身不放大（避免视觉上显得突兀），纯粹是可点击区域
+ * 和按钮本身的存在感变大。 */
+.st-wb .icon-btn{width:var(--wb-icon-btn);height:var(--wb-icon-btn);padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
 .st-wb .icon-btn.active{color:var(--wb-ac);border-color:rgba(200,149,74,.5);background:var(--wb-ac-d)}
 
 /* Preview — embedded by default (pushes/squeezes the editor, like Var Nav), .float switches it
@@ -521,8 +551,8 @@
 }
 .pr-preset-select{
   font-family:var(--wb-fc);font-size:13px;color:var(--wb-tx2);
-  max-width:220px;background:var(--wb-bg-input);border:1px solid var(--wb-border);
-  border-radius:var(--wb-rs);padding:4px 8px;transition:border-color var(--wb-tr),color var(--wb-tr)
+  max-width:220px;height:var(--wb-ctrl-h);background:var(--wb-bg-input);border:1px solid var(--wb-border);
+  border-radius:var(--wb-rs);padding:0 8px;transition:border-color var(--wb-tr),color var(--wb-tr)
 }
 .pr-preset-select:hover{color:var(--wb-tx);border-color:rgba(200,149,74,.4)}
 .pr-preset-select:focus-visible{outline:2px solid var(--wb-ac);outline-offset:1px}
@@ -544,9 +574,6 @@
 
 .wb-mode-switch{display:flex;gap:2px}
 
-.wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;padding:12px}
-.wb-settings-dock-header{font-size:12px;color:var(--wb-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-
 .rx-editor{display:flex;flex-direction:column;flex:1;min-width:0}
 .rx-editor-meta{display:flex;align-items:center;gap:6px}
 .rx-editor-name{font-size:13px;color:var(--wb-tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -556,8 +583,8 @@
 .rx-editor-testbar{flex-shrink:0;display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--wb-border)}
 .rx-editor-testinput{width:100%;resize:vertical}
 
-.rx-form{display:flex;flex-direction:column;gap:4px}
-.rx-label{font-size:14px;color:var(--wb-tx);margin-top:10px}
+.rx-form{display:flex;flex-direction:column;gap:var(--wb-sp-1)}
+.rx-label{font-size:14px;color:var(--wb-tx);margin-top:var(--wb-sp-3)}
 .rx-form .rx-input,.rx-form textarea{width:100%}
 /* select 不再强制 100% 宽——大多数 select 里就 2-4 个字的短选项（AND 任意/跟随全局设置这种），
  * 撑满一整行纯粹是浪费，改成随内容宽度 + 下限，配合 .wb-field-row 让 label 和 select 同一行。
@@ -565,7 +592,7 @@
 .rx-form select{width:auto;min-width:120px;max-width:100%}
 .rx-textarea.invalid{border-color:var(--wb-dg)}
 .rx-err{color:var(--wb-dg);font-size:12px;margin-top:2px}
-.rx-checks{display:flex;flex-wrap:wrap;gap:4px 14px}
+.rx-checks{display:flex;flex-wrap:wrap;gap:var(--wb-sp-1) var(--wb-sp-4)}
 .rx-check{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap}
 /* 之前用 accent-color 想省事，但 .st-wb input{padding:6px 10px;background:...;border:...}
  * 这条全局规则同时也套在了 checkbox 上（复选框也是 input 元素），accent-color 只接管了勾选态
@@ -586,17 +613,41 @@
   content:'';position:absolute;left:4px;top:1px;width:3px;height:7px;
   border:solid var(--wb-bg);border-width:0 2px 2px 0;transform:rotate(45deg);
 }
-.rx-surface{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.wb-advanced-toggle{align-self:flex-start;margin-top:12px;background:transparent;border-color:transparent;padding-left:0}
-.rx-advanced{display:flex;flex-direction:column;gap:8px;padding:10px;margin-top:6px;border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg)}
+.rx-surface{display:flex;flex-wrap:wrap;gap:var(--wb-sp-1);margin-top:var(--wb-sp-1)}
+.wb-advanced-toggle{align-self:flex-start;margin-top:var(--wb-sp-4);background:transparent;border-color:transparent;padding-left:0}
+.rx-advanced{display:flex;flex-direction:column;gap:var(--wb-sp-2);padding:var(--wb-sp-3);margin-top:var(--wb-sp-2);border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg)}
 .rx-num{width:90px !important}
 
 /* label 和控件同一行布局，标签固定宽度左对齐，控件紧跟标签后，不再两端对齐 */
-.wb-field-row{display:flex;align-items:center;gap:12px;margin-top:10px}
+.wb-field-row{display:flex;align-items:center;gap:var(--wb-sp-3);margin-top:var(--wb-sp-3)}
 .wb-field-row .rx-label{margin-top:0;flex-shrink:0;min-width:120px}
 .wb-field-row select{flex-shrink:0}
 .wb-field-row .rx-input,.wb-field-row .rx-textarea{flex:1}
 .wb-field-row .wb-num-wrap{flex-shrink:0}
+/* .wb-row 是"一行塞多个 label+控件 对"的场景（比如 sticky/cooldown/delay 三连），跟 .wb-field-row
+ * 同样需要把 label 的默认 margin-top 清零——之前只有 .wb-field-row 有这条，.wb-row 里的 label
+ * 只能每处手写 style="margin:0" 补，现在两种行容器都统一处理，不用再补了。故意不带
+ * min-width:120px（.wb-row 里的 label 通常是"深度"/"角色"这种短标签，强制 120px 反而挤占控件
+ * 空间——这个差异是有意为之，不是遗漏）。 */
+.wb-row .rx-label{margin-top:0;flex-shrink:0}
+/* .wb-editor-meta 是内容编辑器顶部的 meta/工具栏行（CharacterContentEditor.vue 的 depth/role、
+ * RegexContentEditor.vue 的测试文本框都挂在这里）——同样是行内布局，同样的理由不需要 label 的
+ * 默认竖排间距。 */
+.wb-editor-meta .rx-label{margin-top:0;flex-shrink:0}
+
+/* 表单/分组里"第一个字段不该有多余的顶部间距"——以前每个表单/分组的第一个字段都要在 markup 里
+ * 手写 style="margin-top:0" 逐个消除，写漏一个就会看到那个字段莫名比别的字段离标题远一截。
+ * 改成 :first-child 结构选择器，跟内容顺序自动同步：以后调整字段顺序、插入/删除字段，永远是
+ * 当前排第一的那个自动零间距，不需要再手动追着改 style。 */
+.rx-form > .wb-field-row:first-child,
+.rx-form > .rx-label:first-child,
+.wb-group-body > .wb-field-row:first-child,
+.wb-group-body > .rx-label:first-child,
+.wb-tools-section > .wb-field-row:first-child,
+.wb-tools-section > .rx-label:first-child,
+.rx-editor-testbar > .rx-label:first-child {
+  margin-top: 0;
+}
 
 /* AdvancedGroup.vue：可折叠分组卡片，取代单个 .rx-advanced 大杂烩，一个表单里可以放好几个 */
 .wb-group{border:1px solid var(--wb-border);border-radius:var(--wb-rs);overflow:hidden;margin-top:8px}
@@ -625,7 +676,7 @@
 .wb-num-wrap.dragging .rx-num{border-color:var(--wb-ac)}
 .wb-num-wrap.dragging .wb-num-handle{background:var(--wb-ac-d);color:var(--wb-ac);border-color:rgba(200,149,74,.4)}
 body.wb-no-select{user-select:none !important;-webkit-user-select:none !important}
-.wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;overflow-x:hidden;padding:12px;min-width:0}
+.wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;overflow-x:hidden;padding:0 12px 12px 12px;min-width:0}
 .wb-settings-dock-header{font-size:12px;color:var(--wb-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
 .wb-settings-dock-body{padding:6px;overflow-y:auto}
 
@@ -795,7 +846,9 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
   .wb-toggle-sw::after{width:16px;height:16px}
   .wb-toggle-sw.on::after{transform:translateX(18px)}
   .wb-tab{height:40px}
-  .icon-btn{padding:8px 10px}
+  /* 桌面端 .icon-btn 现在是固定 width/height（见 desktop 规则），这里不能再用 padding 撑大，
+   * 否则跟固定尺寸打架——改成覆盖同一个尺寸变量本身，40px 是常见的移动端舒适点击下限。 */
+  .icon-btn{--wb-icon-btn:40px}
 
   /* Modals: desktop's centered fixed-width dialog (min-width:360px) can overflow a narrow
      phone screen. Let it use most of the viewport width instead, and drop the height cap that

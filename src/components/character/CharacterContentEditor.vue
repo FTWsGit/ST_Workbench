@@ -7,9 +7,9 @@
          SettingsDock（TODO.md 2.4），没有别的地方能编辑这两个字段，所以在这里单独加一条 meta 栏
          承载——见 types.ts Character 接口顶部 doc comment。 -->
     <div v-if="isDepthPrompt" class="wb-editor-meta">
-      <label class="rx-label" style="margin:0">{{ uiStore.t('character.editor.depthLabel') }}</label>
+      <label class="rx-label">{{ uiStore.t('character.editor.depthLabel') }}</label>
       <input type="number" class="rx-input rx-num" v-model.number="depthPromptDepth" />
-      <label class="rx-label" style="margin:0">{{ uiStore.t('character.editor.roleLabel') }}</label>
+      <label class="rx-label">{{ uiStore.t('character.editor.roleLabel') }}</label>
       <select class="wb-select-wide" v-model.number="depthPromptRole">
         <option v-for="opt in CHARACTER_DEPTH_ROLE_OPTIONS" :key="opt.value" :value="opt.value">{{ uiStore.t(opt.labelKey) }}</option>
       </select>

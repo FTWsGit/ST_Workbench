@@ -2,9 +2,9 @@
   <div class="wb-editor-panel" v-if="!tabsStore.activeTab">
     <div class="wb-editor-empty">
       <div class="icon">📝</div>
-      <p v-if="tabsStore.sidebarMode === 'regex'">{{ uiStore.t('regex.editorShell.empty') }}</p>
-      <p v-else-if="tabsStore.sidebarMode === 'worldbook'">{{ worldbookStore.hasData ? uiStore.t('worldbook.editorShell.emptyEntry') : uiStore.t('worldbook.editorShell.empty') }}</p>
-      <p v-else-if="tabsStore.sidebarMode === 'character'">{{ characterStore.hasData ? uiStore.t('character.editorShell.emptyField') : uiStore.t('character.editorShell.empty') }}</p>
+      <p v-if="tabsStore.sidebarCollection === 'regex'">{{ uiStore.t('regex.editorShell.empty') }}</p>
+      <p v-else-if="tabsStore.activeWorkspace === 'worldbook'">{{ worldbookStore.hasData ? uiStore.t('worldbook.editorShell.emptyEntry') : uiStore.t('worldbook.editorShell.empty') }}</p>
+      <p v-else-if="tabsStore.activeWorkspace === 'character'">{{ characterStore.hasData ? uiStore.t('character.editorShell.emptyField') : uiStore.t('character.editorShell.empty') }}</p>
       <p v-else-if="presetStore.hasData">{{ uiStore.t('preset.editorShell.empty') }}</p>
       <p v-else>{{ uiStore.t('preset.editorShell.loading') }}</p>
     </div>

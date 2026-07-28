@@ -57,8 +57,8 @@ export const useTabsStore = defineStore('tabs', () => {
   const settingsDockOpen = ref(true)
   function toggleSettingsDock() { settingsDockOpen.value = !settingsDockOpen.value }
 
-  /** 当前显示的顶层工作区（'preset' | 'worldbook' | 后续的 'character'）。真正的顶层三态切换 UI
-   *  在 App.vue 的 switchMode()，那边会把这个值和 sidebarMode 一起改；这里只管存这个值本身。 */
+  /** 当前显示的顶层工作区（'preset' | 'worldbook' | 'character'）。顶层三态切换 UI 在 App.vue
+   *  顶栏第一行（switchWorkspace()），这里只管存这个值本身。 */
   const activeWorkspace = ref('preset')
   function setActiveWorkspace(ws: string) { activeWorkspace.value = ws }
 
@@ -67,8 +67,24 @@ export const useTabsStore = defineStore('tabs', () => {
    *  不在标签栏露出；切回来的时候原样还在。 */
   const tabsInActiveWorkspace = computed(() => tabs.value.filter(t => t.workspace === activeWorkspace.value))
 
-  const sidebarMode = ref<string>('preset')
-  function setSidebarMode(mode: string) { sidebarMode.value = mode }
+  /** 【2026-07 顶栏 IA 重构，替代原来的 sidebarMode】原来 sidebarMode 用一个扁平字符串
+   *  （'preset'|'regex'|'worldbook'|'character'）同时表达"当前是哪个工作区"和"预设/角色卡工作区
+   *  内部当前在看条目列表还是正则列表"这两件粒度不同的事——正则因此被迫跟三个真正的工作区挤在
+   *  顶栏同一排按钮里，等于告诉用户"正则是第四个平级的工作区"，但它其实是预设/角色卡工作区内部
+   *  的一个子集合，跟 activeWorkspace 完全不是一个层级。
+   *
+   *  拆成两条正交的状态后，"工作区内部在看哪个集合"这件事本身也需要记住——用户在预设工作区切去看
+   *  正则列表、切到角色卡工作区逛了一圈、再切回预设工作区，应该还停在正则列表，不该被重置回条目
+   *  列表。做法照抄上面 activeIdByWorkspace 那条已经验证过的模式：按 workspace 分别记一份，不是
+   *  全局共用一个指针。
+   *
+   *  只有 preset/character 两个工作区有"条目 vs 正则"这个选择（世界书工作区里正则条目本来就是
+   *  世界书条目自己的字段，不是一个独立集合，没有第二个集合可切），所以这里只需要存这两个
+   *  workspace 的值；sidebarCollection 这个 computed 对其它 workspace（目前只有 'worldbook'）
+   *  统一兜底成 'items'，调用方不用自己写 workspace 特判。 */
+  const sidebarCollectionByWorkspace = ref<Record<string, string>>({ preset: 'items', character: 'fields' })
+  const sidebarCollection = computed(() => sidebarCollectionByWorkspace.value[activeWorkspace.value] ?? 'items')
+  function setSidebarCollection(workspace: string, collection: string) { sidebarCollectionByWorkspace.value[workspace] = collection }
 
   /** Per-domain "please scroll your selected item into view" signal — domain-agnostic replacement
    *  for what used to be presetStore's preset-only `sidebarJumpToken`/`requestSidebarScroll()`. Each
@@ -191,7 +207,7 @@ export const useTabsStore = defineStore('tabs', () => {
 
   return {
     tabs, activeId, activeTab, open, renameTab, close, closeAll, closeDomain, closeWorkspace, focus, isOpen,
-    sidebarMode, setSidebarMode, settingsDockOpen, toggleSettingsDock, listScrollToken, requestListScroll,
+    sidebarCollection, setSidebarCollection, settingsDockOpen, toggleSettingsDock, listScrollToken, requestListScroll,
     activeWorkspace, setActiveWorkspace, tabsInActiveWorkspace,
   }
 })

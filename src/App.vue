@@ -19,10 +19,9 @@
              <button class="wb-btn" @click="uiStore.settingsOpen = true">{{ uiStore.t('shared.header.settings') }}</button>
             <div class="wb-sep"></div>
             <div class="wb-mode-switch">
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="switchMode('preset')">{{ uiStore.t('shared.header.mode.preset') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="switchMode('regex')">{{ uiStore.t('shared.header.mode.regex') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="switchMode('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="switchMode('worldbook')">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'preset' }" @click="switchWorkspace('preset')">{{ uiStore.t('shared.header.mode.preset') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'worldbook' }" @click="switchWorkspace('worldbook')">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
+              <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'character' }" @click="switchWorkspace('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
             </div>
             <div class="wb-sep"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -97,19 +96,44 @@
           </template>
         </div>
 
+        <!-- 顶栏第二行：只有 preset/character 工作区内部才有"条目 vs 正则"这个二级选择要做——
+             世界书条目里的"正则"是条目自己的字段（世界书条目有正则替换功能，但那是编辑单个条目
+             时才会看到的选项，不是一个独立于世界书条目之外的集合），没有第二个集合可切，所以
+             worldbook 工作区不渲染这一行，不会出现"渲染了一行但两个按钮长得一样没意义"的空转。
+             视觉上刻意比第一行（.wb-mode-switch）矮/浅——这是它在信息架构里确实低一级的直接体现，
+             不是随手调的样式：用户先选"预设/世界书/角色卡"这个工作区，选完之后才谈得上"在这个工作区
+             里翻条目列表还是正则列表"，两者不是同一件事的两个选项。 -->
+        <div v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'" class="wb-collection-switch">
+          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection !== 'regex' }"
+                  @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, tabsStore.activeWorkspace === 'character' ? 'fields' : 'items')">
+            {{ tabsStore.activeWorkspace === 'character' ? uiStore.t('character.header.collectionFields') : uiStore.t('preset.header.collectionItems') }}
+          </button>
+          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection === 'regex' }"
+                  @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex')">
+            {{ uiStore.t('shared.header.mode.regex') }}
+          </button>
+        </div>
+
         <SearchPanel v-if="presetStore.searchOpen" /> 
 
         <div class="wb-main">
-          <PresetSidebar v-if="tabsStore.sidebarMode === 'preset'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
-          <RegexSidebar v-else-if="tabsStore.sidebarMode === 'regex'"
+          <PresetSidebar v-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection !== 'regex'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
+          <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'regex'"
             :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'"
             :scripts="presetStore.regexScripts" workspace="preset" :t="uiStore.t"
             :on-add="presetStore.addRegexScript" :on-delete="presetStore.deleteRegexScript" :on-reorder="presetStore.reorderRegexScript"
             :sidebar-width="uiStore.settings.sidebarWidth"
             :on-sidebar-width-change="setRegexSidebarWidth"
             :on-sidebar-width-commit="uiStore.saveSettings" />
-          <WorldbookSidebar v-else-if="tabsStore.sidebarMode === 'worldbook'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
-          <CharacterSidebar v-else-if="tabsStore.sidebarMode === 'character'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
+          <WorldbookSidebar v-else-if="tabsStore.activeWorkspace === 'worldbook'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
+          <CharacterSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection !== 'regex'" :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'" />
+          <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'regex'"
+            :mobile-drawer-open="isMobile && mobileDrawerVisible === 'sidebar'"
+            :scripts="characterStore.regexScripts" workspace="character" :t="uiStore.t"
+            :on-add="characterStore.addRegexScript" :on-delete="characterStore.deleteRegexScript" :on-reorder="characterStore.reorderRegexScript"
+            :sidebar-width="uiStore.settings.sidebarWidth"
+            :on-sidebar-width-change="setRegexSidebarWidth"
+            :on-sidebar-width-commit="uiStore.saveSettings" />
           <div class="wb-editor-col">
             <TabBar />
             <div class="wb-editor-row">
@@ -129,10 +153,19 @@
         <!-- Mobile-only action sheet for everything that didn't fit the compact header row. -->
         <div v-if="isMobile" class="wb-mobile-tools-sheet" :class="{ 'wb-mobile-drawer-open': mobileDrawerVisible === 'tools' }">
           <div class="wb-mobile-tools-grip"></div>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'preset' }" @click="runTool(() => switchMode('preset'))">{{ uiStore.t('shared.header.mode.preset') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'regex' }" @click="runTool(() => switchMode('regex'))">{{ uiStore.t('shared.header.mode.regex') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'worldbook' }" @click="runTool(() => switchMode('worldbook'))">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarMode === 'character' }" @click="runTool(() => switchMode('character'))">{{ uiStore.t('shared.header.mode.character') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'preset' }" @click="runTool(() => switchWorkspace('preset'))">{{ uiStore.t('shared.header.mode.preset') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'worldbook' }" @click="runTool(() => switchWorkspace('worldbook'))">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'character' }" @click="runTool(() => switchWorkspace('character'))">{{ uiStore.t('shared.header.mode.character') }}</button>
+          <template v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'">
+            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection !== 'regex' }"
+                    @click="runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, tabsStore.activeWorkspace === 'character' ? 'fields' : 'items'))">
+              {{ tabsStore.activeWorkspace === 'character' ? uiStore.t('character.header.collectionFields') : uiStore.t('preset.header.collectionItems') }}
+            </button>
+            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection === 'regex' }"
+                    @click="runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex'))">
+              {{ uiStore.t('shared.header.mode.regex') }}
+            </button>
+          </template>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
             <button class="wb-mobile-tools-item" @click="runTool(() => { presetStore.copyPanelOpen = true })">{{ uiStore.t('preset.header.copyBlocks') }}</button>
             <button class="wb-mobile-tools-item" :class="{ active: presetStore.searchOpen }" @click="runTool(toggleSearch)">{{ uiStore.t('preset.header.search') }}</button>
@@ -206,16 +239,11 @@ const uiStore = useUiStore()
 const worldbookStore = useWorldbookStore()
 const characterStore = useCharacterStore()
 
-/** sidebarMode 'preset'/'regex' 都属于 'preset' 工作区（正则是预设工作区内的子模式，不是独立
- *  工作区，见 tabsStore.ts OpenTab.workspace 的 doc comment）；'worldbook'/'character' 各自是独立
- *  工作区。切模式的同时把 activeWorkspace 也切过去——目前 sidebarMode 顶栏切换按钮就是唯一的顶层
- *  工作区切换 UI（TODO.md 1.4 提到的三态切换真正落地前，这俩概念先在这一个函数里合并着用）。
- *  角色卡工作区内部的 fields|regex 子切换（characterSidebarMode，TODO.md 1.5）不经过这个函数、
- *  不碰 tabsStore.sidebarMode——那是 CharacterSidebar.vue 自己的本地状态，见该文件顶部 doc
- *  comment，跟预设的 preset|regex 子切换（走这里的 sidebarMode）是两条独立的路。 */
-function switchMode(mode: string) {
-  tabsStore.setSidebarMode(mode)
-  tabsStore.setActiveWorkspace(mode === 'worldbook' ? 'worldbook' : mode === 'character' ? 'character' : 'preset')
+/** 顶栏第一行的三态工作区切换。第二行的"条目/正则"切换是完全独立的一条状态
+ *  （tabsStore.sidebarCollection），不经过这个函数、不影响 activeWorkspace——两者是正交的两个
+ *  轴，见 tabsStore.ts 里 sidebarCollectionByWorkspace 的 doc comment。 */
+function switchWorkspace(workspace: string) {
+  tabsStore.setActiveWorkspace(workspace)
 }
 
 // Mobile layout: sidebar/varNav/preview/settingsDock render as off-canvas overlays (left drawer
@@ -274,7 +302,8 @@ watch(() => tabsStore.settingsDockOpen, (open) => {
 })
 // Switching preset/regex mode (from the tools sheet on mobile) brings the sidebar into view,
 // since that's the part that just changed and is presumably what the user wants to look at.
-watch(() => tabsStore.sidebarMode, () => { if (isMobile.value) mobileDrawerVisible.value = 'sidebar' })
+watch(() => tabsStore.activeWorkspace, () => { if (isMobile.value) mobileDrawerVisible.value = 'sidebar' })
+watch(() => tabsStore.sidebarCollection, () => { if (isMobile.value) mobileDrawerVisible.value = 'sidebar' })
 // Whenever the active tab changes — most commonly the user picked something in the sidebar
 // drawer — the editor underneath is what they actually want to see next, so close WHATEVER
 // overlay is currently open, not just the sidebar specifically.

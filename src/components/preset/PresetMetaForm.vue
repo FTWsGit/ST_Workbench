@@ -1,46 +1,49 @@
 ﻿<template>
   <div v-if="store.rawData" class="rx-form">
-    <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.contextLabel') }}</label>
-    <input class="rx-input rx-num" type="number" v-model.number="maxContext" />
+    <FormField :label="uiStore.t('preset.metaForm.contextLabel')">
+      <input class="rx-input rx-num" type="number" v-model.number="maxContext" />
+    </FormField>
 
-    <label class="rx-label">{{ uiStore.t('preset.metaForm.maxTokensLabel') }}</label>
-    <input class="rx-input rx-num" type="number" v-model.number="maxTokens" />
+    <FormField :label="uiStore.t('preset.metaForm.maxTokensLabel')">
+      <input class="rx-input rx-num" type="number" v-model.number="maxTokens" />
+    </FormField>
 
-    <label class="rx-label">{{ uiStore.t('preset.metaForm.repliesLabel') }}</label>
-    <input class="rx-input rx-num" type="number" min="1" v-model.number="n" />
+    <FormField :label="uiStore.t('preset.metaForm.repliesLabel')">
+      <input class="rx-input rx-num" type="number" min="1" v-model.number="n" />
+    </FormField>
 
     <label class="rx-check"><input type="checkbox" v-model="streamOpenai" /> {{ uiStore.t('preset.metaForm.streamLabel') }}</label>
     <label class="rx-check"><input type="checkbox" v-model="squashSystemMessages" /> {{ uiStore.t('preset.metaForm.squashLabel') }}</label>
 
-    <button class="wb-btn wb-advanced-toggle" @click="samplingOpen = !samplingOpen">{{ samplingOpen ? '▾' : '▸' }} {{ uiStore.t('preset.metaForm.samplingToggle') }}</button>
-    <div v-if="samplingOpen" class="rx-advanced">
+    <AdvancedGroup :title="uiStore.t('preset.metaForm.samplingToggle')">
       <div class="wb-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.temperatureLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.temperatureLabel') }}</label>
         <input class="rx-input rx-num" type="number" step="0.01" v-model.number="temperature" />
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.topPLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.topPLabel') }}</label>
         <input class="rx-input rx-num" type="number" step="0.01" v-model.number="topP" />
       </div>
       <div class="wb-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.freqPenaltyLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.freqPenaltyLabel') }}</label>
         <input class="rx-input rx-num" type="number" step="0.01" v-model.number="frequencyPenalty" />
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.presPenaltyLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.presPenaltyLabel') }}</label>
         <input class="rx-input rx-num" type="number" step="0.01" v-model.number="presencePenalty" />
       </div>
       <div class="wb-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.repPenaltyLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.repPenaltyLabel') }}</label>
         <input class="rx-input rx-num" type="number" step="0.01" v-model.number="repetitionPenalty" />
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.minPLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.minPLabel') }}</label>
         <input class="rx-input rx-num" type="number" step="0.01" v-model.number="minP" />
       </div>
       <div class="wb-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.topKLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.topKLabel') }}</label>
         <input class="rx-input rx-num" type="number" v-model.number="topK" />
-        <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.topALabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('preset.metaForm.topALabel') }}</label>
         <input class="rx-input rx-num" type="number" step="0.01" v-model.number="topA" />
       </div>
-      <label class="rx-label" style="margin:0">{{ uiStore.t('preset.metaForm.seedLabel') }}</label>
-      <input class="rx-input rx-num" type="number" v-model.number="seed" :placeholder="uiStore.t('preset.metaForm.seedHint')" />
-    </div>
+      <FormField :label="uiStore.t('preset.metaForm.seedLabel')">
+        <input class="rx-input rx-num" type="number" v-model.number="seed" :placeholder="uiStore.t('preset.metaForm.seedHint')" />
+      </FormField>
+    </AdvancedGroup>
   </div>
   <p v-else class="pr-cp-empty">{{ uiStore.t('preset.toast.loadFirst') }}</p>
 </template>
@@ -54,15 +57,21 @@
  * field() 是个小工厂：14 个数值字段各自手写一遍 get/set + markDirty() 太啰嗦，収成一个函数按
  * key 生成——直接改 `store.rawData!.xxx` 这种写法在 PresetMetaForm 场景是安全的，因为整个组件
  * 树只在 `store.rawData` 非空时才挂载（模板顶层 v-if="store.rawData"），field() 内部的
- * `store.rawData!` 断言由这个前提保证，不是瞎断言。 */
-import { ref, computed } from 'vue'
+ * `store.rawData!` 断言由这个前提保证，不是瞎断言。
+ *
+ * 【2026-07 二次重构】"采样参数" 折叠区换成共享的 AdvancedGroup.vue，去掉了本地的
+ * samplingOpen ref + 手写切换按钮，跟 CharacterMetaForm.vue 是同一批遗留写法一起清理的。
+ * 单字段换 FormField；temperature/topP 这几组"一行塞两对"保持手写 .wb-row，不套 FormField
+ * （同样的理由，见 WorldbookSettingsForm.vue 顶部 doc comment）。 */
+import { computed } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
 import { useUiStore } from '../../stores/uiStore'
 import type { PresetData } from '../../types'
+import AdvancedGroup from '../shared/AdvancedGroup.vue'
+import FormField from '../shared/FormField.vue'
 
 const store = usePresetStore()
 const uiStore = useUiStore()
-const samplingOpen = ref(false)
 
 function field<K extends keyof PresetData>(key: K) {
   return computed<PresetData[K]>({

@@ -88,6 +88,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'preset.header.copyBlocks': '⇆ Copy Blocks',
+  'preset.header.collectionItems': 'Prompts',
   'preset.header.search': '🔎 Search',
   'preset.header.varNav': '📊 Variable Navigator',
   'preset.header.preview': '👁 Preview',
@@ -427,6 +428,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'character.header.new': 'New Character',
+  'character.header.collectionFields': 'Fields',
   'character.header.delete': 'Delete Character',
   'character.header.switch': 'Switch Character',
   'character.header.noneLoaded': '(No Character Loaded)',

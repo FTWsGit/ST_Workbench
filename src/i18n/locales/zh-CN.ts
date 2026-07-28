@@ -91,6 +91,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'preset.header.copyBlocks': '⇆ 复制块',
+  'preset.header.collectionItems': '提示词',
   'preset.header.search': '🔎 搜索',
   'preset.header.varNav': '📊 变量导航',
   'preset.header.preview': '👁 预览',
@@ -430,6 +431,7 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'character.header.new': '新建角色',
+  'character.header.collectionFields': '字段',
   'character.header.delete': '删除角色',
   'character.header.switch': '切换角色',
   'character.header.noneLoaded': '(未加载角色)',

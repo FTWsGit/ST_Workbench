@@ -1,46 +1,50 @@
 <template>
   <div v-if="script" class="rx-form">
-    <div class="wb-field-row" style="margin-top:0">
-      <span class="rx-label" style="margin:0">{{ props.t('regex.settings.enabled') }}</span>
+    <FormField inline>
+      <span class="rx-label">{{ props.t('regex.settings.enabled') }}</span>
       <span class="wb-toggle-sw" :class="{ on: enabled }" @click="enabled = !enabled"></span>
-    </div>
+    </FormField>
 
-    <label class="rx-label">{{ props.t('regex.settings.findRegexLabel') }}</label>
-    <textarea class="rx-textarea" :class="{ invalid: !findValid }" rows="2" v-model="script.findRegex" :placeholder="props.t('regex.settings.findRegexPlaceholder')"></textarea>
-    <p v-if="!findValid" class="rx-err">{{ props.t('regex.settings.findRegexInvalid') }}</p>
+    <FormField :label="props.t('regex.settings.findRegexLabel')">
+      <textarea class="rx-textarea" :class="{ invalid: !findValid }" rows="2" v-model="script.findRegex" :placeholder="props.t('regex.settings.findRegexPlaceholder')"></textarea>
+      <p v-if="!findValid" class="rx-err">{{ props.t('regex.settings.findRegexInvalid') }}</p>
+    </FormField>
 
-    <label class="rx-label">{{ props.t('regex.settings.scriptNameLabel') }}</label>
-    <input class="rx-input" v-model="script.scriptName" :placeholder="props.t('regex.settings.scriptNamePlaceholder')" />
+    <FormField :label="props.t('regex.settings.scriptNameLabel')">
+      <input class="rx-input" v-model="script.scriptName" :placeholder="props.t('regex.settings.scriptNamePlaceholder')" />
+    </FormField>
 
-    <label class="rx-label">{{ props.t('regex.settings.placementLabel') }}</label>
-    <div class="wb-row rx-checks">
-      <label v-for="opt in PLACEMENT_OPTIONS" :key="opt.value" class="rx-check">
-        <input type="checkbox" :checked="script.placement.includes(opt.value)" @change="togglePlacement(opt.value)" />
-        {{ props.t(opt.labelKey) }}
-      </label>
-    </div>
+    <FormField :label="props.t('regex.settings.placementLabel')">
+      <div class="wb-row rx-checks">
+        <label v-for="opt in PLACEMENT_OPTIONS" :key="opt.value" class="rx-check">
+          <input type="checkbox" :checked="script.placement.includes(opt.value)" @change="togglePlacement(opt.value)" />
+          {{ props.t(opt.labelKey) }}
+        </label>
+      </div>
+    </FormField>
 
-    <label class="rx-label">{{ props.t('regex.settings.surfaceLabel') }}</label>
-    <div class="rx-surface">
-      <button class="wb-btn sm" :class="{ active: script.markdownOnly && !script.promptOnly }" @click="setSurfaceMode('display')">{{ props.t('regex.settings.displayOnly') }}</button>
-      <button class="wb-btn sm" :class="{ active: script.promptOnly && !script.markdownOnly }" @click="setSurfaceMode('prompt')">{{ props.t('regex.settings.promptOnly') }}</button>
-      <button class="wb-btn sm" :class="{ active: script.markdownOnly && script.promptOnly }" @click="setSurfaceMode('both')">{{ props.t('regex.settings.both') }}</button>
-    </div>
+    <FormField :label="props.t('regex.settings.surfaceLabel')">
+      <div class="rx-surface">
+        <button class="wb-btn sm" :class="{ active: script.markdownOnly && !script.promptOnly }" @click="setSurfaceMode('display')">{{ props.t('regex.settings.displayOnly') }}</button>
+        <button class="wb-btn sm" :class="{ active: script.promptOnly && !script.markdownOnly }" @click="setSurfaceMode('prompt')">{{ props.t('regex.settings.promptOnly') }}</button>
+        <button class="wb-btn sm" :class="{ active: script.markdownOnly && script.promptOnly }" @click="setSurfaceMode('both')">{{ props.t('regex.settings.both') }}</button>
+      </div>
+    </FormField>
 
     <AdvancedGroup :title="props.t('regex.settings.advancedToggle')">
-      <label class="rx-label" style="margin-top:0">{{ props.t('regex.settings.trimLabel') }}</label>
-      <textarea class="rx-textarea" rows="3" v-model="trimStringsText"></textarea>
+      <FormField :label="props.t('regex.settings.trimLabel')">
+        <textarea class="rx-textarea" rows="3" v-model="trimStringsText"></textarea>
+      </FormField>
       <label class="rx-check"><input type="checkbox" v-model="script.runOnEdit" /> {{ props.t('regex.settings.runOnEdit') }}</label>
 
-      <div class="wb-field-row">
-        <label class="rx-label" style="margin:0">{{ props.t('regex.settings.substituteLabel') }}</label>
+      <FormField :label="props.t('regex.settings.substituteLabel')" inline>
         <SegmentedControl v-model="substituteModel" :options="substituteOptions" />
-      </div>
+      </FormField>
 
       <div class="wb-row">
-        <label class="rx-label" style="margin:0">{{ props.t('regex.settings.minDepth') }}</label>
+        <label class="rx-label">{{ props.t('regex.settings.minDepth') }}</label>
         <NumberInput v-model="minDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
-        <label class="rx-label" style="margin:0">{{ props.t('regex.settings.maxDepth') }}</label>
+        <label class="rx-label">{{ props.t('regex.settings.maxDepth') }}</label>
         <NumberInput v-model="maxDepthModel" :placeholder="props.t('regex.settings.depthPlaceholder')" />
       </div>
     </AdvancedGroup>
@@ -58,7 +62,13 @@
  * minDepth/maxDepth 换成 NumberInput（拖拽手柄）。"启用" 换成跟侧边栏同款的 .wb-toggle-sw
  * 滑块。这些都只是换了外层控件，各字段原来是"裸 v-model"还是"包了 computed 的 v-model"
  * 一律不变，之前有没有调 markDirty() 现在也还是有没有——这个表单本来就不是靠根节点事件委托
- * 兜底脏检查的（不像 WorldbookSettingsForm.vue），没必要借这次重构顺带改这块逻辑。 */
+ * 兜底脏检查的（不像 WorldbookSettingsForm.vue），没必要借这次重构顺带改这块逻辑。
+ *
+ * 【2026-07 二次重构】改用 FormField.vue（见该文件 doc comment），删掉了每个字段上手写的
+ * style="margin:0"/style="margin-top:0"——现在靠 main.css 里的结构选择器自动处理。
+ * minDepth/maxDepth 那组 .wb-row 双字段行、placement 那组 .wb-row.rx-checks 复选框行都保持
+ * 手写不套 FormField，理由跟 WorldbookSettingsForm.vue 里 sticky/cooldown/delay 一样——
+ * FormField 只管"一个 label 配一个控件"，这两处不是这个模式。 */
 import { computed, watch } from 'vue'
 import { useTabsStore } from '../../stores/tabsStore'
 import { REGEX_PLACEMENT_OPTIONS as PLACEMENT_OPTIONS, REGEX_SUBSTITUTE_OPTIONS as SUBSTITUTE_OPTIONS } from '../../types'
@@ -67,6 +77,7 @@ import type { RegexSettingsFormProps } from './regexProps'
 import AdvancedGroup from '../shared/AdvancedGroup.vue'
 import SegmentedControl from '../shared/SegmentedControl.vue'
 import NumberInput from '../shared/NumberInput.vue'
+import FormField from '../shared/FormField.vue'
 
 const props = defineProps<RegexSettingsFormProps>()
 

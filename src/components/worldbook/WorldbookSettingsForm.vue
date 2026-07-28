@@ -1,68 +1,75 @@
 ﻿<template>
   <div v-if="entry" class="rx-form" @change="store.markDirty()" @input="store.markDirty()">
-    <div class="wb-field-row" style="margin-top:0">
-      <span class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.enabled') }}</span>
+    <FormField inline>
+      <span class="rx-label">{{ uiStore.t('worldbook.settings.enabled') }}</span>
       <span class="wb-toggle-sw" :class="{ on: enabled }" @click="enabled = !enabled"></span>
-    </div>
+    </FormField>
 
-    <label class="rx-label">{{ uiStore.t('worldbook.settings.commentLabel') }}</label>
-    <input class="rx-input" v-model="entry.comment" :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')" @input="onCommentInput" />
+    <FormField :label="uiStore.t('worldbook.settings.commentLabel')">
+      <input class="rx-input" v-model="entry.comment" :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')" @input="onCommentInput" />
+    </FormField>
 
     <!-- 除了名字和启用，其余字段全部塞进下面 4 个可折叠分组，不再无差别摊平成一整条竖列 -->
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupActivation')" default-open>
-      <label class="rx-label" style="margin-top:0">{{ uiStore.t('worldbook.settings.activationLabel') }}</label>
-      <div class="rx-surface">
-        <button class="wb-btn sm" :class="{ active: activationMode === 'keyWord' }" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
-        <button class="wb-btn sm" :class="{ active: activationMode === 'constant' }" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
-        <button class="wb-btn sm" :class="{ active: activationMode === 'vectorized' }" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>
-      </div>
+      <FormField :label="uiStore.t('worldbook.settings.activationLabel')">
+        <div class="rx-surface">
+          <button class="wb-btn sm" :class="{ active: activationMode === 'keyWord' }" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
+          <button class="wb-btn sm" :class="{ active: activationMode === 'constant' }" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
+          <button class="wb-btn sm" :class="{ active: activationMode === 'vectorized' }" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>
+        </div>
+      </FormField>
 
       <!-- 关键词框只在"关键词"激活方式下才有意义（constant/vectorized 不参与关键词匹配），
            之前无条件显示是在误导人——恒定/向量化模式下填了也不会生效。 -->
       <template v-if="activationMode === 'keyWord'">
-        <label class="rx-label">{{ uiStore.t('worldbook.settings.keysLabel') }}</label>
-        <textarea class="rx-textarea" rows="2" v-model="keysText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
+        <FormField :label="uiStore.t('worldbook.settings.keysLabel')">
+          <textarea class="rx-textarea" rows="2" v-model="keysText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
+        </FormField>
 
         <label class="rx-check"><input type="checkbox" v-model="entry.selective" /> {{ uiStore.t('worldbook.settings.selective') }}</label>
         <template v-if="entry.selective">
-          <label class="rx-label">{{ uiStore.t('worldbook.settings.keysSecondaryLabel') }}</label>
-          <textarea class="rx-textarea" rows="2" v-model="keysSecondaryText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
-          <div class="wb-field-row">
-            <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.logicLabel') }}</label>
+          <FormField :label="uiStore.t('worldbook.settings.keysSecondaryLabel')">
+            <textarea class="rx-textarea" rows="2" v-model="keysSecondaryText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
+          </FormField>
+          <FormField :label="uiStore.t('worldbook.settings.logicLabel')" inline>
             <select v-model.number="entry.selectiveLogic">
               <option v-for="o in LOGIC_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
             </select>
-          </div>
+          </FormField>
         </template>
       </template>
 
-      <label class="rx-check">
-        <input type="checkbox" v-model="entry.useProbability" />
-        {{ uiStore.t('worldbook.settings.probabilityLabel') }}
-      </label>
-      <NumberInput v-if="entry.useProbability" v-model="entry.probability" :min="0" :max="100" :nullable="false" />
+      <!-- "按概率触发"以前没包 .wb-field-row，checkbox 和 NumberInput 各占一行，跟同一分组里
+           "插入位置"的 label+select 同行长得不一样——不是设计意图，是漏包了。现在跟其它
+           toggle+条件控件字段（比如下面递归分组的 excludeRecursion 之类）统一走同一种结构：
+           checkbox 自带文字当 label 用，条件渲染的控件跟它同一行。 -->
+      <FormField inline>
+        <label class="rx-check">
+          <input type="checkbox" v-model="entry.useProbability" />
+          {{ uiStore.t('worldbook.settings.probabilityLabel') }}
+        </label>
+        <NumberInput v-if="entry.useProbability" v-model="entry.probability" :min="0" :max="100" :nullable="false" />
+      </FormField>
     </AdvancedGroup>
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupPosition')">
-      <div class="wb-field-row" style="margin-top:0">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.positionLabel') }}</label>
+      <FormField :label="uiStore.t('worldbook.settings.positionLabel')" inline>
         <select v-model.number="entry.position">
           <option v-for="o in POSITION_OPTIONS" :key="o.value" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
         </select>
-      </div>
+      </FormField>
       <div v-if="entry.position === 4" class="wb-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
         <NumberInput v-model="entry.depth" :nullable="false" />
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
         <select v-model="roleModel">
           <option v-for="o in ROLE_OPTIONS" :key="String(o.value)" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
         </select>
       </div>
-      <div class="wb-field-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.orderLabel') }}</label>
+      <FormField :label="uiStore.t('worldbook.settings.orderLabel')" inline>
         <NumberInput v-model="entry.order" :nullable="false" />
-      </div>
+      </FormField>
     </AdvancedGroup>
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupRecursion')">
@@ -70,36 +77,34 @@
       <label class="rx-check"><input type="checkbox" v-model="entry.preventRecursion" /> {{ uiStore.t('worldbook.settings.preventRecursion') }}</label>
       <label class="rx-check"><input type="checkbox" v-model="delayUntilRecursionModel" /> {{ uiStore.t('worldbook.settings.delayUntilRecursion') }}</label>
 
-      <div class="wb-field-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.scanDepthLabel') }}</label>
+      <FormField :label="uiStore.t('worldbook.settings.scanDepthLabel')" inline>
         <NumberInput v-model="scanDepthModel" :placeholder="uiStore.t('worldbook.settings.sameAsGlobal')" />
-      </div>
+      </FormField>
 
       <!-- 大小写/全词匹配只在关键词激活方式下才参与匹配，同样的理由，同样地按 activationMode 收起来 -->
       <template v-if="activationMode === 'keyWord'">
-        <div class="wb-field-row">
-          <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.caseSensitiveLabel') }}</label>
+        <FormField :label="uiStore.t('worldbook.settings.caseSensitiveLabel')" inline>
           <SegmentedControl v-model="caseSensitiveModel" :options="tristateOptions" />
-        </div>
-        <div class="wb-field-row">
-          <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.matchWholeWordsLabel') }}</label>
+        </FormField>
+        <FormField :label="uiStore.t('worldbook.settings.matchWholeWordsLabel')" inline>
           <SegmentedControl v-model="matchWholeWordsModel" :options="tristateOptions" />
-        </div>
+        </FormField>
       </template>
     </AdvancedGroup>
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupEffects')">
       <div class="wb-row">
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.stickyLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('worldbook.settings.stickyLabel') }}</label>
         <NumberInput v-model="stickyModel" />
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.cooldownLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('worldbook.settings.cooldownLabel') }}</label>
         <NumberInput v-model="cooldownModel" />
-        <label class="rx-label" style="margin:0">{{ uiStore.t('worldbook.settings.delayLabel') }}</label>
+        <label class="rx-label">{{ uiStore.t('worldbook.settings.delayLabel') }}</label>
         <NumberInput v-model="delayModel" />
       </div>
 
-      <label class="rx-label">{{ uiStore.t('worldbook.settings.groupLabel') }}</label>
-      <input class="rx-input" v-model="entry.group" :placeholder="uiStore.t('worldbook.settings.groupPlaceholder')" />
+      <FormField :label="uiStore.t('worldbook.settings.groupLabel')">
+        <input class="rx-input" v-model="entry.group" :placeholder="uiStore.t('worldbook.settings.groupPlaceholder')" />
+      </FormField>
       <label class="rx-check"><input type="checkbox" v-model="entry.groupPrioritized" /> {{ uiStore.t('worldbook.settings.groupPrioritized') }}</label>
     </AdvancedGroup>
   </div>
@@ -121,12 +126,25 @@
  *   3. "启用" 换成跟 WorldbookSidebar.vue / RegexSidebar.vue 里同款的 .wb-toggle-sw 滑块，
  *      而不是原生 checkbox——这是整个应用里已经在用的"重要开关"视觉语言，跟侧边栏保持一致。
  *
+ * 【2026-07 二次重构】改用 FormField.vue 统一 label+控件 的排布，顺带修掉两个问题：
+ *   - "按概率触发"以前漏包 .wb-field-row，跟"插入位置"这种同类字段视觉上不一致（checkbox 单独
+ *     一行、NumberInput 又单独一行），现在跟其它 inline 字段走同一个组件、同一种结构。
+ *   - 全文件散落的 style="margin:0"/style="margin-top:0" 内联样式基本删完——这些原来是为了
+ *     手动抵消 .rx-label 默认的 margin-top，现在改成 main.css 里的结构选择器（
+ *     .wb-field-row/.wb-row 的 .rx-label 自动清零、每个分组/表单里排第一的字段自动清零）
+ *     自动处理，不需要调用方逐个记得补。.wb-row 里的 label（depth/role、sticky/cooldown/delay
+ *     这两处三/二连字段行）保持原生写法不套 FormField——FormField 只处理"一个 label 配一个
+ *     控件"这种单一模式，这两处是"一行塞好几对 label+控件"，硬套只会拆成好几行，反而破坏原来
+ *     "挤在一行"的设计意图，所以维持手写，只是不再需要 style="margin:0" 了（main.css 新增的
+ *     .wb-row .rx-label 规则接管）。
+ *
  * 【2026-07 修正，早于本次重构】markDirty 靠表单根节点的 @change/@input 事件委托兜底，不是靠
  * 每个字段各自的 computed setter——worldbookStore.ts 里 entries 是浅监听（watch(entries,
  * markDirty)，不带 deep），原因跟 presetStore.ts 的 prompts 一样：entry.content 是高频编辑
  * 热路径，深度监听整个 entries 数组开销大。这次重构没有改这套机制，只是多了两层考量：
- *   - AdvancedGroup/SegmentedControl 只是包了一层 Vue 组件，不影响原生 DOM 事件冒泡（Vue
- *     组件不是 Shadow DOM 边界），select/checkbox 的 change 事件照样能冒泡到 .rx-form 根节点。
+ *   - AdvancedGroup/SegmentedControl/FormField 都只是包了一层 Vue 组件，不影响原生 DOM 事件
+ *     冒泡（Vue 组件不是 Shadow DOM 边界），select/checkbox 的 change 事件照样能冒泡到
+ *     .rx-form 根节点。
  *   - SegmentedControl 是按钮不是 select/checkbox，点击不会触发 change/input，所以只用在
  *     caseSensitiveModel/matchWholeWordsModel 这种"setter 里已经手动 markDirty() 的
  *     computed 包装字段"上，不用在依赖委托兜底的裸字段上（比如 selectiveLogic 这种直接
@@ -142,6 +160,7 @@ import { WORLDBOOK_POSITION_OPTIONS as POSITION_OPTIONS, WORLDBOOK_LOGIC_OPTIONS
 import AdvancedGroup from '../shared/AdvancedGroup.vue'
 import SegmentedControl from '../shared/SegmentedControl.vue'
 import NumberInput from '../shared/NumberInput.vue'
+import FormField from '../shared/FormField.vue'
 
 const tabsStore = useTabsStore()
 const store = useWorldbookStore()
