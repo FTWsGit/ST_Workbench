@@ -253,6 +253,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 8px 14px 6px;
   border-bottom: 1px solid var(--wb-border);
   font-size: 11px;
@@ -261,14 +262,25 @@
   letter-spacing: 0.08em;
   color: var(--wb-tx2);
   flex-shrink: 0;
+  overflow-x: auto;   /* 桌面 sidebar 固定宽度，按钮多了整条 header 横滚兜底，不被外层 overflow:hidden 裔掉 */
 }
+/* header 三个子项（title span / ListToolbar / .wb-sidebar-tools）溢出时都不收缩、不裁文字，
+ * 让 overflow-x:auto 真正生效。min-width:0 是关键：flex 子项默认 min-width:auto 会阻拦
+ * overflow 滚动（子项不会被裁到比内容更小，容器永远不溢出），必须显式放开。 */
+.wb-sidebar-header > * {
+  flex-shrink: 0;
+  min-width: 0;
+}
+/* header 整体已经 overflow-x:auto 横滚兜底，工具栏自己再开 overflow-x 会形成双层滚条打架——
+ * 这里只保留布局属性，溢出兜底交给 header。 */
 .wb-sidebar-tools {
   display: flex;
   gap: 4px;
 }
 .wb-sidebar-tools .wb-btn {
   padding: 2px 8px;
-  font-size: 11px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .wb-sidebar-tools .wb-btn:disabled {
   opacity: 0.4;
@@ -865,9 +877,10 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
   .wb-right-panel,
   .pr-preview-panel{padding-bottom:env(safe-area-inset-bottom)}
 
-  /* Sidebar tools: allow wrap so Bind/Unbind don't overflow */
-  .wb-sidebar-tools{flex-wrap:wrap;gap:4px}
-  .wb-sidebar-tools .wb-btn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Sidebar tools: 桌面已经 overflow-x:auto 横滚兜底，移动端沿用同一行为——按钮不换行不被裁文字，
+   * 溢出就滚。之前用的 flex-wrap:wrap + flex:1 + ellipsis 那套会把按钮文字裁掉（"Bind" 变成 "Bi…"），
+   * 按钮变扁还得猜内容，不如保持原形可滚。移动端按钮 padding 由 .wb-btn 移动端规则统一放大。 */
+  .wb-sidebar-tools .wb-btn{padding:5px 9px}
 
   /* Tighten block rows so name+role+actions fit */
   .pr-block-item{gap:4px;padding:6px 4px}

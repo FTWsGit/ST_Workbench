@@ -74,8 +74,9 @@ export function useNumberDragScrub(opts: NumberDragScrubOptions) {
     hostWin.removeEventListener('pointerup', onPointerUp)
     hostWin.removeEventListener('pointercancel', onPointerUp)
 
-    // 释放指针捕获
-    if (target && target.hasPointerCapture && pointerId !== null) {
+    // 释放指针捕获 —— hasPointerCapture 是方法不是属性，不能判 truthy（永远 true），
+    // 改成 typeof 判一下是不是真存在这个方法再调，避免在不支持的 WebView 上崩。
+    if (target && typeof target.hasPointerCapture === 'function' && pointerId !== null) {
       try { target.releasePointerCapture(pointerId) } catch {}
     }
 
