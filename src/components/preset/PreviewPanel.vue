@@ -6,7 +6,7 @@
       <div class="wb-row-tight">
         <button v-if="store.previewMode === 'blocks'" class="wb-btn icon-btn" :title="uiStore.t('preset.preview.collapseExpand')" @click="store.toggleAllPreviewBlocks()">▾</button>
         <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.previewFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="wb-btn close-btn compact" @click="store.previewOpen = false">✕</button>
+        <button class="wb-btn close-btn compact" @click="tabsStore.setPreviewOpen('preset', false)">✕</button>
       </div>
     </div>
     <div class="pr-pp-tools">
@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { usePresetStore } from '../../stores/presetStore'
 import { useUiStore } from '../../stores/uiStore'
+import { useTabsStore } from '../../stores/tabsStore'
 import { esc, roleClass as roleClassOf } from '../../utils'
 import { usePanelResize } from '../../composables/usePanelResize'
 import { copyToHostClipboard } from '../../composables/hostEnv'
@@ -69,6 +70,11 @@ import type { PreviewSegment } from '../../types'
 
 const store = usePresetStore()
 const uiStore = useUiStore()
+// previewOpen 本身的开关状态活在 tabsStore（按 workspace 分桶存，见该文件 doc comment）——目前
+// 这个面板只对 'preset' 工作区渲染，关闭时写回的 workspace 硬编码成 'preset' 没问题；PROJECT.md
+// TODO 里提到 Preview 理论上 character 工作区也该有，那天落地时这里要跟着改成读
+// tabsStore.activeWorkspace，不能再硬编码 'preset'。
+const tabsStore = useTabsStore()
 
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.previewWidth,

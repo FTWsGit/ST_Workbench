@@ -144,15 +144,16 @@ export const usePresetStore = defineStore('main', () => {
   watch([order, regexScripts], markDirty, { deep: true })
   watch(prompts, markDirty)
 
-  /* ====== Search ====== */
-  const searchOpen = ref(false)
+  /* ====== Search ======
+   * searchOpen 这个"开关"本身已经搬去 tabsStore（按 workspace 分桶存，见该文件 doc comment），
+   * 这里只留搜索本身的业务状态。组件里判断"要不要显示 SearchPanel"改成读
+   * `tabsStore.searchOpen`。 */
   const searchQuery = ref('')
   const searchReplace = ref('')
   const searchResults = ref<SearchResult[]>([])
   const searchIdx = ref(-1)
 
-  /* ====== Var Nav ====== */
-  const varNavOpen = ref(false)
+  /* ====== Var Nav ====== 开关同样搬去了 tabsStore，见上面 Search 的说明。 */
   const varFilterQ = ref('')
   const allVarOps = ref<VarOp[]>([])
   const filteredVarOps = ref<VarOp[]>([])
@@ -163,8 +164,8 @@ export const usePresetStore = defineStore('main', () => {
    * client-side macro simulation — see 方案B / GENERATE_AFTER_DATA in api/presetApi.ts.
    *   'blocks': per-prompt-block cards, via the openai.js promptManager singleton (方案B).
    *   'raw':    one top-to-bottom concatenated prompt, via the GENERATE_AFTER_DATA event.
+   * 开关同样搬去了 tabsStore，见上面 Search 的说明。
    */
-  const previewOpen = ref(false)
   const previewMode = ref<'blocks' | 'raw'>('blocks')
   const previewLoading = ref(false)
   const previewError = ref('')
@@ -776,11 +777,11 @@ export const usePresetStore = defineStore('main', () => {
   return {
     rawData, prompts, order, presetName, presetList,
     flatNodes, selectedGi, anchorGi, identifierToGi,
-    searchOpen, searchQuery, searchReplace, searchResults, searchIdx,
-    varNavOpen, varFilterQ, allVarOps, filteredVarOps, varIdx,
+    searchQuery, searchReplace, searchResults, searchIdx,
+    varFilterQ, allVarOps, filteredVarOps, varIdx,
     varPopupOpen, varPopupVarName, varPopupOps, varPopupIdx, varPopupPos,
     showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
-    previewOpen, previewMode, previewLoading, previewError,
+    previewMode, previewLoading, previewError,
     previewCollapsed, previewBlockGroups, previewRawText,
     regexScripts, addRegexScript, deleteRegexScript, reorderRegexScript,
     hiddenOpen, copyPanelOpen, dirty, markDirty,

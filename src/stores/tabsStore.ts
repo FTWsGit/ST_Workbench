@@ -86,6 +86,36 @@ export const useTabsStore = defineStore('tabs', () => {
   const sidebarCollection = computed(() => sidebarCollectionByWorkspace.value[activeWorkspace.value] ?? 'items')
   function setSidebarCollection(workspace: string, collection: string) { sidebarCollectionByWorkspace.value[workspace] = collection }
 
+  /** 【2026-07 面板状态搬家】Search/VarNav/Preview 这三个"要不要显示某个悬浮/内嵌面板"的开关，
+   *  以前各自是 presetStore 里一个裸 `ref(false)`——这样写隐含了一个从没被显式承认过的假设："这几个
+   *  面板只可能属于 preset 工作区"，App.vue 里所有 `v-if="activeWorkspace === 'preset'"` 才渲染
+   *  对应按钮的判断，其实是在从外部模拟这条本该长在数据结构里的约束。
+   *
+   *  现在照抄上面 `sidebarCollectionByWorkspace` 已经验证过的模式，按 workspace 分桶存：每个
+   *  workspace 各自记一份"我这儿 search/varNav/preview 开着没"，不再假设只有一份。这样以后要给
+   *  worldbook 接一个它自己的 SearchPanel，不需要碰这里——只需要新建
+   *  `WorldbookSearchPanel.vue`，然后在 `workspaceRegistry.ts` 里把 worldbook 的
+   *  `capabilities.search` 打开，App.vue 的 header/工具抽屉代码本身一行都不用改（它是照着
+   *  registry 查表渲染的，见 `workspaceRegistry.ts`）。
+   *
+   *  三个面板各自的**业务逻辑**（`doSearch()`/`rebuildVarIndex()`/`generatePreviewBlocks()`等）
+   *  依然留在 presetStore 里不动——这里只搬"开关状态"本身，不是要把 Search/VarNav/Preview 现在
+   *  就重构成 domain-agnostic 组件（那些组件的内容目前确实是 preset 专属逻辑，见 PROJECT.md
+   *  「为什么 SearchPanel/VarPanel/.../PresetMetaForm 在 preset/ 而不是 shared/」）。
+   *
+   *  `copyPanelOpen` 故意不搬来这里——CopyPanel 是横跨两份预设的复制工具（PROJECT.md「架构总览」
+   *  里说的"第七种例外"），概念上永远只可能属于 preset 工作区，不存在"以后 worldbook 也要一个
+   *  copyPanel"这种扩展需求，继续留在 presetStore 更诚实。 */
+  const searchOpenByWorkspace = ref<Record<string, boolean>>({})
+  const varNavOpenByWorkspace = ref<Record<string, boolean>>({})
+  const previewOpenByWorkspace = ref<Record<string, boolean>>({})
+  const searchOpen = computed(() => searchOpenByWorkspace.value[activeWorkspace.value] ?? false)
+  const varNavOpen = computed(() => varNavOpenByWorkspace.value[activeWorkspace.value] ?? false)
+  const previewOpen = computed(() => previewOpenByWorkspace.value[activeWorkspace.value] ?? false)
+  function setSearchOpen(workspace: string, open: boolean) { searchOpenByWorkspace.value[workspace] = open }
+  function setVarNavOpen(workspace: string, open: boolean) { varNavOpenByWorkspace.value[workspace] = open }
+  function setPreviewOpen(workspace: string, open: boolean) { previewOpenByWorkspace.value[workspace] = open }
+
   /** Per-domain "please scroll your selected item into view" signal — domain-agnostic replacement
    *  for what used to be presetStore's preset-only `sidebarJumpToken`/`requestSidebarScroll()`. Each
    *  domain's sidebar list (Sidebar.vue for 'preset', RegexSidebarList.vue for 'regex', ...) watches
@@ -209,5 +239,6 @@ export const useTabsStore = defineStore('tabs', () => {
     tabs, activeId, activeTab, open, renameTab, close, closeAll, closeDomain, closeWorkspace, focus, isOpen,
     sidebarCollection, setSidebarCollection, settingsDockOpen, toggleSettingsDock, listScrollToken, requestListScroll,
     activeWorkspace, setActiveWorkspace, tabsInActiveWorkspace,
+    searchOpen, varNavOpen, previewOpen, setSearchOpen, setVarNavOpen, setPreviewOpen,
   }
 })

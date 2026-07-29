@@ -5,7 +5,7 @@
       <span>{{ uiStore.t('preset.varPanel.title') }}</span>
       <div class="wb-row-tight">
         <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.varPanelFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="wb-btn close-btn compact" @click="store.varNavOpen = false">✕</button>
+        <button class="wb-btn close-btn compact" @click="tabsStore.setVarNavOpen('preset', false)">✕</button>
       </div>
     </div>
     <div class="wb-rp-tools">
@@ -35,11 +35,17 @@
 import { watch } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
 import { useUiStore } from '../../stores/uiStore'
+import { useTabsStore } from '../../stores/tabsStore'
 import { usePanelResize } from '../../composables/usePanelResize'
 import { varOpBadge } from '../../utils'
 
 const store = usePresetStore()
 const uiStore = useUiStore()
+// varNavOpen 本身的开关状态活在 tabsStore（按 workspace 分桶存，见该文件 doc comment）——这个
+// 面板目前只对 'preset' 工作区渲染（App.vue 按 workspaceRegistry.capabilities.varNav 挂载），
+// 关闭时写回的 workspace 硬编码成 'preset' 没问题；哪天 varNav 也要支持别的 workspace，这里要
+// 跟着改成读 tabsStore.activeWorkspace。
+const tabsStore = useTabsStore()
 
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.varPanelWidth,
