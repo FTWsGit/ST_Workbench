@@ -7,6 +7,9 @@
   --wb-ac:#c8954a;--wb-ac-h:#d8a55a;--wb-ac-d:rgba(200,149,74,.12);
   --wb-dg:#b86060;--wb-dg-d:rgba(184,96,96,.14);--wb-ok:#60b060;
   --wb-r:8px;--wb-rs:4px;
+  /* 编辑器内边距：textarea / 高亮 <pre> / 行号测量镜像 / 整行高度测量容器共用同一变量，
+   * 保证测量容器的换行宽度与 textarea 完全一致（行号测量正确性的硬契约，见 HighlightedEditor.vue）。 */
+  --wb-editor-pad:16px;
   --wb-fm:'DM Sans',-apple-system,sans-serif;
   --wb-fc:'JetBrains Mono','Fira Code',monospace;
   --wb-tr:.2s ease;
@@ -328,7 +331,7 @@
 .wb-editor-meta{display:flex;gap:12px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--wb-border);flex-shrink:0;flex-wrap:wrap}
 .wb-editor-meta label{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--wb-tx2)}
 .wb-editor-content{flex:1;display:flex;overflow:hidden;position:relative}
-.wb-line-nums{width:46px;background:var(--wb-bg-s);border-right:1px solid var(--wb-border);overflow:hidden;padding:16px 0;flex-shrink:0;user-select:none}
+.wb-line-nums{width:46px;background:var(--wb-bg-s);border-right:1px solid var(--wb-border);overflow:hidden;padding:var(--wb-editor-pad) 0;flex-shrink:0;user-select:none}
 .wb-line-nums .ln{display:flex;align-items:flex-start;justify-content:flex-end;padding-right:8px;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);color:var(--wb-tx3);overflow:hidden;box-sizing:border-box}
 .wb-line-nums .ln.search-hit{color:var(--wb-ac)}
 .wb-line-nums .ln.search-cur{color:var(--wb-bg);background:var(--wb-ac);border-radius:2px}
@@ -338,7 +341,7 @@
    a single class selector (0,1,0) would. Without this, the base rule's opaque background and
    visible text color silently won, leaving a fully-opaque, wrong-font-size textarea sitting on
    top of (z-index 2) and completely hiding the correctly-highlighted <pre> underneath. */
-.wb-editor-wrap .wb-editor-hl,.wb-editor-wrap .wb-editor-ta{position:absolute;top:0;left:0;width:100%;height:100%;padding:16px;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
+.wb-editor-wrap .wb-editor-hl,.wb-editor-wrap .wb-editor-ta{position:absolute;top:0;left:0;width:100%;height:100%;padding:var(--wb-editor-pad);font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
 .wb-editor-wrap .wb-editor-ta{z-index:2;color:transparent!important;caret-color:var(--wb-tx);background:transparent!important;resize:none;outline:none;overflow-y:auto;overflow-x:hidden}
 .wb-editor-wrap .wb-editor-hl{z-index:1;pointer-events:none;color:var(--wb-tx);background:var(--wb-bg);overflow:hidden}
 /* Invisible measurement elements, never shown: .wb-line-mirror measures single-line height /
@@ -346,7 +349,7 @@
    read each line's REAL wrapped height (see HighlightedEditor.vue). Its child divs inherit
    font / white-space / tab-size / line-height from this rule, so they wrap exactly like the
    textarea does. */
-.wb-editor-wrap .wb-line-mirror,.wb-editor-wrap .wb-lh-measure{position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;height:auto;padding:0 16px;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
+.wb-editor-wrap .wb-line-mirror,.wb-editor-wrap .wb-lh-measure{position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;height:auto;padding:0 var(--wb-editor-pad);font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;tab-size:4;margin:0;border:none;letter-spacing:0;box-sizing:border-box}
 .wb-statusbar{display:flex;align-items:center;gap:16px;padding:3px 20px;background:var(--wb-bg-s);border-top:1px solid var(--wb-border);font-size:13px;color:var(--wb-tx3);font-family:var(--wb-fc);flex-shrink:0}
 
 /* Syntax Highlight — scoped under .st-wb: these class names (hl-b, hl-k, ...) are short and

@@ -35,30 +35,18 @@
               <button class="wb-btn" :class="{ active: tabsStore.previewOpen }" @click="togglePreview">{{ uiStore.t('preset.header.preview') }}</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.new')" @click="onNewWorkspace(workspaceRegistry.preset)">+</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.preset)" :disabled="!presetStore.presetName">🗑</button>
-              <select v-if="presetStore.presetList.length" class="pr-preset-select" :value="presetStore.presetName" @change="onWorkspaceSelect(workspaceRegistry.preset, $event)" :title="uiStore.t('preset.header.switch')">
-                <option v-if="!presetStore.presetList.some(p => p.name === presetStore.presetName)" :value="presetStore.presetName" disabled>{{ presetStore.presetName || uiStore.t('preset.header.noneLoaded') }}</option>
-                <option v-for="p in presetStore.presetList" :key="p.name" :value="p.name">{{ p.name }}</option>
-              </select>
-              <span v-else-if="presetStore.presetName" class="pr-preset-name">{{ presetStore.presetName }}</span>
+              <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
               <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.new')" @click="onNewWorkspace(workspaceRegistry.worldbook)">+</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.importFromCharacter')" :disabled="!embeddedCharacterBook" @click="onImportFromCharacterBook"> ⤓ </button>
               <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.worldbook)" :disabled="!worldbookStore.worldbookName">🗑</button>
-              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorkspaceSelect(workspaceRegistry.worldbook, $event)" :title="uiStore.t('worldbook.header.switch')">
-                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('worldbook.header.noneLoaded') }}</option>
-                <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
-              </select>
-              <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
+              <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
               <button class="wb-btn icon-btn" :title="uiStore.t('character.header.new')" @click="onNewWorkspace(workspaceRegistry.character)">+</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('character.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.character)" :disabled="!characterStore.character?.avatar">🗑</button>
-              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onWorkspaceSelect(workspaceRegistry.character, $event)" :title="uiStore.t('character.header.switch')">
-                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('character.header.noneLoaded') }}</option>
-                <option v-for="c in characterStore.characterList" :key="c.avatar" :value="c.avatar">{{ c.name }}</option>
-              </select>
-              <span v-else-if="characterStore.character?.name" class="pr-preset-name">{{ characterStore.character.name }}</span>
+              <WorkspaceSelect />
             </template>
             <button class="wb-btn close-btn" @click="onClosePanel()">✕</button>
           </template>
@@ -67,25 +55,13 @@
             <button class="wb-btn accent" @click="onSave()">{{ saveLabel }}</button>
             <button class="wb-btn" @click="onReload()">{{ uiStore.t('shared.header.reload') }}</button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
-              <select v-if="presetStore.presetList.length" class="pr-preset-select" :value="presetStore.presetName" @change="onWorkspaceSelect(workspaceRegistry.preset, $event)" :title="uiStore.t('preset.header.switch')">
-                <option v-if="!presetStore.presetList.some(p => p.name === presetStore.presetName)" :value="presetStore.presetName" disabled>{{ presetStore.presetName || uiStore.t('preset.header.noneLoaded') }}</option>
-                <option v-for="p in presetStore.presetList" :key="p.name" :value="p.name">{{ p.name }}</option>
-              </select>
-              <span v-else-if="presetStore.presetName" class="pr-preset-name">{{ presetStore.presetName }}</span>
+              <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
-              <select v-if="characterStore.characterList.length" class="pr-preset-select" :value="characterStore.character?.avatar || ''" @change="onWorkspaceSelect(workspaceRegistry.character, $event)" :title="uiStore.t('character.header.switch')">
-                <option v-if="characterStore.character && !characterStore.characterList.some(c => c.avatar === characterStore.character?.avatar)" :value="characterStore.character?.avatar" disabled>{{ characterStore.character?.name || uiStore.t('preset.header.noneLoaded') }}</option>
-                <option v-for="c in characterStore.characterList" :key="c.avatar" :value="c.avatar">{{ c.name }}</option>
-              </select>
-              <span v-else-if="characterStore.character?.name" class="pr-preset-name">{{ characterStore.character.name }}</span>
+              <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-              <select v-if="worldbookStore.worldbookList.length" class="pr-preset-select" :value="worldbookStore.worldbookName" @change="onWorkspaceSelect(workspaceRegistry.worldbook, $event)" :title="uiStore.t('worldbook.header.switch')">
-                <option v-if="!worldbookStore.worldbookList.includes(worldbookStore.worldbookName)" :value="worldbookStore.worldbookName" disabled>{{ worldbookStore.worldbookName || uiStore.t('preset.header.noneLoaded') }}</option>
-                <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
-              </select>
-              <span v-else-if="worldbookStore.worldbookName" class="pr-preset-name">{{ worldbookStore.worldbookName }}</span>
+              <WorkspaceSelect />
             </template>
             <div class="wb-spacer"></div>
             <button class="wb-mobile-tools-btn" :class="{ active: drawer.visible === 'tools' }" :title="uiStore.t('shared.mobile.tools')" @click="drawer.toggleTools">⋯</button>
@@ -209,6 +185,7 @@ import Modals from './components/shared/Modals.vue'
 import TabBar from './components/shared/TabBar.vue'
 import EditorShell from './components/shared/EditorShell.vue'
 import SettingsDock from './components/shared/SettingsDock.vue'
+import WorkspaceSelect from './components/shared/WorkspaceSelect.vue'
 import { useTabsStore } from './stores/tabsStore'
 import { useConfirmStore } from './stores/confirmStore'
 import { esc } from './utils'
@@ -367,30 +344,10 @@ function workspaceKey(adapter: DocumentWorkspaceAdapter, suffix: string): Locale
 
 /**
  * workspaceRegistry 驱动的通用 CRUD：
- * - onWorkspaceSelect：切换工作区文档，若有未保存改动先确认；取消时把 <select> 值回弹到当前 id。
  * - onNewWorkspace：弹出命名框新建；若 adapter.confirmCreateIfDirty 且当前有未保存改动，先二次确认。
  * - onDeleteWorkspace：删除当前文档。
+ * 顶栏 <select> 的切换逻辑已移入 WorkspaceSelect.vue。
  */
-function onWorkspaceSelect(adapter: DocumentWorkspaceAdapter, e: Event) {
-  const select = e.target as HTMLSelectElement
-  const id = select.value
-  if (!id || id === adapter.currentId()) return
-  const doSwitch = () => adapter.switchTo(id)
-  if (adapter.dirty()) {
-    confirmStore.ask({
-      title: uiStore.t(workspaceKey(adapter, 'confirm.switch.title')),
-      message: uiStore.t(workspaceKey(adapter, 'confirm.switch.message'), { name: esc(adapter.labelForId(id)) }),
-      confirmText: uiStore.t('common.switch'),
-      cancelText: uiStore.t('common.cancel'),
-      danger: false,
-      onConfirm: doSwitch,
-      onCancel: () => { select.value = adapter.currentId() },
-    })
-  } else {
-    doSwitch()
-  }
-}
-
 function onNewWorkspace(adapter: DocumentWorkspaceAdapter) {
   const openDialog = () => confirmStore.askInput({
     title: uiStore.t(workspaceKey(adapter, 'prompt.new.title')),
