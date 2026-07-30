@@ -186,8 +186,12 @@ function updateLineNums() {
     if (!line) { heights[i] = lh; continue } // 空逻辑行固定一行高
     const key = cw + '|' + line
     const hit = lineHeightCache.get(key)
-    if (hit !== undefined) heights[i] = hit
-    else misses.push({ i, key, line })
+    if (hit !== undefined) {
+      heights[i] = hit
+      // LRU 命中重排：delete + set 把这条挪到 Map 末尾（最新），避免被下次淘汰误伤。
+      lineHeightCache.delete(key)
+      lineHeightCache.set(key, hit)
+    } else misses.push({ i, key, line })
   }
   if (misses.length && measureRef.value) {
     const hostDoc = getHostDocument()
@@ -203,7 +207,13 @@ function updateLineNums() {
     for (let k = 0; k < misses.length; k++) {
       const h = Math.max(els[k].getBoundingClientRect().height, lh)
       heights[misses[k].i] = h
-      if (lineHeightCache.size < 5000) lineHeightCache.set(misses[k].key, h)
+      // LRU：超上限时淘汰 Map 里最早插入的条目（Map 迭代顺序 = 插入顺序），
+      // 之后 set 会把这个 key 放到最新位置——刚访问过的行留在缓存里。
+      if (lineHeightCache.size >= 5000) {
+        const oldest = lineHeightCache.keys().next().value
+        if (oldest !== undefined) lineHeightCache.delete(oldest)
+      }
+      lineHeightCache.set(misses[k].key, h)
     }
     m.textContent = '' // 一次性清空测量子节点
   }
