@@ -33,25 +33,25 @@
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <button class="wb-btn" :class="{ active: tabsStore.varNavOpen }" @click="toggleVarNav">{{ uiStore.t('preset.header.varNav') }}</button>
               <button class="wb-btn" :class="{ active: tabsStore.previewOpen }" @click="togglePreview">{{ uiStore.t('preset.header.preview') }}</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.new')" @click="onNewWorkspace(workspaceRegistry.preset)">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.preset)" :disabled="!presetStore.presetName">🗑</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.new')" :aria-label="uiStore.t('preset.header.new')" @click="onNewWorkspace(workspaceRegistry.preset)">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.delete')" :aria-label="uiStore.t('preset.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.preset)" :disabled="!presetStore.presetName">🗑</button>
               <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.new')" @click="onNewWorkspace(workspaceRegistry.worldbook)">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.importFromCharacter')" :disabled="!embeddedCharacterBook" @click="onImportFromCharacterBook"> ⤓ </button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.worldbook)" :disabled="!worldbookStore.worldbookName">🗑</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.new')" :aria-label="uiStore.t('worldbook.header.new')" @click="onNewWorkspace(workspaceRegistry.worldbook)">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.importFromCharacter')" :aria-label="uiStore.t('worldbook.header.importFromCharacter')" :disabled="!embeddedCharacterBook" @click="onImportFromCharacterBook"> ⤓ </button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.delete')" :aria-label="uiStore.t('worldbook.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.worldbook)" :disabled="!worldbookStore.worldbookName">🗑</button>
               <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
-              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.new')" @click="onNewWorkspace(workspaceRegistry.character)">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.character)" :disabled="!characterStore.character?.avatar">🗑</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.new')" :aria-label="uiStore.t('character.header.new')" @click="onNewWorkspace(workspaceRegistry.character)">+</button>
+              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.delete')" :aria-label="uiStore.t('character.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.character)" :disabled="!characterStore.character?.avatar">🗑</button>
               <WorkspaceSelect />
             </template>
-            <button class="wb-btn close-btn" @click="onClosePanel()">✕</button>
+            <button class="wb-btn close-btn" :aria-label="uiStore.t('common.close')" @click="onClosePanel()">✕</button>
           </template>
           <template v-else>
-            <button class="wb-mobile-hamburger" :title="uiStore.t('shared.mobile.sidebar')" @click="drawer.toggleSidebar">☰</button>
+            <button class="wb-mobile-hamburger" :title="uiStore.t('shared.mobile.sidebar')" :aria-label="uiStore.t('shared.mobile.sidebar')" @click="drawer.toggleSidebar">☰</button>
             <button class="wb-btn accent" @click="onSave()">{{ saveLabel }}</button>
             <button class="wb-btn" @click="onReload()">{{ uiStore.t('shared.header.reload') }}</button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -64,8 +64,8 @@
               <WorkspaceSelect />
             </template>
             <div class="wb-spacer"></div>
-            <button class="wb-mobile-tools-btn" :class="{ active: drawer.visible === 'tools' }" :title="uiStore.t('shared.mobile.tools')" @click="drawer.toggleTools">⋯</button>
-            <button class="wb-btn close-btn" @click="onClosePanel()">✕</button>
+            <button class="wb-mobile-tools-btn" :class="{ active: drawer.visible === 'tools' }" :title="uiStore.t('shared.mobile.tools')" :aria-label="uiStore.t('shared.mobile.tools')" @click="drawer.toggleTools">⋯</button>
+            <button class="wb-btn close-btn" :aria-label="uiStore.t('common.close')" @click="onClosePanel()">✕</button>
           </template>
         </div>
 

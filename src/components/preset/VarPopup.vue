@@ -4,9 +4,9 @@
       <span class="pr-vp-varname">{{ store.varPopupVarName }}</span>
       <span class="pr-vp-count">{{ uiStore.t(store.varPopupOps.length !== 1 ? 'preset.varPopup.hit' : 'preset.varPopup.hitSingle', { count: store.varPopupOps.length }) }}</span>
       <span class="pr-vp-spacer"></span>
-      <button class="pr-vp-btn" @click="store.navPopupVar(-1)">◀</button>
-      <button class="pr-vp-btn" @click="store.navPopupVar(1)">▶</button>
-      <button class="pr-vp-btn close-btn" @click="store.hideVarPopup()">✕</button>
+      <button class="pr-vp-btn" aria-label="上一个匹配" @click="store.navPopupVar(-1)">◀</button>
+      <button class="pr-vp-btn" aria-label="下一个匹配" @click="store.navPopupVar(1)">▶</button>
+      <button class="pr-vp-btn close-btn" :aria-label="uiStore.t('common.close')" @click="store.hideVarPopup()">✕</button>
     </div>
     <div class="pr-vp-list">
       <div v-for="(v, i) in store.varPopupOps" :key="i"

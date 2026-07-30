@@ -4,9 +4,9 @@
     <div class="wb-rp-header">
       <span>{{ uiStore.t('preset.preview.title') }}</span>
       <div class="wb-row-tight">
-        <button v-if="store.previewMode === 'blocks'" class="wb-btn icon-btn" :title="uiStore.t('preset.preview.collapseExpand')" @click="store.toggleAllPreviewBlocks()">▾</button>
-        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.previewFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="wb-btn close-btn compact" @click="tabsStore.setPreviewOpen('preset', false)">✕</button>
+        <button v-if="store.previewMode === 'blocks'" class="wb-btn icon-btn" :title="uiStore.t('preset.preview.collapseExpand')" :aria-label="uiStore.t('preset.preview.collapseExpand')" @click="store.toggleAllPreviewBlocks()">▾</button>
+        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.previewFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" :aria-label="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
+        <button class="wb-btn close-btn compact" :aria-label="uiStore.t('common.close')" @click="tabsStore.setPreviewOpen('preset', false)">✕</button>
       </div>
     </div>
     <div class="pr-pp-tools">
