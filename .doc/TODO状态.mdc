@@ -1,0 +1,36 @@
+---
+name: "TODO状态"
+description: "未实现的大方向、过渡状态、有意为之的限制清单。判断某功能是否已实现、是否刻意留口子、或排查'预览不自动同步/正则预览不准/共享测试文本'等已知行为时读。"
+alwaysApply: false
+---
+
+# TODO / 已知的过渡状态
+
+## 没开始的大方向
+
+- **跨 domain 集成**：角色卡内嵌世界书（`character_book`）目前完全独立于世界书 domain——打开一张带内嵌世界书的角色卡，`CharacterMetaForm.vue` 的世界书绑定下拉只能换绑"已经存在于世界书 domain 里的"世界书，**不能**把角色卡内嵌的那份直接转成一个新世界书来编辑。计划中的做法是给"新建世界书"入口加一个"从角色卡导入"按钮，读当前打开角色的 `character_book`，转换成 `Worldbook` 格式后调 `worldbookApi.create()`；导入后两边各自独立编辑，不做双向同步（跟 ST 原生行为一致：世界书改动只在角色卡"导出"时才会按当前绑定关系写回，导出功能本期也不做）。动手前得先拿一份真实角色卡样本，确认 `character_book.entries[i]` 的字段跟 `WorldbookEntry` 的具体差异，不确认不要写转换逻辑。**角色卡内嵌编辑世界书本身明确不做**——只能通过上面的导入变成独立世界书后在世界书 domain 编辑。
+- Agent（自然语言创作）完全没开始，只定了一条原则：独立 store，跨 domain 的读写只能通过各 domain store 自己暴露的方法，不允许直接摸 `ctx`。
+
+## 明确的过渡状态
+
+- `regex`/`character` 两个域都没有多选/批量操作/分组功能（preset 域已通过长按+`useListSelection.ts`解决——composable 接口已经是 domain-agnostic 的，要不要接是产品决策，不是技术门槛，接口已经就绪）。`character` 域的 greetings 本来就不需要"选一批做批量操作"这个语义，大概率不会补。
+- `worldbook` 域有完整的 CRUD + 分组 + 批量工具，但还没有搜索/变量导航/预览（这些是 preset 专属功能，worldbook 以后是否需要是产品决策）。
+- `confirmStore.ts` 内部仍保留英文默认值（`'Delete'`/`'Cancel'`/`'OK'`）作为 fallback；虽然所有调用方已显式传 i18n 文案，但默认值没有彻底移除。
+- 角色卡导出（把当前编辑内容写回绑定的世界书）本期不做，用户走 ST 原生 UI，或以后收进某个 ToolsPanel。
+
+## 顶层工具栏还不是完全按 domain/workspace 分派的
+
+（`MetaPanel` 的触发按钮和顶栏第二行的 `sidebarCollection` 切换是目前两个正例——前者按 `activeWorkspace` 只在 `preset`/`character` 两个工作区显示，后者同样只在这两个工作区渲染，worldbook 工作区都看不到；下面几个还没跟上）：
+
+- Var Nav 只对 `preset` 有意义，但不管当前是什么标签都一直显示。
+- Preview 理论上 `preset`/`character`（两边都有正则和创作文本）都该有，目前只对 `preset` 生效。
+- Search 完全是 `preset` 专用逻辑（搜的是 `content` 字段），`regex`/`worldbook`/`character` 域没有搜索入口。
+- 移动端的 ⋯ 工具抽屉同样不是每一项都按 domain/workspace 裁剪——Var Nav/Search 这几项对 regex/worldbook/character 域完全没意义，但抽屉里照样列出；`copyBlocks`/`Meta` 这几项倒是已经按 `activeWorkspace` 裁过了。
+
+## 其它已知限制，有意为之
+
+- 正则预览是纯本地模拟：不解析宏、不代表作用范围与深度限制，UI 上有文字提示但功能上就是做不到跟真实酒馆一致（见 `regexEngine.ts`）。preset/character 两个宿主共用同一套模拟逻辑，这个限制对两边都成立。
+- `RegexContentEditor.vue` 的测试文本是所有正则标签共享一个 `ref`，切换标签不会各自记住测试文本，preset 工作区和 character 工作区的正则标签也共用同一个。
+- marker 块的 name/role 仍可编辑（只锁了内容和删除），是刻意留的口子而不是遗漏，见「状态与持久化 > marker 块受保护」。
+- `selectPresetByName()` 只在 Preset Preview 生成前调用一次，如果用户在预览面板打开的状态下又切换了本工具里编辑的预设、但没有重新点"生成"，Preview 显示的可能还是旧预设的渲染结果——不是自动同步，是"点生成才对齐"的懒惰策略（详见「状态与持久化 > 为什么需要切换 ST 主菜单选中项」）。
+- `getCharacterByAvatar()` 每次都会真的发一次网络请求（`getOneCharacter(avatar)`），不是本地读缓存——切角色/reload/保存后刷新这几个场景本来就是想要"服务端权威最新数据"，用一次网络往返换正确性是划算的，见 `api/characterApi.ts` 文件内 doc comment。**别为了"减少请求"改回判断 `shallow` 标志位再决定要不要刷新**——`shallow` 只有 ST 管理员在 `config.yaml` 里手动开 `performance.lazyLoadCharacters`（默认关、极冷门）才会是 `true`，绝大多数部署下这个标志位形同虚设；`unshallowCharacter()` 本身在 `!shallow` 时直接 `return`，是个几乎总是空操作的本地函数。

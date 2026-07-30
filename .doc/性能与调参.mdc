@@ -1,0 +1,54 @@
+---
+name: "性能与调参"
+description: "热路径性能教训与可调参数清单。被反馈'卡/掉帧/行号错位/打字延迟'类症状时读——根因和可调参数都在这。改行号测量/按行 diff patch/连续触发控件绑定时先读，避免重蹈已修过的弯路。"
+alwaysApply: false
+---
+
+# 性能相关的教训（如果以后又被反馈"卡"）
+
+注意：拖拽 Pointer Events 机制在「移动端布局」讲透，按行 diff patch 在「编辑器内核」讲透，连续控件 draft-until-release 在「架构总览」的套路表。本文件只记教训条目和可调参数，不重述机制。
+
+1. **不要在热路径（打字、resize、拖拽）里"写 DOM 属性→立刻读布局属性"**（强制同步重排）。行号高度**不是**用 canvas `measureText()` 估算宽度换算换行数。现在是让浏览器自己排版：每个逻辑行单独扔进一个隐藏容器（`.wb-lh-measure`，跟 textarea 共享字体/white-space/tab-size/宽度）量它的真实高度，一次 append 全部未缓存的行、再一次性读取（一次 layout，不是每行一次强制重排）。结果按 `(容器宽度, 行文本)` 缓存，稳态下打字只会重测正在编辑的那一行。见 `updateLineNums()`。
+2. **测量精度：优先 `getBoundingClientRect()`，不要用 `offsetHeight`。** `offsetHeight` 的 IDL 类型是 `long`，读出来永远是整数，会把行高的小数部分截掉——项目实际用的 `--wb-fs`(14.5px) × `--wb-lh`(1.65) 算出来的真实单行高度是 23.925px，不是整数。如果每个逻辑行独立用 `offsetHeight` 测量、再按顺序堆叠成行号格子的 CSS `height`，每一行都要单独吃一次"取整"误差（最多约 0.5px），而真实 `<textarea>` 内部是连续排版、不会逐行独立取整。误差不会抵消，只会累加：内容越长、行数越多，行号跟实际文字的错位越明显。**教训：任何要跟 textarea 真实换行严格对齐的测量，一律用 `getBoundingClientRect()`，不要用 `offsetHeight`/`clientHeight` 这类会被隐式转成整数的属性。**
+3. **可视层的刷新代价，取决于"改了多少就重绘多少"，不取决于"算得快不快"**：`useHighlight.ts` 的 `scan()` 本身是纯字符串扫描，算全文一般不贵；真正卡的是把结果灌进 DOM 这一步——`hlRef.value.innerHTML = ...` 整篇替换是 O(全文长度) 的强制重排/重绘，跟内容算得多快无关。参考 CodeMirror 5 的做法：可视层按逻辑行拆成一个个持久 DOM 节点，一次刷新只 diff 并重写真正变化的那几行，没变的行 DOM 引用原样复用。机制详见「编辑器内核」。
+4. **高亮/行号/光标这些衍生视觉更新不需要 idle 调度，只要是按行 diff patch 的就可以同步做**：`onInput` 直接同步调用它们（不再有 `requestIdleCallback`/`scheduleRenderUpdate` 这层）。能这样做的前提正是上一条——刷新代价已经被压到 O(改动行数) 而不是 O(全文长度)。详见「编辑器内核 > 打字调度」。
+5. **`user-select:none` 要设置得"早"**：`pointerdown` 就关，`pointerup` 兜底恢复，CSS 里也静态加一层作为基础防线。
+
+## 已知的可调参数
+
+`composables/hostEnv.ts`：
+
+```ts
+export const MOBILE_BREAKPOINT = 720  // px，移动端布局断点；main.css 里 @media (max-width: 720px) 手写了同一个数字，改一处必须跟着改
+```
+
+`HighlightedEditor.vue` 顶部：
+
+```ts
+const RESIZE_DEBOUNCE_MS = 20     // 编辑器尺寸变化后行号重算的防抖延迟
+```
+
+`utils.ts`（`wordDiff`/`macroAwareDiff` 相关）：
+
+```ts
+const LCS_FALLBACK_MAX = 2500       // patience-diff 锚点切出的小区间，n*m 低于这个值直接跑 LCS
+const DIFF_TOKEN_BUDGET = 4_000_000 // 首尾裁剪后剩下的中段，n*m 超过这个值直接放弃 diff
+const MIN_TRUSTED_RUN = 2           // 非锚点来源的匹配片段，低于这个 token 数又被夹在两块高亮中间，判定为噪声折回高亮
+```
+
+`types.ts`：`SEARCH_MAX = 200`（搜索结果 DOM 渲染上限）。
+
+`PresetSidebar.vue`:
+
+```ts
+const DRAG_THRESHOLD = 4  // block 拖拽/长按判定的移动阈值（px），防止滑动列表时意外拖拽或误触发长按
+const LONG_PRESS_MS = 200 // 移动端触屏长按多选的延迟
+```
+
+`App.vue`（FAB 相关）:
+
+```ts
+const FAB_SIZE = 48            // fab 大小, keep in sync with .wb-fab's width/height in main.css
+const FAB_DRAG_THRESHOLD = 4   // fab 拖拽 threshold
+const FAB_LONG_PRESS_MS = 100  // fab 长按拖拽延迟，比 PresetSidebar 的 LONG_PRESS_MS 短，因为 FAB 是独立悬浮元素，不用跟滚动手势区分
+```

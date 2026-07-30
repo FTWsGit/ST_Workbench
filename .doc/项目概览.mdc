@@ -1,0 +1,116 @@
+---
+name: "项目概览"
+description: "ST_Workbench 是什么、管哪四类数据、目录结构怎么组织。新接手项目、不确定整体定位、查找某文件做什么时读。"
+alwaysApply: true
+---
+
+# 项目概览
+
+## 这是什么
+
+一个给 SillyTavern/TauriTavern 的「酒馆助手」(Tavern Helper) 用的 Vue 3 + Pinia 脚本，桌面和移动端都能用。目前管理四类数据：
+
+- **Chat Completion 预设**：提示词块的增删改查、排序、启用/禁用、分组、搜索替换、变量追踪、精确预览渲染、跨预设复制提示词块，以及模型参数（temperature/top_p/context length/streaming 等）的整份文档级编辑。
+- **绑定在预设上的正则脚本**（`preset.extensions.regex_scripts`）：编辑查找/替换/修剪/作用范围/深度等参数，本地模拟查找-替换做预览。
+- **世界书**：条目的增删改查、排序、启用/禁用、分组、批量工具（启用/禁用/改激活方式）。
+- **角色卡**：七个"大文本框"创作字段（description/scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt）+ 可拖拽排序的开场白（greetings）+ 创作者信息/tags/talkativeness/世界书绑定换绑的整份文档级编辑，以及**绑定在角色卡上的正则脚本**（跟预设域是同一个 `extensions.regex_scripts` 概念，复用同一套参数化正则组件，只是宿主换成了角色卡）。
+
+四者全部原生接入标签系统、支持中/英文界面切换。agent 辅助创作是规划中但还没开始的方向（见文末 TODO）——整个 UI 骨架（标签页、侧边栏模式切换、设置面板、悬浮窗）是按"以后会有不止一种可编辑的东西"设计的，不是只为预设+正则量身定制。
+
+其中，TauriTavern 是 Rust 重构后端的 SillyTavern，前端 API 保持了一致，使用 WebView2。
+
+## 项目结构
+
+```
+ST_Workbench/
+├── vite.config.js       # 打包成单文件 iife，无 css-injected-by-js 插件（CSS 手动注入，见 main.ts）
+├── package.json
+├── tsconfig.json
+└── src/
+    ├── main.ts             # 入口：挂载到 window.top.document 的 <body> 下，一个 position:fixed 的
+    │                       # vw/vh 全屏透明锚点承载所有悬浮 UI（见"部署环境"）
+    ├── App.vue             # 顶层布局：FAB（可长按拖拽）+ 顶部工具栏（桌面完整版 / 移动端精简版+⋯工具抽屉）
+    │                       # + 两行式工作区切换（第一行 activeWorkspace 三态：preset/worldbook/character；第二行
+    │                       # sidebarCollection，只在 preset/character 工作区出现：items|fields 与 regex 二选一，
+    │                       # 见「多 domain 路由」）+ 主区域 + 常驻挂载点
+    │                       # （CopyPanel/MetaPanel/Modals/VarPopup）+ 移动端抽屉/底部弹出层的显隐状态机
+    │                       # （mobileDrawerVisible），见"移动端响应式布局"
+    ├── types.ts            # 所有 TS 类型 + DEFAULT_SETTINGS + SEARCH_MAX + 字体/颜色/正则字段选项/角色卡固定字段表（CHARACTER_FIELDS）等跨文件共享常量
+    ├── utils.ts            # 纯函数工具层：esc/span/escRe/debounce + orderedPromptsWithHidden + macroAwareDiff/wordDiff（精确预览高亮）+ applyMultiSelect（多选算法）+ roleClass/varOpBadge（小型UI映射）
+    ├── regexEngine.ts      # 正则脚本的纯函数逻辑：查找/替换/修剪的本地模拟，供预览复用，preset/character 两个宿主共用同一套逻辑
+    ├── env.d.ts
+    ├── api/                 # 跟 SillyTavern 本体交互的读写层（原来是单个 sillytavern.ts，已按 domain 拆分）
+    │   ├── hostContext.ts     # 无 domain 知识：getCtx()/getTopWindow()/ensureTopImporter() 这类"怎么拿到 ST 环境"的机制，presetApi/characterApi/worldbookApi 都从这里取
+    │   ├── apiUtils.ts        # 跨 domain 共享的纪律性工具：只有 deepClonePlain()（传给 ST 前必须深拷贝成纯数据，不能是 Vue Proxy）这一类真正 domain-agnostic 的东西，故意不抽 BaseApi<T>（见「架构总览」）
+    │   ├── presetApi.ts       # PresetManager 增删查存、方案B单例读取、真实 generate 捕获最终请求体、selectPresetByName（仅 Preset Preview 用，见"状态与持久化 > 与 ST API 的数据契约"）
+    │   ├── worldbookApi.ts    # `/scripts/world-info.js` 模块函数封装：list/get/create/edit/delete，`entries: Record<uid,entry>` ⇄ 工作层数组互转
+    │   └── characterApi.ts    # `/script.js` 模块 `characters` 数组 + multipart 表单读写：getCharacterByAvatar（每次都用 `getOneCharacter()` 真发网络请求重新拉取，见文件内 doc comment——`unshallowCharacter()`是纯本地操作且几乎总是空操作，别被名字骗了）、create/editCharacter（字段级 oldRaw 回退合并）、deleteCharacter
+    ├── stores/
+    │   ├── uiStore.ts          # Pinia id 'ui'，导出 useUiStore()——全局 UI 单例：settings（字体/颜色/面板宽度/语言/FAB 位置）+ cssVars + panelOpen（主面板开关）+ settingsOpen（设置弹窗开关）+ metaPanelOpen（元信息悬浮窗开关，横跨 preset/character，见「MetaPanel」）+ toast 通知 + i18n t()/currentLocale。所有组件直接 useUiStore()，不经过任何 domain store 转发
+    │   ├── presetStore.ts     # Pinia id 'main'，导出 usePresetStore()——当前正在编辑的那份预设（含它自带的 regex_scripts、以及模型参数等整份文档级字段）的全部状态和业务逻辑
+    │   ├── worldbookStore.ts   # 'worldbook'——世界书条目的全部状态和业务逻辑，独立于 presetStore
+    │   ├── characterStore.ts   # 'character'——当前正在编辑的那张角色卡（含它自带的 regex_scripts）的全部状态和业务逻辑，独立文档 store，模式跟 worldbookStore 一致；虚拟字段路由（`currentField`/`setCurrentFieldValue`）+ greetings 增删拖拽 + oldRaw 字段级回退保存
+    │   ├── tabsStore.ts       # 'tabs'——跨 domain 的标签页状态、activeWorkspace（顶层三态）、sidebarCollection（工作区内二级切换，按 workspace 各自记忆）、settingsDockOpen、按 domain 的 listScrollToken，纯 UI 布局状态，不装任何预设数据
+    │   └── confirmStore.ts    # 'confirm'——通用确认弹窗（ask）+ 单行输入弹窗（askInput），domain 无关
+    ├── styles/
+    │   └── main.css           # 全部样式（唯一样式文件），作为字符串注入宿主文档；末尾一大段 `@media (max-width: 720px)` 是移动端布局
+    ├── i18n/
+    │   ├── index.ts           # LocaleKey 类型 + locales 汇总 + 补全检查（开发期用）
+    │   ├── types.ts           # 文案表的 TS 类型
+    │   └── locales/
+    │       ├── zh-CN.ts       # 中文文案表
+    │       └── en.ts          # 英文文案表
+    ├── composables/
+    │   ├── hostEnv.ts         # getHostWindow()/getHostDocument()/copyToHostClipboard()（见"部署环境"）+ useIsMobile()/MOBILE_BREAKPOINT（响应式移动端判定，见"移动端响应式布局"），非常重要
+    │   ├── useI18n.ts         # t() 翻译函数，复用 settings 持久化（被 uiStore 内部调用，组件不直接用这个）
+    │   ├── useHighlight.ts    # 语法高亮：递归优先级扫描器（被 HighlightedEditor 使用）
+    │   ├── usePanelResize.ts  # 拖拽调整面板宽度的通用逻辑（Pointer Events，桌面鼠标 + 移动端触摸通用），监听器绑在 host window 上
+    │   ├── useFloatingPanel.ts # 悬浮窗的拖拽定位/resize/多开自动置顶机制（Pointer Events，domain-agnostic），供 `FloatingPanelShell.vue` 使用，见「悬浮窗 Shell」
+    │   ├── useGroupedList.ts  # block/entry 分组列表的 domain-agnostic 核心（flatNodes 构建、bind/unbind、collapse、gi 查找），`PresetSidebar.vue`/`WorldbookSidebar.vue` 都在用，见「两套坐标系」
+    │   ├── useDragReorder.ts  # 鼠标/触摸拖拽排序的纯机制（Pointer Events，阈值判定/命中检测/suppress-click/rAF 节流的命中计算/拖拽时列表边缘自动滚动/文本选中抑制），key 类型泛型化（`T`，默认 `number`），domain 无关。`RegexSidebar.vue`/`PresetSidebar.vue`/`WorldbookSidebar.vue`/`CharacterSidebar.vue` 都在用；自动滚动通过可选的 `autoScrollContainer` 参数 opt-in
+    │   ├── useListScrollSync.ts # "滚动到当前激活标签对应的行"的纯机制：监听 `tabsStore.listScrollToken[domain]`，按 `activeTab.key` 反查目标行并 `scrollIntoView`。domain 无关（展开折叠组/高亮不归它管，那是 `presetStore.ts` 里监听 `activeTab` 的另一个 watcher 的事，见「状态与持久化 > presetStore.ts 里的关键设计」的 `revealAndFindGi` 条目）
+    │   ├── useInlineRename.ts   # 双击改名的纯机制（进入编辑态自动 focus+select，blur/Enter 提交，Esc 取消），domain 无关
+    │   └── useListSelection.ts  # 点击/Ctrl+点击/Shift+点击/移动端长按四种"选中手势"的识别+分发（不重新实现 `applyMultiSelect`，ctrl/shift 直接转发进调用方已有的状态转换函数，比如 `store.selectBlock()`），`PresetSidebar.vue` 在用，domain 无关（见「分组与多选」）
+    └── components/
+        ├── shared/                 # 真正 domain-agnostic 的组件：靠 domain/workspace 字符串路由或不认识任何 domain 概念
+        │   ├── HighlightedEditor.vue  # 宏语法 textarea 内核：行号+按行 diff patch 的高亮覆盖层+真实 DOM 换行测量+括号配对+可选跳转/变量点击 + `disabled` prop（marker 块只读时用），preset/regex/worldbook/character 四个域的内容编辑器都是它的薄壳
+        │   ├── EditorShell.vue        # 内容编辑区的路由容器：按 activeTab.domain 挂载对应编辑组件，`domain === 'regex'` 时数据源再按 `activeTab.workspace` 分派到 presetStore 还是 characterStore，纯路由，不持有任何桥接状态
+        │   ├── SettingsDock.vue       # 右侧设置面板的路由容器：按 activeTab.domain 查 FORMS 表挂载设置表单（故意没有 character 条目，character tab 激活时整个面板自动隐藏，见「多 domain 路由」的 character 部分），regex 表单的数据源同 EditorShell 按 workspace 分派
+        │   ├── FloatingPanelShell.vue # 悬浮窗容器：可拖拽定位/可 resize/多开自动置顶/移动端变 bottom sheet，机制在 `useFloatingPanel.ts`，自己只管 header/body/resize 手柄的渲染。CopyPanel/WorldbookToolsPanel/MetaPanel 都是它的调用方，见「悬浮窗 Shell」
+        │   ├── MetaPanel.vue          # "整份文档"级别的元信息悬浮窗：按 `activeWorkspace` 查 `META_FORMS` 表（`preset → PresetMetaForm`/`character → CharacterMetaForm`，worldbook 没有条目）挂载对应表单，见「MetaPanel」
+        │   ├── TabBar.vue             # 标签栏，纯展示 tabsStore.tabs
+        │   ├── ListToolbar.vue        # 侧边栏列表顶部"新建按钮 slot + 计数"工具条，多个侧边栏共用
+        │   ├── FormField.vue          # 表单字段：一个 label + 一个控件，`inline` prop 控制竖排还是同行（`.wb-field-row`）。四个 domain 的 SettingsForm/MetaForm 现在统一走它，不再各自决定"要不要包一层、要不要手写 margin 覆盖"，见「UI 复用组件 / CSS 速查」
+        │   ├── AdvancedGroup.vue      # 可折叠的"高级选项"分组（▸/▾ 切换 + `default-open` prop），Regex/Worldbook/Character/Preset 四处 SettingsForm/MetaForm 的折叠区共用同一个实现
+        │   ├── NumberInput.vue        # 带拖拽手柄的数字输入框，`nullable` prop 控制是否允许清空
+        │   ├── SegmentedControl.vue   # 2-3 个短选项的分段按钮，`.rx-surface`/`.wb-btn.sm` 的薄封装，用来替代短选项 `<select>`
+        │   └── Modals.vue             # 设置弹窗 + 通用 confirm/prompt（confirmStore）+ 隐藏块列表 + toast；内嵌一段 block 删除确认（未迁移，见 TODO）
+        ├── preset/                  # preset 域（预设提示词块）专属组件
+        │   ├── PresetSidebar.vue       # 侧边栏：多选（Ctrl/Shift/长按，走 `useListSelection`）、绑定分组（走 `useGroupedList`）、展开/收起、双击改名（走 `useInlineRename`）、拖拽排序（走 `useDragReorder`，本地只保留分组插入语义的 `onDrop` 回调）、滚动同步（走 `useListScrollSync`）、宽度可拖拽、`mobileDrawerOpen` prop 控制移动端左滑抽屉
+        │   ├── PresetContentEditor.vue # 内容编辑区薄壳：v-model 桥接 store.currentBlock.content（currentBlock 直接从 tabsStore.activeTab.key 解析，不依赖任何数组下标）、搜索行高亮、变量点击弹窗、name/role meta 条、marker 块传 `disabled` 给 HighlightedEditor 禁止编辑内容
+        │   ├── PresetSettingsForm.vue  # 设置表单（name/role，单个 block 级别），挂进 SettingsDock 的 FORMS 表
+        │   ├── PresetMetaForm.vue      # 整份预设级别的模型参数表单（context/max_tokens/回复数/流式/压缩系统消息/采样参数），挂进 MetaPanel 的 META_FORMS 表，见「MetaPanel」
+        │   ├── SearchPanel.vue        # 顶部搜索替换条（只搜 preset content，见 TODO）
+        │   ├── VarPanel.vue           # 右侧变量导航面板，可切换悬浮/嵌入模式
+        │   ├── VarPopup.vue           # 点击变量名弹出的小悬浮窗
+        │   ├── PreviewPanel.vue       # 预览面板，基于真实 ST 渲染；生成前会调用 `store.selectPresetByName()` 把 ST 主菜单选中的预设切到当前工具正在编辑的这份
+        │   └── CopyPanel.vue          # 跨预设复制提示词块的悬浮工具：独立加载/编辑/保存，和 presetStore 的编辑会话完全隔离；移动端把左右两栏中间的复制按钮换成上下箭头
+        ├── worldbook/                # worldbook 域（世界书条目）专属组件
+        │   ├── WorldbookSidebar.vue     # 侧边栏：列表 + 分组 + 拖拽排序 + 滚动同步 + 双击改名，同 PresetSidebar 的模式
+        │   ├── WorldbookContentEditor.vue # 内容编辑区薄壳：v-model 桥接 store.currentEntry.content，套 HighlightedEditor
+        │   ├── WorldbookSettingsForm.vue  # 设置表单：激活方式/位置/深度/概率/递归等，挂进 SettingsDock 的 FORMS 表
+        │   └── WorldbookToolsPanel.vue   # 批量工具面板：批量启用/禁用、批量改激活方式，复用 FloatingPanelShell
+        ├── regex/                  # regex 域（绑定在预设/角色卡上的正则脚本）专属组件，全部参数化（数据源+CRUD回调走 props，见「多 domain 路由」的 regex 部分）
+        │   ├── RegexSidebar.vue       # 侧边栏：列表 + 拖拽排序（用 `useDragReorder`）+ 滚动同步（用 `useListScrollSync`）+ 增删，`mobileDrawerOpen` prop 同 PresetSidebar
+        │   ├── RegexContentEditor.vue # 内容编辑区薄壳：replaceString 用 HighlightedEditor 编辑，编辑/预览互斥切换 + 共享测试文本
+        │   ├── RegexSettingsForm.vue  # 设置表单：findRegex/作用范围/表层替换/高级选项
+        │   └── regexProps.ts       # 正则三件套共用的 props 类型定义（`scripts`/`workspace`/`t`/各 CRUD 回调），调用方（App.vue 挂载点，preset/character 两个工作区各喂一份，见「多 domain 路由」）各自喂自己 store 的数据
+        └── character/               # character 域（角色卡）专属组件
+            ├── CharacterSidebar.vue    # 侧边栏：固定字段静态行（CHARACTER_FIELDS 定序，不可拖拽）+ greetings 可拖拽子区（`useDragReorder`，不接多选）。只渲染字段+开场白列表——是否渲染这个组件还是 `RegexSidebar.vue`（角色卡自己的正则子集合）由 App.vue 按 `tabsStore.sidebarCollection` 决定，这个组件自己不知道 regex 的存在，见「多 domain 路由」
+            ├── CharacterContentEditor.vue # 虚拟字段内容编辑区：activeTab.key 是 `field:xxx`/`field:greeting:<id>` 这种虚拟字段 key，解析逻辑全收在 characterStore 的 `currentField`/`setCurrentFieldValue` 里，这里只管 v-model 桥接；`depthPrompt` 字段额外带一条 depth/role 的 meta 栏（角色卡故意不接 SettingsDock，这两个数值/枚举字段没有别的地方能编辑）
+            └── CharacterMetaForm.vue   # 整张角色卡级别的 Meta 表单：creator/creatorNotes/version/tags/talkativeness/fav + 世界书绑定下拉换绑（选项来自 worldbookStore.worldbookList，只换名字不做内嵌编辑），挂进 MetaPanel 的 META_FORMS 表
+```
+
+### 为什么 SearchPanel/VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 在 `preset/` 而不是 `shared/`
+
+这几个组件的**实际功能**是纯 preset 专属的（Search 只搜 preset content，VarNav 只认 `{{setvar/getvar}}` 在 preset 里的分布，Preview 只渲染 preset，PresetMetaForm 只认预设的模型参数字段）——放进 `shared/` 名不副实（暗示 domain-agnostic，代码里却全是硬编码的 preset 概念）。放在 `preset/` 更诚实地反映现状：regex 域若要加搜索/预览，需要重构成按 domain 分派。`Modals.vue`/`MetaPanel.vue`/`FloatingPanelShell.vue` 留在 `shared/` 是因为它们的主体逻辑确实是通用宿主/路由容器——`MetaPanel.vue` 自己不认识"温度"或"talkativeness"是什么，只是照着 `activeWorkspace` 查表挂载 `PresetMetaForm`/`CharacterMetaForm`，跟 `EditorShell.vue`/`SettingsDock.vue` 是同一种"路由容器不持有 domain 知识"的模式；`Modals.vue` 只有 preset 删除确认那一小段是 preset 专属（见 TODO）。

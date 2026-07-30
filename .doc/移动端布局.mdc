@@ -1,0 +1,50 @@
+---
+name: "移动端布局"
+description: "响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。"
+alwaysApply: true
+---
+
+# 移动端响应式布局
+
+`composables/hostEnv.ts` 的 `useIsMobile()` 提供一个响应式 `isMobile` ref，断点是同文件导出的 `MOBILE_BREAKPOINT = 720`（px，宿主窗口宽度）。**优先用 `matchMedia` 监听断点跨越**，不支持时退化成 `resize` 监听——跟侧边栏 resize 一样，监听的是 `getHostWindow()`，不是裸 `window`（原因见「部署环境」：脚本自己的 JS 执行上下文是 iframe，裸全局对象量出来的永远是 iframe 自己的尺寸）。CSS 里 `@media (max-width: 720px)` 手写了同一个数字——**两处改一处必须跟着改，CSS 读不到 TS 里的常量**。
+
+桌面端是四栏并排（侧边栏 / 编辑区 / 变量面板 / 预览面板），移动端屏幕放不下，所以整体换了一套 **off-canvas drawer / bottom sheet** 模式，而不是把面板硬塞进一列纵向堆叠：
+
+- **`.wb-sidebar`**：左侧滑入式抽屉，头部 ☰ 按钮触发（`App.vue` 的 `toggleMobileSidebar`）。
+- **`.wb-right-panel`（变量面板 + 设置面板共用这个 class）和 `.pr-preview-panel`**：底部弹出式 sheet，从头部 ⋯ 打开的工具抽屉里选中对应项才会出现（见下）。
+- **`.wb-editor-col`**（真正的提示词/正则编辑区）：唯一一直留在正常文档流里、始终占满宽度的东西——手机上应该"随时都在"的只有这一块。
+- 一个共享的 `.wb-mobile-backdrop` 半透明遮罩，盖住编辑区，点它关闭当前打开的那一个抽屉/sheet。
+
+面板移出文档流（`position:absolute`，锚定到 `main.ts` 里那个全屏 `position:fixed` 的挂载点，见「部署环境」），用 transform 滑入滑出，跟编辑区自己的滚动容器完全没有交集——避免"父容器可滚 + 子面板自己也可滚"的滚动嵌套错乱、以及 `.float` 悬浮模式的面板被布局流强制拉直的问题。
+
+移动端头部按钮也换了一套：桌面端 8+ 个按钮一行放不下手机 ~360px 宽的头部，所以移动端头部只留 `☰ / 保存 / 预设名 / ⋯ / ✕` 五个，其余（切换 preset/regex 模式、复制块、搜索、设置、变量导航、预览、新建/删除预设）挪进 ⋯ 按钮打开的 `.wb-mobile-tools-sheet` 里，列表形式一次性列出。这套状态机全在 `App.vue` 的 `mobileDrawerVisible`（`'none' | 'sidebar' | 'varNav' | 'preview' | 'settingsDock' | 'tools'`）里：
+
+- 它不是"面板开没开"的第二份真相——`varNavOpen`/`previewOpen`/`settingsDockOpen` 这几个 store flag 在桌面/移动端语义完全一样，`mobileDrawerVisible` 只是"当前滑进视野的是哪一个"，由几个 `watch` 跟这些 flag 保持同步（flag 开 → 抽屉滑入；flag 关或抽屉被背景遮罩点掉 → flag 也跟着关，不是只关视觉）。
+- 切换 `sidebarMode`（preset/regex）会自动把 `mobileDrawerVisible` 设成 `'sidebar'`——刚切换模式，用户大概率想看侧边栏。
+- `tabsStore.activeId` 变化（在抽屉里点了侧边栏某一项）会把 `mobileDrawerVisible` 设回 `'none'`，露出编辑区。
+- `store.editorJump` 变化（搜索/变量导航"跳转到"操作）**也**要触发同样的收起——这个 token 在跳转目标已经是当前打开的标签时不会改变 `activeId`（标签没变，只是编辑器内部跳到了不同的行/列），如果只监听 `activeId` 就会出现"点了跳转但视觉上抽屉纹丝不动"的假死感，得单独再监听一次。
+
+## 交互层：从 `mousedown` 到 Pointer Events
+
+所有拖拽/resize 相关的事件监听（`useDragReorder.ts`、`usePanelResize.ts`、`PresetSidebar.vue` 自己那份拖拽实现、FAB 长按拖拽）都从 `mousedown`/`mousemove`/`mouseup` 迁移成了 `pointerdown`/`pointermove`/`pointerup`/`pointercancel`——一套事件同时覆盖鼠标、触屏、触控笔，不用分别写两套逻辑。迁移时**必须**用 `pointerId` 过滤后续的 move/up，不能像原来鼠标那样默认"同时只会有一路输入"，否则多点触控下会串扰。
+
+**触屏拖拽 vs 原生滚动的冲突**是这批改动里最容易踩的坑：如果让触屏拖拽跟鼠标一样"点在行上任意位置就能拖"，会跟"上下滑动这个列表"的原生滚动手势正面冲突——真实的滚动手势在最初几个 touch 采样点里，位移同样会超过拖拽阈值（`DRAG_THRESHOLD = 4px`），几乎每次滚动都会被误判成"开始拖拽"，跟浏览器自己的原生滚动抢同一路 touch。业界对可排序列表的标准解法是**触屏拖拽只能从一个专门的小把手发起**：鼠标用户保留"点行内任意位置就能拖"的桌面习惯（鼠标拖拽天然不会跟滚动手势冲突，没有歧义要消解），但触屏/触控笔的 `pointerdown` 只有落在 `.wb-drag-handle`（那个 `⠿` 图标）上才会真正启动拖拽流程，行内其它地方完全不拦截，交给浏览器原生滚动处理。`.wb-drag-handle` 在 CSS 里加了 `touch-action: none`，防止落在把手上的触摸还被顺手当成滚动手势，但把手之外的区域不受影响，列表滚动照常顺滑。
+
+移动端触摸目标（tap target）也统一放大了：桌面端 20~24px 的小图标按钮在手机上很难精确点中（业界常引用的舒适下限是 ~40px），做法是**不放大图标本身**（视觉上会显得突兀），而是用 padding 撑大可点击区域、内容居中，视觉尺寸不变、命中区域变大。
+
+## FAB 长按拖拽
+
+悬浮球默认位置由 CSS 的 `bottom:24px;right:24px` 决定（并带安全区适配，`env(safe-area-inset-*)`）。长按（`FAB_LONG_PRESS_MS = 100ms`，比 `PresetSidebar` 的长按多选阈值更短，因为这里没有"跟滚动手势区分"的顾虑）之后进入拖拽模式，把当前渲染位置冻结成显式 `left/top` 写进 `uiStore.settings.fabPos`，此后跟随指针移动，松手时一次性 `uiStore.saveSettings()` 落盘（拖拽过程中只改内存里的 draft，不逐帧写 `localStorage`，和设置弹窗里拖动滑块/色盘的"draft-until-release"规则一致）。
+
+判定"这是一次点击"还是"这是一次长按拖拽"时**不延迟点击本身**：普通的 `pointerdown → pointerup`（在 `FAB_LONG_PRESS_MS` 之内完成）从头到尾没有调用 `preventDefault()`，浏览器该发的 `click` 照发不误，所以快速点击跟改动前一样快；只有长按计时器真的触发了，才切进拖拽模式并开始吞掉紧随其后的那次 `click`（`fabSuppressClick`），防止松手时被误认成"点击打开面板"。
+
+FAB 位置在宿主窗口 resize 时会被重新 clamp 进可视区域（`onHostResize`）——最常见的触发场景是手机横竖屏切换，或者桌面浏览器窗口在拖拽后被缩窄，防止 FAB 卡在一个再也够不着的角落。
+
+## 悬浮窗 Shell：`FloatingPanelShell.vue` + `useFloatingPanel.ts`
+
+`CopyPanel`/`WorldbookToolsPanel`/`MetaPanel` 这类"不占用主面板布局、独立浮在上面"的窗口，共用同一套 domain-agnostic 的拖拽定位/resize/多开置顶机制——`useFloatingPanel.ts` 只管"这个矩形框在哪、多大、盖在最上面与否"，不知道自己里面装的是复制工具还是元信息表单；`FloatingPanelShell.vue` 是薄壳，只渲染 header（标题+拖拽发起区+✕ 关闭）/body（`v-slot`）/右下角 resize 手柄，业务内容整个通过默认 slot 塞进去。
+
+- **坐标系**：`x`/`y` 是面板左上角相对于 `.wb-panel`（`inset:0` 铺满整个宿主视口）的像素偏移，跟 pointer 事件的 `clientX`/`clientY` 直接可比，不需要额外换算——前提是 `.wb-panel` 本身相对宿主视口没有偏移，这个前提目前成立。跟 `usePanelResize.ts`/FAB 拖拽一样，所有 pointer 监听挂在 `getHostWindow()` 上而不是裸 `window`（原因见「部署环境」）。
+- **多开叠放**：所有悬浮窗实例共享**同一个模块级递增计数器**（不是数组/Set）做"点哪个哪个到最上层"，初始值 `100010`，卡在 `main.css` 已有的 z-index 序列（`.wb-panel` 100000 / `.wb-modal-overlay` 100001 / `.wb-toast` 100002 / `.pr-var-popup` 100003）上方——所以悬浮窗永远盖在主面板和这些提示类 UI 之上，新加一个悬浮窗不需要去核对现有 z-index 数字，直接复用这套机制即可。
+- **移动端**：`isMobile` 为真时不下发 `left`/`top`/`width`/`height` 这几个内联样式，只下发 `z-index`——位置/尺寸完全交给 CSS 的 `.wb-float-shell.mobile` 规则（贴底满宽 sheet），拖拽/resize 的 pointerdown handler 也直接短路（`onDragStart`/`onResizeStart` 里的 `if (isMobile.value) return`），移动端 resize 手柄本身也不渲染。**内联样式和 CSS class 规则打架时内联永远赢**，所以桌面端逻辑完全不需要关心移动端分支，两者天然互不干扰。
+- **调用方只需要**：`useFloatingPanel({ width, height, minWidth, minHeight })` 拿到 `{ style, dragging, bringToFront, onDragStart, onResizeStart }`，`FloatingPanelShell.vue` 的 `title`/`close-title`/`width`/`height`/`min-width`/`min-height` props + `@close` 事件包办剩下的接线——`MetaPanel.vue` 就是这么接的，没有自己碰任何拖拽/resize 逻辑。

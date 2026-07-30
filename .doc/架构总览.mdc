@@ -1,0 +1,95 @@
+---
+name: "架构总览"
+description: "Pinia store 职责边界与多 domain 路由：标签页决定编辑区/设置区显示什么，顶栏两行正交轴控制工作区与子集合。改 store 间分工、加新 domain、改顶栏路由、加整份文档级元信息字段、抄'新增功能套路表'时读。各 store 内部数据结构与 dirty/settings 持久化见'状态与持久化'。"
+alwaysApply: true
+---
+
+# 架构总览：状态怎么流动
+
+**先看这个，再看任何具体组件。**
+
+## 六个 Pinia store，职责边界很窄，别混着用
+
+- **`stores/uiStore.ts`（id `'ui'`，导出 `useUiStore()`）**：全局 UI 单例。拥有 `settings`（字体/颜色/面板宽度/语言/FAB 位置）、`cssVars`（计算出的 CSS 变量）、`panelOpen`（整个 ST_Workbench 浮动面板的主开关）、`settingsOpen`（设置弹窗开关）、`metaPanelOpen`（元信息悬浮窗开关，见下面「MetaPanel」）、`toastMsg`/`toastVisible`/`showToast`（通知系统）、`t`/`currentLocale`（i18n）。**所有组件直接 `useUiStore()` 拿全局 UI 状态，不经过任何 domain store 转发。** presetStore/worldbookStore/characterStore 内部也 `useUiStore()` 解构 `t`/`showToast` 供自己的 IO 函数用，但不再对外 return 这些字段。
+- **`stores/presetStore.ts`（id `'main'`，导出 `usePresetStore()`）**：当前正在编辑的这一份预设的全部数据和业务逻辑。导出名叫 usePresetStore，但 Pinia id 故意保留 `'main'` 不变（改了只会 invalidate 已持久化的 devtools 状态，没有收益）。内部数据结构（prompts/order/selectedGi/flatNodes/regexScripts/revealAndFindGi 及其 watch）、与 ST API 的数据契约（PresetManager/prompt_order/marker/selectPresetByName）、dirty 追踪见「状态与持久化」。
+- **`stores/worldbookStore.ts`（'worldbook'）**：世界书条目的全部状态和业务逻辑，独立于 presetStore（不共享 rawData/prompts 那套，自己维护一份 entries + order）。内部数据结构与 dirty 机制见「状态与持久化」。
+- **`stores/characterStore.ts`（'character'）**：当前正在编辑的这张角色卡的全部状态和业务逻辑，独立文档 store（模式跟 worldbookStore 一致），包括它自带的 `regex_scripts`（跟预设域同一个概念，见「多 domain 路由」）。七个创作字段 + greetings 通过虚拟字段 key（`field:xxx`/`field:greeting:<id>`）路由，`CharacterContentEditor.vue` 自己不解析 key——`currentField`/`setCurrentFieldValue` 是唯一解析入口。保存走字段级 `oldRaw` 回退合并（角色卡是 multipart 表单读写，跟 preset/worldbook 的纯 JSON 读写形状不一样，见 `api/characterApi.ts`）。内部数据结构与 dirty 机制见「状态与持久化」。
+- **`stores/tabsStore.ts`（'tabs'）**：标签页（`{domain, key, label, workspace}`）、`activeWorkspace`（当前活跃工作区，`preset`/`worldbook`/`character` 三态，顶栏第一行，Save/Reload 按钮和"未保存"红点只对它生效）、`sidebarCollection`（工作区内部当前在看哪个集合，顶栏第二行，只有 `preset`/`character` 有得选，见「多 domain 路由」）、`settingsDockOpen`、`listScrollToken`（按 domain 的"请把当前项滚动进视野"信号）。这些是"UI 现在长什么样"，跟"预设/角色卡里存了什么数据"是两码事，故意分开。
+- **`stores/confirmStore.ts`（'confirm'）**：两条流——`ask()`（标题+正文+确认/取消回调，正文允许简单 HTML，`danger:false` 用于非删除类）和 `askInput()`（单行输入+确认回调，空值自动挡住不关窗）。**铁律：全项目禁止调用原生 `window.confirm/prompt`，包括 `getHostWindow().confirm()`**——在 TauriTavern 的 WebView2 宿主里不可靠，一律走这两个方法。
+
+`CopyPanel.vue` 是刻意的第七种例外：它不用上面任何一个 store 的数据，自己维护左右两份独立状态（`reactive<Record<'left'|'right', SideState>>`）直接调 `api/presetApi.ts`，因为它要同时摆弄两个可能都不是"当前正在编辑"的预设。**需要同时操作两份独立数据的功能，抄 CopyPanel 这个模式**；"操作当前正在编辑的那一份"的功能永远走对应 domain 的正常状态流，不要另开一份。
+
+## 多 domain 路由：标签页决定编辑区和设置区显示什么，不是硬编码分支
+
+核心概念是 `OpenTab = {domain, key, label, workspace}`。用户点侧边栏某一项 → `tabsStore.open({domain, key, label, workspace})` → 标签栏出现/聚焦对应标签 → `EditorShell.vue`（模板分支）/`SettingsDock.vue`（`FORMS: Record<domain, Component>` 表）各自拿 `tabsStore.activeTab.domain` 挂载对应组件。**这两个容器组件完全不知道每个 domain 具体有什么字段**，新增一个 domain 不需要改它们的逻辑，只需要加一行路由。
+
+`domain` 和 `workspace` 是两个不同维度，别混着用：`domain` 决定"用哪个组件编辑这个标签"（`preset`/`regex`/`worldbook`/`character`），`workspace` 决定"这个标签归哪份文档所有"（`preset`/`worldbook`/`character`）。二者在大多数情况下能对上号，但 `regex` 这个 domain 是例外——正则脚本可以挂在预设上也可以挂在角色卡上，同一个 `domain: 'regex'` 的标签，`workspace` 可能是 `'preset'` 也可能是 `'character'`。`EditorShell.vue`/`SettingsDock.vue` 遇到 `domain === 'regex'` 时，数据源（`scripts`/CRUD 回调）按 `activeTab.workspace` 再分派一次，不能只看 domain。
+
+目前接进这套路由的有四个 domain，**全部完全原生接入标签系统，没有任何桥接层**：
+
+- **`preset`**：`EditorShell.vue` 挂载 `PresetContentEditor.vue`，`store.currentBlock` 直接从 `tabsStore.activeTab.key`（block identifier）解析，完全不依赖任何数组下标。**侧边栏的展开折叠组/高亮/滚动现在完全由 `tabsStore.activeTab` 驱动，统一收在 `presetStore.ts` 一个 `watch(() => tabsStore.activeTab, ...)` 里**（搜索结果点击、变量导航点击、TabBar 点击、侧边栏点击全部走 `tabsStore.open()`/`focus()` 到这，没有人再各自手动展开/高亮）——具体机制见「状态与持久化 > presetStore.ts 里的关键设计」。设置表单 `PresetSettingsForm.vue`（name/role，单个 block 级别）正常接入 `SettingsDock` 的 FORMS 表；模型参数等整份文档级字段走 `PresetMetaForm.vue`（悬浮窗，见「MetaPanel」），不进 SettingsDock。
+- **`regex`**：完全原生接入标签系统，是**完全参数化**的三件套（`components/regex/regexProps.ts` 定义 `scripts`/`workspace`/`t`/CRUD 回调，组件自己不 `usePresetStore()`）——数据源是调用方喂的 `store.regexScripts`（一个 live computed，`preset` 工作区指向 `presetStore.rawData.extensions.regex_scripts`，`character` 工作区指向 `characterStore` 自己那份，两边字段结构一样但不是同一份数据，改动跟宿主文档自己的 `dirty` 追踪走同一条路，不需要单独持久化）。
+- **`worldbook`**：独立工作区（不像 regex 属于别的工作区），有自己的 store（`worldbookStore.ts`），不共享 presetStore 的 rawData/prompts。`WorldbookContentEditor.vue`（内容编辑，套 HighlightedEditor）+ `WorldbookSettingsForm.vue`（激活方式/位置/深度/概率/递归等）+ `WorldbookSidebar.vue`（列表+分组+拖拽排序，同 PresetSidebar 的模式）+ `WorldbookToolsPanel.vue`（批量工具悬浮面板）。`store.currentEntry` 从 `tabsStore.activeTab.key`（`String(entry.uid)`）解析，跟 preset 域的 `currentBlock` 同一个模式。故意**不接** MetaPanel（没有整份文档级的元信息需要单独编辑）。
+- **`character`**：独立工作区，有自己的 store（`characterStore.ts`）。`CharacterContentEditor.vue` 走虚拟字段 key 路由（不是数组下标也不是 uid，是 `field:description`/`field:greeting:<合成id>` 这种字符串前缀，解析全在 `characterStore.currentField`/`setCurrentFieldValue` 里）。**故意不接 `SettingsDock` 的 FORMS 表**——character tab 激活时右侧设置面板自动隐藏（`formComponent` 查不到对应条目），因为角色卡没有"单个字段级别"的额外设置需要挂表单，`depthPrompt` 唯一的 depth/role 两个数值/枚举字段直接做进 `CharacterContentEditor.vue` 自己的 meta 栏了。整份角色卡级别的 creator/tags/talkativeness/世界书绑定走 `CharacterMetaForm.vue`（悬浮窗，见「MetaPanel」）。
+
+**顶栏是两行，对应两个正交的轴，别混着用**：第一行 `activeWorkspace`（`preset`/`worldbook`/`character` 三态）决定"现在编辑哪份文档"；第二行 `sidebarCollection` 决定"这份文档内部在看哪个集合"，只有 `preset`/`character` 两个工作区有得选（各自的 items/fields 集合 vs 各自绑定的正则脚本集合），`worldbook` 没有第二个集合，顶栏第二行对它不渲染。两者都决定侧边栏渲染哪个 `XxxSidebar.vue`——这一层跟标签页是分开的，切换这两个状态只影响"侧边栏现在给你选什么"，不影响已经打开的标签（可以同时开着 preset 标签和 worldbook 标签，随时点标签互相切换）。
+
+**`regex` 不是顶层工作区，是 `preset`/`character` 两个工作区各自的 `sidebarCollection` 取值之一**——预设的正则子集合和角色卡的正则子集合复用同一个参数化 `RegexSidebar.vue`/`RegexContentEditor.vue`/`RegexSettingsForm.vue`，区别只是 App.vue 挂载时喂给它的是 `presetStore.regexScripts`+`workspace:'preset'` 还是 `characterStore.regexScripts`+`workspace:'character'`。挂载点、切换逻辑现在统一收在 App.vue 一处（顶栏第二行的两个按钮直接调 `tabsStore.setSidebarCollection(activeWorkspace, collection)`），`CharacterSidebar.vue`/`PresetSidebar.vue` 自己都不知道 regex 集合的存在——新增一个"工作区内部还有子集合"的 domain 时，抄这个模式，不要在某个 Sidebar 组件内部再发明一个本地 `localMode`。
+
+## MetaPanel：整份文档级别的元信息悬浮窗
+
+`preset`/`character` 各自的模型参数、creator/tags 这类"描述整份文档而不是某个 block/entry"的字段，不适合塞进 `SettingsDock`（那边是严格按 `activeTab` 解析单条记录的），也不适合硬塞进右侧栏（preset 工作区右侧已经挤了 preview + varPanel + settingsDock）。做法是复用 `FloatingPanelShell.vue`（见「悬浮窗 Shell」）另开一个 `MetaPanel.vue`，按 `tabsStore.activeWorkspace`（不是 `activeTab`——同一时刻只有一个工作区在显示，不需要按 tab 精确解析）查一张 `META_FORMS: Record<string, Component>` 表：`preset → PresetMetaForm.vue`，`character → CharacterMetaForm.vue`，**worldbook 没有条目**（查不到时 `formComponent` 是 `undefined`，`MetaPanel.vue` 直接不渲染整个悬浮窗；触发这个面板的顶栏按钮在 worldbook 工作区本身也不会渲染，双重保险）。开关状态是 `uiStore.metaPanelOpen`——放在 `uiStore` 而不是某个 domain store，是因为它横跨 preset/character 两个工作区，不属于任何一个 domain 的数据。
+
+## 新增一个 domain 的套路
+
+（比如以后的世界书导入角色卡内嵌世界书，或者别的什么）
+
+1. `types.ts` 加数据类型。
+2. 数据如果本来就活在已有的宿主对象里（像 regex 活在 preset/character 里），对应 store 加一个 live computed + CRUD 方法；如果是全新的持久化目标，仿照 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现有函数的模式在 `api/` 下加一个新文件，`deepClonePlain()` 这类真正 domain-agnostic 的纪律放 `api/apiUtils.ts`，**故意不抽 `BaseApi<T>`**——三个 domain 的 API 形状差异太大（preset 走 PresetManager 单例、worldbook 走模块函数、character 走 multipart 表单），强行抽基类只会催生一堆 `never`/`unknown` 类型断言。新 API 文件只导入它真正需要的东西。
+3. 在 `stores/` 下加一个新 store（如果跟已有的共享模式就照 worldbookStore/characterStore 抄）。
+4. `tabsStore` 的 `domain`/`workspace` 联合类型加新值。
+5. `EditorShell.vue` 的模板分支加一行 `<XxxContentEditor v-if="domain === 'xxx'">`；`SettingsDock.vue` 的 `FORMS` 表加一条 `xxx: XxxSettingsForm`；如果新 domain 有"整份文档级别"的元信息字段，`MetaPanel.vue` 的 `META_FORMS` 表加一条，并在顶栏/工具栏加触发 `uiStore.metaPanelOpen = true` 的按钮（参考 `PresetSidebar`/`CharacterSidebar` 的 toolbar）。
+6. 侧边栏加 `XxxSidebar.vue`（参考 `PresetSidebar`/`WorldbookSidebar` 的模式：`useGroupedList`/`useDragReorder`/`useListScrollSync`/`useInlineRename`/`useListSelection`），在 App.vue 挂载点按 `activeWorkspace`/`sidebarCollection` 分派。
+7. i18n：`zh-CN.ts` 加键，`en.ts` 跟着加，`LocaleKey` 类型会自动收进去，`npm run typecheck` 卡得住漏译。
+
+## UI 规范与开发套路
+
+### UI 复用组件 / CSS 速查
+
+新写 UI 前先看这里有没有现成的：
+`pr` -> `preset`专用
+`rx` -> `regex`专用
+`wb` -> `workbench`，全局专用
+想复用某个domain专用CSS，那有可能需要改名
+
+- **按钮**：`.wb-btn`（默认）/ `.wb-btn.accent`（强调色）/ `.wb-btn.active`（激活态）/ `.wb-btn.sm`（小号）/ `.wb-btn.close-btn`（✕关闭）/ `.wb-btn.close-btn.compact`（面板头部用）/ `.wb-btn.icon-btn`（纯图标按钮，📌 float 切换那种）。
+- **弹窗**：`.wb-modal-overlay` + `.wb-modal`（+ `.lg`/`.sm` 尺寸修饰）+ `.wb-modal-footer`；CopyPanel 专用大尺寸是 `.pr-cp-modal`；滚动内容加 `.wb-modal-scroll`。移动端断点内 `.wb-modal` 自动改用 `92vw` 宽度、去掉桌面端的高度上限假设，不用另写响应式规则。
+- **可选中的列表行**：`.pr-block-item` + `.selected` + `.pr-block-name` + `.pr-block-role`/`.sys`/`.user`/`.asst` + `.pr-block-act`/`.del`。`PresetSidebar`/`CopyPanel`/`RegexSidebar` 共用同一套。
+- **角色徽标 class**：`utils.ts` 的 `roleClass(role, prefix?)`，不要手写三元表达式。
+- **`{{setvar}}`/`{{addvar}}`/`{{getvar}}` 徽标**：`utils.ts` 的 `varOpBadge(type)`。
+- **嵌入/悬浮双模式右侧面板**：`.wb-right-panel` + `.float` 修饰 + `.wb-rp-header`（📌 float 切换 + ✕ 关闭）+ `.wb-right-resize-handle`。`VarPanel`/`PreviewPanel`/`SettingsDock` 三个都是这一套，新加同类面板照抄；移动端断点内这套面板自动变成底部弹出 sheet（`.wb-mobile-drawer-open` 触发滑入），`.float` 修饰在断点内被同优先级的移动端规则覆盖，不用单独处理。
+- **侧边栏列表顶部工具条**：`ListToolbar.vue`（新建按钮 slot + 计数），`PresetSidebar.vue`/`WorldbookSidebar.vue`/`RegexSidebar.vue` 三个共用（`CharacterSidebar.vue` 没有走这个，固定字段列表没有"新建"语义、greetings 的"+"按钮就地放在自己的分区标题行里）。
+- **拖拽排序 / 面板 resize**：`composables/useDragReorder.ts` / `usePanelResize.ts`，只关心 Pointer Events 机制本身，具体怎么排序（数组 splice 还是树结构）由调用方的 `onDrop(from, to, after)` 回调决定。触屏专属规则：把手类元素（`.wb-drag-handle`、`.wb-resize-handle`、`.wb-right-resize-handle`）都要有 `touch-action: none`，否则触摸拖拽会被浏览器同时当成滚动手势。
+- **小型布局工具类**：`.wb-row`/`.wb-row-tight`/`.wb-row-mt`/`.wb-flex1`/`.wb-range-wide`/`.wb-select-wide`/`.wb-value-label`——一次性 flex 行/宽度值优先用这些，不要写内联 `style`。
+- **正则表单**（`.rx-*`）：`.rx-form` 内的输入框要用 `.rx-input`/`textarea`/`select` 才会 `width:100%`——**绝对不能写裸 `input` 选择器**，会连 checkbox 一起撑成整行（见「部署环境 > CSS 优先级 / 作用域的坑」）。
+- **搜索结果展示上限** `SEARCH_MAX` 唯一来源在 `types.ts`（`doSearch()` 收集是全量的，只限制 DOM 渲染行数）。
+
+### 新增功能时的套路
+
+| 要做什么 | 抄哪个模式 |
+| --- | --- |
+| 加一个新的设置项 | 只改 `types.ts`（`Settings` + `DEFAULT_SETTINGS`） |
+| 加一个确认弹窗 | `confirmStore.ask({title, message, onConfirm, ...})`——**不要**用原生 `confirm()` |
+| 加一个要用户输入一行文本的弹窗 | `confirmStore.askInput(...)`（空值自动挡住）——**不要**用原生 `prompt()` |
+| 加一个 preset 专属的信息类弹窗 | 抄 `Modals.vue` 里 `v-if="store.xxxOpen"` 的写法 |
+| 加一个复杂度较高、自成一体的悬浮工具（像 CopyPanel） | 单独开一个 `.vue` 文件，App.vue 常驻挂载 + 内部 `v-if`，是否借用 presetStore 数据看「六个 Pinia store」 |
+| 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `VarPanel`/`PreviewPanel`/`SettingsDock` 的 `.wb-right-panel`/`.float` 对称写法（移动端断点会自动接管成底部 sheet，不用额外处理） |
+| 加一个新的可编辑 domain | 看「新增一个 domain 的套路」的 7 步 |
+| 加一个"列表 + 点击选中"交互 | `utils.ts` 的 `applyMultiSelect()` |
+| 加一个"列表 + 拖拽排序"交互（支持触屏） | `composables/useDragReorder.ts`（Pointer Events），自己只写 `onDrop` 回调里的排序逻辑，把手元素记得加 `touch-action: none` |
+| 加一个"按 role/type 出徽标 class 名"的地方 | `utils.ts` 的 `roleClass()`/`varOpBadge()` |
+| 加一个新的 locale key | 在 `i18n/locales/zh-CN.ts` 和 `i18n/locales/en.ts` 同时加；如果 key 属于 `types.ts` 选项表，把 `label` 改成 `labelKey: LocaleKey` 并在 locale 文件里补文案 |
+| 加一个设置弹窗里"拖动时连续触发"的控件（滑块/色盘） | 抄 `Modals.vue` 的 draft 模式：拖动中只改组件本地 draft，松手（`@change`）才 commit 进 store + localStorage。直接绑 store 会每 tick 触发 cssVars 全量 style 重算 + 同步写 localStorage，肉眼可见地卡（FAB 长按拖拽也是这个模式，只是提交时机是 `pointerup` 而不是 `@change`） |
+| 要往 SillyTavern 读/存数据 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现成的函数（domain 各自的读写层）；传给 ST 自己 API 的对象**必须**先深拷贝，见「状态与持久化 > 与 ST API 的数据契约」 |
+| 改动 `utils.ts`/`regexEngine.ts` 里的纯函数算法 | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
+| 判断当前是不是移动端布局 | `composables/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |

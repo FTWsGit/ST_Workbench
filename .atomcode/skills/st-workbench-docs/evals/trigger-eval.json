@@ -1,0 +1,126 @@
+{
+  "skill_name": "st-workbench-docs",
+  "skill_description": "ST_Workbench 项目（C:\\Users\\Administrator\\Desktop\\ST_Workbench，Vue 3 + Pinia + TypeScript 的 SillyTavern/TauriTavern 酒馆助手脚本）的文档纪律流程。三阶段：开干前用 scripts 堆读 alwaysApply:true 核心文档建立 mental model；改具体代码前按文件→文档映射按需读 alwaysApply:false 领域文档；改完回头扫一遍 .doc 是否需要同步更新，并跑 sync 脚本刷新 AGENTS.md 的 Project Doc 表。任何在这个项目里加功能、修 bug、重构、改代码、改样式、改类型、改 i18n key、改 store、改组件、改 composable、改 api、改纯函数的任务都必须用这个 skill——即使用户没提到\"文档\"二字，即使改动看起来很小。本 skill 不适用于非 ST_Workbench 项目。",
+  "evals": [
+    {
+      "id": 1,
+      "should_trigger": true,
+      "prompt": "帮我在 src/stores/uiStore.ts 里加个 toolsPanelOpen 开关，参考 metaPanelOpen 的模式，然后接到 App.vue 顶栏 ⋯ 工具抽屉里",
+      "rationale": "改 uiStore 加新导出 + 改 App.vue 顶栏——ST_Workbench 项目内编码任务，Phase 1 读核心文档 + Phase 3 检查架构总览的 store 职责段要不要同步"
+    },
+    {
+      "id": 2,
+      "should_trigger": true,
+      "prompt": "HighlightedEditor.vue 的行号测量用 offsetHeight 不准，项目用的 --wb-fs 14.5px × --wb-lh 1.65 算出来单行 23.925px 不是整数，帮我改成 getBoundingClientRect",
+      "rationale": "改编辑器内核 + 行号测量——Phase 2 读编辑器内核.mdc + 性能与调参.mdc，skill-creator 举的高频场景"
+    },
+    {
+      "id": 3,
+      "should_trigger": true,
+      "prompt": "正则预览不准啊，trim 不生效，RegexContentEditor.vue 那个测试栏的预览跟真实酒馆里跑出来的对不上",
+      "rationale": "排查预览/正则模拟——Phase 2 读预览与正则模拟.mdc + TODO状态.mdc（可能是有意为之的简化）"
+    },
+    {
+      "id": 4,
+      "should_trigger": true,
+      "prompt": "我要给 regex 域加个搜索功能，抄 preset 域 SearchPanel.vue 的模式，RegexSidebar.vue 里塞个搜索框",
+      "rationale": "加新功能（跨域复用）——ST_Workbench 项目内编码，Phase 1 + Phase 2 读状态与持久化（regex_scripts 数据契约）+ Phase 3 套路表可能要补"
+    },
+    {
+      "id": 5,
+      "should_trigger": true,
+      "prompt": "tabsStore 里 settingsDockOpen 这个字段是不是放错地方了，感觉应该在 uiStore",
+      "rationale": "改 store 职责边界——ST_Workbench 项目内重构，Phase 1 读架构总览（六个 Pinia store 职责段）+ Phase 3 同步描述"
+    },
+    {
+      "id": 6,
+      "should_trigger": true,
+      "prompt": "shared.toast.saveFailed 这个 key 英文版漏了，en.ts 里没加，帮我补上",
+      "rationale": "加 locale key——Phase 2 读国际化.mdc，skill description 明列"改 i18n key"触发"
+    },
+    {
+      "id": 7,
+      "should_trigger": true,
+      "prompt": "useDragReorder.ts 在 TauriTavern WebView2 里拖拽没反应，鼠标动但列表不排",
+      "rationale": "排查 host iframe 怪癖——Phase 1 读部署环境.mdc（getHostWindow 铁律），skill description 列"排查拖拽没反应"触发"
+    },
+    {
+      "id": 8,
+      "should_trigger": true,
+      "prompt": "characterStore 里 currentField 这个虚拟字段路由看不懂，field:description / field:greeting:<id> 这种 key 怎么解析的",
+      "rationale": "改 characterStore 内部字段——Phase 2 读状态与持久化.mdc（characterStore 虚拟字段路由段）"
+    },
+    {
+      "id": 9,
+      "should_trigger": true,
+      "prompt": "用户反馈打字卡，HighlightedEditor 打一个字要等半秒才出高亮，行号也跟着跳",
+      "rationale": "性能症状排查——Phase 2 读性能与调参.mdc + 编辑器内核.mdc，skill description 列"被反馈卡/掉帧"触发"
+    },
+    {
+      "id": 10,
+      "should_trigger": true,
+      "prompt": "Marker 块的 name 我想改成只读不让编辑，现在还能改 name/role 只锁了 content",
+      "rationale": "改 marker 保护逻辑——Phase 2 读状态与持久化.mdc（marker 块受保护段）+ TODO状态.mdc（这是有意为之的口子）"
+    },
+    {
+      "id": 11,
+      "should_trigger": false,
+      "prompt": "帮我写一个 Vue 3 + Pinia 的待办清单 demo，组件用 setup script，状态用 pinia",
+      "rationale": "技术栈匹配（Vue 3 + Pinia）但不是 ST_Workbench 项目——skill description 明示"不适用于非 ST_Workbench 项目"，近似 miss 测边界"
+    },
+    {
+      "id": 12,
+      "should_trigger": false,
+      "prompt": "我的 React 项目里 useState 的 setter 在 setTimeout 回调里拿到的是旧值，怎么解",
+      "rationale": "完全不同项目不同框架——基础 negative，测模型不会因为"setter/state"模糊就误触"
+    },
+    {
+      "id": 13,
+      "should_trigger": false,
+      "prompt": "帮我读一下 .doc/项目概览.mdc 这个文件，告诉我里面写了什么",
+      "rationale": "近似 miss——共享 .doc / 项目概览关键词，但用户只是让读文件不是做编码任务，skill description 说"用本 skill 干编码任务"，单纯读不该触发"
+    },
+    {
+      "id": 14,
+      "should_trigger": false,
+      "prompt": "AGENTS.md 里 Project Doc 表的格式不对，表格没渲染出来，帮我看看 markdown 语法",
+      "rationale": "近似 miss——共享 AGENTS.md / Project Doc / 文档关键词，但这是 markdown 渲染问题不是 ST_Workbench 编码任务，skill 不管文档格式"
+    },
+    {
+      "id": 15,
+      "should_trigger": false,
+      "prompt": "我有个 SillyTavern 的脚本想部署到酒馆里，但是不知道怎么挂载 UI 到顶层文档",
+      "rationale": "近似 miss——共享 SillyTavern/酒馆/顶层文档概念，但这是"我有另一个脚本想部署"不是"改 ST_Workbench"，skill 限定 ST_Workbench 项目内"
+    },
+    {
+      "id": 16,
+      "should_trigger": false,
+      "prompt": "帮我给这个 TypeScript 项目加 ESLint，配 strict 规则，report unused vars",
+      "rationale": "近似 miss——共享 TypeScript 项目概念，但 ESLint 配置不是 ST_Workbench 编码任务，skill 不管 lint"
+    },
+    {
+      "id": 17,
+      "should_trigger": false,
+      "prompt": "Pinia store 的 persist 插件怎么用，我想把 settings 持久化到 localStorage",
+      "rationale": "近似 miss——共享 Pinia/settings 持久化概念，但这是通用 Pinia 用法问题不是 ST_Workbench 的 settings 持久化（那个是 uiStore.saveSettings 手写的不是 persist 插件）"
+    },
+    {
+      "id": 18,
+      "should_trigger": false,
+      "prompt": "Vite 打包成 iife 格式的时候 css 没自动注入，得手动 import 才行",
+      "rationale": "近似 miss——ST_Workbench 的 vite.config.js 就是 iife + 手动注入 CSS，但用户问的是通用 Vite 行为不是改 ST_Workbench 的 vite 配置"
+    },
+    {
+      "id": 19,
+      "should_trigger": false,
+      "prompt": "Pointer Events 在 Safari 上有兼容性问题吗，pointermove 不触发",
+      "rationale": "近似 miss——ST_Workbench 用 Pointer Events，但用户问的是通用 Safari 兼容性不是 ST_Workbench 的拖拽问题"
+    },
+    {
+      "id": 20,
+      "should_trigger": false,
+      "prompt": "帮我设计一个新 skill，管理某个项目的 .doc 文档，要支持 alwaysApply 标记和按需读取",
+      "rationale": "近似 miss——用户正在做的就是写这个 skill，skill description 提到"管理 .doc 文档"，但这是元任务（写 skill）不是用 skill 做 ST_Workbench 编码"
+    }
+  ]
+}

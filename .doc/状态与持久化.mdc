@@ -1,0 +1,108 @@
+---
+name: "状态与持久化"
+description: "各 domain store 的内部数据结构、与 ST API 的数据契约、dirty/settings 持久化机制。改 presetStore/worldbookStore/characterStore 内部字段（prompts/order/selectedGi/flatNodes/虚拟字段路由）、改 api/presetApi/characterApi/worldbookApi、碰 PresetManager/prompt_order/marker/selectPresetByName、改 settings 持久化或 dirty 追踪时读。"
+alwaysApply: false
+---
+
+# 状态与持久化
+
+按"与 ST API 的数据契约 → 各 store 内部数据结构 → 持久化与 dirty 追踪"三层讲。改 store 相关代码时一处读完，不用再跨文件跳。
+
+## 与 ST API 的数据契约
+
+### 预设读写必须走 PresetManager，绝不能直接把响应式对象传给 ST
+
+1. **保存**：只能走 `ctx.getPresetManager('openai').savePreset(name, data)`，只覆盖写一个预设文件——早期走 `/api/settings/save` 是整体覆盖式写入，会把用户 settings.json 其它字段全抹掉。
+2. **必须显式指定 `'openai'` API 类型**：`ctx.getPresetManager()` 不传参数返回的是"ST 当前主 API"对应的 manager，用户主 API 切到别的东西可能根本不是 chat completion。
+3. **绝对不能把 Pinia/Vue 的响应式对象直接传给 ST 自己的 API**——`structuredClone()` 克隆不了 Vue 的 Proxy 会直接抛错；更隐蔽的是如果 ST 在克隆失败前就把引用赋值进了自己的活跃状态，我们的 Vue Proxy 会残留在 ST 内部直到手动刷新页面。**规矩**：任何要传给 ST 自己 API 的对象，传之前必须 `JSON.parse(JSON.stringify(...))` 深拷贝（`savePresetAs()` 内部还会再防御性拷一次，双重保险）。
+4. `api/presetApi.ts` 暴露的入口：`listPresets()`/`getSelectedPresetName()`/`getPresetByName(name)`/`savePresetAs(name, data)`/`deletePreset(name)`/`invalidateCache()`/**`selectPresetByName(name)`**（把 ST 主菜单当前选中的预设切换过去，见下方"为什么需要切换 ST 主菜单选中项"）——所有"读/存预设"功能唯一应该调用的入口，不要绕开它们直接摸 ST 的 `ctx`。
+5. **正则脚本没有独立的读/存入口，因为不需要**：`regex_scripts` 就活在 `preset.extensions.regex_scripts` 里，`getPresetByName`/`savePresetAs` 读/写整份预设的时候已经带上了。新建预设、克隆预设当模板时，**记得把 `extensions.regex_scripts` 也清空**，不然新预设会带着源预设的正则——（漏过已修，`createPreset()` 里就是这么处理的）。
+
+### `prompt_order` 用 `character_id` 定位条目
+
+按 `character_id === 100001` 查找对应条目（`100001` 是 ST 里 Chat Completion 全局默认设置的固定 id），查不到就新建一条 `{ character_id: 100001, order: [] }` 追加进数组。这个模式在三处保持一致，**改任何一处时记得三处一起改**：
+
+- `utils.ts` 的 `orderedPromptsWithHidden()`（读侧，给隐藏块列表用）。
+- `presetStore.ts` 的 `applyLoadedPreset()`（加载）、`doSavePreset()`（保存）、`createPreset()`（新建/清空）。
+- `CopyPanel.vue` 的 `ensureOrder()`（跨预设复制时确保两侧都有一条可写的 order）。
+
+### 为什么需要"切换 ST 主菜单选中项"（`selectPresetByName`）
+
+`ST.generate('normal')`（Precise Preview 的"完整请求原文"模式、Preset Preview 走的方案B单例）**不认工具里正在编辑的是哪份预设，只认 ST 主菜单当前选中的是哪份**——如果用户在本工具里切到了另一份预设编辑，但 ST 主菜单还停在原来那份，Preview 生成出来的会是主菜单那份的内容，跟用户在编辑器里看到的对不上。`ST.selectPresetByName(name)` 能切主菜单选中项，但**这个操作在 ST 里很慢**，所以只在 `PreviewPanel.vue` 点"生成"之前调用一次 `store.selectPresetByName(store.presetName)`，且函数内部先判断 `ST.getSelectedPresetName() === name`，相等则跳过、零开销——只有真不一致时才付这一次代价。切换失败走 `shared.toast.selectPresetFailed` 提示"可能导致显示数据不精确"。
+
+### marker 块受保护，不能删除/隐藏/编辑内容
+
+`PresetBlock.marker` 为 `true` 的块（ST 内部生成的占位块，比如聊天历史插入点）`deleteBlock()` 检测到目标块是 marker 就直接短路、弹 `shared.toast.cannotDeleteMarker` toast，不执行删除；`PresetContentEditor.vue` 把 `store.currentBlock?.marker` 传给 `HighlightedEditor` 的 `disabled` prop，textarea 变成 `readonly`，改不了内容（但仍可选中/复制文本）。name/role 这类元数据目前**没有**被同样锁死——`PresetSettingsForm.vue` 一直有一行提示（`preset.settings.markerHint`）说明这是 marker �块、改了这里的角色/名字可能不影响实际渲染，但没有强制只读，是刻意留的口子（marker 块偶尔需要改个显示名方便肉眼区分，见「TODO状态」）。
+
+### 角色卡是 multipart 表单读写，不是纯 JSON
+
+`api/characterApi.ts` 走 `/script.js` 模块 `characters` 数组 + multipart 表单读写：`getCharacterByAvatar`（每次都用 `getOneCharacter()` 真发网络请求重新拉取，见文件内 doc comment——`unshallowCharacter()` 是纯本地操作且几乎总是空操作，别被名字骗了）、`create/editCharacter`（字段级 oldRaw 回退合并）、`deleteCharacter`。跟 preset/worldbook 的纯 JSON 读写形状不一样，是 characterStore 保存逻辑要走字段级 oldRaw 的根因（见下方 dirty 机制）。
+
+### 世界书走模块函数封装
+
+`api/worldbookApi.ts` 是 `/scripts/world-info.js` 模块函数封装：list/get/create/edit/delete，`entries: Record<uid,entry>` ⇄ 工作层数组互转。
+
+## 各 store 内部数据结构
+
+### presetStore.ts 里的关键设计
+
+- **`prompts` / `order`**：`prompts` 是所有提示词块（含禁用/隐藏）。`order` 是当前生效的顺序+启用状态，元素是 `OrderItem` 或 `OrderGroup`。
+- **`selectedGi` / `anchorGi`**：多选集合（gi 的 Set）和多选锚点（Shift+范围选的起点）。侧边栏所有高亮完全对应 `selectedGi`，表面和逻辑 100% 统一，没有两套系统打架。**没有 `selIdx` 这个字段**（见「架构总览」）——"编辑器现在显示哪个块"完全由 `tabsStore.activeTab.key` 决定，跟侧边栏的选中/高亮状态本来是两件独立的事，只通过 `identifierToGi()` 单向换算；但两者**不能真的完全脱钩**——见下面 `revealAndFindGi` 条目里那段 `watch(() => tabsStore.activeTab, ...)`，"active tab 变了"这件事需要单向驱动"高亮跟着变"，否则会出现"点了 tab 但侧边栏没高亮/没展开折叠组"这个 bug（细节见下面两条）。
+- **`currentBlock`**：computed，直接从 `tabsStore.activeTab.key`（block identifier，仅当 `activeTab.domain === 'preset'` 时）→ `prompts` 解出的活引用，完全不依赖任何数组下标。`PresetContentEditor`/`PresetSettingsForm` 直接改它的字段就同步进 `prompts`/dirty 追踪，不需要维护本地 ref（name/role 不是高频输入的热路径，没那个必要）。
+- **`identifierToGi(identifier)`**：辅助函数，把 block identifier 反查成 flatNodes 里的 gi，供侧边栏高亮/滚动/`addBlock()` 决定插入位置这类场景使用——是 `currentBlock` 那条主链路的补充，不是它的依赖。
+- **`regexScripts`**：live computed，指向 `rawData.extensions.regex_scripts`，`push`/`splice` 直接生效并落进 dirty 追踪，不需要单独 setter。
+- **`flatNodes`**：computed，`order` 或 group 的 `collapsed` 变化时重建，preset 域所有选中/跳转/拖拽都基于这个数组的索引。
+- **`selectPresetByName(name)`**：见上面"为什么需要切换 ST 主菜单选中项"，只被 `PreviewPanel.vue` 生成前调用，不是通用的预设切换入口——那是 `switchPreset()` 的事，两者不要混。
+- **`revealAndFindGi(identifier)`**：跳转专用，先自动展开目标所在的折叠组，再查 gi，避免折叠组里的块跳不过去。**不由各跳转函数各自手动调用**——紧挨着它下面有一个 `watch(() => tabsStore.activeTab, (tab) => {...}, { immediate: true, flush: 'sync' })`，是"标签驱动侧边栏"这件事**唯一**的实现：只要 `activeTab` 变成了某个 block（不管是搜索结果点击、变量导航点击、TabBar 点击、还是侧边栏自己点击触发的），这个 watcher 就会 `revealAndFindGi()` 展开折叠组、然后把 `selectedGi`/`anchorGi` 重置成只选中这一行。`jumpToSearchResult`/`jumpToVarOp`/`jumpToPopupVar` 现在只需要 `tabsStore.open({domain:'preset', key, label})` + `requestEditorJump(...)`，不用再自己调 `revealAndFindGi()` 或摆弄 `selectedGi`——`flush: 'sync'` 是为了保证这个 watcher 先于 `useListScrollSync.ts` 那个监听同一个 token 的 watcher 跑完，否则会有"组还没展开就去 `scrollIntoView`，滚到一个还不存在的行"的竞态。
+  - **为什么监听 `activeTab` 本身、不能监听 `tabsStore.listScrollToken['preset']`**：`store.selectBlock()`（ctrl/shift 多选路径）内部也调 `tabsStore.requestListScroll('preset')`，如果 watcher 监听同一个 token，会在多选算完的同一 tick 里立刻把多选结果用"当前 active tab 对应的单个 gi"覆盖回单选——**表现是 Ctrl/Shift 多选完全失效**。监听 `activeTab` 引用本身没这问题，ctrl/shift 多选从不改 `activeId`。代价是"重新点击已经是 active 的那个 tab"这种情况 `activeTab` 引用不变、watcher 不重新触发，所以 `PresetSidebar.vue` 的普通点击处理函数仍在本地做一次同样的 `selectedGi`/`anchorGi` 重置（覆盖 watcher 抓不到的 edge case）。
+- **Preset IO 原语**：`loadPresetByName()` 是唯一真正的 load，其它都是薄包装——`loadFromContext()`（首次打开面板，加载 ST 当前选中的那份）、`switchPreset(name)`（明确切到另一份预设，丢弃未保存改动，UI 层负责先 confirm）、`reloadPreset()`（重新加载**本工具当前打开的这份**（`presetName.value`），不是 ST 当前选中的——两者可以不同）、`refreshPresetList()`（同步预设下拉列表）。
+- **`generatePreviewBlocks()`/`generatePreviewRaw()`**：真实调用 SillyTavern 自身渲染管线，不是本地模拟（见「预览与正则模拟」）。
+
+### worldbookStore / characterStore 的对应设计
+
+- **worldbookStore**：模式跟 presetStore 一致——`entries`（所有条目）+ `order`（顺序+启用状态）；`currentEntry` 从 `tabsStore.activeTab.key`（`String(entry.uid)`）解析，跟 preset 域的 `currentBlock` 同一个模式。故意**不接** MetaPanel（没有整份文档级的元信息需要单独编辑）。
+- **characterStore**：虚拟字段路由是核心区别——`currentField`/`setCurrentFieldValue` 是唯一解析入口，`activeTab.key` 是 `field:xxx`/`field:greeting:<id>` 这种字符串前缀，`CharacterContentEditor.vue` 自己不解析 key。七个创作字段（description/scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt）+ greetings 可拖拽排序。`depthPrompt` 字段额外带一条 depth/role 的 meta 栏（角色卡故意不接 SettingsDock，这两个数值/枚举字段没有别的地方能编辑）。
+
+### 分组与多选（preset 域专属，regex 域目前没有）
+
+1. **多选**：桌面端 Ctrl+Click toggle，Shift+Click 范围选；移动端长按（~200ms）toggle 多选。手势识别+分发统一走 `composables/useListSelection.ts`：桌面点击/Ctrl点击/Shift点击是 `onClick(id, e)`，移动端长按是 `onPointerDown(id, e)`——长按判定走 Pointer Events，`pointerType !== 'mouse'` 且落点不在 `.wb-drag-handle` 上时才启动长按计时器（否则视为拖拽发起，见「移动端布局」的触屏拖拽说明），移动超过阈值（默认 4px）或松手前取消计时器；计时器到期后**不是另一套长按专属的选中规则**，而是直接分发成跟桌面 Ctrl+点击一样的 `'ctrl'` mode，两条路径最终都走到调用方同一个 `onSelect(mode, id)` 处理函数，`PresetSidebar.vue` 里这个函数对 `'ctrl'`/`'shift'` 调 `store.selectBlock(gi, {...})`（`navigator.vibrate(40)` 是长按分支自己加的额外反馈，跟选中逻辑无关）。composable 本身不知道 `applyMultiSelect`，只负责"识别手势→报告 mode"，避免出现两份状态转换实现。
+2. **绑定分组（Bind/Unbind）**：选中 2+ 个顶层 block 绑成可折叠组，组内子块保持相对顺序。
+3. **分组持久化**：导出时把 group 展开回扁平数组，每个子块携带 `_gid`/`_gname`/`_gcollapsed`/`_genabled`/`_gidx`；导入时扫描 `_gid` 还原结构。SillyTavern 会忽略这些未知字段，不破坏兼容性。
+4. **双击改名**：group header 和 block item 都支持（PresetSidebar 内联 input）。
+
+### 核心架构：flatNodes + gi 坐标系
+
+放弃直接用 `order` 数组下标做选中/拖拽/跳转坐标，每次渲染动态构建 `flatNodes`。`gi` 和 `order` 下标没有 group 时碰巧相等，一有 group 就完全不一样。要点：
+
+- `bindSelected()` 里 `items`（要绑成组的块）和 `indices`（从后往前删除用）必须分开排序。
+- `reorderBlock` 目前只移动第一个选中项到目标位置，"多选项保持相对顺序一起移动"还没做。
+- **`flatNodes` 故意跳过 collapsed group 的子节点**（`walk()` 里 `if (g && !ref.collapsed)` 才递归——这是它给侧边栏做折叠渲染用的语义，组收起了子节点当然不该出现在可视列表里）。但这个"可视列表"语义会连累两类看起来不相关的代码，各是各的坑，改对一类不代表另一类也对：
+  - **"扫全部 preset 找东西"的函数**（`doSearch`/`rebuildVarIndex`/`showVarPopup`/`generatePreviewBlocks`）：不能拿 `flatNodes` 当"所有 block 的列表"去遍历，会漏掉折叠组里的内容（比如 varPopup 会显示"这个变量没有其它出现位置"，其实只是没扫到折叠组里那份）。要从 `prompts.value`（不关心 order/group，`doSearch`/`rebuildVarIndex` 用的这个）或 `order.value.flatMap(node => isGroup(node) ? node.children : [node])`（展开一层 group、不管折叠状态，`showVarPopup`/`generatePreviewBlocks` 用的这个）取数据源。`showVarPopup()` 现在接收的是调用方直接传入的 `clickBlockId`（block identifier），不再像老版本那样传一个 gi 再反查——变量点击永远发生在当前打开的编辑器里，标识块身份用 identifier 比 gi 更直接，也天然规避了"gi 到底是不是 flatNodes 里能查到的那个"这类问题。
+  - **"根据 identifier 反查 gi 然后跳过去"的函数**（`previewSearchResult`/`jumpToSearchResult`/`jumpToVarOp`/`jumpToPopupVar`）：如果目标 block 所在的组当前是折叠的，`flatNodes.value.findIndex(...)` 直接找不到、返回 -1。统一走 `revealAndFindGi(identifier)`（先把目标所在的 collapsed group 展开，再查 gi），不要自己裸写 `flatNodes.value.findIndex`。`jumpToSearchResult`/`jumpToVarOp`/`jumpToPopupVar` 这三个（会真正切换标签的）现在**不直接调用** `revealAndFindGi()` 了——`tabsStore.open(...)` 触发 `activeTab` 变化后，由 `presetStore.ts` 那个统一的 `watch(() => tabsStore.activeTab, ...)` 代劳（见上面「presetStore.ts 里的关键设计」）；只有 `previewSearchResult`（打字预览、故意不切标签避免抢焦点那个）还在自己直接调 `revealAndFindGi()`，因为它没有 `activeTab` 变化可以让那个 watcher 接手。
+
+### 当前状态（多选/分组）
+
+- ✅ 只有 `selectedGi` 一套选中状态，表面高亮和逻辑选中 100% 统一
+- ✅ 普通点击：清空多选 → 选中当前行 → 设置锚点 → 打开标签/切换折叠。之后直接 Shift 点别的行就能范围选，符合主流交互习惯
+- ✅ Ctrl/Cmd+点击：切换单个行的选中状态，更新锚点
+- ✅ Shift+点击：从锚点到点击行做范围选中，锚点不动（和 VSCode/文件管理器行为一致）
+- ✅ 移动端长按：等价 Ctrl+点击，切换单个行的选中状态，设置锚点，触发震动反馈
+- ✅ `canUnbind` 检查 `selectedGi` 里是否有 group，`unbindCurrent()` 从 `selectedGi` 里找第一个 group 执行 unbind
+- ✅ 滚动逻辑滚动**当前 active tab** 对应的行（`useListScrollSync.ts` 按 `activeTab.key` 反查目标，不是 `selectedGi` 里最小的那个：那种情况下 `selectedGi` 没变但你想看的其实是刚点的这个 tab）
+- ✅ marker 块受保护：不能删除、隐藏、内容不能编辑（详见上面"marker 块受保护"）
+
+## 持久化与 dirty 追踪
+
+### settings 持久化：加一个新设置只需要改 `types.ts`
+
+`settings` 整体存 `localStorage`（`st-wb-settings`），加载时 `{ ...DEFAULT_SETTINGS, ...存的内容 }` 合并（`syntaxColors` 再单独深合并一层）。新增设置项只需要在 `types.ts` 的 `Settings` interface 和 `DEFAULT_SETTINGS` 加一行——比如 `fabPos: { x: number; y: number } | null`（FAB 被长按拖拽后的显式坐标，`null` 表示还没拖过、继续用 CSS 默认的 `bottom/right` 定位，见「移动端布局 > FAB 长按拖拽」）。
+
+字体/颜色是通过 `uiStore.cssVars` 挂在 `.st-wb` 根节点上的 CSS 变量（`--wb-fs`/`--wb-ff`/`--hl-*`），所有后代自然继承——所以设置弹窗改字体对所有域的编辑器同时生效，不需要逐组件接线（唯一要手动做的是触发重新测量，见「编辑器内核」）。
+
+### "未保存"标记：三个 store 的 dirty 机制不一样
+
+presetStore 的 `dirty` 是 `watch([prompts, order, regexScripts], ..., {deep:true})`——三个数据源都自动触发，不需要在每个改动函数手动打标。代价是"加载新预设"本身也会触发，所以 `applyLoadedPreset()` 加载完之后用 `nextTick()` 把它拨回 `false`。同时 `applyLoadedPreset()` 会调用 `tabsStore.closeWorkspace('preset')`——`regex_scripts` 也活在同一份被替换掉的 `rawData` 里，所有旧标签都是悬空的，切预设/重新加载时一起清。模型参数等 `PresetMetaForm.vue` 直接改的字段不在这个 watch 的监听范围内（它们是 `rawData` 上的散字段，不是 `prompts`/`order`/`regexScripts` 这几个专门的 ref），所以 `PresetMetaForm.vue` 每个字段的 setter 里都手动调一次 `store.markDirty()`。
+
+worldbookStore 的 `dirty` 同理：`watch([order, entries], ...)`，order 深监听（量小），entries 浅监听（高频编辑热路径，跟 presetStore 的 prompts 同一个理由），加载完用 `nextTick()` 拨回 `false`。
+
+characterStore 的 `dirty` **不是** watch 出来的，是每个改动函数（`setCurrentFieldValue`/`addGreeting`/`deleteGreeting`/`reorderGreeting`/正则 CRUD/`CharacterMetaForm.vue` 每个字段的 setter）显式调用 `markDirty()`——角色卡的字段结构比预设/世界书松散得多（七个大文本框 + greetings 数组 + regex_scripts + 一堆 meta 散字段），没有一两个能覆盖所有改动入口的顶层 ref 可以整体 watch，跟 CopyPanel 的 `dirty` 是同一个理由（改动入口少或者分散，手动置 `true` 比强行凑一个 watch 更直接）。

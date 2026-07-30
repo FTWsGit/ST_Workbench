@@ -1,0 +1,40 @@
+---
+name: "国际化"
+description: "自研 useI18n（无 vue-i18n）与文案 key 命名规范。加新 locale key、加新语言、改文案、排查漏翻译兜底、用 LocaleKey 做 typecheck 校验时读。"
+alwaysApply: false
+---
+
+# 国际化（i18n）
+
+项目没有引入 `vue-i18n`，而是自研了一个 `useI18n.ts` composable。这里只记对日常开发最重要的点：
+
+- **单一数据源**：`Settings.language` 是 `types.ts`/`DEFAULT_SETTINGS` 里的一个普通设置项，和其它设置项一起存 `localStorage`（`st-wb-settings`）。不要另起一套持久化。
+- **调用方式**：`uiStore` 内部调用 `useI18n(settings)` 并把 `t` 暴露出来，所以组件/store 里通过 `uiStore.t(key, params?)` 调用，和 `uiStore.showToast(...)` 同风格。
+- **Key 命名**：`域.场景.用途` 三段式，例如 `preset.sidebar.bindGroup`、`shared.toast.saveFailed`、`common.save`。不要用中文原文当 key。新增的移动端专属文案走 `shared.mobile.*`（例如 `shared.mobile.sidebar`/`shared.mobile.tools`，分别对应 ☰ 和 ⋯ 两个按钮的 tooltip）——移动端工具抽屉里其它项复用的都是已有的 `shared.header.*` key，没有另开一套。
+- **选项表**：`types.ts` 里的 `REGEX_PLACEMENT_OPTIONS`/`REGEX_SUBSTITUTE_OPTIONS`/`SYNTAX_LABEL_KEYS` 等业务选项表，字段是 `labelKey: LocaleKey`，渲染时 `t(opt.labelKey)`。`types.ts` 继续是"有哪些选项"的事实来源，locale 文件只提供文案。
+- **动态拼接**：toast / error 文案用 `{msg}` 具名占位符，例如 `t('shared.toast.saveFailed', { msg: e.message })`。
+- **兜底**：当前语言缺 key 时回退中文，再缺就显示 key 本身，方便一眼发现漏翻译。
+- **加新语言**：扩展 `Settings.language` 联合类型 + 新增 `i18n/locales/<lang>.ts` + 在 `i18n/index.ts` 注册。目前只有 `zh-CN` 和 `en`。
+- **验证**：`npm run typecheck` 能通过 `LocaleKey` 类型在编译期抓出 key 拼写错误。
+
+## 命名规范
+
+### 域划分
+- `common.*`：跨域原子词，所有域通用、文字不随上下文变化的按钮/标签（保存/取消/删除/关闭/确认/创建/切换/新建/加载等）
+- `shared.*`：跨域复用的通用组件/逻辑文案，按组件分块：header、mobile、settings、toast、confirm、floatingPanel、listToolbar、highlightedEditor、syntax
+- `preset.*`：预设域专属文案
+- `regex.*`：正则域专属文案
+- `worldbook.*`：世界书域专属文案
+- `character.*`：角色卡域专属文案
+
+### 命名格式
+`域.组件/场景.用途`，最多四级结构，例如：
+- `preset.toast.loaded`：预设域-提示-加载成功
+- `character.confirm.switch.title`：角色域-确认弹窗-切换-标题
+- `shared.syntax.hl-b`：共享域-语法高亮-大括号标签
+
+### 后续维护建议
+1. 新增文案时，先判断是否为跨域通用按钮文字，如果是则添加到`common.*`或`shared.*`下，不要在各域重复定义
+2. 新增业务域文案时，严格归属到对应域下，禁止跨域引用其他域的业务key
+3. 新增key永远先加在`zh-CN.ts`中，再在`en.ts`中对应位置添加英文翻译，保持两个文件顺序一致
+4. 动态引用的key（如选项的labelKey）修改时，记得同步修改语言文件中的对应key

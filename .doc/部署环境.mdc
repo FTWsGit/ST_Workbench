@@ -1,0 +1,46 @@
+---
+name: "部署环境"
+description: "宿主环境怪癖：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，所有全局对象量到的都是 iframe 自己。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定的代码、或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。"
+alwaysApply: true
+---
+
+# 部署环境
+
+## 部署环境：iframe 执行 + 顶层文档挂载
+
+1. 项目打包成单文件 `dist/index.iife.js`（`vite.config.js` 用 `lib` + `iife` format，`cssCodeSplit:false`）。
+2. 用户把它作为脚本导入到 SillyTavern「酒馆助手」的脚本区。
+3. 酒馆助手实际是在一个 **`about:srcdoc` 的 iframe 里执行脚本**，但脚本自己选择把 UI 挂到 **`window.top.document`**（顶层文档），这样悬浮窗才能正常显示。见 `main.ts`。
+4. **后果**：脚本自己 JS 执行上下文里，裸写的全局 `window`/`document` 指的是 **iframe 自己的**，跟实际渲染 UI 的顶层文档是两个完全不同的东西。凡是不小心用了裸 `window.xxx`/`document.xxx` 的地方，几乎必然出 bug。
+
+## 挂载点本身现在长什么样
+
+（`main.ts`）：不再是一个"随便 append 上去、靠 DOM 顺序自然盖在最上面"的裸 `<div>`，而是显式给了一套完整的定位样式，直接内联写在元素上（不依赖 CSS 层叠，避免被任何后加载的规则打乱）：`position:fixed; top:0; left:0; width:100vw; height:100dvh(回退100vh); z-index:2147483647`（合法 z-index 最大值）；同时 `pointer-events:none`——挂载点本身铺满全屏但不吃任何点击，真正可见的部分（`.wb-fab`/`.wb-panel`/`.pr-var-popup` 等）各自在 CSS 里单独声明 `pointer-events:auto` 抢回来，宿主页面其它地方的点击照常穿透。这个元素 append 到 `targetDoc.body`（不是 `<html>`），原因见下面的坑列表。挂载后还有一段一次性诊断：如果检测到宿主 `<html>` 上有非 `none` 的 `transform`/`perspective`/`filter`/`will-change: transform`，会 `console.warn` 提示——这类属性本身不影响 `vw`/`dvh` 的尺寸计算，但如果 transform 真的包含位移（不只是单位矩阵/缩放/绕原点旋转），会让 `top:0;left:0` 偏离真实视口角落；留这条日志是为了下次真遇到"FAB 位置整体偏移"的报告时有据可查，而不是从零开始猜。
+
+## 宿主环境的约束
+
+（都在 `composables/hostEnv.ts` + 各组件里修掉了）
+
+- `window.addEventListener('mousemove',...)` 绑在 iframe 的 window 上 → 拖拽宽度条/拖拽排序完全没反应。
+- `getComputedStyle(document.documentElement)` 读的是 iframe 自己空白的 `<html>` → 字号设置不生效。
+- 命令式创建的 DOM 节点，字体解析跟着创建者的文档走，不是跟着挂载到哪个 DOM 树走 → 如果拿宿主页面自己的 `document.createElement(...)` 创建测量用的隐藏节点，量出来的宽度/高度和实际渲染对不上（HighlightedEditor 的换行/单行高度测量节点——`.wb-lh-measure`/`.wb-line-mirror`——统一用 `getHostDocument()` 创建就是这个原因）。
+- `navigator.clipboard.writeText(...)` 裸调用是 iframe 自己的 `navigator`，且 `about:srcdoc` 默认不带 clipboard-write 的 Permissions Policy 委派 → 大概率直接 reject 或 `undefined`。改用 `copyToHostClipboard()`：host window 的 clipboard API 失败就自动降级 `execCommand('copy')` 隐藏 textarea 方案，两条路都失败才返回 `false`，且真的 `console.error` 出来。
+- 原生 `window.confirm/prompt/alert` 在 TauriTavern 的 WebView2 宿主里不可靠——这**不是**"换 host window 调"能解决的，所以一律走 `confirmStore.ask()`/`askInput()`。
+- **`<html>` 有 `transform`（即使是 identity matrix）时，`position:fixed` 元素的 containing block 会变成 `<html>` 而不是 viewport**，导致 `inset:0`/`bottom:24px` 等计算错误、UI 飘到视口外。修复：挂载点用 `100vw`/`100dvh`（视口单位，不走 containing-block 链路）显式给宽高，不用 `inset:0`；内部浮层全部 `position:absolute` 锚定到这个挂载点。
+- **移动端 ST 主题把 `<body>` 做成 `position:fixed`**（防止软键盘弹出时页面抖动），且 `position:fixed` 会无条件建立新的层叠上下文——这意味着 `<body>` 自己变成了一个层叠上下文，包含聊天输入框等元素；一个"DOM 顺序更靠后但自身没有 positioned"的裸 `<div>`，画在"in-flow 非定位"这一层，天然低于任何 positioned 层叠上下文，跟 DOM 顺序完全无关。修复：挂载点显式给了 `position:fixed` + 具体数值的 `z-index`（`auto` 的 z-index 虽然也建立层叠上下文，但排在"z-index 0/auto"这一层，实测不足以稳定盖过 `<body>` 自己的层叠上下文；显式正数 z-index 才进入更高的"positive z-index"层，无条件盖过前者）；append 到 `<body>`（不是 `<html>`），让自己的 z-index 在 `<body>` 的层叠上下文*内部*竞争，而不是站在外面跟整个 `<body>` 比。
+- **`100vh` 在移动端会被底部导航栏/地址栏压缩**，导致内容被裁（FAB 被导航栏盖住、sidebar 底部内容看不到）。修复：挂载点高度用 `100dvh`（dynamic viewport height），不支持 `dvh` 的浏览器自动回退到 `100vh`（先设 `height:100vh` 再覆盖设 `height:100dvh`，两行都写，靠属性覆盖顺序实现"降级不报错"）。
+
+## 规矩
+
+任何需要"操作实际可见 UI 所在文档"的代码都走 `getHostWindow()`/`getHostDocument()`。任何"把错误吞掉换一个 toast 提示"的 `.catch()`，必须先 `console.error`/`console.warn` 真实错误。
+
+## CSS 优先级 / 作用域的坑
+
+酒馆本身是个大页面，没有 Shadow DOM 隔离，所有样式共享同一个层叠上下文：
+
+1. **选择器优先级算错**：一条基础规则 `.st-wb input,.st-wb select,.st-wb textarea{...}` 意外压过了专门给编辑器写的覆盖规则，把编辑器 textarea 样式压回基础规则、挡住了语法高亮层。现在用祖先类名限定（如 `.wb-editor-wrap .wb-editor-ta`）确保优先级稳赢。
+2. **裸 `input` 选择器连 checkbox 一起选中**：给正则设置表单写 `.rx-form input{width:100%}` 时没限定 type，把 `type="checkbox"` 也撑成了一整条横线，旁边的文字被挤到只剩几像素、逐字换行。修成 `.rx-form .rx-input{width:100%}` 只选中文本类输入框，checkbox 另外单独 `width:auto`。**同类规则以后再写，先想清楚会不会连累到 checkbox/radio**。
+3. **类名太通用导致被外部样式撞车**：语法高亮相关类名一开始没加 `.st-wb` 前缀。现在所有这类通用类名选择器都强制加前缀。
+4. **重构 DOM 结构后 CSS 选择器没跟着改**：选择器语法合法但匹配不到任何元素，安静失效，不会报错。**重构 DOM 结构时必须同步检查所有引用了旧 class 名的 CSS 选择器**。
+5. **宿主页面（特别是移动端主题）的全局 `button` 重置会覆盖我们的样式**：ST 手机端主题常有 `button { background: transparent; border: none; }`，会把 `.wb-fab` 的 `background`/`border`/`pointer-events` 全部抹掉，视觉上变成"没渲染"。修复：关键视觉样式加 `!important`（`background`/`border`/`pointer-events`），并在 `getComputedStyle` 验证期就确认生效。
+6. **移动端断点规则要赢过桌面端的 `.float` 修饰**：`.wb-right-panel`/`.pr-preview-panel` 的 `.float` 变体是在 `@media` 外面定义的（同样 `position:absolute`），如果移动端断点内的规则选择器特异性不够，用户开着悬浮模式进入手机布局时会看到桌面端悬浮样式而不是底部 sheet。做法是断点内**显式复合选择器同时匹配 `.float` 变体**（`.wb-right-panel.float` 而不是只写 `.wb-right-panel`），配合媒体查询内规则总是后声明的源码顺序，稳赢桌面端规则，而不是赌两边特异性刚好一样时谁写在后面。
