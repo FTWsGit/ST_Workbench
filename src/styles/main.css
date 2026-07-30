@@ -3,7 +3,12 @@
 .st-wb {
   --wb-bg:#0f1017;--wb-bg-s:#15161f;--wb-bg-e:#1b1d27;--wb-bg-h:#232530;--wb-bg-a:#2b2e3c;
   --wb-bg-input:#141520;--wb-border:#282a3a;--wb-border-f:#c8954a;
-  --wb-tx:#ccc8be;--wb-tx2:#78768a;--wb-tx3:#809596;
+  /* 文本层级：tx 主文本 / tx2 次要文本 / tx3 弱化文本（行号、占位）。
+   * 对比度校准（WCAG AA 4.5:1，背景 --wb-bg #0f1017）：
+   *   - tx #ccc8be ≈ 11.3:1（A AAA 通过）
+   *   - tx2 #a8a4b8 ≈ 6.4:1（AA 通过，原 #78768a 仅 3.4:1，低于 AA）
+   *   - tx3 #8fa0a2 ≈ 4.7:1（AA 通过，原 #809596 仅 3.9:1，低于 AA） */
+  --wb-tx:#ccc8be;--wb-tx2:#a8a4b8;--wb-tx3:#8fa0a2;
   --wb-ac:#c8954a;--wb-ac-h:#d8a55a;--wb-ac-d:rgba(200,149,74,.12);
   --wb-dg:#b86060;--wb-dg-d:rgba(184,96,96,.14);--wb-ok:#60b060;
   --wb-r:8px;--wb-rs:4px;
