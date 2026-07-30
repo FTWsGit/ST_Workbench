@@ -10,7 +10,10 @@ import { ref } from 'vue'
  *  - askInput()/confirmPrompt()/cancelPrompt()：单行文本输入 + 确认回调。替代 window.prompt()。
  *  - askMulti()/confirmMulti()/cancelMulti()：多文档清单式确认，用于"汇总展示多份未保存改动"场景。
  *
- * 三个 flow 都是扁平状态而非队列——此应用不会同时弹出两个需要排队的确认框。
+ * 并发保护：三个 flow 共用同一个"当前是否打开"的闸门。任一 flow 已经 open 时，
+ * 新进入的 ask/askInput/askMulti 会先强制 cancel 当前 flow（触发其 onCancel 让调用方回退 UI 状态），
+ * 再开自己。这样既保证不丢回调（旧的 onConfirmCb 不再被静默覆盖），
+ * 也避免两个弹窗叠加显示。出现并发覆盖本身通常是上游 bug 征兆，额外打一条 console.warn 便于排查。
  */
 export interface ConfirmMultiItem {
   /** 一行列表项要显示的文字，调用方自己拼好（比如"预设：MyPreset *"），这个 store 不关心
@@ -61,6 +64,7 @@ export const useConfirmStore = defineStore('confirm', () => {
   let onCancelCb: (() => void) | null = null
 
   function ask(opts: ConfirmOptions) {
+    ifAnyOpenCancel()
     title.value = opts.title
     message.value = opts.message
     confirmText.value = opts.confirmText ?? 'OK'
@@ -94,6 +98,7 @@ export const useConfirmStore = defineStore('confirm', () => {
   let onPromptConfirmCb: ((value: string) => void) | null = null
 
   function askInput(opts: PromptOptions) {
+    ifAnyOpenCancel()
     promptTitle.value = opts.title
     promptMessage.value = opts.message ?? ''
     promptPlaceholder.value = opts.placeholder ?? ''
@@ -128,6 +133,7 @@ export const useConfirmStore = defineStore('confirm', () => {
   let onMultiCancelCb: (() => void) | null = null
 
   function askMulti(opts: ConfirmMultiOptions) {
+    ifAnyOpenCancel()
     multiTitle.value = opts.title
     multiMessage.value = opts.message ?? ''
     multiItems.value = opts.items
@@ -149,6 +155,20 @@ export const useConfirmStore = defineStore('confirm', () => {
     const cb = onMultiCancelCb
     onMultiConfirmCb = null; onMultiCancelCb = null
     cb?.()
+  }
+
+  /**
+   * 并发闸门：任一 flow 已 open 时，强制 cancel 当前 flow（触发其 onCancel 让调用方回退 UI 状态），
+   * 再让新进入的 ask/askInput/askMulti 开自己。三个 flow 的 cancel 都会清回自己的 open 标记，
+   * 因此本函数只挑当前真正 open 的那个 cancel，避免重复触发。
+   */
+  function ifAnyOpenCancel() {
+    if (open.value) { cancel(); warnConcurrent() }
+    else if (promptOpen.value) { cancelPrompt(); warnConcurrent() }
+    else if (multiOpen.value) { cancelMulti(); warnConcurrent() }
+  }
+  function warnConcurrent() {
+    console.warn('[ST_Workbench] confirmStore: 已有弹窗打开，新请求已强制取消旧的。这通常是上游并发调用 bug。')
   }
 
   return {
