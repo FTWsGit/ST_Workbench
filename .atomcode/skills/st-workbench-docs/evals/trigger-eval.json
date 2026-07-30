@@ -36,13 +36,13 @@
       "id": 6,
       "should_trigger": true,
       "prompt": "shared.toast.saveFailed 这个 key 英文版漏了，en.ts 里没加，帮我补上",
-      "rationale": "加 locale key——Phase 2 读国际化.mdc，skill description 明列"改 i18n key"触发"
+      "rationale": "加 locale key——Phase 2 读国际化.mdc，skill description 明列\"改 i18n key\"触发"
     },
     {
       "id": 7,
       "should_trigger": true,
       "prompt": "useDragReorder.ts 在 TauriTavern WebView2 里拖拽没反应，鼠标动但列表不排",
-      "rationale": "排查 host iframe 怪癖——Phase 1 读部署环境.mdc（getHostWindow 铁律），skill description 列"排查拖拽没反应"触发"
+      "rationale": "排查 host iframe 怪癖——Phase 1 读部署环境.mdc（getHostWindow 铁律），skill description 列\"排查拖拽没反应\"触发"
     },
     {
       "id": 8,
@@ -54,7 +54,7 @@
       "id": 9,
       "should_trigger": true,
       "prompt": "用户反馈打字卡，HighlightedEditor 打一个字要等半秒才出高亮，行号也跟着跳",
-      "rationale": "性能症状排查——Phase 2 读性能与调参.mdc + 编辑器内核.mdc，skill description 列"被反馈卡/掉帧"触发"
+      "rationale": "性能症状排查——Phase 2 读性能与调参.mdc + 编辑器内核.mdc，skill description 列\"被反馈卡/掉帧\"触发"
     },
     {
       "id": 10,
@@ -66,19 +66,19 @@
       "id": 11,
       "should_trigger": false,
       "prompt": "帮我写一个 Vue 3 + Pinia 的待办清单 demo，组件用 setup script，状态用 pinia",
-      "rationale": "技术栈匹配（Vue 3 + Pinia）但不是 ST_Workbench 项目——skill description 明示"不适用于非 ST_Workbench 项目"，近似 miss 测边界"
+      "rationale": "技术栈匹配（Vue 3 + Pinia）但不是 ST_Workbench 项目——skill description 明示\"不适用于非 ST_Workbench 项目\"，近似 miss 测边界"
     },
     {
       "id": 12,
       "should_trigger": false,
       "prompt": "我的 React 项目里 useState 的 setter 在 setTimeout 回调里拿到的是旧值，怎么解",
-      "rationale": "完全不同项目不同框架——基础 negative，测模型不会因为"setter/state"模糊就误触"
+      "rationale": "完全不同项目不同框架——基础 negative，测模型不会因为\"setter/state\"模糊就误触"
     },
     {
       "id": 13,
       "should_trigger": false,
       "prompt": "帮我读一下 .doc/项目概览.mdc 这个文件，告诉我里面写了什么",
-      "rationale": "近似 miss——共享 .doc / 项目概览关键词，但用户只是让读文件不是做编码任务，skill description 说"用本 skill 干编码任务"，单纯读不该触发"
+      "rationale": "近似 miss——共享 .doc / 项目概览关键词，但用户只是让读文件不是做编码任务，skill description 说\"用本 skill 干编码任务\"，单纯读不该触发"
     },
     {
       "id": 14,
@@ -90,7 +90,7 @@
       "id": 15,
       "should_trigger": false,
       "prompt": "我有个 SillyTavern 的脚本想部署到酒馆里，但是不知道怎么挂载 UI 到顶层文档",
-      "rationale": "近似 miss——共享 SillyTavern/酒馆/顶层文档概念，但这是"我有另一个脚本想部署"不是"改 ST_Workbench"，skill 限定 ST_Workbench 项目内"
+      "rationale": "近似 miss——共享 SillyTavern/酒馆/顶层文档概念，但这是\"我有另一个脚本想部署\"不是\"改 ST_Workbench\"，skill 限定 ST_Workbench 项目内"
     },
     {
       "id": 16,
@@ -120,7 +120,7 @@
       "id": 20,
       "should_trigger": false,
       "prompt": "帮我设计一个新 skill，管理某个项目的 .doc 文档，要支持 alwaysApply 标记和按需读取",
-      "rationale": "近似 miss——用户正在做的就是写这个 skill，skill description 提到"管理 .doc 文档"，但这是元任务（写 skill）不是用 skill 做 ST_Workbench 编码"
+      "rationale": "近似 miss——用户正在做的就是写这个 skill，skill description 提到\"管理 .doc 文档\"，但这是元任务（写 skill）不是用 skill 做 ST_Workbench 编码"
     }
   ]
 }

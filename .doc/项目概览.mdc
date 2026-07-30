@@ -51,7 +51,8 @@ ST_Workbench/
     │   ├── worldbookStore.ts   # 'worldbook'——世界书条目的全部状态和业务逻辑，独立于 presetStore
     │   ├── characterStore.ts   # 'character'——当前正在编辑的那张角色卡（含它自带的 regex_scripts）的全部状态和业务逻辑，独立文档 store，模式跟 worldbookStore 一致；虚拟字段路由（`currentField`/`setCurrentFieldValue`）+ greetings 增删拖拽 + oldRaw 字段级回退保存
     │   ├── tabsStore.ts       # 'tabs'——跨 domain 的标签页状态、activeWorkspace（顶层三态）、sidebarCollection（工作区内二级切换，按 workspace 各自记忆）、settingsDockOpen、按 domain 的 listScrollToken，纯 UI 布局状态，不装任何预设数据
-    │   └── confirmStore.ts    # 'confirm'——通用确认弹窗（ask）+ 单行输入弹窗（askInput），domain 无关
+    │   ├── confirmStore.ts    # 'confirm'——通用确认弹窗（ask/askInput/askMulti）+ 单行输入弹窗，domain 无关
+    │   └── workspaceRegistry.ts  # 不是 Pinia store，是工厂函数 createWorkspaceRegistry()——preset/worldbook/character 三个 domain store 的新建/删除/切换/重载/保存的对外统一表（DocumentWorkspaceAdapter），App.vue 顶栏三行的 <select>/+/🗑、Save/Ctrl+S、Reload、✕关面板聚合 dirty、移动端工具抽屉新建/删除全部查这张表写通用逻辑，见「架构总览 > 六个 Pinia store」
     ├── styles/
     │   └── main.css           # 全部样式（唯一样式文件），作为字符串注入宿主文档；末尾一大段 `@media (max-width: 720px)` 是移动端布局
     ├── i18n/
@@ -66,6 +67,10 @@ ST_Workbench/
     │   ├── useHighlight.ts    # 语法高亮：递归优先级扫描器（被 HighlightedEditor 使用）
     │   ├── usePanelResize.ts  # 拖拽调整面板宽度的通用逻辑（Pointer Events，桌面鼠标 + 移动端触摸通用），监听器绑在 host window 上
     │   ├── useFloatingPanel.ts # 悬浮窗的拖拽定位/resize/多开自动置顶机制（Pointer Events，domain-agnostic），供 `FloatingPanelShell.vue` 使用，见「悬浮窗 Shell」
+    │   ├── useFabDrag.ts      # FAB 长按拖拽的 domain-agnostic 机制（Pointer Events，draft-until-release，resize clamp），供 `App.vue` 用，见「移动端布局 > FAB 长按拖拽」
+    │   ├── useMobileWorkspaceDrawer.ts # 移动端抽屉状态机：表驱动，只管"现在哪个抽屉可见"，不认任何 domain。App.vue 喂一张 panels 表 + revealSidebarOn/closeOn 两个 watch 列表就接完，见「移动端布局」
+    │   ├── useNumberDragScrub.ts # 数字输入的"按住左右拖改值"机制（Pointer Events + setPointerCapture），供 `NumberInput.vue` 用，见「移动端布局 > 数字拖拽微调」
+    │   ├── useRegexScripts.ts  # 正则脚本 CRUD 的复用逻辑（add/delete/reorder），presetStore 和 characterStore 都从这拿，避免两份重复实现，见「架构总览 > regex CRUD 的复用」
     │   ├── useGroupedList.ts  # block/entry 分组列表的 domain-agnostic 核心（flatNodes 构建、bind/unbind、collapse、gi 查找），`PresetSidebar.vue`/`WorldbookSidebar.vue` 都在用，见「两套坐标系」
     │   ├── useDragReorder.ts  # 鼠标/触摸拖拽排序的纯机制（Pointer Events，阈值判定/命中检测/suppress-click/rAF 节流的命中计算/拖拽时列表边缘自动滚动/文本选中抑制），key 类型泛型化（`T`，默认 `number`），domain 无关。`RegexSidebar.vue`/`PresetSidebar.vue`/`WorldbookSidebar.vue`/`CharacterSidebar.vue` 都在用；自动滚动通过可选的 `autoScrollContainer` 参数 opt-in
     │   ├── useListScrollSync.ts # "滚动到当前激活标签对应的行"的纯机制：监听 `tabsStore.listScrollToken[domain]`，按 `activeTab.key` 反查目标行并 `scrollIntoView`。domain 无关（展开折叠组/高亮不归它管，那是 `presetStore.ts` 里监听 `activeTab` 的另一个 watcher 的事，见「状态与持久化 > presetStore.ts 里的关键设计」的 `revealAndFindGi` 条目）

@@ -38,17 +38,22 @@ const MIN_TRUSTED_RUN = 2           // 非锚点来源的匹配片段，低于�
 
 `types.ts`：`SEARCH_MAX = 200`（搜索结果 DOM 渲染上限）。
 
-`PresetSidebar.vue`:
+`composables/useDragReorder.ts`:
 
 ```ts
-const DRAG_THRESHOLD = 4  // block 拖拽/长按判定的移动阈值（px），防止滑动列表时意外拖拽或误触发长按
-const LONG_PRESS_MS = 200 // 移动端触屏长按多选的延迟
+const DRAG_THRESHOLD = 4  // 拖拽/长按判定的移动阈值（px），防止滑动列表时意外拖拽或误触发长按
 ```
 
-`App.vue`（FAB 相关）:
+`composables/useListSelection.ts`:
 
 ```ts
-const FAB_SIZE = 48            // fab 大小, keep in sync with .wb-fab's width/height in main.css
-const FAB_DRAG_THRESHOLD = 4   // fab 拖拽 threshold
-const FAB_LONG_PRESS_MS = 100  // fab 长按拖拽延迟，比 PresetSidebar 的 LONG_PRESS_MS 短，因为 FAB 是独立悬浮元素，不用跟滚动手势区分
+const LONG_PRESS_MS = 200  // 移动端触屏长按多选的延迟（pointerType !== 'mouse' 且落点不在 .wb-drag-handle 上时启动计时器）
+```
+
+`composables/useFabDrag.ts`（不是顶层常量，是 `useFabDrag(opts)` 的默认参数；调用方要覆盖就喂 opts）:
+
+```ts
+size = opts.size ?? 48                  // FAB 边长，需跟 CSS 里 .wb-fab 的 width/height 保持一致
+dragThreshold = opts.dragThreshold ?? 4 // 判定"这是一次拖动"所需的最小位移（px）
+longPressMs = opts.longPressMs ?? 100   // 长按判定延迟，比 useListSelection 的 LONG_PRESS_MS 短，因为 FAB 是独立悬浮元素，不用跟滚动手势区分
 ```

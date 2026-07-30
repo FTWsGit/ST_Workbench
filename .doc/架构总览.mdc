@@ -15,9 +15,14 @@ alwaysApply: true
 - **`stores/worldbookStore.ts`（'worldbook'）**：世界书条目的全部状态和业务逻辑，独立于 presetStore（不共享 rawData/prompts 那套，自己维护一份 entries + order）。内部数据结构与 dirty 机制见「状态与持久化」。
 - **`stores/characterStore.ts`（'character'）**：当前正在编辑的这张角色卡的全部状态和业务逻辑，独立文档 store（模式跟 worldbookStore 一致），包括它自带的 `regex_scripts`（跟预设域同一个概念，见「多 domain 路由」）。七个创作字段 + greetings 通过虚拟字段 key（`field:xxx`/`field:greeting:<id>`）路由，`CharacterContentEditor.vue` 自己不解析 key——`currentField`/`setCurrentFieldValue` 是唯一解析入口。保存走字段级 `oldRaw` 回退合并（角色卡是 multipart 表单读写，跟 preset/worldbook 的纯 JSON 读写形状不一样，见 `api/characterApi.ts`）。内部数据结构与 dirty 机制见「状态与持久化」。
 - **`stores/tabsStore.ts`（'tabs'）**：标签页（`{domain, key, label, workspace}`）、`activeWorkspace`（当前活跃工作区，`preset`/`worldbook`/`character` 三态，顶栏第一行，Save/Reload 按钮和"未保存"红点只对它生效）、`sidebarCollection`（工作区内部当前在看哪个集合，顶栏第二行，只有 `preset`/`character` 有得选，见「多 domain 路由」）、`settingsDockOpen`、`listScrollToken`（按 domain 的"请把当前项滚动进视野"信号）。这些是"UI 现在长什么样"，跟"预设/角色卡里存了什么数据"是两码事，故意分开。
-- **`stores/confirmStore.ts`（'confirm'）**：两条流——`ask()`（标题+正文+确认/取消回调，正文允许简单 HTML，`danger:false` 用于非删除类）和 `askInput()`（单行输入+确认回调，空值自动挡住不关窗）。**铁律：全项目禁止调用原生 `window.confirm/prompt`，包括 `getHostWindow().confirm()`**——在 TauriTavern 的 WebView2 宿主里不可靠，一律走这两个方法。
+- **`stores/confirmStore.ts`（'confirm'）**：两条流——`ask()`（标题+正文+确认/取消回调，正文允许简单 HTML，`danger:false` 用于非删除类）/`askInput()`（单行输入+确认回调，空值自动挡住不关窗）/`askMulti()`（多条目确认，App.vue 关面板时聚合各工作区 dirty 提示用）。**铁律：全项目禁止调用原生 `window.confirm/prompt`，包括 `getHostWindow().confirm()`**——在 TauriTavern 的 WebView2 宿主里不可靠，一律走这三个方法。
+- **`stores/workspaceRegistry.ts`**（不是 Pinia store，是普通工厂函数 `createWorkspaceRegistry()`）：三个 domain store 新建/删除/切换/重载/保存的**对外统一表**——`preset`/`worldbook`/`character` 三个 `DocumentWorkspaceAdapter`，形状对齐（`dirty`/`currentLabel`/`currentId`/`labelForId`/`switchTo`/`reload`/`save`/`create`/`remove`，character 额外一个 `confirmCreateIfDirty`）。App.vue 顶栏三行的 `<select>`/+ 按钮/🗑 按钮、Save/Ctrl+S、Reload、✕关面板聚合 dirty、移动端工具抽屉里的新建/删除，全部查这张表写通用逻辑，不再各自 `if (workspace === 'preset')` 硬编码。**刻意不去改三个 store 内部的函数名**——它们已被别的组件各自直接调用（PresetSidebar.vue 也会调 presetStore 的方法），这一层只包一次转接，风险小。新建/删除/切换/重载的统一逻辑接的是 App.vue 的 `onNewWorkspace`/`onDeleteWorkspace`/`onWorkspaceSelect`/`onSave`/`onReload`。
 
 `CopyPanel.vue` 是刻意的第七种例外：它不用上面任何一个 store 的数据，自己维护左右两份独立状态（`reactive<Record<'left'|'right', SideState>>`）直接调 `api/presetApi.ts`，因为它要同时摆弄两个可能都不是"当前正在编辑"的预设。**需要同时操作两份独立数据的功能，抄 CopyPanel 这个模式**；"操作当前正在编辑的那一份"的功能永远走对应 domain 的正常状态流，不要另开一份。
+
+## regex CRUD 的复用：`composables/useRegexScripts.ts`
+
+presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`reorderRegexScript` 不再各自手写——都从 `useRegexScripts(getScripts, { markDirty, showToast, t, loadFirstMessageKey?, defaultPlacement? })` 拿同一份实现，调用方只喂"怎么拿当前 scripts 数组的 getter"和三个 domain 无关的依赖。`getScripts` 返回的是可变数组引用（preset 指向 `rawData.extensions.regex_scripts`、character 指向自己那份），改了直接落进对应 store 的 dirty 追踪，不需要单独 setter。
 
 ## 多 domain 路由：标签页决定编辑区和设置区显示什么，不是硬编码分支
 
@@ -90,6 +95,9 @@ alwaysApply: true
 | 加一个"按 role/type 出徽标 class 名"的地方 | `utils.ts` 的 `roleClass()`/`varOpBadge()` |
 | 加一个新的 locale key | 在 `i18n/locales/zh-CN.ts` 和 `i18n/locales/en.ts` 同时加；如果 key 属于 `types.ts` 选项表，把 `label` 改成 `labelKey: LocaleKey` 并在 locale 文件里补文案 |
 | 加一个设置弹窗里"拖动时连续触发"的控件（滑块/色盘） | 抄 `Modals.vue` 的 draft 模式：拖动中只改组件本地 draft，松手（`@change`）才 commit 进 store + localStorage。直接绑 store 会每 tick 触发 cssVars 全量 style 重算 + 同步写 localStorage，肉眼可见地卡（FAB 长按拖拽也是这个模式，只是提交时机是 `pointerup` 而不是 `@change`） |
+| 加一个"按住左右拖改数值"的输入框 | `components/shared/NumberInput.vue` + `composables/useNumberDragScrub.ts`，原数 number input + 拖拽手柄共存，见「移动端布局 > 数字拖拽微调」 |
+| 加一个对三个 domain store 的"新建/删除/切换/重载/保存"统一入口 | 走 `stores/workspaceRegistry.ts` 的 `DocumentWorkspaceAdapter` 表，App.vue 顶栏/Save/Reload/关面板/移动端工具抽屉都查这张表写通用逻辑，不要各自 `if (workspace === 'preset')` 硬编码 |
+| 加一份正则脚本的 add/delete/reorder CRUD | 走 `composables/useRegexScripts.ts`，presetStore 和 characterStore 都从这拿同一份实现，调用方只喂"怎么拿当前 scripts 数组 getter"和三个 domain 无关的依赖 |
 | 要往 SillyTavern 读/存数据 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现成的函数（domain 各自的读写层）；传给 ST 自己 API 的对象**必须**先深拷贝，见「状态与持久化 > 与 ST API 的数据契约」 |
 | 改动 `utils.ts`/`regexEngine.ts` 里的纯函数算法 | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
 | 判断当前是不是移动端布局 | `composables/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |

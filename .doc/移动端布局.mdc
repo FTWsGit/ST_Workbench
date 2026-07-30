@@ -1,7 +1,7 @@
 ---
 name: "移动端布局"
 description: "响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。"
-alwaysApply: true
+alwaysApply: false
 ---
 
 # 移动端响应式布局
@@ -17,12 +17,13 @@ alwaysApply: true
 
 面板移出文档流（`position:absolute`，锚定到 `main.ts` 里那个全屏 `position:fixed` 的挂载点，见「部署环境」），用 transform 滑入滑出，跟编辑区自己的滚动容器完全没有交集——避免"父容器可滚 + 子面板自己也可滚"的滚动嵌套错乱、以及 `.float` 悬浮模式的面板被布局流强制拉直的问题。
 
-移动端头部按钮也换了一套：桌面端 8+ 个按钮一行放不下手机 ~360px 宽的头部，所以移动端头部只留 `☰ / 保存 / 预设名 / ⋯ / ✕` 五个，其余（切换 preset/regex 模式、复制块、搜索、设置、变量导航、预览、新建/删除预设）挪进 ⋯ 按钮打开的 `.wb-mobile-tools-sheet` 里，列表形式一次性列出。这套状态机全在 `App.vue` 的 `mobileDrawerVisible`（`'none' | 'sidebar' | 'varNav' | 'preview' | 'settingsDock' | 'tools'`）里：
+移动端头部按钮也换了一套：桌面端 8+ 个按钮一行放不下手机 ~360px 宽的头部，所以移动端头部只留 `☰ / 保存 / 预设名 / ⋯ / ✕` 五个，其余（切换 preset/regex 模式、复制块、搜索、设置、变量导航、预览、新建/删除预设）挪进 ⋯ 按钮打开的 `.wb-mobile-tools-sheet` 里，列表形式一次性列出。这套状态机抽成了 `composables/useMobileWorkspaceDrawer.ts`——App.vue 喂一张 `panels: MobileDrawerPanel[]` 表（每条声明 `key`/`isOpen`/`setOpen`），composable 只管"现在哪一个抽屉是打开的"这一件事，不认任何 domain：
 
-- 它不是"面板开没开"的第二份真相——`varNavOpen`/`previewOpen`/`settingsDockOpen` 这几个 store flag 在桌面/移动端语义完全一样，`mobileDrawerVisible` 只是"当前滑进视野的是哪一个"，由几个 `watch` 跟这些 flag 保持同步（flag 开 → 抽屉滑入；flag 关或抽屉被背景遮罩点掉 → flag 也跟着关，不是只关视觉）。
-- 切换 `sidebarMode`（preset/regex）会自动把 `mobileDrawerVisible` 设成 `'sidebar'`——刚切换模式，用户大概率想看侧边栏。
-- `tabsStore.activeId` 变化（在抽屉里点了侧边栏某一项）会把 `mobileDrawerVisible` 设回 `'none'`，露出编辑区。
-- `store.editorJump` 变化（搜索/变量导航"跳转到"操作）**也**要触发同样的收起——这个 token 在跳转目标已经是当前打开的标签时不会改变 `activeId`（标签没变，只是编辑器内部跳到了不同的行/列），如果只监听 `activeId` 就会出现"点了跳转但视觉上抽屉纹丝不动"的假死感，得单独再监听一次。
+- 状态是返回的 `drawer.visible`（`'none' | 'sidebar' | <panel.key> | 'tools'`），App.vue 模板里用它派生 class。`'sidebar'`/`'tools'` 是内置特殊值（每个工作区都有一个侧边栏和一个工具抽屉，不需要放进 panels 表），其它取值对应 panels 里某条的 `key`。
+- 它不是"面板开没关"的第二份真相——`varNavOpen`/`previewOpen`/`settingsDockOpen` 这几个 store flag 在桌面/移动端语义完全一样，`drawer.visible` 只是"当前滑进视野的是哪一个"，由 composable 内部对每个 `panel.isOpen` 挂的 `watch` 保持同步（flag 开 → 抽屉滑入；flag 关或抽屉被背景遮罩点掉 → flag 也跟着关，不是只关视觉）。
+- App.vue 喂给 composable 的 `revealSidebarOn: [() => tabsStore.activeWorkspace, () => tabsStore.sidebarCollection]`——切换 workspace 或"条目↔正则"集合后，composable 自动把 `visible` 设成 `'sidebar'`，刚切换用户大概率想看侧边栏。
+- `closeOn: [() => tabsStore.activeId, () => presetStore.editorJump]`——选中新标签或触发 `editorJump`（搜索/变量跳转）时自动收起。`editorJump` 这个 token 在跳转目标已经是当前打开的标签时不会改变 `activeId`（标签没变，只是编辑器内部跳到了不同的行/列），如果只靠 `activeId` 监听就会出现"点了跳转但视觉上抽屉纹丝不动"的假死感，所以单独再加一条。
+- 工具抽屉里的每一项（`drawer.runTool(fn)`）：先执行动作再收起抽屉；若动作本身打开了某个受追踪的面板，composable 那几个 watch 会在同步处理后把 `visible` 重新指向那个面板，不需要 runTool 自己兜。
 
 ## 交互层：从 `mousedown` 到 Pointer Events
 
@@ -32,13 +33,19 @@ alwaysApply: true
 
 移动端触摸目标（tap target）也统一放大了：桌面端 20~24px 的小图标按钮在手机上很难精确点中（业界常引用的舒适下限是 ~40px），做法是**不放大图标本身**（视觉上会显得突兀），而是用 padding 撑大可点击区域、内容居中，视觉尺寸不变、命中区域变大。
 
-## FAB 长按拖拽
+## 数字拖拽微调：`composables/useNumberDragScrub.ts`
 
-悬浮球默认位置由 CSS 的 `bottom:24px;right:24px` 决定（并带安全区适配，`env(safe-area-inset-*)`）。长按（`FAB_LONG_PRESS_MS = 100ms`，比 `PresetSidebar` 的长按多选阈值更短，因为这里没有"跟滚动手势区分"的顾虑）之后进入拖拽模式，把当前渲染位置冻结成显式 `left/top` 写进 `uiStore.settings.fabPos`，此后跟随指针移动，松手时一次性 `uiStore.saveSettings()` 落盘（拖拽过程中只改内存里的 draft，不逐帧写 `localStorage`，和设置弹窗里拖动滑块/色盘的"draft-until-release"规则一致）。
+`components/shared/NumberInput.vue` = 原生 `<input type="number">` + 右侧一个 ⠿ 拖拽手柄。手柄的"按住左右拖、横向位移映射成数值增量"由 `useNumberDragScrub({ get, set, step?, min?, max? })` 提供，跟原生输入共存（键盘/上下箭头/滚轮照常），按住 Shift 精细调整（每像素 0.1× step）。Pointer Events + `setPointerCapture`，监听器绑在 `getHostWindow()` 解决 iframe 拖出界事件丢失。整数 step 时结果也 snap 到整数，避免浮点尾巴。`NumberInput.vue` 的 `set` 故意写 `inputEl.value.value` 再 `dispatchEvent('input')`，让拖拽改值走跟手输一样的冒泡路径，父容器的 `@change`/`@input` 委托照常触发，不用单独接一份逻辑。
 
-判定"这是一次点击"还是"这是一次长按拖拽"时**不延迟点击本身**：普通的 `pointerdown → pointerup`（在 `FAB_LONG_PRESS_MS` 之内完成）从头到尾没有调用 `preventDefault()`，浏览器该发的 `click` 照发不误，所以快速点击跟改动前一样快；只有长按计时器真的触发了，才切进拖拽模式并开始吞掉紧随其后的那次 `click`（`fabSuppressClick`），防止松手时被误认成"点击打开面板"。
+## FAB 长按拖拽：`composables/useFabDrag.ts`
 
-FAB 位置在宿主窗口 resize 时会被重新 clamp 进可视区域（`onHostResize`）——最常见的触发场景是手机横竖屏切换，或者桌面浏览器窗口在拖拽后被缩窄，防止 FAB 卡在一个再也够不着的角落。
+FAB 长按拖拽整套机制抽成了 domain-agnostic 的 `useFabDrag(opts)` composable——只管"自由两轴悬浮元素的长按拖动 + 跟点击区分 + resize 后 clamp 回视口"，不知道 FAB 长什么样也不知道点开会发生什么。`App.vue` 喂 `getPos`/`setPos`/`commit`/`onTap` 四个回调就接完了，不自己管 `pointermove` 监听、`suppressClick`、`onHostResize` 这些机制。
+
+悬浮球默认位置由 CSS 的 `bottom:24px;right:24px` 决定（并带安全区适配，`env(safe-area-inset-*)`）。长按（`longPressMs` 默认 `100ms`，比 `PresetSidebar` 的长按多选阈值更短，因为这里没有"跟滚动手势区分"的顾虑）之后进入拖拽模式，把当前渲染位置冻结成显式 `left/top` 写进 `opts.setPos`（App.vue 路由到 `uiStore.settings.fabPos`），此后跟随指针移动，松手时一次性 `opts.commit()`（App.vue 路由到 `uiStore.saveSettings()`）落盘（拖拽过程中只改内存里的 draft，不逐帧写 `localStorage`，和设置弹窗里拖动滑块/色盘的"draft-until-release"规则一致）。
+
+判定"这是一次点击"还是"这是一次长按拖拽"时**不延迟点击本身**：普通的 `pointerdown → pointerup`（在 `longPressMs` 之内完成）从头到尾没有调用 `preventDefault()`，浏览器该发的 `click` 照发不误，所以快速点击跟改动前一样快；只有长按计时器真的触发了，才切进拖拽模式并开始吞掉紧随其后的那次 `click`（composable 内部的 `suppressClick`），防止松手时被误认成"点击打开面板"。
+
+位置在宿主窗口 resize 时会被重新 clamp 进可视区域（`onHostResize`）——最常见的触发场景是手机横竖屏切换，或者桌面浏览器窗口在拖拽后被缩窄，防止 FAB 卡在一个再也够不着的角落。`App.vue` 的 `onMounted` 把它绑到 `getHostWindow().addEventListener('resize', fab.onHostResize)`。
 
 ## 悬浮窗 Shell：`FloatingPanelShell.vue` + `useFloatingPanel.ts`
 

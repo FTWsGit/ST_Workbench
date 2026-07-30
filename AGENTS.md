@@ -7,8 +7,8 @@
 |------|------------|-------|
 | `.doc/项目概览.mdc` | true | ST_Workbench 是什么、管哪四类数据、目录结构怎么组织。新接手项目、不确定整体定位、查找某文件做什么时读。 |
 | `.doc/架构总览.mdc` | true | Pinia store 职责边界与多 domain 路由：标签页决定编辑区/设置区显示什么，顶栏两行正交轴控制工作区与子集合。改 store 间分工、加新 domain、改顶栏路由、加整份文档级元信息字段、抄'新增功能套路表'时读。各 store 内部数据结构与 dirty/settings 持久化见'状态与持久化'。 |
-| `.doc/部署环境.mdc` | true | 宿主环境怪癖：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，所有全局对象量到的都是 iframe 自己。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定的代码、或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。 |
-| `.doc/移动端布局.mdc` | true | 响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。 |
+| `.doc/部署环境.mdc` | false | 宿主环境怪癖：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，所有全局对象量到的都是 iframe 自己。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定的代码、或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。 |
+| `.doc/移动端布局.mdc` | false | 响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。 |
 | `.doc/状态与持久化.mdc` | false | 各 domain store 的内部数据结构、与 ST API 的数据契约、dirty/settings 持久化机制。改 presetStore/worldbookStore/characterStore 内部字段（prompts/order/selectedGi/flatNodes/虚拟字段路由）、改 api/presetApi/characterApi/worldbookApi、碰 PresetManager/prompt_order/marker/selectPresetByName、改 settings 持久化或 dirty 追踪时读。 |
 | `.doc/编辑器内核.mdc` | false | HighlightedEditor.vue 四个域共用的宏语法 textarea 内核与 useHighlight.ts 高亮算法。改编辑器、useHighlight/highlightLines/highlightContent、打字调度、行号测量、光标追踪、refreshFont 接口时读。行号测量与按行 diff patch 的性能教训见'性能与调参'。 |
 | `.doc/预览与正则模拟.mdc` | false | Precise Preview 真实渲染 ST 管线（非本地模拟）与 regexEngine.ts 正则本地模拟（有意的简化）。改 PreviewPanel/regexEngine/macroAwareDiff/wordDiff/正则预览、或排查'预览不准/trim 不生效/正则无效'类症状时读。selectPresetByName 契约见'状态与持久化'。 |
