@@ -4,8 +4,8 @@
     <div class="wb-rp-header">
       <span>{{ uiStore.t('preset.varPanel.title') }}</span>
       <div class="wb-row-tight">
-        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.varPanelFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="wb-btn close-btn compact" @click="tabsStore.setVarNavOpen('preset', false)">✕</button>
+        <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.varPanelFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" :aria-label="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
+        <button class="wb-btn close-btn compact" :aria-label="uiStore.t('common.close')" @click="tabsStore.setVarNavOpen('preset', false)">✕</button>
       </div>
     </div>
     <div class="wb-rp-tools">

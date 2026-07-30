@@ -9,7 +9,7 @@
   >
     <div class="wb-float-header" @pointerdown="onDragStart">
       <span class="wb-float-title"><slot name="title">{{ title }}</slot></span>
-      <button class="wb-btn close-btn" :title="closeTitle" @click="$emit('close')">✕</button>
+      <button class="wb-btn close-btn" :title="closeTitle" :aria-label="closeTitle" @click="$emit('close')">✕</button>
     </div>
     <div class="wb-float-body">
       <slot />
