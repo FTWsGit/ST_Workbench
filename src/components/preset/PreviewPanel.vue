@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="pr-preview-panel" :class="{ float: uiStore.settings.previewFloat }" :style="{ width: uiStore.settings.previewWidth + 'px' }">
     <div class="wb-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
     <div class="wb-rp-header">
@@ -70,10 +70,7 @@ import type { PreviewSegment } from '../../types'
 
 const store = usePresetStore()
 const uiStore = useUiStore()
-// previewOpen 本身的开关状态活在 tabsStore（按 workspace 分桶存，见该文件 doc comment）——目前
-// 这个面板只对 'preset' 工作区渲染，关闭时写回的 workspace 硬编码成 'preset' 没问题；PROJECT.md
-// TODO 里提到 Preview 理论上 character 工作区也该有，那天落地时这里要跟着改成读
-// tabsStore.activeWorkspace，不能再硬编码 'preset'。
+/** previewOpen 按 workspace 分桶存于 tabsStore；目前仅对 'preset' 工作区渲染，关闭时硬编码 'preset'。若未来 character 工作区也接入 Preview，需改为读 activeWorkspace。 */
 const tabsStore = useTabsStore()
 
 const resize = usePanelResize({

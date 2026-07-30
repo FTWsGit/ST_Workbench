@@ -16,16 +16,9 @@
 </template>
 
 <script setup lang="ts">
-/* 原生 number input 之外叠一个拖拽手柄，不是替换原生输入——键盘输入/上下箭头/滚轮该怎么用
- * 还怎么用，拖拽只是多一种改数值的方式。
- *
- * 关于 markDirty 委托：WorldbookSettingsForm.vue 的字段脏检查是靠表单根节点的 @change/@input
- * 事件委托兜底的（见那个文件顶部的大段 doc comment），拖拽改值是 useNumberDragScrub 直接调
- * set()，不经过用户在 <input> 上打字这条路，如果只 emit('update:modelValue') 而不摸那个
- * <input> 元素本身，这次改动永远不会以一个真实 DOM input 事件的身份出现，委托会漏掉。所以
- * set() 里手动改 inputEl.value 的值 + dispatchEvent(new Event('input', {bubbles:true}))，
- * 让拖拽出来的改动跟手打的改动走同一条路径（都触发 onNativeInput → 都会冒泡到 rx-form 根
- * 节点），而不是维护两条平行的"改值"逻辑。 */
+/** 数字输入框：原生 number input + 右侧拖拽手柄。键盘/滚轮/上下箭头照常使用；拖拽只是额外改值方式。
+ *  拖拽 set() 会手动写 inputEl.value 并派发 input 事件，以冒泡到父容器的 @change/@input 事件委托（脏检查）路径，
+ *  避免与手输改值走两套逻辑。 */
 import { ref } from 'vue'
 import { useNumberDragScrub } from '../../composables/useNumberDragScrub'
 
@@ -35,7 +28,7 @@ const props = withDefaults(defineProps<{
   min?: number
   max?: number
   placeholder?: string
-  /** 是否允许清空为 null（比如"跟随全局设置"用 null 占位），默认允许；关掉后清空回落到 0 */
+  /** 是否允许清空为 null（如"跟随全局设置"），默认允许；关闭后清空回落到 0。 */
   nullable?: boolean
 }>(), { nullable: true })
 

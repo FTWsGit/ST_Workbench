@@ -2,23 +2,9 @@ import { ref, onUnmounted } from 'vue'
 import { getHostWindow } from './hostEnv'
 
 /**
- * Drag-to-resize a panel's width.
- * `getWidth`/`setWidth` let the caller decide where width is stored (store.settings, local ref, etc).
- * `dir` controls which side the handle is on: 'right' means dragging the right edge of a
- * left-anchored panel (grows width as mouse moves right); 'left' means dragging the left edge
- * of a right-anchored panel (grows width as mouse moves left, e.g. the var/preview panels).
- *
- * IMPORTANT: this app is often mounted onto window.top.document while its own script executes
- * inside a child iframe (Tavern Helper). Pointer events during the drag happen over the TOP
- * document, so listeners must be attached to the host window — not the bare global `window`,
- * which would silently never fire.
- *
- * Uses Pointer Events (not mouse events) so this also works with touch input on mobile — a
- * single pointerdown/pointermove/pointerup triplet covers mouse, touch, and pen uniformly,
- * unlike mouse events which touch browsers don't reliably dispatch for drag gestures. The
- * handle's own `touch-action: none` (see .wb-resize-handle / .wb-right-resize-handle in
- * main.css) stops the browser from also interpreting the drag as a page-scroll gesture, which
- * would otherwise fight with this handler for the same touch.
+ * 拖拽调整面板宽度。`getWidth`/`setWidth` 由调用方决定宽度存储位置。
+ * `dir`：'right'（左锚点面板右边缘）/ 'left'（右锚点面板左边缘）。
+ * 监听器附加到宿主 window（因可能嵌入 iframe）。使用 Pointer Events 统一处理鼠标/触摸/笔。
  */
 export function usePanelResize(opts: {
   getWidth: () => number
@@ -68,9 +54,6 @@ export function usePanelResize(opts: {
     hostWin.removeEventListener('pointercancel', onPointerUp)
   })
 
-  // Keep the old name as an alias — call sites currently do
-  // `@mousedown="resize.onMouseDown"` / `@mousedown="onResizeStart"`. Those get switched to
-  // `@pointerdown` per-component (so each handle also picks up `touch-action: none` in main.css
-  // at the same time), but keeping this alias means nothing breaks mid-migration.
+  // 保留旧名 onMouseDown 作为别名，兼容过渡期调用方。
   return { active, onMouseDown: onPointerDown, onPointerDown }
 }

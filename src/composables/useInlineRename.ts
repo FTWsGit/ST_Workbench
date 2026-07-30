@@ -1,18 +1,9 @@
 import { ref, nextTick } from 'vue'
 
 /**
- * Double-click-to-rename: click a name to enter edit mode, an <input> replaces the label,
- * focuses and selects its text, and blur/Enter commits while Esc cancels. PresetSidebar.vue used
- * to hand-write this twice — once for block names, once for group names — with the two copies
- * differing only in which store field they read/wrote. This composable is that one
- * implementation; each caller instantiates it once per distinct rename target (block names and
- * group names stay two separate instances, since they ARE different things being renamed, not
- * two variations on one state machine — see sidebar-refactor-report.md 四.3's phrasing:
- * "本来就是不同的编辑目标，不需要合并成一个状态机").
- *
- * `getCurrentName`/`onCommit` are callbacks rather than this composable reaching into a store
- * directly, so it stays domain-agnostic — same reasoning as useDragReorder's onDrop being a
- * narrow callback rather than owning any domain-specific interpretation itself.
+ * 双击重命名：双击进入编辑模式，<input> 替换标签，blur/Enter 提交，Esc 取消。
+ * 每个调用方为不同的编辑目标实例化一次（如块名和组名各一个实例）。
+ * `getCurrentName`/`onCommit` 为回调，保持域无关性。
  */
 export function useInlineRename<T>(opts: {
   getCurrentName: (id: T) => string
@@ -21,8 +12,7 @@ export function useInlineRename<T>(opts: {
   const editingId = ref<T | null>(null)
   const inputRef = ref<HTMLInputElement | null>(null)
 
-  /** Bind as the edit-mode <input>'s :ref. Focuses and selects its text on mount, so typing
-   *  immediately replaces the current name rather than requiring a manual select-all first. */
+  /** 绑定编辑模式 <input> 的 :ref。挂载后自动聚焦并全选文本。 */
   function setInputRef(el: any) {
     if (el) {
       inputRef.value = el as HTMLInputElement
@@ -40,9 +30,7 @@ export function useInlineRename<T>(opts: {
     editingId.value = id
   }
 
-  /** Commits on blur/Enter. Empty (whitespace-only) input is treated as "no rename" rather than
-   *  clearing the name — matches the previous per-field implementations, which both skipped the
-   *  store write when `newName` was falsy after trim(). */
+  /** blur/Enter 提交。空输入（仅空白字符）视为取消重命名。 */
   function finish(id: T, e: Event) {
     const input = e.target as HTMLInputElement
     const newName = input.value.trim()

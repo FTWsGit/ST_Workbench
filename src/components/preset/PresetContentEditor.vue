@@ -1,10 +1,3 @@
-﻿<!--
-  Was Editor.vue. Renamed for symmetry with RegexContentEditor.vue now that both are thin,
-  domain-specific wrappers around the shared HighlightedEditor widget (components/shared/) — see
-  that file's header comment for what moved there. Everything block-specific stays here: reading/
-  writing store.currentBlock.content via v-model, search-result line highlighting, the var-click
-  → var-popup wiring, and the name/role meta bar.
--->
 <template>
   <div class="wb-editor-panel">
     <div class="wb-editor-meta">
@@ -42,20 +35,16 @@ const uiStore = useUiStore()
 const tabsStore = useTabsStore()
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>()
 
+/** store.currentBlock.content 的 v-model 桥接；set 里显式 markDirty()，prompts 改为浅监听以避免每字遍历。 */
 const content = computed<string>({
   get: () => store.currentBlock?.content ?? '',
-  // markDirty(): `prompts` is now watched shallowly (see presetStore.ts's dirty-tracking
-  // comment) precisely because this setter is the hot path — deep-watching content edits meant
-  // a full-preset traverse() on every keystroke. This one explicit call replaces that.
   set: (v) => { if (store.currentBlock) { store.currentBlock.content = v; store.markDirty() } },
 })
 
-// Hide any open var-popup whenever the active block tab changes — a stray popup pointing at the
-// previous block's variable would be showing the wrong context otherwise.
+/** 切换激活 block 时关闭可能残留的 var-popup（避免指向旧 block 的变量上下文错误）。 */
 watch(() => tabsStore.activeTab?.key, () => { store.hideVarPopup() }, { immediate: true })
 
-// Search-result line highlighting for the line-number gutter — block-specific (searches
-// store.currentBlock's content), so it lives here rather than in the generic component.
+/** 搜索结果行号高亮：行号槽用的 block 专属逻辑，放在这里而非通用编辑器内。 */
 function lineClass(ln: number) {
   if (!store.searchResults.length) return ''
   const blockId = store.currentBlock?.identifier
@@ -70,8 +59,7 @@ function onVarClick(payload: { varName: string; cursorPos: number; pos: { top: n
   store.showVarPopup(payload.varName, store.currentBlock?.identifier ?? null, payload.cursorPos, payload.pos)
 }
 
-// Settings dialog font-size/family changes don't resize the textarea element itself, so
-// HighlightedEditor's own ResizeObserver won't catch them — nudge it explicitly.
+/** 字号/字体变化不改 textarea 尺寸，ResizeObserver 捕捉不到，主动 refresh。 */
 watch(() => [uiStore.settings.editorFontSize, uiStore.settings.editorFontFamily], () => {
   editorRef.value?.refreshFont()
 })

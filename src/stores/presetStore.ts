@@ -12,16 +12,10 @@ import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { DEFAULT_PRESET } from '../types'
 
-// isGroup 保留原名重新导出（现在只是 useGroupedList 里 isGroupNode 的别名）——虽然目前没有别的
-// 文件 import 它，但这是个纯类型守卫，留着无害，以防以后哪里想直接判断一个 OrderNode 是不是组。
+// 类型守卫，判断 OrderNode 是否为组
 export { isGroup }
 
-// Was useStore()/defineStore('main', ...). Renamed the export (not the Pinia store id — that
-// stays 'main', changing it would invalidate anyone's persisted devtools state for no benefit)
-// now that this sits alongside tabsStore/confirmStore in stores/ — "useStore" stopped being a
-// good name the moment a second domain (regex) joined this file, and would only get more
-// confusing once a worldbook/character store exists too (see PROJECT_HANDOFF.md TODO). Every
-// call site across the app was updated to usePresetStore() as part of this same reorg.
+// export 名为 usePresetStore，Pinia store id 仍为 'main'（改动会废弃已持久化的 devtools 状态）
 export const usePresetStore = defineStore('main', () => {
   const tabsStore = useTabsStore()
   const confirmStore = useConfirmStore()
@@ -36,56 +30,33 @@ export const usePresetStore = defineStore('main', () => {
   const presetName = ref('')
   const presetList = ref<PresetListEntry[]>([])
 
-  /* flatNodes 构建 + 选择态(selectedGi/anchorGi)/折叠/绑定/拆组/重排这套树形分组机制现在统一由
-   * useGroupedList 提供（domain-agnostic，见该文件顶部doc comment）。这里解构出全部用得到的部分：
-   * toggleBlock/toggleGroupCollapse/reorderBlock/selectBlock/identifierToGi/revealAndFindGi 直接
-   * 原样导出给组件/其它函数用；clearSelection 用在 applyLoadedPreset()（换预设时清空选中态）；
-   * insertAfterActive/removeNode 是纯树操作原语，被下面 addBlock/deleteBlock/hideBlock/
-   * addHiddenBlock 用来处理"插入到哪/删哪"，再自己补上 prompts/tabsStore 那部分；
-   * bindSelected/unbindGroup 被下面同名函数包一层 toast 后重新导出（略作改名避免撞名）。 */
+  /* flatNodes 构建 + 选择态(selectedGi/anchorGi)/折叠/绑定/拆组/重排由 useGroupedList 提供。
+   * 解构说明：toggleBlock/toggleGroupCollapse/reorderBlock/selectBlock/identifierToGi/revealAndFindGi
+   *   原样导出；clearSelection 用于 applyLoadedPreset() 换预设时清空选中；
+   * insertAfterActive/removeNode
+   *   纯树操作原语，被 addBlock/deleteBlock/hideBlock/addHiddenBlock 用于处理"插入到哪/删哪"，
+   *   再各自补上 prompts/tabsStore 那部分；
+   * bindSelected/unbindGroup
+   *   被下面同名函数包一层 toast 后重新导出（略作改名避免撞名）。 */
   const {
     selectedGi, anchorGi, flatNodes, identifierToGi, revealAndFindGi,
     clearSelection, selectBlock, toggleBlock, toggleGroupCollapse, reorderBlock,
     insertAfterActive, removeNode, bindSelected: bindSelectedNodes, unbindGroup: unbindGroupNode,
   } = useGroupedList(order)
 
-  /** Single source of truth for "the active block tab drives the sidebar": whenever the active
-   *  tab actually changes to a block, this expands whatever collapsed group contains it (via
-   *  revealAndFindGi) and highlights it (selectedGi/anchorGi) to just that one row — covers
-   *  search-result click, var-nav click, and TabBar click, which all go through
-   *  tabsStore.open()/focus() to get there.
-   *
-   *  MUST key off `tabsStore.activeTab` itself (a reference that only changes when the active tab
-   *  identity actually changes), NOT off `listScrollToken['block']`: selectBlock() (the
-   *  ctrl/shift multi-select path) also calls requestListScroll('block') — to get the newly
-   *  (multi-)selected row scrolled into view — without ever touching activeId. Keying this watcher
-   *  off that same token meant every ctrl/shift-click immediately got its own just-computed
-   *  selectedGi clobbered back down to a single-row selection derived from whatever tab happened
-   *  to still be open. Watching activeTab avoids that entirely, since multi-select never changes
-   *  it.
-   *
-   *  Trade-off: re-clicking a row that's already the active tab won't re-fire this (activeId
-   *  doesn't change, so the computed doesn't invalidate) — PresetSidebar.vue's plain-click handler
-   *  still sets selectedGi/anchorGi locally itself to cover exactly that case (a plain click's job
-   *  is "select exactly this row" regardless of whether it was already open); when it also
-   *  changes the active tab, this watcher fires too and computes the identical value, which is
-   *  harmless, not a second source of truth for a genuinely different case.
-   *
-   *  Scrolling itself stays separate, in useListScrollSync.ts on the sidebar side — it needs the
-   *  rendered itemEls DOM map, which is a component-layer concern this store has no business
-   *  owning; open()/focus() trigger that via requestListScroll() same as always.
-   *
-   *  `flush: 'sync'` so this resolves before useListScrollSync's watcher (also triggered off
-   *  open()/focus(), via requestListScroll) tries to read flatNodes — otherwise a same-tick race
-   *  could have it compute gi against a still-collapsed group and scroll to nothing. */
+  /** 活动标签驱动侧边栏高亮的单一真相源：活动 tab 切到某 block 时，展开包含它的折叠组
+   *  (revealAndFindGi) 并高亮该行 (selectedGi/anchorGi)。
+   *  约束：必须 key off `tabsStore.activeTab`（只在活动 tab 身份实际变化时变），而非
+   *  `listScrollToken['block']`——selectBlock() 的 ctrl/shift 多选路径也会触发
+   *  requestListScroll('block')，却从不改 activeId；若 key 在同一 token 上，每次 ctrl/shift
+   *  点击都会把刚算好的 selectedGi 冲回单行。
+   *  `flush: 'sync'`：让此 watcher 先于 useListScrollSync 由 open()/focus() 触发的
+   *  requestListScroll 那条路径解析，避免同 tick race 拿到仍折叠的组而滚到空处。 */
   watch(() => tabsStore.activeTab, (tab) => {
     if (!tab || tab.domain !== 'preset') return
     const gi = revealAndFindGi(tab.key)
     if (gi < 0) return
-    // Idempotency guard: avoid handing the sidebar's v-for a new Set reference (and a re-render)
-    // when the highlight wouldn't actually change — same "only touch the ref when the effective
-    // value actually changes" reasoning as useDragReorder.ts's rAF-throttled updateDragOver.
-    // useDragReorder.ts's rAF-throttled updateDragOver.
+    // 幂等守卫：高亮实际不变时不给侧边栏 v-for 新 Set 引用
     if (anchorGi.value === gi && selectedGi.value.size === 1 && selectedGi.value.has(gi)) return
     selectedGi.value = new Set([gi])
     anchorGi.value = gi
@@ -114,40 +85,24 @@ export const usePresetStore = defineStore('main', () => {
     defaultPlacement: [2],
   })
 
-  /* ====== Dirty tracking (drives the `*` on the header Save button) ======
-   * `order`/`regexScripts` stay deep-watched: every explicit block/group op below (add/delete/
-   * hide/reorder/bind/unbind/toggle) and every regex script field (scriptName/findRegex/...)
-   * mutates one of these two, and both arrays are small (order = top-level items/groups count,
-   * regexScripts = a handful of scripts) — deep-watching them costs Vue a full traverse() of a
-   * small tree per mutation, cheap enough to not sprinkle markDirty() calls everywhere.
-   *
-   * `prompts` is watched WITHOUT deep instead — it holds every block's full content string, and
-   * a deep watcher re-traverses the ENTIRE array (every block, every field) on every single
-   * mutation it sees, including a nested one. Since block content is edited character-by-
-   * character (PresetContentEditor.vue's v-model), a deep watch here meant every keystroke paid
-   * for a full-preset traversal — the real cause of the "text appears in chunks" typing lag
-   * (see PROJECT.md), nothing to do with the editor's own idle-callback scheduling.
-   * A non-deep watch on a ref-wrapped array still fires on top-level mutations (push/splice/
-   * reassignment) — i.e. add/delete/duplicate block — for free. It does NOT fire when a nested
-   * field (content/name/role) on an existing element changes, so those few call sites mark dirty
-   * explicitly via markDirty()/`dirty.value = true` right where they mutate: PresetContentEditor.
-   * vue's content setter, PresetSettingsForm.vue's name/role handlers, PresetSidebar.vue's inline
-   * rename commit, and replaceCurrent()/replaceAll() below.
-   *
-   * The only wrinkle: assigning a freshly-loaded preset's data into `prompts`/`order` in
-   * applyLoadedPreset() looks exactly like "a change" to these same watchers, so they fire and
-   * mark dirty too. applyLoadedPreset() clears it back via nextTick() right after — Vue flushes
-   * watchers queued by that assignment before that nextTick callback runs, so the flag always
-   * ends up correctly false once the load has fully settled. */
+  /* ====== 脏标记（驱动 header Save 按钮上的 `*`） ======
+   * `order`/`regexScripts` 深度 watch：两者数组都很小，全量 traverse 成本可忽略。
+   * `prompts` 浅 watch：holds 每个 block 的完整内容字符串，深 watch 会在每次嵌套字段
+   *   变更时全量重遍历——而 block 内容是逐字符编辑的，这是打字卡顿的真正成因。浅 watch
+   *   仍能捕获顶层变异（push/splice/重赋值），即 add/delete/duplicate block。
+   * 嵌套字段（content/name/role）变更不在浅 watch 范围内，相关调用点显式 markDirty()：
+   *   PresetContentEditor.vue 的 content setter、PresetSettingsForm.vue 的 name/role 处理、
+   *   PresetSidebar.vue 的 inline rename commit、以及下面的 replaceCurrent()/replaceAll()。
+   * 加载新预设时对 prompts/order 的赋值看起来像"变更"会触发 watch 标脏——applyLoadedPreset()
+   *   在 nextTick 里清回 false（Vue 在该 nextTick 回调前 flush 掉这次赋值排入的 watcher）。 */
   const dirty = ref(false)
   function markDirty() { dirty.value = true }
   watch([order, regexScripts], markDirty, { deep: true })
   watch(prompts, markDirty)
 
   /* ====== Search ======
-   * searchOpen 这个"开关"本身已经搬去 tabsStore（按 workspace 分桶存，见该文件 doc comment），
-   * 这里只留搜索本身的业务状态。组件里判断"要不要显示 SearchPanel"改成读
-   * `tabsStore.searchOpen`。 */
+   * searchOpen 开关本身已搬去 tabsStore（按 workspace 分桶存）。这里只留搜索本身的状态。
+   * 组件判断"要不要显示 SearchPanel"改成读 `tabsStore.searchOpen`。 */
   const searchQuery = ref('')
   const searchReplace = ref('')
   const searchResults = ref<SearchResult[]>([])
@@ -160,12 +115,10 @@ export const usePresetStore = defineStore('main', () => {
   const varIdx = ref(-1)
 
   /* ====== Preview ======
-   * Two modes, both driven by real SillyTavern rendering (dry-run generate), NOT by our own
-   * client-side macro simulation — see 方案B / GENERATE_AFTER_DATA in api/presetApi.ts.
-   *   'blocks': per-prompt-block cards, via the openai.js promptManager singleton (方案B).
-   *   'raw':    one top-to-bottom concatenated prompt, via the GENERATE_AFTER_DATA event.
-   * 开关同样搬去了 tabsStore，见上面 Search 的说明。
-   */
+   * 两种模式，都走真实 SillyTavern 渲染（dry-run generate），非客户端宏模拟：
+   *   'blocks': per-prompt-block 卡片，经 openai.js promptManager singleton (方案B)。
+   *   'raw':    顶到底拼接的整条 prompt，经 GENERATE_AFTER_DATA 事件。
+   * 开关同样搬去了 tabsStore，见上面 Search 的说明。 */
   const previewMode = ref<'blocks' | 'raw'>('blocks')
   const previewLoading = ref(false)
   const previewError = ref('')
@@ -175,13 +128,12 @@ export const usePresetStore = defineStore('main', () => {
 
   /* ====== Modals ====== */
   const hiddenOpen = ref(false)
-  const copyPanelOpen = ref(false) // Cross-preset block copy tool (CopyPanel.vue) — fully self-contained there, this is just the open flag
+  const copyPanelOpen = ref(false) // CopyPanel.vue 的 open flag，该组件自包含
 
   /* ====== Jump requests (Editor listens & scrolls/selects; Sidebar listens & scrolls into view) ====== */
-  // incremented token forces watchers to fire even if line/col repeat
-  // `keepFocus: true` scrolls the match into view without moving focus/selection into the
-  // editor — used while typing in the search box so the editor previews the current match
-  // without stealing the keystroke you're mid-typing.
+  // token 递增：line/col 重复时也强制 watcher 触发
+  // `keepFocus: true`：只把匹配滚入视图，不移动 focus/selection 进编辑器——用于在搜索框内打字时
+  // 预览当前匹配，而不偷走你正在打字的按键。
   const editorJump = ref<{ line: number; col: number; len: number; token: number; keepFocus: boolean } | null>(null)
   let jumpCounter = 0
   function requestEditorJump(line: number, col: number, len: number, keepFocus = false) {
@@ -198,23 +150,17 @@ export const usePresetStore = defineStore('main', () => {
 
   const hasData = computed(() => rawData.value !== null)
   const hiddenBlocks = computed(() => {
-    // Expand groups: a grouped block's identifier lives in group.children, not at the top
-    // level — without this, every grouped block would wrongly show up in the Add Hidden list.
+    // 展开组：grouped block 的 identifier 在 group.children 里，不在顶层
     const ids = new Set(order.value.flatMap(o => isGroup(o) ? o.children.map(c => c.identifier) : [o.identifier]))
     return prompts.value.filter(p => !ids.has(p.identifier))
   })
 
   /* ====== Preset IO ======
-   * loadPresetByName() is the one real "load" primitive — everything else is a thin wrapper
-   * around it:
-   *   - loadFromContext(): first load when the panel opens, defaults to whatever ST currently
-   *     has selected.
-   *   - switchPreset(name): explicitly load a DIFFERENT preset than whatever's currently open
-   *     here, independent of ST's own selected preset — this is the actual "preset switcher"
-   *     rather than being permanently locked to ST's selection.
-   *   - refreshPresetList(): (re)populate presetList so the UI has something to pick from; called
-   *     automatically on first load, and exposed standalone in case a preset gets added/removed
-   *     in ST elsewhere while our panel is open.
+   * loadPresetByName() 是唯一真正的"load"原语，其余都是薄封装：
+   *   - loadFromContext(): 面板首次打开时加载 ST 当前选中的预设。
+   *   - switchPreset(name): 显式加载另一个预设，独立于 ST 自己的选中——真正的"预设切换器"。
+   *   - refreshPresetList(): (重新)填充 presetList 供 UI 选择；首次加载自动调用，
+   *     也独立暴露以防 ST 别处增删预设时同步。
    */
   function importOrderWithGroups(raw: OrderItem[]): OrderNode[] {
     const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: {item: OrderItem; idx: number}[] }>()
@@ -288,7 +234,7 @@ export const usePresetStore = defineStore('main', () => {
     clearSelection()
     presetName.value = name
     rebuildVarIndex()
-    tabsStore.closeWorkspace('preset') // 旧标签（block、regex都算，两者都属于预设工作区）指向的都是即将被替换掉的这份数据；不用 closeAll()，见 tabsStore.ts closeWorkspace() 的 doc comment
+    tabsStore.closeWorkspace('preset') // 旧标签（block、regex都算）都指向即将被替换的数据
     nextTick(() => { dirty.value = false })
   }
 
@@ -308,7 +254,7 @@ export const usePresetStore = defineStore('main', () => {
   }
   
 
-  /** First load when the panel opens: whatever ST currently has selected. */
+  /** 面板首次打开时加载：ST 当前选中的预设。 */
   function loadFromContext() {
     refreshPresetList()
     Host.invalidateCache()
@@ -328,9 +274,8 @@ export const usePresetStore = defineStore('main', () => {
     loadPresetByName(name)
   }
 
-  /** Explicit preset switch — loads a DIFFERENT preset than whatever's open here right now,
-   *  independent of what ST itself has selected. Any unsaved edits in the current one are
-   *  discarded (the caller/UI is expected to confirm first if that matters). */
+  /** 显式切换预设——加载另一个预设，独立于 ST 自己的选中。当前预设未保存的编辑会被丢弃
+   *  （若这有影响，调用方/UI 应先确认）。 */
   function switchPreset(name: string) {
     if (!name || name === presetName.value) return
     loadPresetByName(name)
@@ -349,20 +294,12 @@ export const usePresetStore = defineStore('main', () => {
     }
     const name = presetName.value || 'preset_modified'
     try {
-      // rawData.value is a live Pinia/Vue-reactive object (ref() deep-wraps it, and everything
-      // nested inside — prompts array, each prompt object, prompt_order, ...). ST's own
-      // PresetManager.savePreset() calls structuredClone() on whatever we pass it internally,
-      // and a Vue reactive Proxy is NOT structured-cloneable — that's the
-      // "structuredClone... could not be cloned" toast. Worse: if ST assigns the object we
-      // passed into its own live state before hitting that clone call, our Vue Proxy leaks into
-      // SillyTavern's internals and stays there (as a "Proxy(Object)" wrapped in a
-      // MutableReactiveHandler from THIS app's Vue instance, not ST's own reactivity) until the
-      // page is refreshed — which is exactly the corrupted state from your test. So: always hand
-      // ST a fully plain, non-reactive deep clone, never the live ref. (savePresetAs() itself
-      // also deep-clones defensively — belt and suspenders.)
+      // rawData.value 是 Vue 响应式 Proxy，ST 的 savePreset 内部 structuredClone 不了它，
+      // 且若 ST 先把传入对象赋进自己的 live state 再 clone，我们的 Proxy 会泄漏进 ST 内部。
+      // 约束：永远交给 ST 一个纯 plain、非响应式的深拷贝。
       await ST.savePresetAs(name, JSON.parse(JSON.stringify(rawData.value)))
       presetName.value = name
-      refreshPresetList() // saving under a new name adds an entry — keep the picker in sync
+      refreshPresetList() // 新名保存会新增条目，保持 picker 同步
       dirty.value = false
       showToast(t('preset.toast.saved', { name }))
     } catch (e: any) { showToast(t('preset.toast.saveFailed', { msg: e.message })) }
@@ -394,13 +331,11 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   /* ====== Block Ops ======
-   * selectBlock/toggleBlock/toggleGroupCollapse/reorderBlock are exactly what useGroupedList()
-   * returned above (destructured near the top of this store) — pure tree ops with no
-   * preset-specific behavior, so there's nothing to wrap and no local redefinition here anymore.
-   * addBlock/deleteBlock/hideBlock/addHiddenBlock stay here because they touch things
-   * useGroupedList deliberately doesn't know about: `prompts` (the backing data array),
-   * tabsStore (open/close tabs), confirmStore (the delete confirmation). They call
-   * insertAfterActive()/removeNode() for the tree-shape part and handle the rest themselves. */
+   * selectBlock/toggleBlock/toggleGroupCollapse/reorderBlock 是 useGroupedList() 返回的纯树操作，
+   * 原样导出，无 preset 特化逻辑，这里不再重新定义。
+   * addBlock/deleteBlock/hideBlock/addHiddenBlock 留在这里，因为它们要触碰 useGroupedList
+   * 故意不碰的东西：`prompts`（后端数据数组）、tabsStore（开/关标签）、confirmStore（删除确认）。
+   * 它们调 insertAfterActive()/removeNode() 处理树形部分，其余自己处理。 */
   function addBlock() {
     if (!rawData.value) { showToast(t('preset.toast.loadFirst')); return }
     const id = 'custom_' + Date.now()
@@ -410,7 +345,7 @@ export const usePresetStore = defineStore('main', () => {
     })
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
     insertAfterActive({ identifier: id, enabled: true }, activeId)
-    // 直接打开新块的标签——编辑器内容由标签驱动，不再需要桥接
+    // 直接打开新块的标签——编辑器内容由标签驱动
     tabsStore.open({ domain: 'preset', key: id, label: 'New Block', workspace: 'preset' })
     showToast(t('preset.toast.blockCreated'))
   }
@@ -437,8 +372,8 @@ export const usePresetStore = defineStore('main', () => {
       onConfirm: () => {
         const removed = removeNode(gi)
         if (!removed) return
-        // 组：只关子块的标签，不删 prompts 里的数据——这些块变成"隐藏块"，还能从隐藏块列表里
-        // 找回来，跟原实现行为一致（不是这次重构才有的设计）。叶子块：关自己的标签+真删数据行。
+        // 组：只关子块标签，不删 prompts 数据（子块变为"隐藏块"，仍可从隐藏块列表找回）。
+        // 叶子块：关自己标签 + 真删数据行。
         for (const id of removed.identifiers) tabsStore.close('preset', id)
         if (!wasGroup) {
           const pi = prompts.value.findIndex(p => p.identifier === removed.identifiers[0])
@@ -463,7 +398,7 @@ export const usePresetStore = defineStore('main', () => {
     const wasGroup = node.isGroup
     const removed = removeNode(gi)
     if (!removed) return
-    // 隐藏一个组：只是把整个组（含子块）从 order 里摘掉，不关子块的标签——跟原实现一样，只有
+    // 隐藏组：只把整个组（含子块）从 order 摘掉，不关子块标签。
     // 隐藏单个叶子块时才关它自己的标签。
     if (!wasGroup) tabsStore.close('preset', removed.identifiers[0])
     showToast(t('preset.toast.blockHidden'))
@@ -471,15 +406,14 @@ export const usePresetStore = defineStore('main', () => {
   function addHiddenBlock(identifier: string) {
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
     insertAfterActive({ identifier, enabled: true }, activeId)
-    // 打开标签让编辑器显示新加的块
+    // 打开新加块的标签
     const block = prompts.value.find(p => p.identifier === identifier)
     tabsStore.open({ domain: 'preset', key: identifier, label: block?.name || identifier, workspace: 'preset' })
     showToast(t('preset.toast.blockAdded'))
   }
 
   /* ====== Group Ops ======
-   * Thin toast wrappers around useGroupedList()'s bindSelected()/unbindGroup() — the tree
-   * mechanics live there now, this just turns "did it work" into the right showToast() call. */
+   * useGroupedList() 的 bindSelected()/unbindGroup() 外包一层 toast。 */
   function bindSelected() {
     const result = bindSelectedNodes()
     if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
@@ -515,10 +449,7 @@ export const usePresetStore = defineStore('main', () => {
         }
       })
     })
-    // Preview the first match by scrolling it into view, WITHOUT stealing focus from the
-    // search box — that's what let the previous behavior only accept one keystroke at a time
-    // before you had to re-click the input. Explicit actions (clicking a result, Enter,
-    // prev/next buttons) still do a full jump that also moves focus + selection.
+    // 预览第一个匹配项：滚动到可见区但不抢焦点（搜索框打字时不中断输入）。
     if (searchResults.value.length) previewSearchResult(0)
   }
   function previewSearchResult(i: number) {
@@ -533,8 +464,7 @@ export const usePresetStore = defineStore('main', () => {
     if (i < 0 || i >= searchResults.value.length) return
     searchIdx.value = i
     const r = searchResults.value[i]
-    // 直接打开标签——编辑器内容、展开折叠组、侧边栏高亮全部由标签驱动（见 revealAndFindGi 上方
-    // 那个 watch(tabsStore.activeTab, ...)），这里不用再手动 revealAndFindGi 一次
+    // 直接打开标签——编辑器内容、展开折叠组、侧边栏高亮全由标签驱动
     const block = prompts.value.find(p => p.identifier === r.blockId)
     tabsStore.open({ domain: 'preset', key: r.blockId, label: block?.name || r.blockName, workspace: 'preset' })
     requestEditorJump(r.line, r.col, r.ml, false)
@@ -553,7 +483,7 @@ export const usePresetStore = defineStore('main', () => {
     const line = ls[r.line] || ''
     ls[r.line] = line.substring(0, r.col) + searchReplace.value + line.substring(r.col + r.ml)
     p.content = ls.join('\n')
-    markDirty() // nested field mutation — the shallow `prompts` watch above won't catch this
+    markDirty() // 嵌套字段变更，浅 watch 抓不到
     doSearch()
     showToast(t('preset.toast.replaced1'))
   }
@@ -574,8 +504,7 @@ export const usePresetStore = defineStore('main', () => {
   function rebuildVarIndex() {
     allVarOps.value = []
     varIdx.value = -1
-    // findVarOps (utils.ts) is nesting-aware — unlike a naive regex, it correctly picks up var ops
-    // nested inside another setvar/addvar's value, e.g. {{setvar::a::...{{getvar::b}}...}}.
+    // findVarOps 是嵌套感知的（能正确处理 setvar/addvar 值内嵌套的 var op）。
     prompts.value.forEach((p) => {
       const c = p.content || ''
       findVarOps(c).forEach((v) => {
@@ -588,8 +517,7 @@ export const usePresetStore = defineStore('main', () => {
     })
     allVarOps.value.sort((a, b) =>
       a.varName.localeCompare(b.varName) ||
-      // Within the same variable: writes before reads — SET → ADD → GET. (Used to be
-      // get-first, which put the least informative badge at the top of each group.)
+      // 同变量内：写在前读在后 SET → ADD → GET
       ({ setvar: 0, addvar: 1, get: 2 }[a.type] - { setvar: 0, addvar: 1, get: 2 }[b.type])
     )
     filterVarNav()
@@ -605,7 +533,7 @@ export const usePresetStore = defineStore('main', () => {
     if (i < 0 || i >= filteredVarOps.value.length) return
     varIdx.value = i
     const v = filteredVarOps.value[i]
-    // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理，见 revealAndFindGi 上方
+    // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理
     const block = prompts.value.find(p => p.identifier === v.blockId)
     tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
     requestEditorJump(v.line, v.col, v.varName.length)
@@ -617,8 +545,7 @@ export const usePresetStore = defineStore('main', () => {
   }
   watch(varFilterQ, filterVarNav)
 
-  /* ====== Var Click Popup (small floating popup near the clicked {{...var...}}, distinct
-     from the persistent right-side Var Nav panel — both exist side by side, matching MiMo) ====== */
+  /* ====== Var Click Popup（点击 {{...var...}} 弹出的浮动小面板，区别于右侧固定 Var Nav 面板）====== */
   const varPopupOpen = ref(false)
   const varPopupVarName = ref('')
   const varPopupOps = ref<VarOp[]>([])
@@ -628,15 +555,12 @@ export const usePresetStore = defineStore('main', () => {
   function showVarPopup(varName: string, clickBlockId: string | null, clickPos: number, pos: { top: number; left: number }) {
     const ops: VarOp[] = []
     let currentIdx = -1
-    // findVarOps (utils.ts) is nesting-aware — unlike the old per-varName regex here, it correctly
-    // finds ops nested inside another setvar/addvar's value instead of mis-closing on the nested
-    // macro's own `}}`. We scan for ALL var ops in the preset and filter down to `varName` here,
-    // since findVarOps has no notion of "only this variable".
-    // The click always originates from the block currently open in the editor (that's the only
-    // place enableVarClick is wired up), so we receive the block identifier directly.
-    // Groups: scan order.value.flatMap (like generatePreviewBlocks) rather than flatNodes, since
-    // flatNodes deliberately drops the children of a COLLAPSED group — a collapsed group must
-    // not make its blocks' variables invisible to this popup.
+    // findVarOps (utils.ts) 嵌套感知：能正确找到嵌套在另一个 setvar/addvar value 里的 op，
+    // 不会误闭合在嵌套宏自己的 `}}` 上。这里扫描 preset 内所有 var op 再 filter 到 varName，
+    // 因为 findVarOps 没有"只此变量"的概念。
+    // 点击始终源自编辑器中当前打开的 block（enableVarClick 只在那里接线），故直接收到 block identifier。
+    // 组：扫 order.value.flatMap 而非 flatNodes——flatNodes 故意丢掉折叠组的 children，
+    // 折叠组不能让其 blocks 的变量对此 popup 不可见。
     const allItems = order.value.flatMap(node => isGroup(node) ? node.children : [node])
     allItems.forEach((o) => {
       const p = prompts.value.find(pp => pp.identifier === o.identifier)
@@ -646,11 +570,10 @@ export const usePresetStore = defineStore('main', () => {
         ops.push({
           blockId: p.identifier, blockName: p.name || p.identifier,
           type: v.type, varName, varValue: v.varValue,
-          line: v.line, col: v.col, pos: v.pos, ordIdx: 0, // not a real index anymore (see comment above) — unused elsewhere, kept for shape compat with VarOp
+          line: v.line, col: v.col, pos: v.pos, ordIdx: 0, // 不再是真实索引；其它地方未用，保留以兼容 VarOp 形状
         })
-        // clickPos falls anywhere within this macro's source span — for setvar/addvar that span can
-        // run over multiple lines and contain nested macros, so use findVarOps' nesting-aware `end`
-        // rather than assuming a single-line, non-nested match like the old regex did.
+        // clickPos 落在此宏源 span 内任意处——setvar/addvar 的 span 可跨多行且含嵌套宏，
+        // 故用 findVarOps 的嵌套感知 `end`，而非假设单行非嵌套匹配。
         if (p.identifier === clickBlockId && v.pos <= clickPos && clickPos <= v.end) currentIdx = ops.length - 1
       })
     })
@@ -669,7 +592,7 @@ export const usePresetStore = defineStore('main', () => {
     if (i < 0 || i >= varPopupOps.value.length) return
     varPopupIdx.value = i
     const v = varPopupOps.value[i]
-    // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理，见 revealAndFindGi 上方
+    // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理
     const block = prompts.value.find(p => p.identifier === v.blockId)
     tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
     requestEditorJump(v.line, v.col, v.varName.length)
@@ -683,29 +606,22 @@ export const usePresetStore = defineStore('main', () => {
   /* ====== Preview ====== */
 
   function diffAgainstRaw(raw: string, rendered: string) {
-    // No raw content to diff against at all (marker blocks etc) — nothing to highlight.
+    // 无 raw 内容可对比（marker blocks 等）——无需高亮
     if (!raw.trim()) return [{ text: rendered, added: false }]
-    // macroAwareDiff anchors on the literal text between/around {{macros}} instead of doing a
-    // global token-level diff — see its doc comment in utils.ts for why that's necessary (the
-    // old wordDiff(stripMacros(raw), rendered) approach kept drifting by one token around
-    // repeated short tokens like spaces/`<`/`>`/list-bullet whitespace).
+    // macroAwareDiff 以 {{macros}} 之间的字面文本为锚点，而非全局 token 级 diff
     return macroAwareDiff(raw, rendered)
   }
 
-  /** For Now, the only Function that will use ST main Menu data is Preset Preview.
-   * And since switch to another preset is SLOW in ST, we decided to only *select*(switch) preset
-   * when the selected preset in main Menu is different with the chosen preset in script.*/
+  /** 调用 ST 的主菜单选择预设（不是加载到编辑器），仅在 ST 当前选中不同时执行。 */
   function selectPresetByName(name: string) {
     if (!name || ST.getSelectedPresetName() === name) return
     if (!ST.selectPresetByName(name)) showToast(t('preset.toast.selectPresetFailed'))
   }
 
-  /** Per-block precise preview (方案B): each card shows the block's REAL rendered text — after
-   *  macros, regex, and other extensions all ran — sourced from the openai.js promptManager
-   *  singleton, not from our own macro simulation. Substituted/inserted text (vs. the block's
-   *  own raw content) is highlighted via a word diff. Marker blocks (chatHistory, world info,
-   *  etc.) and blocks that expand into multiple sub-messages have no single "raw content" of
-   *  their own to diff against, so those are shown plain. */
+  /** Per-block 精确预览 (方案B)：每张卡片显示该 block 经 macros/regex/其它扩展全部跑完后的真实渲染文本，
+   *  数据来自 openai.js promptManager singleton，非客户端宏模拟。替换/插入的文本（相对于该 block 自己的
+   *  raw content）通过 word diff 高亮。marker blocks（chatHistory、world info 等）和展开为多条子消息的
+   *  block 没有单一"raw content"可对比，按原文平铺显示。 */
   async function generatePreviewBlocks() {
     previewError.value = ''
     previewLoading.value = true
@@ -743,12 +659,10 @@ export const usePresetStore = defineStore('main', () => {
     }
   }
 
-  /** Whole-prompt precise preview: the exact `messages` array SillyTavern was about to send to
-   *  the API, captured off CHAT_COMPLETION_SETTINGS_READY during a REAL generation (immediately
-   *  cancelled via stopGeneration() once captured — see getFinalRequestMessages() for why dry-run
-   *  isn't enough here: it skips plugin/API-level request processing that this event fires after).
-   *  No block boundaries, no highlighting — this is deliberately "what the API actually sees",
-   *  for a final sanity check after checking individual blocks in the other mode. */
+  /** 整条 prompt 的精确预览：ST 真正要发给 API 的 `messages` 数组，从 CHAT_COMPLETION_SETTINGS_READY
+   *  事件在真实 generation 期间捕获（捕获后立即 stopGeneration() 取消；见 getFinalRequestMessages()：
+   *  dry-run 不够——它跳过 plugin/API-level request processing，而该事件在这些处理之后才触发）。
+   *  无 block 边界、无高亮——刻意呈现"API 实际看到的内容"，作为另一模式下逐 block 检查后的最终 sanity check。 */
   async function generatePreviewRaw() {
     previewError.value = ''
     previewLoading.value = true

@@ -5,17 +5,12 @@ import { DEFAULT_SETTINGS, FONT_OPTIONS } from '../types'
 import { useI18n } from '../composables/useI18n'
 
 /**
- * Global UI state singleton. Owns:
- *   - settings (font/colors/panel widths/language/FAB position)
- *   - toast notifications
- *   - i18n t() function
- *   - settings modal open flag (global — settings aren't per-domain)
- *   - main panel open flag (the whole ST_Workbench floating panel)
- *
- * Was a plain composable (composables/useUiState.ts). Now a real Pinia store ('ui') — any
- * store/component calls `useUiStore()` directly and Pinia guarantees they all share one
- * instance. `useI18n(settings)` is unchanged — still called inside this setup, reading off
- * the `settings` ref owned here.
+ * 全局 UI 状态单例。拥有：
+ *   - settings（字体/颜色/面板宽度/语言/FAB 位置）
+ *   - toast 通知
+ *   - i18n t() 函数
+ *   - settings 弹窗开关（全局 —— settings 不是按 domain 分的）
+ *   - 主面板开关（整个 ST_Workbench 浮动面板）
  */
 export const useUiStore = defineStore('ui', () => {
   const settings = ref<Settings>(loadSettings())
@@ -29,17 +24,13 @@ export const useUiStore = defineStore('ui', () => {
     }
   })
 
-  // Main panel open flag — the entire ST_Workbench floating panel. Global, not per-domain.
+  // 主面板开关 —— 整个 ST_Workbench 浮动面板。全局，不按 domain 分。
   const panelOpen = ref(false)
 
-  // Settings modal open flag — global, not per-domain. Settings (font/language/colors) apply
-  // to the whole app, not just the preset editor, so the open/close state lives here.
+  // Settings 弹窗开关 —— 全局，不按 domain 分。
   const settingsOpen = ref(false)
 
-  // MetaPanel（TODO.md 2.5b）打开状态——横跨 preset/character 两个工作区（MetaPanel.vue 自己按
-  // tabsStore.activeWorkspace 查 META_FORMS 表决定渲染哪个表单），不属于任何一个 domain store，
-  // 跟 copyPanelOpen（纯 preset 专属，留在 presetStore 里）不是一回事，理由跟 panelOpen/
-  // settingsOpen 一样：这是"整个 app 的一块 UI 状态"，不是某个 domain 的数据。
+  // MetaPanel 打开状态 —— 横跨 preset/character 两个工作区，不属于某个 domain store。
   const metaPanelOpen = ref(false)
 
   function loadSettings(): Settings {
@@ -57,9 +48,8 @@ export const useUiStore = defineStore('ui', () => {
   }
   function saveSettings() { localStorage.setItem('st-wb-settings', JSON.stringify(settings.value)) }
 
-  // useI18n reads off the same `settings` ref this store owns — language is just another
-  // Settings field, persisted through the loadSettings/saveSettings path above, not a second
-  // source of truth.
+  // useI18n 读取此 store 持有的同一个 `settings` ref —— language 只是另一个 Settings 字段，
+  // 通过 loadSettings/saveSettings 路径读写，不是第二个真相来源。
   const { t, currentLocale } = useI18n(settings)
 
   function resetSettings() {

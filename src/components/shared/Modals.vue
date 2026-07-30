@@ -1,5 +1,5 @@
 <template>
-  <!-- Settings -->
+  <!-- 设置 -->
   <div v-if="uiStore.settingsOpen" class="wb-modal-overlay" @click.self="uiStore.settingsOpen = false">
     <div class="wb-modal lg">
       <h3>⚙ {{ uiStore.t('shared.settings.title') }}</h3>
@@ -44,10 +44,7 @@
     </div>
   </div>
 
-  <!-- Generic Confirm (confirmStore) — every "are you sure" in the app goes through this one dialog:
-       preset switch/delete, block delete, regex delete, CopyPanel reload/remove/close-unsaved.
-       NEVER use getHostWindow().confirm() — it's unreliable inside TauriTavern's WebView2 host,
-       see confirmStore.ts's doc comment. -->
+  <!-- 通用确认框（confirmStore）：应用内所有"你确定吗"走这里，禁用原生 confirm()（Tauri WebView2 下不可靠）。 -->
   <div v-if="confirmStore.open" class="wb-modal-overlay" @click.self="confirmStore.cancel()">
     <div class="wb-modal sm">
       <h3>{{ confirmStore.title }}</h3>
@@ -59,7 +56,7 @@
     </div>
   </div>
 
-  <!-- Generic Prompt (confirmStore) — replaces window.prompt(), same TauriTavern reasoning. -->
+  <!-- 通用输入框（confirmStore）：替代 window.prompt()，同 WebView2 原因。 -->
   <div v-if="confirmStore.promptOpen" class="wb-modal-overlay" @click.self="confirmStore.cancelPrompt()">
     <div class="wb-modal sm">
       <h3>{{ confirmStore.promptTitle }}</h3>
@@ -76,11 +73,7 @@
     </div>
   </div>
 
-  <!-- Generic Confirm Multi (confirmStore) — "close panel with unsaved changes across
-       workspaces" (see App.vue's onClosePanel()) and any future multi-document confirmation.
-       Reuses .wb-modal-list/.wb-modal-item from the "Add Hidden" dialog below, minus the
-       click-to-add behavior — this list is read-only/informational, the actual decision is the
-       Confirm/Cancel footer, hence the .static modifier (no hover affordance, not clickable). -->
+  <!-- 通用多对象确认框（confirmStore）：用于"跨工作区未保存改动关闭面板"等多文档确认场景，列表只读展示。 -->
   <div v-if="confirmStore.multiOpen" class="wb-modal-overlay" @click.self="confirmStore.cancelMulti()">
     <div class="wb-modal sm">
       <h3>{{ confirmStore.multiTitle }}</h3>
@@ -97,7 +90,7 @@
     </div>
   </div>
 
-  <!-- Add Hidden -->
+  <!-- 添加隐藏块 -->
   <div v-if="presetStore.hiddenOpen" class="wb-modal-overlay" @click.self="presetStore.hiddenOpen = false">
     <div class="wb-modal">
       <h3>{{ uiStore.t('preset.sidebar.hiddenBlock') }}</h3>
@@ -132,18 +125,13 @@ const confirmStore = useConfirmStore()
 const presetStore = usePresetStore()
 const uiStore = useUiStore()
 
-// Local drafts for the two controls that fire continuously while being dragged (range slider,
-// color picker). Binding these straight to presetStore.settings meant every tick of the drag pushed
-// a reactive update through cssVars -> the .st-wb inline style -> a full style recalc, PLUS a
-// synchronous localStorage write, dozens of times a second — visibly janky. Now the draft only
-// updates local component state while dragging, and commits to the store (and localStorage)
-// once, on release.
+/** 字号滑块/颜色选择器的本地草稿：拖拽过程中只更新本地状态，避免每 tick 触发 cssVars 重算 + localStorage 写入；release 时才 commit。 */
 const draftFontSize = ref(uiStore.settings.editorFontSize)
 const draftColors = reactive<SyntaxColors>({ ...uiStore.settings.syntaxColors })
 
 watch(() => uiStore.settingsOpen, (open) => {
   if (open) {
-    // Re-sync drafts each time the panel opens, in case settings changed elsewhere (e.g. Reset Defaults).
+    // 每次打开重新同步，防止外部（如重置默认值）改动
     draftFontSize.value = uiStore.settings.editorFontSize
     Object.assign(draftColors, uiStore.settings.syntaxColors)
   }
@@ -160,8 +148,7 @@ function commitColor(key: keyof SyntaxColors) {
   uiStore.saveSettings()
 }
 
-// Prompt modal: autofocus + select-all whenever it opens, matching window.prompt()'s old
-// default text-selected behavior.
+/** Prompt 弹窗打开时自动聚焦并全选，对齐 window.prompt() 行为。 */
 const promptInputRef = ref<HTMLInputElement>()
 watch(() => confirmStore.promptOpen, (open) => {
   if (open) nextTick(() => { promptInputRef.value?.focus(); promptInputRef.value?.select() })

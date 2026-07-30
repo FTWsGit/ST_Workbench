@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="wb-right-panel" :class="{ float: uiStore.settings.varPanelFloat }" :style="{ width: uiStore.settings.varPanelWidth + 'px' }">
     <div class="wb-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
     <div class="wb-rp-header">
@@ -41,10 +41,7 @@ import { varOpBadge } from '../../utils'
 
 const store = usePresetStore()
 const uiStore = useUiStore()
-// varNavOpen 本身的开关状态活在 tabsStore（按 workspace 分桶存，见该文件 doc comment）——这个
-// 面板目前只对 'preset' 工作区渲染（App.vue 按 workspaceRegistry.capabilities.varNav 挂载），
-// 关闭时写回的 workspace 硬编码成 'preset' 没问题；哪天 varNav 也要支持别的 workspace，这里要
-// 跟着改成读 tabsStore.activeWorkspace。
+/** varNavOpen 按 workspace 分桶存于 tabsStore；本面板目前仅对 'preset' 工作区渲染，关闭时硬编码 'preset' 即可，若未来支持其他 workspace 需改为读 activeWorkspace。 */
 const tabsStore = useTabsStore()
 
 const resize = usePanelResize({

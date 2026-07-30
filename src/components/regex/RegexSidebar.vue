@@ -29,9 +29,6 @@
 </template>
 
 <script setup lang="ts">
-/* 正则三件套之一——参数化改造后不再 import usePresetStore()，数据源+CRUD走props，见
- * regexProps.ts 顶部的 doc comment。tabsStore 是全局单例 store，跟背后是哪个 domain store
- * 无关，继续直接用；domain 字符串 'regex' 也继续写死（这是"这个组件是什么"，不是"数据从哪来"）。*/
 import { watch } from 'vue'
 import { useDragReorder } from '../../composables/useDragReorder'
 import { useListScrollSync } from '../../composables/useListScrollSync'
@@ -75,11 +72,7 @@ function onDragStart(i: number, e: PointerEvent) {
   onItemMouseDown(i, e, (from, to, after) => props.onReorder(from, to, after))
 }
 
-// Scroll the active regex item into view whenever something asks for it (TabBar click, this
-// list's own click, or anything else that goes through tabsStore.open()/focus()) — see
-// useListScrollSync.ts's doc comment. itemEls (from useDragReorder) is keyed by list index, so
-// keyOf resolves activeTab.key (a script id) back to that index — same lookup this file used to
-// do inline before scrolling.
+/** 激活项滚动同步：通过 tabsStore.open/focus 触发时把对应项滚入视图；keyOf 把脚本 id 解析为列表索引。 */
 useListScrollSync({
   domain: 'regex',
   itemEls,

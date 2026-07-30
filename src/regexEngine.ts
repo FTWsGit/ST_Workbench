@@ -15,7 +15,6 @@ export function parseFindRegex(raw: string): RegExp | null {
   }
 }
 
-/**  */
 export function applyRegexScript(text: string, script: RegexScript): string {
   const re = parseFindRegex(script.findRegex)
   if (!re) return text

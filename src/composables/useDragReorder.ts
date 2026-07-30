@@ -2,39 +2,19 @@ import { getHostDocument, getHostWindow } from './hostEnv'
 import { ref } from 'vue'
 
 const DRAG_THRESHOLD = 4
-// Auto-scroll tuning, ported as-is from PresetSidebar.vue's handleListAutoScroll/startDragScroll:
-// AUTO_SCROLL_EDGE_PX is how close to the top/bottom edge (in px) the pointer has to be before
-// auto-scroll kicks in; AUTO_SCROLL_MAX_SPEED is the scroll speed (px/frame) right at the edge,
-// scaled down linearly to 0 at AUTO_SCROLL_EDGE_PX away from the edge.
+// AUTO_SCROLL_EDGE_PX：指针距顶部/底部边缘多近时触发自动滚动；AUTO_SCROLL_MAX_SPEED：边缘处滚动速度（px/帧），线性衰减到 0。
 const AUTO_SCROLL_EDGE_PX = 70
 const AUTO_SCROLL_MAX_SPEED = 40
 
 /**
- * Pointer-based drag-to-reorder for a list, plus the "scroll item into view" helper that
- * useListScrollSync consumes. Key type is generic (`T`, defaults to `number`) so this one
- * implementation covers every domain's list: PresetSidebar keys by `gi` (a flatNodes index,
- * `number`), RegexSidebar keys by plain array index (also `number`, but semantically just "index"
- * with no flatNodes indirection), and any future identifier-keyed list (e.g. a card domain with
- * no grouping) can key by `string` directly — matches applyMultiSelect<T>()'s existing genericity
- * in utils.ts, which was already designed with this in mind (see sidebar-refactor-report.md 三).
- *
- * `dragOverIdx` uses `null` (not `-1`) as its "nothing" sentinel, since `-1` only makes sense for
- * numeric keys — a generic composable can't assume a numeric ordering exists.
- *
- * Auto-scrolling the list while dragging near its top/bottom edge is opt-in via
- * `autoScrollContainer`: pass a getter for the scrolling element (e.g. `() => listRef.value`) to
- * enable it, or omit it for a list that doesn't need it (e.g. RegexSidebar, which is short enough
- * in practice that this was never implemented for it — this composable makes it a one-line add
- * whenever that changes, rather than requiring its own from-scratch implementation the way
- * PresetSidebar's did before this extraction).
+ * 基于 Pointer 的列表拖拽重排，泛型 T 覆盖所有域（PresetSidebar 用 gi / RegexSidebar 用索引 / 未来用 string 标识的列表）。
+ * `dragOverIdx` 用 null（而非 -1）作为空值哨兵。自动滚动通过 `autoScrollContainer` getter 选择性启用。
  */
 export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => HTMLElement | null | undefined }) {
   const dragIdx = ref<T | null>(null)
   const dragOverIdx = ref<T | null>(null)
   const dragOverPos = ref<'top' | 'bottom'>('top')
-  /** Exposed (not just used internally by scrollItemIntoView) so callers can hand this same map
-   *  to useListScrollSync — one map, one source of truth for "which DOM element is item i",
-   *  rather than each composable keeping its own parallel map that could drift out of sync. */
+  /** 暴露 itemEls 供 useListScrollSync 共用——单一数据源，避免两套映射漂移。 */
   const itemEls = new Map<T, HTMLElement>()
   let suppressClick = false
   let dragScrollRAF: number | null = null
@@ -43,20 +23,13 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
     if (el) itemEls.set(i, el as HTMLElement)
     else itemEls.delete(i)
   }
-  /** Scrolls item `i` into view if it's currently mounted — used to react to external "show me
-   *  this item" signals (e.g. tabsStore.listScrollToken) the same way Sidebar.vue's own
-   *  scrollSelectedIntoView() does for the block list, shared here since useDragReorder already
-   *  owns the itemEls map. No-op if `i` isn't currently rendered (filtered out, or out of range). */
+  /** 将指定项滚动到可视区域。若 `i` 未渲染则为空操作。 */
   function scrollItemIntoView(i: T) {
     const el = itemEls.get(i)
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }
 
-  // Throttle dragover-equivalent updates with requestAnimationFrame, and only touch the refs
-  // when the effective (idx, pos) actually changes, to avoid re-rendering the whole v-for list on
-  // every pointermove tick — ported from PresetSidebar.vue's flushDragOver/pendingOver, which
-  // mattered there because preset lists can be long; kept generic here since nothing about it is
-  // preset-specific and a short regex list is strictly no worse off with it.
+  // 用 requestAnimationFrame 节流 dragover 更新，仅当 (idx, pos) 实际变化时才触发射频。
   let dragRAF = 0
   let pendingOver: { idx: T; pos: 'top' | 'bottom' } | null = null
   function flushDragOver() {
@@ -65,12 +38,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
     if (dragOverIdx.value !== pendingOver.idx) dragOverIdx.value = pendingOver.idx
     if (dragOverPos.value !== pendingOver.pos) dragOverPos.value = pendingOver.pos
   }
-  // Figure out which item the pointer is currently over, and whether it's in the top or bottom
-  // half of that item (that decides insert-before vs insert-after). Falls back to clamping to the
-  // first/last item when the pointer is above/below the whole list, so dragging past either end
-  // still gives a sensible drop target instead of silently doing nothing — "first"/"last" here
-  // means first/last in itemEls' insertion order, which for a v-for-rendered list is always its
-  // visual top-to-bottom order, so this doesn't need to assume anything numeric about `T`.
+  // 确定指针所在项及上下半区（决定插入前/后）。指针超出列表范围时钳位到首/末项。
   function updateDragOver(clientY: number) {
     let bestIdx: T | null = null
     let bestPos: 'top' | 'bottom' = 'top'
@@ -103,10 +71,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
       dragScrollRAF = requestAnimationFrame(tick)
     })()
   }
-  /** Auto-scrolls `opts.autoScrollContainer()` when the pointer is near its top/bottom edge —
-   *  ported from PresetSidebar.vue's handleListAutoScroll/startDragScroll/stopDragScroll (see
-   *  module doc comment above). No-op if `autoScrollContainer` wasn't passed to this composable
-   *  instance, or if it currently returns null/undefined. */
+  /** 指针接近 `autoScrollContainer` 顶部/底部边缘时自动滚动。未配置则为空操作。 */
   function handleListAutoScroll(clientY: number) {
     const container = opts?.autoScrollContainer?.()
     if (!container) return
@@ -120,10 +85,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
     }
   }
 
-  // Suppresses host-document text selection while dragging — without this, a fast drag gesture
-  // also selects the text of whatever it passes over, which looks broken. Ported from
-  // PresetSidebar.vue's suppressSelection/restoreSelection; kept generic since it has nothing to
-  // do with blocks specifically, any drag-to-reorder list wants this.
+  // 拖拽时禁止宿主文档文本选择。
   function suppressSelection() {
     const hostDoc = getHostDocument()
     hostDoc.body.style.userSelect = 'none'
@@ -136,22 +98,8 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
   }
 
   /**
-   * Uses Pointer Events rather than mouse events, so this also works when `i` is dragged via
-   * touch on mobile — see usePanelResize.ts's doc comment for the same reasoning (one pointer
-   * event triplet covers mouse/touch/pen uniformly).
-   *
-   * TOUCH vs SCROLL: touch drags are gated to the .wb-drag-handle element specifically — see
-   * PresetSidebar.vue's onItemMouseDown for the full reasoning (short version: letting touch-drag
-   * start anywhere on the row means it fights the browser's native scroll for the same gesture,
-   * since a real scroll swipe also crosses DRAG_THRESHOLD almost immediately; requiring a small
-   * dedicated handle, with `touch-action: none` set on JUST that handle in main.css, is the
-   * standard fix). Mouse users keep whole-row dragging since a mouse drag never competes with a
-   * scroll gesture in the first place.
-   *
-   * `onDrop`'s job is intentionally narrow: "item `from` was dropped near item `to`, on its top
-   * (`after: false`) or bottom (`after: true`) half". Any domain-specific interpretation of that
-   * — e.g. PresetSidebar's group-insert semantics (dropping just inside vs. between groups) — stays
-   * in the caller's `onDrop` callback, not in this composable. See sidebar-refactor-report.md 四.3.
+   * 使用 Pointer Events 统一处理鼠标/触摸/笔。触摸拖拽限 .wb-drag-handle 元素内，避免与原生滚动冲突。
+   * `onDrop` 职责窄化：(from, to, after) → 域内语义由调用方 onDrop 回调解释。
    */
   function onItemMouseDown(i: T, e: PointerEvent, onDrop: (from: T, to: T, after: boolean) => void) {
     if (e.pointerType === 'mouse') {
@@ -182,9 +130,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
       restoreSelection()
       stopDragScroll()
       if (dragging) {
-        // A real drag happened — the browser will still fire a native `click` on pointerup at
-        // the same target even though the pointer moved, so the caller should swallow that one
-        // click via consumeSuppressClick().
+        // 真实拖拽后浏览器仍会触发原生 click，调用方应通过 consumeSuppressClick() 吞掉该事件。
         suppressClick = true
         const over = pendingOver
         if (over && over.idx !== i) onDrop(i, over.idx, over.pos === 'bottom')

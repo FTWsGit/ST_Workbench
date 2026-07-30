@@ -1,21 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-/** 一个 tab 对应"某个 domain 里的某一条具体数据"——预设块、正则脚本、世界书条目、角色卡字段……
- *  domain 用字符串而不是枚举，是因为这个 store 完全不需要知道每个 domain 具体是什么，它只管
- *  "开着哪些标签、谁是当前激活的、顺序是什么"，内容渲染完全交给调用方按 domain 路由到对应组件。
- *  key 只要求在同一 domain 内唯一（通常就是那条数据自己的 id/identifier）；跨 domain 允许重复，
- *  实际判重靠 domain+key 这个组合（见 tabId）。 */
+/** 一个 tab 对应"某个 domain 里的某一条具体数据"。domain 和 key 的组合构成 tabId（判重）。
+ *  跨 domain 允许重复 key；domain+key 组合唯一。 */
 export interface OpenTab {
   domain: string
   key: string
   label: string
-  /** 这个标签归属哪个顶层工作区（'preset' | 'character' | 'worldbook'，同样是字符串不是枚举，
-   *  理由跟 domain 一样）。故意跟 domain 分开、由调用方显式指定，不能从 domain 反推：预设工作区
-   *  下的正则标签 domain 是 'regex'，workspace 却是 'preset'（正则是预设工作区内的子模式，不是
-   *  独立工作区，见 TODO.md 1.5/1.6）；以后角色卡工作区里的正则标签 domain 同样是 'regex'，但
-   *  workspace 会是 'character'——同一个 domain 字符串，两种不同的 workspace 归属，只有调用方
-   *  自己知道现在开的是哪个工作区。 */
+  /** 归属的工作区标识（'preset' | 'character' | 'worldbook'）。跟 domain 分开、由调用方显式指定。
+   *  同一 domain（如 'regex'）可能出现在不同 workspace 下，不能从 domain 反推。 */
   workspace: string
 }
 
@@ -26,28 +19,12 @@ function tabId(t: Pick<OpenTab, 'domain' | 'key'>): string {
 export const useTabsStore = defineStore('tabs', () => {
   const tabs = ref<OpenTab[]>([])
 
-  /** 【2026-07 重构】每个工作区各自记着自己的"当前激活标签id"，不是像之前那样全局共用一个
-   *  `activeId` 指针。起因是三个工作区（preset/worldbook/character）落地后暴露出两个串台 bug：
-   *    1. 关掉某个工作区最后一个标签时，原来的 close() 直接从"全部标签"这个大数组里找相邻项接棒
-   *       焦点——工作区之间的标签在同一个数组里前后挨着放，选出来的"相邻项"经常是别的工作区的
-   *       标签，导致关光世界书的标签后，编辑器忽然冒出一个预设的标签。
-   *    2. 顶栏切换工作区（switchMode()）本身完全不碰 activeId——只要用户没有手动点开新工作区里
-   *       的某个标签，activeTab 还是切换前那个工作区的标签，EditorShell/SettingsDock 单纯按
-   *       activeTab.domain 路由，看到的还是旧工作区的内容，直到用户点开一个新标签才刷新过来。
-   *  按 workspace 分开存了之后，activeTab 天然只会解析到"当前激活工作区"自己名下的标签，两个问题
-   *  是同一个根因、同一次改动一起解决——不需要在 EditorShell.vue/SettingsDock.vue 里另外加
-   *  "domain 是否属于当前 workspace"这种过滤逻辑。
-   *  各工作区的 activeId 在切走之后依然保留在这个 map 里（"背景保活"，见 TODO.md 1.6），切回来时
-   *  原样还在，不会因为切换工作区就丢了"上次编辑到哪个标签"这件事。 */
+  /** 每个工作区各自记着自己的"当前激活标签 id"。分开存是为了关掉某个工作区的最后一个标签时只在自己
+   *  工作区内找相邻项接棒焦点，不会切到别的工作区的标签；切换工作区也不会丢"上次编辑到哪个标签"。 */
   const activeIdByWorkspace = ref<Record<string, string | null>>({})
 
-  /** 只读——当前激活工作区名下的 activeId。不能做成 external-writable 的 computed 直接代理到
-   *  `activeIdByWorkspace.value[activeWorkspace.value]`：open()/close()/focus() 这些函数操作的
-   *  目标工作区是"这个标签自己归属的 workspace"，不一定等于"当前正在显示的 activeWorkspace"
-   *  （比如 worldbookStore.applyLoaded() 会调 closeWorkspace('worldbook')，这个调用点未必发生在
-   *  用户正显示着世界书工作区的时候）——所以这几个函数内部都显式按目标 tab/domain 自己的
-   *  workspace 去操作 activeIdByWorkspace，不会经过、也不能经过 activeWorkspace 这个"当前显示的
-   *  是哪个工作区"的间接层。 */
+  /** 只读：当前激活工作区名下的 activeId。open()/close()/focus() 按目标 tab 自己的 workspace 操作
+   *  activeIdByWorkspace，不经过这个 computed —— 调用点可能发生在非当前工作区。 */
   const activeId = computed<string | null>(() => activeIdByWorkspace.value[activeWorkspace.value] ?? null)
 
   const activeTab = computed<OpenTab | null>(
@@ -57,55 +34,22 @@ export const useTabsStore = defineStore('tabs', () => {
   const settingsDockOpen = ref(true)
   function toggleSettingsDock() { settingsDockOpen.value = !settingsDockOpen.value }
 
-  /** 当前显示的顶层工作区（'preset' | 'worldbook' | 'character'）。顶层三态切换 UI 在 App.vue
-   *  顶栏第一行（switchWorkspace()），这里只管存这个值本身。 */
+  /** 当前显示的顶层工作区（'preset' | 'worldbook' | 'character'）。 */
   const activeWorkspace = ref('preset')
   function setActiveWorkspace(ws: string) { activeWorkspace.value = ws }
 
-  /** TabBar 只渲染当前工作区的标签子集——切到角色卡/世界书工作区时不该还看到预设/正则的标签占
-   *  着位置。它们依然原样留在 tabs 数组里，不清空、不销毁（"背景保活"，见 TODO.md 1.6），只是
-   *  不在标签栏露出；切回来的时候原样还在。 */
+  /** TabBar 只渲染当前工作区的标签子集。其他工作区的标签原样留在 tabs 数组里，不清空不销毁。 */
   const tabsInActiveWorkspace = computed(() => tabs.value.filter(t => t.workspace === activeWorkspace.value))
 
-  /** 【2026-07 顶栏 IA 重构，替代原来的 sidebarMode】原来 sidebarMode 用一个扁平字符串
-   *  （'preset'|'regex'|'worldbook'|'character'）同时表达"当前是哪个工作区"和"预设/角色卡工作区
-   *  内部当前在看条目列表还是正则列表"这两件粒度不同的事——正则因此被迫跟三个真正的工作区挤在
-   *  顶栏同一排按钮里，等于告诉用户"正则是第四个平级的工作区"，但它其实是预设/角色卡工作区内部
-   *  的一个子集合，跟 activeWorkspace 完全不是一个层级。
-   *
-   *  拆成两条正交的状态后，"工作区内部在看哪个集合"这件事本身也需要记住——用户在预设工作区切去看
-   *  正则列表、切到角色卡工作区逛了一圈、再切回预设工作区，应该还停在正则列表，不该被重置回条目
-   *  列表。做法照抄上面 activeIdByWorkspace 那条已经验证过的模式：按 workspace 分别记一份，不是
-   *  全局共用一个指针。
-   *
-   *  只有 preset/character 两个工作区有"条目 vs 正则"这个选择（世界书工作区里正则条目本来就是
-   *  世界书条目自己的字段，不是一个独立集合，没有第二个集合可切），所以这里只需要存这两个
-   *  workspace 的值；sidebarCollection 这个 computed 对其它 workspace（目前只有 'worldbook'）
-   *  统一兜底成 'items'，调用方不用自己写 workspace 特判。 */
+  /** 每个工作区各自记着"工作区内部当前在看哪个集合"（条目列表 vs 正则列表）。
+   *  只有 preset/character 有"条目 vs 正则"的选择；其他 workspace 兜底成 'items'。 */
   const sidebarCollectionByWorkspace = ref<Record<string, string>>({ preset: 'items', character: 'fields' })
   const sidebarCollection = computed(() => sidebarCollectionByWorkspace.value[activeWorkspace.value] ?? 'items')
   function setSidebarCollection(workspace: string, collection: string) { sidebarCollectionByWorkspace.value[workspace] = collection }
 
-  /** 【2026-07 面板状态搬家】Search/VarNav/Preview 这三个"要不要显示某个悬浮/内嵌面板"的开关，
-   *  以前各自是 presetStore 里一个裸 `ref(false)`——这样写隐含了一个从没被显式承认过的假设："这几个
-   *  面板只可能属于 preset 工作区"，App.vue 里所有 `v-if="activeWorkspace === 'preset'"` 才渲染
-   *  对应按钮的判断，其实是在从外部模拟这条本该长在数据结构里的约束。
-   *
-   *  现在照抄上面 `sidebarCollectionByWorkspace` 已经验证过的模式，按 workspace 分桶存：每个
-   *  workspace 各自记一份"我这儿 search/varNav/preview 开着没"，不再假设只有一份。这样以后要给
-   *  worldbook 接一个它自己的 SearchPanel，不需要碰这里——只需要新建
-   *  `WorldbookSearchPanel.vue`，然后在 `workspaceRegistry.ts` 里把 worldbook 的
-   *  `capabilities.search` 打开，App.vue 的 header/工具抽屉代码本身一行都不用改（它是照着
-   *  registry 查表渲染的，见 `workspaceRegistry.ts`）。
-   *
-   *  三个面板各自的**业务逻辑**（`doSearch()`/`rebuildVarIndex()`/`generatePreviewBlocks()`等）
-   *  依然留在 presetStore 里不动——这里只搬"开关状态"本身，不是要把 Search/VarNav/Preview 现在
-   *  就重构成 domain-agnostic 组件（那些组件的内容目前确实是 preset 专属逻辑，见 PROJECT.md
-   *  「为什么 SearchPanel/VarPanel/.../PresetMetaForm 在 preset/ 而不是 shared/」）。
-   *
-   *  `copyPanelOpen` 故意不搬来这里——CopyPanel 是横跨两份预设的复制工具（PROJECT.md「架构总览」
-   *  里说的"第七种例外"），概念上永远只可能属于 preset 工作区，不存在"以后 worldbook 也要一个
-   *  copyPanel"这种扩展需求，继续留在 presetStore 更诚实。 */
+  /** Search/VarNav/Preview 三个面板的"开关状态"，按 workspace 分桶存。
+   *  各自业务逻辑（doSearch()/rebuildVarIndex()/generatePreviewBlocks() 等）留在对应 store 里。
+   *  copyPanelOpen 留在 presetStore —— CopyPanel 永远只属于 preset 工作区。 */
   const searchOpenByWorkspace = ref<Record<string, boolean>>({})
   const varNavOpenByWorkspace = ref<Record<string, boolean>>({})
   const previewOpenByWorkspace = ref<Record<string, boolean>>({})
@@ -116,31 +60,15 @@ export const useTabsStore = defineStore('tabs', () => {
   function setVarNavOpen(workspace: string, open: boolean) { varNavOpenByWorkspace.value[workspace] = open }
   function setPreviewOpen(workspace: string, open: boolean) { previewOpenByWorkspace.value[workspace] = open }
 
-  /** Per-domain "please scroll your selected item into view" signal — domain-agnostic replacement
-   *  for what used to be presetStore's preset-only `sidebarJumpToken`/`requestSidebarScroll()`. Each
-   *  domain's sidebar list (Sidebar.vue for 'preset', RegexSidebarList.vue for 'regex', ...) watches
-   *  only its own `listScrollToken[domain]` counter and scrolls its own currently-active item into
-   *  view when it ticks.
-   *
-   *  Lives here (tabs store) rather than in presetStore (main) because it's UI-layout state about
-   *  tabs/sidebars, not preset data, and because it needs to fire for ANY domain, not just blocks
-   *  — see PROJECT_HANDOFF.md 架构总览 1/2. `open()` and `focus()` below both trigger it
-   *  automatically, so callers that open/focus a tab never need to remember to request a scroll
-   *  themselves: the two are inherently the same user action ("show me this item"). Domain call
-   *  sites that jump WITHOUT going through open()/focus() (search-result jump, var-nav jump — both
-   *  stay within an already-active preset tab) call requestListScroll('preset') directly from
-   *  presetStore. */
+  /** 按 domain 的"请滚动到当前选中项"信号。每个 domain 的侧边栏只监听自己的计数器。
+   *  放在这里（tabsStore）而不是 presetStore 是因为它是 UI 布局状态（标签/侧边栏）而非业务数据，
+   *  且需要对任意 domain 触发。open()/focus() 会自动触发，调用方无需手动请求滚动。 */
   const listScrollToken = ref<Record<string, number>>({})
   function requestListScroll(domain: string) {
     listScrollToken.value[domain] = (listScrollToken.value[domain] || 0) + 1
   }
 
-  /** 打开一个标签。已经开着就只 focus，不重复插入、也不挪到末尾——不然每次点一个已经打开的
-   *  标签，它在标签栏里的位置还会跳来跳去，体验会很怪。label 允许在已存在时刷新（比如 block
-   *  改名之后再从 sidebar 点开，标签上的文字要跟着更新）。
-   *  激活焦点写进 tab.workspace 自己名下，不是当前 activeWorkspace——两者理论上应该一致（打开
-   *  标签的入口只会出现在对应工作区的侧边栏里），这里显式用 tab.workspace 只是不依赖这个"应该
-   *  一致"的假设，多一层保险。 */
+  /** 打开一个标签。已存在则只 focus 不重复插入（label 允许刷新）。焦点写进 tab.workspace 名下。 */
   function open(tab: OpenTab) {
     const id = tabId(tab)
     const existing = tabs.value.find(t => tabId(t) === id)
@@ -158,10 +86,7 @@ export const useTabsStore = defineStore('tabs', () => {
     const ws = closedTab.workspace
     const wasActive = activeIdByWorkspace.value[ws] === id
 
-    // 焦点候选只在同一个工作区内的标签里找——用 splice 之前的下标在"同工作区子序列"里定位，右边
-    // 优先、没有就退到左边，都没有就空着，跟浏览器/VSCode关标签页的落焦行为一致。故意不用整个
-    // tabs 数组的相邻下标（那是之前"关掉世界书最后一个标签，编辑器却冒出预设标签"那个 bug 的
-    // 根因），只在 workspace 过滤后的子序列里找相邻项。
+    // 焦点候选只在同一个工作区内的标签里找，不在 tabs 数组全局相邻下标里找。
     let fallback: OpenTab | null = null
     if (wasActive) {
       const siblings = tabs.value.filter(t => t.workspace === ws)
@@ -178,13 +103,8 @@ export const useTabsStore = defineStore('tabs', () => {
     activeIdByWorkspace.value = {}
   }
 
-  /** 只关掉某个 domain 的全部标签——比如切换/重新加载预设时，指向旧数据的 block 标签（引用的
-   *  identifier 在新预设里根本不存在了）需要清掉，但正则、世界书这些跟这次预设重载无关的标签
-   *  不该被一起打扫掉，所以按 domain 精确清，不做"全部清空"。
-   *  按每个受影响 workspace 各自检查、各自可能清空自己的 activeId——不假设某个 domain 只会出现在
-   *  一个 workspace 下（正则 domain 现在恒属于 workspace='preset'，但角色卡工作区落地后会有另一份
-   *  domain='regex' / workspace='character' 的标签，这里不应该因为清 'preset' 工作区的正则标签就
-   *  连带影响到 'character' 工作区的 activeId，反之亦然）。 */
+  /** 只关掉某个 domain 的全部标签，不影响其他 domain。
+   *  逐个影响到的 workspace 各自检查 activeId，避免跨 workspace 误影响。 */
   function closeDomain(domain: string) {
     const closingIds = new Set(tabs.value.filter(t => t.domain === domain).map(tabId))
     tabs.value = tabs.value.filter(t => t.domain !== domain)
@@ -197,25 +117,13 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  /** 同 closeDomain，但按 workspace 清——预设工作区一次重载/切换要连带关掉的是"这个工作区里的
-   *  全部标签"（block + 正则两个 domain 都算，因为正则是预设工作区的子模式，不是独立工作区，见
-   *  上面 OpenTab.workspace 的 doc comment），不是全部 domain。用这个而不是 closeAll()，是因为
-   *  closeAll() 会连带把角色卡/世界书工作区里跟这次预设重载完全无关的标签也清掉——工作区之间要
-   *  "背景保活"（TODO.md 1.6：切换工作区不清空、不丢改动），一个工作区内部的重载动作不该有这种
-   *  跨工作区的副作用。
-   *  这个工作区的标签已经全部关掉了，activeId 直接清空——不像 close()/closeDomain() 那样还要找
-   *  "同工作区的相邻标签"接棒（这个工作区已经一个不剩了，没有相邻的可接），更不能像重构前那样退回
-   *  到"tabs 数组里随便剩下的第一个"，那正是本次要修的串台 bug 本身。 */
+  /** 按 workspace 清空全部标签，不清除其他 workspace 的标签。本工作区标签已全部清空，activeId 直接置空。 */
   function closeWorkspace(workspace: string) {
     tabs.value = tabs.value.filter(t => t.workspace !== workspace)
     activeIdByWorkspace.value[workspace] = null
   }
 
-  /** 只同步某个标签的显示文字，不改 activeId、不触发 requestListScroll——用于"底层数据被
-   *  改名了，如果它的标签正开着就把文字同步一下"这种场景（block/regex 改名输入框，逐字触发）。
-   *  故意跟 open() 分开：open() 语义是"用户刚导航到这里"，理应顺带滚动侧边栏；改名不是导航，
-   *  每敲一个字都顺带触发一次 scrollIntoView({behavior:'smooth'}) 会跟输入渲染抢主线程，
-   *  是 PROJECT.md 里记录过的卡顿根因之一。标签没开着就是个静默 no-op。 */
+  /** 同步标签显示文字，不改 activeId、不触发 requestListScroll。用于逐字触发改名场景。 */
   function renameTab(domain: string, key: string, label: string) {
     const t = tabs.value.find(x => tabId(x) === domain + ':' + key)
     if (t) t.label = label

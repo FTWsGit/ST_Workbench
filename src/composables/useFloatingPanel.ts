@@ -1,11 +1,9 @@
 import { ref, computed, onUnmounted, type CSSProperties } from 'vue'
 import { getHostWindow, useIsMobile } from './hostEnv'
 
-/** 所有悬浮窗共享同一个递增计数器来做"点哪个哪个到最上层"——比维护一个面板实例的数组/Set 简单
- *  得多，数字只增不减也完全无所谓（不会真的溢出，用户不可能在一个会话里点出 Number.MAX_SAFE_INTEGER
- *  次）。基准值 100010，卡在 main.css 已有的 z-index 序列（.wb-panel 100000 / .wb-modal-overlay
- *  100001 / .wb-toast 100002 / .pr-var-popup 100003）上方，保证悬浮窗永远盖在主面板和这些提示类
- *  UI 之上，不需要跟它们比大小。 */
+/** 所有悬浮窗共享同一个递增计数器来做"点哪个哪个到最上层"。
+ *  基准值 100010，卡在 main.css 已有的 z-index 序列（.wb-panel 100000 / .wb-modal-overlay
+ *  100001 / .wb-toast 100002 / .pr-var-popup 100003）上方，保证悬浮窗永远盖在主面板之上。 */
 let topZCounter = 100010
 
 export interface UseFloatingPanelOptions {
@@ -16,16 +14,10 @@ export interface UseFloatingPanelOptions {
   minHeight?: number
 }
 
-/** 悬浮窗的拖拽定位 + resize + z-index 置顶机制，domain-agnostic——不知道自己里面装的是
- *  CopyPanel 还是以后的 MetaPanel/ToolsPanel，只管"这个矩形框在哪、多大、盖在最上面与否"。
- *  从 CopyPanel.vue 原本写死的 `.wb-modal-overlay` 定中弹窗（无法拖动/resize/多开叠放）里抽出来，
- *  见 FloatingPanelShell.vue 顶部 doc comment 和 TODO.md 阶段0「抽悬浮窗 Shell 组件」。
- *
- *  坐标系：x/y 是面板左上角相对于它的定位祖先（`.wb-panel`，`inset:0` 铺满整个宿主视口）的像素
- *  偏移——跟 pointer 事件的 clientX/clientY 是同一个坐标系，因为 `.wb-panel` 相对宿主视口没有
- *  自己的偏移。跟 usePanelResize.ts 一样，所有 pointer 监听都挂在宿主顶层 window 上而不是裸
- *  `window`（这个 app 的脚本本身跑在 iframe 里，见 hostEnv.ts 顶部注释），否则拖拽在 Tavern
- *  Helper 环境下会直接不生效。 */
+/** 悬浮窗的拖拽定位 + resize + z-index 置顶机制，domain-agnostic——只管"这个矩形框在哪、多大、
+ *  盖在最上面与否"。坐标系：x/y 是面板左上角相对于 `.wb-panel`（`inset:0` 铺满整个宿主视口）的
+ *  像素偏移，跟 pointer 事件的 clientX/clientY 同坐标系。所有 pointer 监听挂在宿主顶层 window 上
+ *  而非 iframe 的裸 `window`，否则拖拽在 Tavern Helper 环境下不生效。 */
 export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
   const hostWin = getHostWindow()
   const isMobile = useIsMobile()
@@ -82,8 +74,7 @@ export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
   let resizeStartX = 0, resizeStartY = 0, resizeStartW = 0, resizeStartH = 0
   function onResizeMove(e: PointerEvent) {
     if (resizePointerId === null || e.pointerId !== resizePointerId) return
-    // 上限留 8px 边距，纯粹是不让面板右/下边缘完全顶死视口边界，视觉上留口气；不是什么精确
-    // 约束，用 hostWin.innerWidth/innerHeight 估算即可。
+    // 上限留 8px 边距，不让面板边缘完全顶死视口边界；用 hostWin.innerWidth/innerHeight 估算即可。
     const maxW = hostWin.innerWidth - x.value - 8
     const maxH = hostWin.innerHeight - y.value - 8
     width.value = Math.max(minWidth, Math.min(maxW, resizeStartW + (e.clientX - resizeStartX)))
@@ -119,9 +110,7 @@ export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
     hostWin.removeEventListener('pointercancel', onResizeUp)
   })
 
-  /** 面板本体的内联样式。移动端不下发 left/top/width/height——那几项交给 CSS 的
-   *  `.wb-float-shell.mobile` 规则（贴底满宽 sheet），内联样式跟 class 规则打架的话内联永远赢，
-   *  所以移动端这里只给 z-index，位置/尺寸完全交给 CSS。 */
+  /** 面板本体的内联样式。移动端只给 z-index，位置/尺寸交给 CSS 的 `.wb-float-shell.mobile` 规则。 */
   const style = computed<CSSProperties>(() => {
     if (isMobile.value) return { zIndex: String(zIndex.value) }
     return {

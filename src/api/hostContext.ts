@@ -1,10 +1,6 @@
 /* ====== 宿主环境访问（无 domain 知识）======
- * 这个文件只负责"怎么拿到 SillyTavern 的 ctx / 顶层 window"这类跟具体业务数据无关的机制，
- * 不应该出现任何 preset/character/worldbook 的概念。domain 相关的读写逻辑放 presetApi.ts /
- * characterApi.ts / worldbookApi.ts，它们都从这里拿 getCtx()/getTopWindow() 用。
- *
- * 从 sillytavern.ts 拆分出来（2026-07），行为原样保留，见 PROJECT.md「新增一个 domain 的套路」
- * 和 TODO.md 阶段0「拆分 sillytavern.ts」。 */
+ * 只负责获取 SillyTavern 的 ctx / 顶层 window 等跟具体业务无关的机制。domain 读写逻辑放
+ * presetApi.ts / characterApi.ts / worldbookApi.ts，它们都从这里拿 getCtx()/getTopWindow()。 */
 
 let cachedCtx: any = null
 
@@ -27,15 +23,12 @@ export function invalidateCache() {
 }
 
 /* ====== 顶层文档动态 import 助手 ======
- * 见《SillyTavern预设块渲染实现文档》第3节。核心限制：`import()` 必须在顶层文档的模块作用域里
- * 执行，否则拿到的不是 ST 页面自己用的那个单例。我们的脚本本身跑在 about:srcdoc 的 iframe 里
- * （见 hostEnv.ts 顶部注释），iframe 自己 dynamic import 一个以 '/' 开头的相对路径会按 iframe
- * 自己的 base URL（about:srcdoc，没有正常 origin）解析，行大概率会失败或指向错误的模块实例。
- * 解决方式：往顶层文档注入一个 <script type="module">，让 import() 在顶层文档的模块作用域里
- * 执行、正确解析相对路径，并把结果挂到顶层 window 上，我们再跨窗口拿这个函数引用来用。
+ * 核心限制：`import()` 必须在顶层文档的模块作用域里执行，否则拿到的不是 ST 页面自己的单例。
+ * 脚本跑在 about:srcdoc 的 iframe 里，iframe 自己的 dynamic import 会按假 origin 解析失败。
+ * 解决方式：注入 <script type="module"> 到顶层文档，把 import() 结果挂到顶层 window 上跨窗口引用。
  *
- * 这个机制本身不属于任何 domain——目前只有 presetApi.ts 的精确预览在用，但它跟"读/存预设"
- * 没有任何耦合，纯粹是"怎么在顶层文档跑一次动态 import"，放这里而不是 presetApi.ts。 */
+ * 这个机制不属于任何 domain——只解决"怎么在顶层文档跑一次 dynamic import"，因此放这里而非
+ * presetApi.ts。 */
 let topImporterPromise: Promise<(spec: string) => Promise<any>> | null = null
 export function ensureTopImporter(): Promise<(spec: string) => Promise<any>> {
   if (topImporterPromise) return topImporterPromise

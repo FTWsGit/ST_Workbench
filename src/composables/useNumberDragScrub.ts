@@ -1,8 +1,6 @@
-/* 数字输入的"拖拽微调"——参考 Figma/AE 那种：按住数字往左右拖，横向位移映射成数值增量。
- * 不用原生 <input type=range>，理由见 WorldbookSettingsForm.vue 重构时的讨论：order/depth/
- * sticky/cooldown/delay 这些字段值域大多无界或没有"该被拖满一条轨道"的自然上限，range 语义在
- * 这种场景下要么范围设小了不够用，要么设大了每像素精度差。drag-scrub 不依赖 min/max，拖多远
- * 都行，跟原生 <input type=number> 共存（不是替换），键盘输入/上下箭头/滚轮该怎么用还怎么用。
+/* 数字输入的"拖拽微调"：按住数字往左右拖，横向位移映射成数值增量。
+ * 不依赖 min/max，拖多远都行，跟原生 <input type=number> 共存（键盘输入/上下箭头/滚轮照常）。
+ * 按住 Shift 精细调整（每像素 0.1x step）。用 Pointer Events + setPointerCapture。
  *
  * 用法（NumberInput.vue 里）：
  *   const { onPointerDown } = useNumberDragScrub({
@@ -10,11 +8,7 @@
  *     set: (v) => emit('update:modelValue', v),
  *     step: props.step,
  *   })
- *   <span @pointerdown="onPointerDown">拖拽手柄</span>
- *
- * 按住 Shift 精细调整（每像素 0.1x step），跟大多数同类实现（Figma 等）的修饰键习惯一致。
- * 用 Pointer Events + setPointerCapture，风格上跟 usePanelResize.ts／useDragReorder.ts 一致，
- * 拖拽过程中还会给 body 加一个 no-select 类，避免拖的时候选中旁边的文字。 */
+ *   <span @pointerdown="onPointerDown">拖拽手柄</span> */
 import { ref, onUnmounted } from 'vue'
 import { getHostWindow } from './hostEnv'
 
@@ -74,8 +68,7 @@ export function useNumberDragScrub(opts: NumberDragScrubOptions) {
     hostWin.removeEventListener('pointerup', onPointerUp)
     hostWin.removeEventListener('pointercancel', onPointerUp)
 
-    // 释放指针捕获 —— hasPointerCapture 是方法不是属性，不能判 truthy（永远 true），
-    // 改成 typeof 判一下是不是真存在这个方法再调，避免在不支持的 WebView 上崩。
+    // hasPointerCapture 是方法，用 typeof 判存在后再调，避免不支持的环境报错。
     if (target && typeof target.hasPointerCapture === 'function' && pointerId !== null) {
       try { target.releasePointerCapture(pointerId) } catch {}
     }

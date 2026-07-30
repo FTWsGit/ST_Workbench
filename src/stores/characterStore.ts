@@ -33,15 +33,9 @@ function emptyCharacter(name: string): Character {
   }
 }
 
-/** 独立文档 store（TODO.md 阶段2），跟 worldbookStore 是同一种"不挂靠 presetStore"的工作区
- *  （见 PROJECT.md「新增一个 domain 的套路」）。跟 worldbook 不一样的地方：
- *   - 没有 flatNodes/分组那套坐标系——CharacterSidebar.vue 故意不复用 PresetSidebar 那套复杂度
- *     （TODO.md 2.2），固定字段列表来自 types.ts 的 CHARACTER_FIELDS 常量，不需要排序/分组。
- *   - 只有 greetings 这一个子列表需要拖拽排序（TODO.md 1.2）。greetings 本身在 ST 原生格式/
- *     Character 接口里都只是 `string[]`，没有稳定 id——如果直接拿数组下标当 tab key，
- *     删除/拖拽重排会让已经打开的 tab 悄悄指向另一条内容（这正是 PROJECT.md 反复强调的
- *     "别拿下标当身份"那个坑，这里从一开始就用 greetingIds 这份跟 greetings 严格同步、
- *     只在本地存在的合成 id 数组来做 tab 寻址，不持久化、不参与保存）。 */
+/** 独立文档 store：角色卡工作区。跟 worldbook 的区别：
+ *   - 没有 flatNodes/分组 —— 固定字段列表来自 CHARACTER_FIELDS 常量。
+ *   - greetings 拖拽使用合成 id 做 tab 寻址，不直接用数组下标。 */
 export const useCharacterStore = defineStore('character', () => {
   const tabsStore = useTabsStore()
   const confirmStore = useConfirmStore()
@@ -66,7 +60,7 @@ export const useCharacterStore = defineStore('character', () => {
 
   const hasData = computed(() => character.value !== null)
 
-  /* ====== greetings 的合成 id（本节顶部 doc comment）====== */
+  /* ====== greetings 的合成 id ====== */
   const greetingIds = ref<string[]>([])
 
   /* ====== 虚拟字段路由：EditorShell.vue 只需要 activeTab.key 就能拿到/改当前字段的值，
@@ -157,10 +151,8 @@ export const useCharacterStore = defineStore('character', () => {
       },
     })
   }
-  /** `fromIdx`/`toIdx`/`after` 是 useDragReorder<number> 报告的下标（对应 greetingIds 当前顺序，
-   *  不是合成 id 本身——useDragReorder 泛型 key 类型用 number 更贴近现有 RegexSidebar 的用法，
-   *  拖拽发生在同一次渲染帧内，下标不会失效），greetings 和 greetingIds 两个数组永远同步 splice，
-   *  谁也不会跟丢。 */
+  /** `fromIdx`/`toIdx`/`after` 是 useDragReorder<number> 报告的下标（对应 greetingIds 当前顺序），
+   *  greetings 和 greetingIds 两个数组同步 splice。 */
   function reorderGreeting(fromIdx: number, toIdx: number, after: boolean) {
     if (!character.value) { showToast(t('character.toast.loadFirst')); return }
     reorderArray(character.value.greetings, fromIdx, toIdx, after)

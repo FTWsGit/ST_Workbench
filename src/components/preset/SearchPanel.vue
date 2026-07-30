@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="pr-search">
     <div class="pr-search-bar">
       <input type="text" v-model="store.searchQuery" @input="store.doSearch()" :placeholder="uiStore.t('preset.search.placeholder')" @keydown.enter.prevent="store.navSearch($event.shiftKey ? -1 : 1)">
@@ -31,6 +31,7 @@ import type { SearchResult } from '../../types'
 
 const store = usePresetStore()
 const uiStore = useUiStore()
+/** 搜索结果最多展示 SEARCH_MAX 条，避免巨量结果时渲染卡顿。 */
 const displayResults = computed(() => store.searchResults.slice(0, SEARCH_MAX))
 
 function renderCtx(r: SearchResult) {

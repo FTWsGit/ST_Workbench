@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
       <span>{{ uiStore.t('worldbook.sidebar.title', { count: store.order.length }) }}</span>
@@ -14,7 +14,7 @@
     <div class="wb-list" ref="listRef">
       <p v-if="!store.order.length" class="pr-cp-empty">{{ uiStore.t('worldbook.sidebar.empty') }}</p>
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">
-        <!-- Group Header -->
+        <!-- 分组头 -->
         <div v-if="node.isGroup"
              :ref="(el) => setItemRef(el, gi)"
              class="pr-group-header"
@@ -40,7 +40,7 @@
             <span class="pr-block-act del" @click.stop="store.deleteEntry(gi)">🗑</span>
           </span>
         </div>
-        <!-- Entry Item -->
+        <!-- 条目 -->
         <div v-else
              :ref="(el) => setItemRef(el, gi)"
              class="pr-block-item"
@@ -75,9 +75,9 @@
 </template>
 
 <script setup lang="ts">
-/* 世界书侧边栏——不像正则三件套那样参数化（TODO.md 1.5 的参数化只是为了给以后角色工作区复用同一套
- * 正则组件，世界书只有一个 worldbookStore，没有这个复用需求），直接 useWorldbookStore()，跟
- * PresetSidebar.vue 是同一种耦合方式。 */
+/** 世界书侧边栏：分组+条目两级列表，支持拖拽排序/多选/内联重命名/折叠分组/绑定解绑。
+ *  不参数化，直接 useWorldbookStore()（只有一个 worldbookStore，无复用需求）。
+ *  组件有两个根节点（<aside> + .wb-resize-handle），mobileDrawerOpen 显式绑到 <aside>，不依赖单根自动 class 透传。 */
 import { ref, computed, watch } from 'vue'
 import { useWorldbookStore } from '../../stores/worldbookStore'
 import { useUiStore } from '../../stores/uiStore'
@@ -91,8 +91,6 @@ import { useListSelection } from '../../composables/useListSelection'
 import ListToolbar from '../shared/ListToolbar.vue'
 import WorldbookToolsPanel from './WorldbookToolsPanel.vue'
 
-// 同 PresetSidebar.vue：模板有两个根节点（<aside> + .wb-resize-handle），mobileDrawerOpen 走显式
-// prop 绑在 <aside> 上，不能依赖 Vue 的单根自动 class 透传。
 const props = defineProps<{ mobileDrawerOpen?: boolean }>()
 const toolsOpen = ref(false)
 
@@ -136,7 +134,7 @@ function unbindCurrent() {
   store.unbindGroup(groupGi)
 }
 
-/* ---- Inline rename：条目名字对应 entry.comment ---- */
+/** 内联重命名——分组名 */
 const {
   editingId: editingGroupGi, setInputRef: setGroupNameInputRaw,
   start: startEditGroupNameRaw, finish: finishEditGroupName, cancel: cancelEditGroupName,
@@ -147,6 +145,7 @@ const {
 function setGroupNameInput(el: any, _gi: number) { setGroupNameInputRaw(el) }
 function startEditGroupName(gi: number) { const node = store.flatNodes[gi]; if (node && node.isGroup) startEditGroupNameRaw(gi) }
 
+/** 内联重命名——条目名（entry.comment，提交时同步 renameTab） */
 const {
   editingId: editingBlockGi, setInputRef: setBlockNameInputRaw,
   start: startEditBlockNameRaw, finish: finishEditBlockName, cancel: cancelEditBlockName,
@@ -169,7 +168,6 @@ const {
 function setBlockNameInput(el: any, _gi: number) { setBlockNameInputRaw(el) }
 function startEditBlockName(gi: number) { const node = store.flatNodes[gi]; if (node && !node.isGroup) startEditBlockNameRaw(gi) }
 
-/* ---- Resize ---- */
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
   setWidth: (w) => { uiStore.settings.sidebarWidth = w },
@@ -178,7 +176,7 @@ const resize = usePanelResize({
 function onResizeStart(e: PointerEvent) { resize.onPointerDown(e) }
 watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
 
-/* ---- Scroll active item into view ---- */
+/** 激活条目滚动同步（按 identifier 解析 gi）。 */
 useListScrollSync({
   domain: 'worldbook',
   itemEls,
@@ -190,7 +188,6 @@ useListScrollSync({
   },
 })
 
-/* ---- Drag and drop（见 PresetSidebar.vue 同名函数的 doc comment，原理一致，这里不重复）---- */
 function onDragDrop(from: number, to: number, after: boolean) {
   store.reorderBlock(from, to, after)
 }

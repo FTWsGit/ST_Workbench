@@ -3,19 +3,10 @@ import { ensureTopImporter } from './hostContext'
 import { deepClonePlain } from './apiUtils'
 
 /* ====== 世界书 API ======
- * 【2026-07 修正】世界书不是 REST /api/worldinfo/* 接口——那是我们最早逆向时搞错的，ST 自己
- * 前端从来没这么调用过。真实机制是 `/scripts/world-info.js` 这个 ESM 模块自己导出的函数
- * （world_names / loadWorldInfo / createNewWorldInfo / saveWorldInfo / deleteWorldInfo），
- * 状态全在这个模块实例内部，前端直接调用它们，不发 HTTP 请求到那几个路径。
- *
- * 跟 presetApi.ts 里 getPromptManagerMessages() 拿 '/scripts/openai.js' 是同一个套路：用
- * hostContext.ts 的 ensureTopImporter()（顶层文档动态 import 助手，见那边的 doc comment），
- * 不能自己在 iframe 里裸 `import('/scripts/world-info.js')`——路径会按 iframe 的
- * about:srcdoc 假 origin 解析，大概率失败或者拿到错误的模块实例。
- *
- * `ensureTopImporter()` 底层的 `import()` 走浏览器原生模块缓存，同一个 URL 重复 import() 拿到
- * 的是同一个模块命名空间对象，`mod.world_names` 是 ESM 的 live binding，ST 内部
- * createNewWorldInfo/deleteWorldInfo 改了那个数组之后，我们这边不用重新 import 就能读到最新值。 */
+ * 通过 ensureTopImporter() import ST 的 /scripts/world-info.js 模块获取世界书操作函数
+ * （world_names / loadWorldInfo / createNewWorldInfo / saveWorldInfo / deleteWorldInfo）。
+ * 状态全在模块实例内部，不发 HTTP 请求。import() 走浏览器原生模块缓存，同一 URL 拿到同一实例，
+ * mod.world_names 是 ESM live binding。 */
 
 async function getWorldInfoModule(): Promise<any> {
   const importer = await ensureTopImporter()
@@ -27,20 +18,14 @@ async function getWorldInfoModule(): Promise<any> {
 }
 
 /* ====== ST 原生世界书格式 ⇄ 工作层 Worldbook 双向转换 ======
- * 字段名差异（2026-07 修正版，之前版本这里全错了）：
- *   - keys（工作层） ⇄ key（原生，字符串数组，只是名字不一样）
- *   - disabled（工作层） ⇄ disable（原生，语义相同：都是 true=禁用，不是反的——之前误以为原生
- *     叫 enabled 且语义相反，其实字段名和语义只有名字对不上，值不用取反）
- *   - groupPrioritized（工作层） ⇄ groupOverride（原生，只是名字不一样，语义相同）
- *   - keyWord（工作层专属）：原生没有这个字段，constant/vectorized 都为 false 时代表关键词激活，
- *     转换时派生出来；写回原生格式时直接丢弃。
- *   - caseSensitive / matchWholeWords：两边都是 `boolean | null`，null = 跟随全局设置，字段名和
- *     取值语义两边一致，不需要转换，直接透传。
- * 其余字段（scanDepth/position/role/sticky/cooldown/delay/group/groupWeight/probability/
- * useProbability/excludeRecursion/preventRecursion/delayUntilRecursion 等）两边字段名完全一致，
- * 用 `{ ...raw }` 打底再覆盖上面几个不一致的字段，而不是逐字段白名单搬运——这样
- * automationId/useGroupScoring/matchPersonaDescription 这类没建模进 WorldbookEntry 接口的
- * 字段能原样透传保留，一次读-改-存往返不会被悄悄丢掉。 */
+ * 字段映射：
+ *   - keys（工作层） ⇄ key（原生）
+ *   - disabled（工作层） ⇄ disable（原生，语义相同）
+ *   - groupPrioritized（工作层） ⇄ groupOverride（原生）
+ *   - keyWord（工作层专属）：由 constant/vectorized 派生，写回时丢弃。
+ *   - caseSensitive / matchWholeWords：boolean | null，透传。
+ * 其余字段（scanDepth/position/role/sticky/cooldown/delay/group/groupWeight/probability 等）
+ * 字段名完全一致，用 `{ ...raw }` 打底再覆盖不一致字段，保留未建模进接口的字段。 */
 function fromSTEntry(uidKey: string, raw: any): WorldbookEntry {
   const constant = !!raw?.constant
   const vectorized = !!raw?.vectorized
@@ -110,9 +95,8 @@ export async function createWorldbook(name: string): Promise<void> {
   await mod.createNewWorldInfo(name, { interactive: false })
 }
 
-/** 保存（覆盖写）到指定名字。`data` 必须是纯对象，不能是 Pinia/Vue 的活跃响应式引用，理由跟
- *  presetApi.ts savePresetAs() 一样（structuredClone 过不了 Vue Proxy），这里用
- *  deepClonePlain() 兜底。 */
+/** 保存（覆盖写）到指定名字。`data` 必须是纯对象，不能是 Pinia/Vue 响应式引用——
+ *  structuredClone 过不了 Vue Proxy，用 deepClonePlain() 兜底。 */
 export async function saveWorldbook(data: Worldbook): Promise<void> {
   const mod = await getWorldInfoModule()
   if (typeof mod.saveWorldInfo !== 'function') {
@@ -184,19 +168,14 @@ function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number
   }
 }
 
-/** 纯转换，不碰 ST——单独导出方便脱离 Vue 用 `npx tsx` 写测试用例（PROJECT.md 对 `utils.ts`/
- *  `regexEngine.ts` 这类纯函数文件的要求，这个转换同样属于"高频改错、需要独立验证"的那一类）。
- *  `fallbackUid` 用条目在数组里的下标兜底——只有当规范字段里没有 `id` 时才会用到，不影响正常
- *  已带 `id` 的条目。 */
+/** 纯转换，不碰 ST——单独导出方便脱离 Vue 用 `npx tsx` 写测试用例。
+ *  `fallbackUid` 用条目在数组里的下标兜底——只有当规范字段里没有 `id` 时才会用到。 */
 export function importCharacterBookEntries(entries: CharacterBookEntryLike[] | undefined | null): WorldbookEntry[] {
   return (entries ?? []).map((raw, idx) => fromCharacterBookEntry(raw, idx))
 }
 
-/** 把角色卡内嵌世界书导入成一份新的独立世界书文件。只负责 ST 端注册名字 + 写入转换后的内容，
- *  不负责把结果加载进 worldbookStore——调用方（worldbookStore.importFromCharacterBook()）自己
- *  决定导入后是否紧接着 getWorldbookByName() 读一次权威数据，跟 createWorldbook() 的分工是
- *  同一个模式（PROJECT.md「关键设计要点」第7条：真正加载前以 ST 返回的为准，不假设转换结果就是
- *  最终存到磁盘的样子）。 */
+/** 把角色卡内嵌世界书导入成一份新的独立世界书文件。只负责 ST 端注册 + 写入，不负责加载进
+ *  worldbookStore——调用方决定是否接着 getWorldbookByName() 读权威数据。 */
 export async function importCharacterBook(name: string, book: { entries?: CharacterBookEntryLike[] } | null | undefined): Promise<void> {
   await createWorldbook(name)
   const entries = importCharacterBookEntries(book?.entries)

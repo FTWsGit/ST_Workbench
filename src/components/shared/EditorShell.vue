@@ -35,10 +35,7 @@ const worldbookStore = useWorldbookStore()
 const characterStore = useCharacterStore()
 const tabsStore = useTabsStore()
 
-/** domain === 'regex' 标签可能归属两个不同工作区（预设自己的正则 / 角色卡自己的正则，见
- *  tabsStore.ts OpenTab.workspace 的 doc comment 和 CharacterSidebar.vue 顶部 doc comment），
- *  数据源按 activeTab.workspace 分派，不再硬编码 presetStore——这是 RegexContentEditor.vue
- *  参数化改造（TODO.md 阶段0）之后，第一个真正利用"数据源可以不是 presetStore"这一点的调用方。 */
+/** domain='regex' 的数据源按 activeTab.workspace 分派（预设正则 / 角色卡正则），不再硬编码 presetStore。 */
 const regexScripts = computed(() =>
   tabsStore.activeTab?.workspace === 'character' ? characterStore.regexScripts : presetStore.regexScripts
 )

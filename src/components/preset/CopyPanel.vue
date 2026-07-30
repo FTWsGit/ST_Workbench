@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <FloatingPanelShell
     v-if="store.copyPanelOpen"
     :title="uiStore.t('preset.copyPanel.title')"
@@ -103,25 +103,18 @@ interface SideState {
   anchor: string | null
   dirty: boolean
 }
-// Was five separate ref() pairs (leftName/rightName, leftData/rightData, ...) with every function
-// below doing `side === 'left' ? leftX.value : rightX.value` to pick one. A reactive per-side
-// object collapses that into `sides[side].x` everywhere and gives a natural home for the third
-// column if this panel ever needs one (e.g. copying into a brand-new preset).
+/** 每侧状态（name/data/选中集合/锚点/脏标记），用 reactive 按 side 索引统一访问。 */
 const sides = reactive<Record<Side, SideState>>({
   left: { name: '', data: null, sel: new Set(), anchor: null, dirty: false },
   right: { name: '', data: null, sel: new Set(), anchor: null, dirty: false },
 })
 const other = (side: Side): Side => (side === 'left' ? 'right' : 'left')
 
-// Blocks in their actual generation order (prompt_order), not raw prompts[] storage order — see
-// utils.ts's orderedPromptsWithHidden() doc comment. Hidden (not-in-order) blocks are appended
-// at the end and flagged so the UI can mark them.
+/** 块按实际生成顺序（prompt_order）排列，隐藏块（不在 order 内）追加到末尾并打标记。 */
 const leftOrdered = computed(() => sides.left.data ? orderedPromptsWithHidden(sides.left.data) : [])
 const rightOrdered = computed(() => sides.right.data ? orderedPromptsWithHidden(sides.right.data) : [])
 
-// Re-list available presets fresh every time the panel opens — deliberately independent of the
-// main editor's store.presetList (which may be stale, or never populated if the main panel's
-// list wasn't opened this session).
+/** 面板每次打开都重新列出可用预设，不依赖主编辑器的 store.presetList（可能过期或未加载）。 */
 watch(() => store.copyPanelOpen, (open) => {
   if (!open) return
   try { presetOptions.value = ST.listPresets() }
@@ -132,6 +125,7 @@ function genId() {
   return 'copy_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
+/** 载入指定侧预设。若该侧有未保存改动，先确认。 */
 function loadSide(side: Side) {
   const s = sides[side]
   if (!s.name) return
@@ -152,11 +146,10 @@ function loadSide(side: Side) {
   })
 }
 
-// Same ctrl/shift/plain click model as the main editor's sidebar (PresetSidebar.vue → store's
-// selectBlock) — see applyMultiSelect's doc comment in utils.ts for the exact semantics.
-// `all` must be in the same VISUAL order the list renders in (leftOrdered/rightOrdered), not raw
-// prompts[] storage order — otherwise shift-range-select would pick the wrong span of rows even
-// after the display order itself was fixed.
+/**
+ * 列表项点击：与主编辑器侧边栏同款 ctrl/shift/普通点击多选模型（applyMultiSelect）。
+ * `all` 必须按视觉顺序（leftOrdered/rightOrdered）传入，否则 shift 区间选择会选错行。
+ */
 function onItemClick(side: Side, id: string, e: MouseEvent) {
   const s = sides[side]
   if (!s.data) return
@@ -180,9 +173,7 @@ function clearSel(side: Side) {
   sides[side].anchor = null
 }
 
-/** prompt_order in a raw PresetData is always a flat array (groups are just `_gid`-tagged
- *  entries within it, see presetStore.ts's importOrderWithGroups/exportOrder) — no tree to build
- *  here. */
+/** 确保 data.prompt_order 中存在 character_id === 100001 的条目及其 order 数组，返回该 order。 */
 function ensureOrder(data: PresetData): OrderItem[] {
   if (!Array.isArray(data.prompt_order)) data.prompt_order = []
   let entry = data.prompt_order.find((p: any) => p.character_id === 100001)
@@ -194,6 +185,10 @@ function ensureOrder(data: PresetData): OrderItem[] {
   return entry.order
 }
 
+/**
+ * 从 from 侧复制选中块到另一侧。按源侧视觉顺序遍历，保证粘贴后顺序与所选一致；
+ * 目标侧每个块都重新生成 identifier，避免与已有 id（或之前粘贴的同块副本）冲突。
+ */
 function copy(from: Side) {
   const src = sides[from]
   const dst = sides[other(from)]
@@ -203,18 +198,11 @@ function copy(from: Side) {
   const dstOrder = ensureOrder(dst.data)
   const existingIds = new Set(dst.data.prompts.map(p => p.identifier))
   let n = 0
-  // Walk the SOURCE's visual (ordered) sequence, not prompts[] storage order, so a multi-select
-  // copy lands on the destination side in the order you saw/selected it in, not whatever order
-  // ST happened to store the source blocks in internally.
   const srcOrdered = from === 'left' ? leftOrdered.value : rightOrdered.value
   for (const entry of srcOrdered) {
     const b = entry.block
     if (!src.sel.has(b.identifier)) continue
     const clone: PresetBlock = JSON.parse(JSON.stringify(b))
-    // Always mint a fresh identifier on the destination side — reusing the source's own id
-    // risks colliding with an unrelated block that already happens to use it over there (or
-    // with an earlier copy of this same block pasted in previously), which would silently
-    // overwrite/duplicate the wrong block instead of adding a new one.
     let newId = genId()
     while (existingIds.has(newId)) newId = genId()
     clone.identifier = newId
@@ -249,23 +237,20 @@ function removeBlock(side: Side, id: string) {
   })
 }
 
+/** 保存一侧：传 ST 纯深拷贝（Vue Proxy 不能被 structuredClone 处理）；若保存的恰好是主编辑器当前预设，提示重载。 */
 async function saveSide(side: Side) {
   const s = sides[side]
   if (!s.data || !s.name) return
   try {
-    // Same rule as presetStore.ts's doSavePreset(): never hand ST a live reactive object,
-    // always a plain deep clone (structuredClone inside ST's savePreset can't clone a Vue Proxy).
     await ST.savePresetAs(s.name, JSON.parse(JSON.stringify(s.data)))
     s.dirty = false
     store.refreshPresetList()
     uiStore.showToast(uiStore.t('preset.toast.saved', { name: s.name }))
-    // This tool operates on its own independently-loaded copy of the preset data, not on the
-    // main editor's live store — if this happens to be the same preset currently open there,
-    // that in-memory copy is now stale relative to what was just written to disk.
     if (s.name === store.presetName) uiStore.showToast(uiStore.t('preset.toast.reloadNote'))
   } catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.saveFailed', { msg: e?.message || e })) }
 }
 
+/** 关闭面板：两侧都干净才直接关；否则弹确认。 */
 function close() {
   if (!sides.left.dirty && !sides.right.dirty) { store.copyPanelOpen = false; return }
   confirmStore.ask({

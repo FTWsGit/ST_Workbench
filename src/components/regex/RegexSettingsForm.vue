@@ -52,23 +52,6 @@
 </template>
 
 <script setup lang="ts">
-/* 正则三件套之一——参数化改造后不再 import usePresetStore()，见 regexProps.ts 顶部的
- * doc comment。tabsStore 是全局单例 store，跟背后是哪个 domain store 无关，继续直接用，
- * renameTab() 的 domain 参数也继续写死 'regex'（这是"这个组件是什么"，不是"数据从哪来"）。
- *
- * 【2026-07 UI 重构】"高级选项" 换成共享的 AdvancedGroup.vue（跟 WorldbookSettingsForm.vue
- * 用的是同一个组件），去掉了本地的 advancedOpen ref + 手写的 wb-advanced-toggle 按钮。
- * substituteRegex 的 <select> 换成 SegmentedControl（3 个短选项，横排按钮比下拉框更直观），
- * minDepth/maxDepth 换成 NumberInput（拖拽手柄）。"启用" 换成跟侧边栏同款的 .wb-toggle-sw
- * 滑块。这些都只是换了外层控件，各字段原来是"裸 v-model"还是"包了 computed 的 v-model"
- * 一律不变，之前有没有调 markDirty() 现在也还是有没有——这个表单本来就不是靠根节点事件委托
- * 兜底脏检查的（不像 WorldbookSettingsForm.vue），没必要借这次重构顺带改这块逻辑。
- *
- * 【2026-07 二次重构】改用 FormField.vue（见该文件 doc comment），删掉了每个字段上手写的
- * style="margin:0"/style="margin-top:0"——现在靠 main.css 里的结构选择器自动处理。
- * minDepth/maxDepth 那组 .wb-row 双字段行、placement 那组 .wb-row.rx-checks 复选框行都保持
- * 手写不套 FormField，理由跟 WorldbookSettingsForm.vue 里 sticky/cooldown/delay 一样——
- * FormField 只管"一个 label 配一个控件"，这两处不是这个模式。 */
 import { computed, watch } from 'vue'
 import { useTabsStore } from '../../stores/tabsStore'
 import { REGEX_PLACEMENT_OPTIONS as PLACEMENT_OPTIONS, REGEX_SUBSTITUTE_OPTIONS as SUBSTITUTE_OPTIONS } from '../../types'
@@ -117,10 +100,7 @@ function setSurfaceMode(mode: 'display' | 'prompt' | 'both') {
   script.value.markdownOnly = mode === 'display' || mode === 'both'
   script.value.promptOnly = mode === 'prompt' || mode === 'both'
 }
-// 名字改了，同步一下已开标签的显示文字，不然标签栏上的名字和这里改完的对不上。用
-// renameTab() 而不是 open()：这里逐字触发，open() 会顺带 requestListScroll()（侧边栏
-// scrollIntoView smooth），每敲一个字都跑一次会跟输入渲染抢主线程，是可感知的卡顿——
-// 见 PROJECT.md「已知问题」。renameTab() 只改标签文字，没有这个副作用。
+/** 同步标签名。用 renameTab() 而非 open()：open() 会触发侧边栏 scrollIntoView，每字输入会卡顿。 */
 watch(() => script.value?.scriptName, (name) => {
   if (script.value && name !== undefined) tabsStore.renameTab('regex', script.value.id, name || props.t('common.unnamed'))
 })

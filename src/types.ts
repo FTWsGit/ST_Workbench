@@ -123,10 +123,10 @@ export interface Settings {
   settingsDockWidth: number
   settingsDockFloat: boolean
   language: 'zh-CN' | 'en'
-  /** FAB's explicit top-left position (px, in viewport coords — see App.vue's onFabPointerDown),
-   *  set the first time the user long-press-drags it. `null` means "use the CSS default"
-   *  (bottom:24px/right:24px, see .wb-fab in main.css), which also stays responsive to the
-   *  mobile safe-area media query — an explicit saved position deliberately overrides that. */
+  /** FAB 的显式左上角位置（px，视口坐标——见 App.vue 的 onFabPointerDown），
+   *  用户首次长按拖拽时设置。`null` 表示"使用 CSS 默认值"
+   *  (bottom:24px/right:24px，见 main.css 的 .wb-fab)，默认位置会响应
+   *  移动端 safe-area 媒体查询——显式保存的位置会覆盖此行为。 */
   fabPos: { x: number; y: number } | null
 }
 

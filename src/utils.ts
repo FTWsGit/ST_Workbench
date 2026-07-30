@@ -12,18 +12,14 @@ export function escRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/** Maps a {{setvar/addvar/getvar}} op's `type` to its badge label + CSS class ('SET'/'set',
- *  'ADD'/'add', 'GET'/'get'). Was duplicated verbatim in VarPanel.vue and VarPopup.vue. */
+/** setvar/addvar/getvar 的 badge label + CSS class 映射。 */
 export function varOpBadge(type: 'setvar' | 'addvar' | 'get'): { cls: string; label: string } {
   if (type === 'setvar') return { cls: 'set', label: 'SET' }
   if (type === 'addvar') return { cls: 'add', label: 'ADD' }
   return { cls: 'get', label: 'GET' }
 }
 
-/** Maps a prompt block's `role` to its short CSS class suffix ('user'/'asst'/'sys'), optionally
- *  under a caller-supplied prefix (e.g. PreviewPanel's 'pb-user'/'pb-asst'/'pb-sys'). Was three
- *  separate, functionally-identical copies (Sidebar.vue, CopyPanel.vue, PreviewPanel.vue) —
- *  consolidated here so a future role type doesn't need updating in three places. */
+/** prompt block 的 role → CSS class 后缀（'user'/'asst'/'sys'），可加 prefix。 */
 export function roleClass(role: string | undefined, prefix = ''): string {
   const suffix = role === 'user' ? 'user' : role === 'assistant' ? 'asst' : 'sys'
   return prefix + suffix
@@ -31,25 +27,9 @@ export function roleClass(role: string | undefined, prefix = ''): string {
 
 export interface OrderedBlockEntry { block: PresetBlock; hidden: boolean }
 
-/** Flattens a PresetData's prompt_order (which may contain _gid-tagged group entries, see
- *  presetStore's importOrderWithGroups/exportOrder) into a plain, VISUALLY ORDERED list of blocks —
- *  the actual generation order, ignoring group boundaries entirely (callers that only need "top
- *  to bottom order", like CopyPanel.vue, don't care about the group tree itself).
- *
- *  Blocks that exist in `data.prompts` but aren't referenced anywhere in prompt_order (hidden
- *  blocks — same concept as presetStore's `hiddenBlocks` computed) are appended at the end, each
- *  flagged `hidden: true`, in their `prompts` array order.
- *
- *  Dangling order entries that reference a since-deleted prompt identifier are silently skipped
- *  (mirrors what flatNodes effectively does — it can only ever resolve identifiers that exist in
- *  `prompts`), and a duplicate order entry for the same identifier only surfaces once, at its
- *  first position.
- *
- *  Was needed because CopyPanel.vue used to iterate `data.prompts` directly — prompts[] is
- *  whatever order ST happened to store the blocks in on disk, which is NOT the order they
- *  actually render in (that's prompt_order's job) — so the copy-panel block list was visibly out
- *  of order relative to the main editor's Sidebar, and shift-range-select there picked the wrong
- *  span of rows for the same reason. */
+/** 把 prompt_order 展开成视觉顺序的 block 列表（忽略 group 边界）。
+ *  存在于 prompts 但未在 prompt_order 中引用的 hidden block 追加在末尾，标记 hidden: true。
+ *  指向已删除 prompt 的悬空 order 条目静默跳过；同一 identifier 的重复条目只在首次位置出现。 */
 export function orderedPromptsWithHidden(data: PresetData): OrderedBlockEntry[] {
   const byId = new Map(data.prompts.map(p => [p.identifier, p]))
   const seen = new Set<string>()
@@ -75,11 +55,7 @@ export function debounce<T extends (...a: any[]) => void>(fn: T, ms: number): T 
   return ((...a: any[]) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) }) as unknown as T
 }
 
-/** Find the index right after the matching `}}` for a `{{` opener at `text[start..start+2)`,
- *  handling nested `{{...}}`. Deliberately a standalone minimal copy of the same scan
- *  useHighlight.ts does for coloring — that version is tangled up with recursive tier-based
- *  highlighting concerns we don't need here, and importing it back would make utils.ts (a leaf
- *  module) depend on a component-level composable. Returns -1 if unmatched. */
+/** 找到 `{{` 起始处匹配的 `}}` 后那个 index，处理嵌套 `{{...}}`。未匹配返回 -1。 */
 export function findMacroEnd(text: string, start: number): number {
   let depth = 1, j = start + 2
   while (j < text.length && depth > 0) {
@@ -90,21 +66,9 @@ export function findMacroEnd(text: string, start: number): number {
   return depth === 0 ? j : -1
 }
 
-/**
- * Strip every `{{...}}` macro span out of `text` entirely (removed, not replaced with anything).
- *
- * Used before diffing a block's raw content against its real rendered output (see wordDiff
- * below). A macro's own literal source characters — its name, `::` separators, variable name —
- * have no correspondence to whatever it expands to, but a plain LCS diff doesn't know that; it
- * just matches whatever characters line up. If the substituted value happens to share characters
- * with the macro's own syntax (e.g. `{{getvar::用户名字}}` expanding to a value that itself
- * contains "用户"), those characters spuriously "match" the macro's raw source and get excluded
- * from the highlight — splitting what should be one solid highlighted span into fragments with
- * unhighlighted holes punched through the middle of it. Removing macro spans from the raw side
- * entirely (rather than, say, replacing them with a placeholder) sidesteps this: nothing from a
- * macro's source text can ever be a candidate match for anything in the rendered text again, so
- * a macro's entire expansion always highlights as one uninterrupted span.
- */
+/** 从 `text` 中整体移除每个 `{{...}}` macro span。
+ *  diff 前用：macro 自身的源字符（名字、`::`、变量名）与展开值无对应关系，
+ *  整段移除而非占位符替换，保证 macro 整段展开值高亮为连续 span。 */
 export function stripMacros(text: string): string {
   let out = '', i = 0
   while (i < text.length) {
@@ -121,29 +85,14 @@ export interface VarOpMatch {
   type: 'setvar' | 'addvar' | 'get'
   varName: string
   varValue: string
-  pos: number   // absolute index of this macro's opening `{{` in `text`
-  end: number   // absolute index right after this macro's TRUE (nesting-aware) closing `}}`
+  pos: number   // 此 macro 起始 `{{` 在 text 中的绝对 index
+  end: number   // 此 macro TRUE（嵌套感知）闭合 `}}` 之后的绝对 index
   line: number  // 0-based
-  col: number   // 0-based, column of the variable name (not of `{{`) — matches VarOp's existing convention
+  col: number   // 0-based，变量名所在列（非 `{{`），沿用 VarOp 的现有约定
 }
 
-/**
- * Scan `text` for every `{{setvar/addvar/getvar}}` occurrence, INCLUDING ones nested inside
- * another macro's value — e.g. `{{setvar::a::...{{getvar::b}}...}}`.
- *
- * A plain regex like `\{\{(setvar|addvar)::(...)::([\s\S]*?)\}\}` can't do this correctly: its
- * value group is non-greedy, so it closes on the FIRST `}}` it encounters — which for a nested
- * macro is the INNER macro's closing brace, not the outer one's. That truncates the outer value
- * at the wrong point, AND the inner macro is never seen on the next `exec()` call either, since
- * `lastIndex` already advanced past it as "part of" the (wrongly-closed) outer match.
- *
- * This walks `text` once, matching `{{`/`}}` depth-aware (same technique as findMacroEnd/
- * stripMacros above) to find each macro's TRUE end regardless of nesting depth, then recurses
- * into a setvar/addvar's value (and defensively into any other macro's body) to pick up whatever
- * var ops are nested inside. Used by presetStore.ts's rebuildVarIndex (Var Nav panel) and
- * showVarPopup (click-a-variable popup) — both used to rely on the naive regex above and so both
- * silently dropped/mangled var ops nested inside another setvar/addvar's value.
- */
+/** 扫描 `text` 中所有 `{{setvar/addvar/getvar}}`，包括嵌套在另一 macro 值中的。
+ *  用深度感知的 `{{`/`}}` 匹配找到每个 macro 的 TRUE end，再递归进 setvar/addvar 的值取嵌套 var op。 */
 export function findVarOps(text: string): VarOpMatch[] {
   const out: VarOpMatch[] = []
 
@@ -158,8 +107,8 @@ export function findVarOps(text: string): VarOpMatch[] {
     let i = from
     while (i < to) {
       if (text[i] === '{' && text[i + 1] === '{') {
-        const end = findMacroEnd(text, i)
-        if (end === -1 || end > to) { i++; continue } // unmatched (or dangling past our range) — treat as literal
+      const end = findMacroEnd(text, i)
+      if (end === -1 || end > to) { i++; continue } // 未匹配或超出范围，当字面量
         const innerStart = i + 2
         const innerEnd = end - 2 // start of the closing `}}`
         const inner = text.slice(innerStart, innerEnd)
@@ -175,7 +124,7 @@ export function findVarOps(text: string): VarOpMatch[] {
               const valueStart = sep + 2
               const { line, col } = lineColOf(i, after)
               out.push({ type, varName, varValue: text.slice(valueStart, innerEnd), pos: i, end, line, col })
-              scan(valueStart, innerEnd) // pick up var ops nested inside this setvar/addvar's own value
+              scan(valueStart, innerEnd) // 取 setvar/addvar 值内嵌套的 var op
               matchedVarOp = true
             }
             break
@@ -188,7 +137,7 @@ export function findVarOps(text: string): VarOpMatch[] {
           out.push({ type: 'get', varName, varValue: '', pos: i, end, line, col })
           matchedVarOp = true
         }
-        if (!matchedVarOp) scan(innerStart, innerEnd) // some other macro — var ops could still be nested in its args
+        if (!matchedVarOp) scan(innerStart, innerEnd) // 其他 macro，其 args 内可能仍嵌套 var op
 
         i = end
         continue
@@ -202,12 +151,8 @@ export function findVarOps(text: string): VarOpMatch[] {
 }
 
 /**
- * Split `text` into the literal pieces that sit between/around its top-level `{{...}}` macros,
- * in order, with the macros themselves removed (mirrors stripMacros' own boundary detection so
- * the two stay in lockstep). For `n` macros this returns `n + 1` pieces — any of them can be the
- * empty string (two adjacent macros with nothing between them, or a macro flush against the very
- * start/end of `text`). Used by macroAwareDiff below to anchor on the literal text itself instead
- * of on individual tokens.
+ * 把 `text` 按 top-level `{{...}}` macro 切成字面片段（macro 自身移除），保留顺序。
+ * n 个 macro → n+1 个片段，任一片段可为空字符串。macroAwareDiff 用它锚定字面文本。
  */
 function splitByMacros(text: string): string[] {
   const pieces: string[] = []
@@ -231,136 +176,57 @@ function pushRun(out: { text: string; added: boolean }[], text: string, added: b
 }
 
 /**
- * Macro-boundary-anchored diff between `raw` (author-written block content, WITH its `{{}}`
- * macros still in place) and `rendered` (the real ST-rendered text for that block). This is the
- * primary entry point for precise-preview highlighting now — see wordDiff's own doc comment for
- * the three rounds of token-level fixes it went through, all of which turned out to share one
- * root cause that this function sidesteps entirely instead of patching further:
+ * macro 边界锚定的 diff：`raw` 含 `{{}}` macro，`rendered` 是 ST 真实渲染文本。
+ * 把 raw 拆成 L0, {{M0}}, L1, {{M1}}, ..., Ln；因 ST 原位替换 macro，
+ * rendered 形如 L0, expand(M0), L1, expand(M1), ..., Ln，Li 片段逐字携带。
+ * 按序前进游标，在 rendered 中逐段做 forward substring 定位——无需全局 token 唯一性。
  *
- * wordDiff's patience-diff anchoring can only ever trust a token as an anchor if that exact
- * token occurs EXACTLY ONCE in the whole block, globally. That assumption quietly breaks down on
- * real preset blocks, which are full of short, highly-repeated tokens — a single space, a lone
- * `-`, `<`/`>` from pseudo-XML wrapper tags repeated once per section, whitespace runs from
- * list-item indentation repeated once per bullet. None of those can ever be trusted anchors, so
- * whole neighborhoods of the diff fall through to plain local LCS, which is free to "borrow" a
- * same-looking token from the wrong place nearby. Visually this showed up as the highlight
- * boundary drifting by one token: swallowing the space before a substituted value, losing the
- * newline+indent after it, or slicing the leading `<` off a closing tag like `</纪录方式>` — all
- * reported independently but all the same class of bug.
- *
- * This function never needs global token uniqueness in the first place. We already know exactly
- * where every macro sits in `raw` (that's what splitByMacros gives us), so `raw` decomposes into
- * literal text segments L0, {{M0}}, L1, {{M1}}, ..., Ln — and because ST substitutes macros
- * in-place, `rendered` is expected to look like L0, expand(M0), L1, expand(M1), ..., Ln with the
- * Li segments carried over VERBATIM. So instead of a global bag-of-tokens comparison, we walk the
- * Li segments in order and locate each one as an exact substring of `rendered`, searching forward
- * from a cursor that only ever advances. A local, sequential search needs no global uniqueness
- * guarantee at all — just "does this segment's text re-occur before the next one does", which
- * holds even when the very same short separator (e.g. a repeated `\n - ` list bullet) appears
- * many times in the block, because we only ever look for the NEXT occurrence after the cursor,
- * never any occurrence anywhere. Whatever lies between two consecutive anchors is, by
- * construction, exactly that macro's expansion — highlighted as one uninterrupted span, with no
- * risk of a token from elsewhere in the block leaking in and punching a hole through it.
- *
- * Falls back to the token-level wordDiff in two cases: no macros at all in `raw` (nothing to
- * anchor on — e.g. pure regex/extension substitution with no `{{}}` involved), or a literal
- * segment that can't be found verbatim (a macro like `{{trim}}` ate some of its neighboring
- * whitespace, or another plugin altered the literal text too) — retried once with the segment's
- * own leading/trailing whitespace trimmed off before giving up and falling back to a local
- * wordDiff for just that stretch.
+ * 两种回退到 token-level wordDiff：raw 中无 macro（无处锚定）；
+ * 某字面片段在 rendered 中找不到逐字匹配（macro 吃了相邻空白，或 literal 被插件改），
+ * 回退前会先 trim 该片段首尾空白再试一次。
  */
 export function macroAwareDiff(raw: string, rendered: string): { text: string; added: boolean }[] {
   const pieces = splitByMacros(raw)
-  if (pieces.length === 1) return wordDiff(raw, rendered) // no macros — nothing to anchor on
+  if (pieces.length === 1) return wordDiff(raw, rendered) // 无 macro——无处锚定
 
   const out: { text: string; added: boolean }[] = []
   let cursor = 0
 
   for (const piece of pieces) {
-    if (!piece) continue // empty segment (adjacent macros, or one flush against start/end) — nothing to anchor on here
+    if (!piece) continue // 空片段（相邻 macro，或 macro 紧贴 start/end）——此处无字面可锚
 
     let idx = rendered.indexOf(piece, cursor)
     let matched = piece
     if (idx === -1) {
-      // Most common reason a literal segment doesn't survive verbatim: a macro on one of its
-      // edges (e.g. {{trim}}) consumed some of its own adjacent whitespace. Retry with that
-      // whitespace stripped before falling all the way back.
+      // 字面片段未能逐字存活的常见原因：其一侧边缘的 macro（如 {{trim}}）吃了自己相邻的空白。
+      // 回退前先 trim 该片段首尾空白再试一次。
       const trimmed = piece.trim()
       if (trimmed && (idx = rendered.indexOf(trimmed, cursor)) !== -1) matched = trimmed
     }
 
     if (idx === -1) {
-      // Genuinely can't anchor this segment verbatim — fall back to the old token-level diff,
-      // scoped to just this segment against the rest of the unconsumed rendered text.
+      // 确实无法逐字锚定此片段——回退到旧的 token-level diff，范围限定为此片段 vs 剩余未消费 rendered 文本。
       const local = wordDiff(piece, rendered.slice(cursor))
       for (const seg of local) pushRun(out, seg.text, seg.added)
-      cursor = rendered.length // local wordDiff already accounted for everything remaining
+      cursor = rendered.length // local wordDiff 已 accounted for 剩余全部
       continue
     }
 
-    pushRun(out, rendered.slice(cursor, idx), true) // gap before this anchor = prior macro's expansion
+    pushRun(out, rendered.slice(cursor, idx), true) // 此 anchor 之前的 gap = 前一个 macro 的展开
     pushRun(out, matched, false)
     cursor = idx + matched.length
   }
 
-  if (cursor < rendered.length) pushRun(out, rendered.slice(cursor), true) // trailing macro expansion, if raw ended on one
+  if (cursor < rendered.length) pushRun(out, rendered.slice(cursor), true) // 尾随 macro 展开（若 raw 以 macro 结尾）
 
   return out
 }
 
 /**
- * Word-level diff between `a` (raw, author-written block content) and `b` (the real
- * ST-rendered text for that block, after macros/regex/other extensions ran). Used to highlight
- * which parts of the rendered text are the *result* of substitution rather than literal
- * boilerplate that was already there — the ST render only gives us final text with no markers
- * of what changed, so this reconstructs an approximation.
- *
- * Returns `b` as a sequence of {text, added} runs: `added: false` runs are tokens that matched
- * something in `a` (kept verbatim, in order); `added: true` runs are tokens present in `b` but
- * not matched from `a` (macro output, regex-inserted text, etc). Tokens only in `a` (removed by
- * rendering, e.g. a `{{trim}}` macro eating the newline after it) are simply dropped — `b` is
- * ground truth for what to display, `a` only exists to tell added text apart from kept text.
- *
- * This is a heuristic, not a semantic diff: it can't know a plugin transformed "foo" into "bar"
- * vs. coincidentally matched tokens elsewhere. It's meant for "does this look substituted",
- * not a byte-exact provenance trace.
- *
- * Tokenization: plain whitespace-delimited "words" fall apart badly on CJK/punctuation-dense
- * text, because there are no spaces between "words" to split on — a whole clause like
- * `|对'{{user}}'怀有爱护` is ONE token, so as soon as `{{user}}` resolves to something else the
- * entire clause reads as "changed" and gets highlighted wholesale, when really only the 3
- * substituted characters should be. So tokens are: whitespace runs, OR runs of ASCII
- * letters/digits/underscore (keeps English words/macro output like "FTW" atomic instead of
- * shattering them into single letters), OR any other single character on its own (CJK
- * ideographs, punctuation, quotes, emoji, ...). That lets the diff align at per-character
- * resolution through CJK text while still treating Latin words as whole units.
- *
- * Matching strategy: plain LCS on that token stream turns out not to be enough on its own.
- * Repeated short tokens are everywhere in this kind of text — `<`/`>` from custom pseudo-XML
- * wrappers, CJK punctuation, quote marks — and whenever several equally-short-distance candidates
- * exist, a plain LCS DP will happily settle on WHICHEVER maximum-length alignment it finds first,
- * which is "valid" by the letter of longest-common-subsequence but not necessarily the one a
- * human reading the two texts side by side would consider correct — e.g. matching a `<` deep
- * inside one substituted value against an unrelated `<` several lines away, instead of the `<`
- * that actually belongs to the closing tag right next to it. That shows up as a stray
- * unhighlighted character (or a whole tag) punched out of the middle of what should read as one
- * continuous highlighted span, or — worse — a literal, unchanged tag like `</纪录方式>` reading as
- * partly "substituted" because its own `<` got stolen by a wrong match elsewhere.
- *
- * So matching is done in two tiers:
- *  1. Patience-style anchoring (diffRange): tokens that occur EXACTLY ONCE on both sides are
- *     unambiguous — there's only one thing they could possibly correspond to. Take the longest
- *     increasing (order-preserving) subsequence of those as trusted sync points, then recurse on
- *     the gaps between them. This is what correctly threads the needle between two genuinely
- *     identical structural tags even when there are many other repeated tokens in between.
- *  2. Plain LCS (lcsAtoms) as the base case, only ever run on whatever's left AFTER anchoring —
- *     i.e. small stretches already boxed in by trusted anchors on both sides (or the whole input,
- *     if it has no unique tokens at all to anchor on, which only happens for very short/highly
- *     repetitive spans where an O(n*m) DP is cheap anyway).
- * A final noise-collapse pass folds any short (< MIN_TRUSTED_RUN tokens) matched run that came
- * from tier 2 and is sandwiched between two highlighted runs back into the highlight — even with
- * anchoring, a small leftover gap can still occasionally resolve to a coincidental single-token
- * match rather than a meaningful one.
+ * Word-level diff：`a`=raw 原文，`b`=ST 渲染文本。返回 `b` 的 {text,added} run 序列。
+ * 约束：token = 空白 run / ASCII letters+digits+underscore run / 其他单字符，
+ * 使 CJK 逐字符对齐且 Latin 词原子化。匹配两层：patience anchoring（diffRange）+ plain LCS（lcsAtoms），
+ * 最后 noise-collapse。详见各函数。
  */
 function tokenizeForDiff(s: string): string[] {
   return s.match(/\s+|[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/g) || []
@@ -368,9 +234,8 @@ function tokenizeForDiff(s: string): string[] {
 
 type DiffAtom = { text: string; added: boolean; trusted: boolean }
 
-// Plain LCS, one atom per token. Used as the base case once patience-anchoring has boxed a
-// region in (or immediately, for regions too small to bother anchoring). Matches here are
-// `trusted: false` — still just "a" valid alignment, not necessarily "the" correct one.
+// Plain LCS，一 token 一 atom。base case：patience anchoring 框定的小段，或太小不值得 anchor 的段。
+// 这里匹配 `trusted: false`——只是 "某" 合法对齐，不一定是 "那" 正确的。
 function lcsAtoms(A: string[], B: string[]): DiffAtom[] {
   const n = A.length, m = B.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
@@ -383,17 +248,16 @@ function lcsAtoms(A: string[], B: string[]): DiffAtom[] {
   let i = 0, j = 0
   while (i < n && j < m) {
     if (A[i] === B[j]) { out.push({ text: B[j], added: false, trusted: false }); i++; j++ }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) { i++ } // token only in A: dropped from rendered output
-    else { out.push({ text: B[j], added: true, trusted: false }); j++ } // token only in B: substituted/inserted
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { i++ } // token 仅在 A：从渲染输出中丢
+    else { out.push({ text: B[j], added: true, trusted: false }); j++ } // token 仅在 B：被替换/插入
   }
   while (j < m) { out.push({ text: B[j], added: true, trusted: false }); j++ }
   return out
 }
 
-// Below this (post-anchor-split) n*m, just run plain LCS directly — small enough to be cheap,
-// and not worth the overhead of scanning for anchors that likely aren't there anyway.
+// 低于此 n*m（post-anchor-split）直接跑 plain LCS——够小够便宜，不值得扫 anchor。
 const LCS_FALLBACK_MAX = 2500
-// Overall (pre-split) budget backstop — see wordDiff's top-level call site.
+// 总体（pre-split）预算上限——见 wordDiff 顶层调用处。
 const DIFF_TOKEN_BUDGET = 4_000_000
 
 function diffRange(A: string[], B: string[]): DiffAtom[] {
@@ -401,8 +265,7 @@ function diffRange(A: string[], B: string[]): DiffAtom[] {
   if (!B.length) return []
   if (A.length * B.length <= LCS_FALLBACK_MAX) return lcsAtoms(A, B)
 
-  // Tokens that occur exactly once in BOTH A and B: unambiguous by construction, whatever else
-  // is going on elsewhere in the text.
+  // 在 BOTH A 和 B 中都恰好出现一次的 token：构造上无歧义，不管别处发生什么。
   const countA = new Map<string, number>(), firstA = new Map<string, number>()
   A.forEach((t, idx) => { countA.set(t, (countA.get(t) || 0) + 1); if (!firstA.has(t)) firstA.set(t, idx) })
   const countB = new Map<string, number>(), firstB = new Map<string, number>()
@@ -414,11 +277,10 @@ function diffRange(A: string[], B: string[]): DiffAtom[] {
     if (countA.get(t) !== 1 || countB.get(t) !== 1) continue
     candidates.push({ ai, bi: firstB.get(t)! })
   }
-  if (!candidates.length) return lcsAtoms(A, B) // nothing unique to anchor on — fall back directly
+  if (!candidates.length) return lcsAtoms(A, B) // 没有 unique token 可锚——直接回退
 
-  // Anchors must also preserve relative order (can't match ai=5<->bi=10 and ai=8<->bi=3, that'd
-  // cross) — the longest increasing subsequence of B-positions, taken in A-order, is the largest
-  // non-crossing set of these unique matches.
+  // Anchor 必须保相对顺序（不能 ai=5<->bi=10 和 ai=8<->bi=3 这样交叉）——
+  // B-position 的 longest increasing subsequence（按 A 序）是这些 unique 匹配的最大非交叉集。
   const lis = lisIndices(candidates.map(c => c.bi))
   const anchors = lis.map(idx => candidates[idx])
 
@@ -433,8 +295,8 @@ function diffRange(A: string[], B: string[]): DiffAtom[] {
   return out
 }
 
-// Longest increasing subsequence, returned as indices into `seq` (patience sorting). Used to
-// pick the largest non-crossing set of candidate anchor pairs.
+// Longest increasing subsequence，返回 `seq` 的 index（patience sorting）。
+// 用于从候选 anchor 对中取最大非交叉集。
 function lisIndices(seq: number[]): number[] {
   const parent: number[] = new Array(seq.length).fill(-1)
   const pileTops: number[] = []
@@ -456,19 +318,16 @@ function lisIndices(seq: number[]): number[] {
   return result.reverse()
 }
 
-// Minimum number of CONSECUTIVE tokens an untrusted (tier-2 LCS) matched run needs before we
-// trust it as "genuinely carried-over text" rather than a coincidental character collision —
-// see the noise-collapse pass at the end of wordDiff for why this matters.
+// 一个 untrusted（tier-2 LCS）matched run 需要的最少连续 token 数，
+// 达不到就当偶发字符碰撞处理——见 wordDiff 末尾的 noise-collapse pass。
 const MIN_TRUSTED_RUN = 2
 
 export function wordDiff(a: string, b: string): { text: string; added: boolean }[] {
   const A = tokenizeForDiff(a), B = tokenizeForDiff(b)
 
-  // Trim matching prefix/suffix first. Real preset blocks are usually mostly-identical text with
-  // one or a few small substituted spots, so this alone shrinks the anchoring/DP work down to
-  // just the neighborhood of the actual edits, regardless of how long the surrounding block is.
-  // These are exact matches walked in from both ends of the whole string — trustworthy
-  // regardless of length, same as a patience anchor.
+  // 先 trim 匹配的 prefix/suffix。预设 block 多为整段相同文本中一两处替换点，
+  // 所以单这一步就把 anchoring/DP 工作量缩到实际编辑点附近，不管周围 block 多长。
+  // 这些是从整串两端走入的精确匹配——不管多长都可信，同 patience anchor。
   let lo = 0
   const maxLo = Math.min(A.length, B.length)
   while (lo < maxLo && A[lo] === B[lo]) lo++
@@ -479,18 +338,17 @@ export function wordDiff(a: string, b: string): { text: string; added: boolean }
   const atoms: DiffAtom[] = []
   for (let k = 0; k < lo; k++) atoms.push({ text: B[k], added: false, trusted: true })
   if (midA.length * midB.length > DIFF_TOKEN_BUDGET) {
-    // Edit region itself too large to diff cheaply — show it as one plain (unhighlighted) chunk
-    // rather than risk a multi-second synchronous computation. Prefix/suffix outside it are still
-    // correctly un-highlighted above/below, so this only degrades the middle.
+    // Edit region 本身太大不好便宜 diff——显示为一个 plain（未高亮）块，
+    // 而非冒险做多秒同步计算。它之外的 prefix/suffix 上下仍正确未高亮，所以只退化中间。
     if (midB.length) atoms.push({ text: midB.join(''), added: false, trusted: false })
   } else {
     atoms.push(...diffRange(midA, midB))
   }
   for (let k = hiB; k < B.length; k++) atoms.push({ text: B[k], added: false, trusted: true })
 
-  // Merge consecutive same-`added` atoms into runs, tracking token count and whether ANY atom in
-  // the run is trusted (patience anchor or boundary trim) — a run touched by even one trusted
-  // atom is exempt from the noise-collapse check below, same as a long-enough untrusted run.
+  // 把连续同 `added` 的 atom 合并成 run，跟踪 token 数量与 run 内是否任一 atom 为 trusted
+  // （patience anchor 或边界 trim）——被任一 trusted atom 触及的 run 免除下面 noise-collapse 检查，
+  // 同足够长的 untrusted run 一样。
   const segs: { text: string; added: boolean; tokens: number; anyTrusted: boolean }[] = []
   for (const at of atoms) {
     const last = segs[segs.length - 1]
@@ -498,11 +356,9 @@ export function wordDiff(a: string, b: string): { text: string; added: boolean }
     else segs.push({ text: at.text, added: at.added, tokens: 1, anyTrusted: at.trusted })
   }
 
-  // Noise collapse: an untrusted matched run sandwiched between two highlighted runs, made of
-  // fewer than MIN_TRUSTED_RUN tokens, is more likely a coincidental leftover collision (even
-  // after anchoring, small gaps between anchors can still resolve this way) than a genuine chunk
-  // of carried-over literal text — fold it into the surrounding highlight instead of letting it
-  // punch a hole through the middle of it.
+  // Noise collapse：夹在两个 highlighted run 之间、token 数少于 MIN_TRUSTED_RUN 的 untrusted matched run，
+  // 更可能是偶发残留碰撞（即便 anchor 之后小 gap 仍可能如此解析）而非真正搬过来的字面文本块——
+  // 把它折进周围 highlight，而非让它从中间戳个洞。
   const out: { text: string; added: boolean }[] = []
   for (let k = 0; k < segs.length; k++) {
     const seg = segs[k]
@@ -522,29 +378,20 @@ export interface MultiSelectState<T> {
 }
 
 /**
- * Shared plain/ctrl/shift multi-select semantics — one click model used both by the main
- * editor's block list (Sidebar.vue, via presetStore's selectBlock) and CopyPanel.vue's two
- * independent block lists, so the two don't drift out of sync with each other over time.
+ * 共享的 plain/ctrl/shift 多选语义——主编辑器 block list（Sidebar.vue，经 presetStore selectBlock）
+ * 与 CopyPanel.vue 两份独立 block list 共用同一套点击模型。
  *
- * `id` is whatever the caller uses to identify a selectable row (a numeric flatNodes index for
- * the main sidebar, a string block identifier for CopyPanel). `all` is every selectable id in
- * the list's current on-screen order — only needed for the shift-range case, to walk from the
- * anchor to the clicked row in visual order rather than doing raw Math.min/max arithmetic on the
- * ids themselves (which only happens to work when ids ARE consecutive integers, as in the
- * original gi-index-based sidebar implementation; CopyPanel's string identifiers aren't).
+ * `id`：caller 用来标识可选行的东西（主侧栏是 flatNodes 数值 index，CopyPanel 是 string block identifier）。
+ * `all`：列表当前屏幕顺序下的全部可选 id——仅 shift-range 情况需要，按视觉顺序从 anchor 走到点击行，
+ * 而非对 id 直接做 Math.min/max（后者只对连续整数 id 成立）。
  *
- * Semantics (mirrors the original presetStore selectBlock() exactly):
- *  - plain click: if this is the only currently-selected row, clicking it again clears the
- *    selection entirely; otherwise the selection becomes just this row, which also becomes the
- *    new anchor.
- *  - ctrl+click: toggles this row in/out of the existing selection; becomes the new anchor
- *    either way (even when the click just removed it).
- *  - shift+click: requires an existing anchor (a no-op otherwise) — selects every row between
- *    the anchor and this one, inclusive, in `all`'s order. The anchor itself doesn't move, so
- *    repeated shift-clicks keep extending/shrinking the range from the same fixed start point.
+ * 语义（镜像 presetStore selectBlock()）：
+ *  - plain click：若此行是唯一选中行，再点一次清空选中；否则选中变为仅此行，它也成为新 anchor。
+ *  - ctrl+click：在现有选中里 toggle 此行；无论加入还是移除都成为新 anchor。
+ *  - shift+click：需已有 anchor（否则 no-op）——选 anchor 与此行之间的所有行（含两端，按 `all` 顺序）。
+ *    anchor 本身不动，所以重复 shift-click 从同一固定起点继续扩展/收缩范围。
  *
- * Pure/no mutation — callers assign the returned state back to their own refs, which works
- * equally well from a Pinia store action or a plain component-local ref.
+ * Pure/无 mutation——caller 把返回 state 赋回自己的 ref，对 Pinia store action 或组件本地 ref 都一样。
  */
 export function applyMultiSelect<T>(
   state: MultiSelectState<T>,

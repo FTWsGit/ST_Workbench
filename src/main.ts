@@ -8,17 +8,11 @@ import mainCss from './styles/main.css?inline'
 import { getHostDocument } from './composables/hostEnv'
 
 function mount() {
-  // 酒馆助手在 iframe (about:srcdoc) 里执行脚本
-  // 必须挂到顶层文档，否则 FAB 在 iframe 里看不到
+  // 酒馆助手在 iframe (about:srcdoc) 里执行脚本，必须挂到顶层文档，否则 FAB 在 iframe 里看不到
   const targetDoc = getHostDocument()
 
-  // Inject the stylesheet as a plain string BEFORE creating/mounting anything.
-  // We import the CSS with `?inline` (Vite gives it back as a raw string, with no
-  // automatic runtime injection into *this* document) and write it into the target
-  // document ourselves. This avoids the previous approach of waiting for a plugin to
-  // inject a <style> tag into the iframe's own document and then cloning it over —
-  // that had a real race condition (the clone could run before or after injection)
-  // and, even when it "worked", was one extra layer of indirection for no benefit.
+  // 在创建/挂载任何组件前注入样式：CSS 通过 ?inline 以原始字符串导入，直接写到目标文档，
+  // 避免原先"插件注入 iframe <style> 再克隆到主文档"的竞态。
   if (!targetDoc.getElementById('ST_Workbench-style')) {
     const style = targetDoc.createElement('style')
     style.id = 'ST_Workbench-style'
@@ -28,76 +22,30 @@ function mount() {
 
   const el = targetDoc.createElement('div')
   el.id = 'ST_Workbench'
-  // Appended to <html> (documentElement), not <body>, AND given its own explicit
-  // position:fixed + huge z-index here (inline, so nothing in main.css can accidentally lose
-  // this cascade fight) rather than leaving it as a plain unstyled div. This spot used to just
-  // rely on being appended after <body> in DOM order to paint on top — that turned out not to
-  // be enough. Confirmed by live device testing (not guesswork): in SillyTavern's own mobile
-  // theme, <body> itself is made `position:fixed` (a common trick to stop the page shifting
-  // when the on-screen keyboard opens/closes). `position:fixed` ALWAYS creates a new stacking
-  // context, regardless of z-index — so <body> becomes its own stacking context containing
-  // things like the chat's #send_textarea, and a later-in-DOM-order but NON-positioned sibling
-  // (which is what this div was before this change) paints in the "in-flow, non-positioned"
-  // layer, which is BELOW any positioned stacking context's layer in the CSS painting order —
-  // completely independent of which one is later in the DOM. Source order only decides ties
-  // WITHIN the same layer. So our own UI was rendering, in the right place, just permanently
-  // buried under <body>'s own stacking context (e.g. the chat's #send_textarea), which is why
-  // it looked identical to "not rendering at all" or "not clickable".
-  //
-  // The fix has two parts, both required:
-  //  1. `position:fixed` + explicit `width:100vw;height:100vh` (NOT `inset:0`) here on the
-  //     OUTERMOST wrapper. `vw`/`vh` units are always resolved against the true visual
-  //     viewport, unlike `inset:0`/percentages, which resolve against whatever this element's
-  //     *containing block* turns out to be — and per the CSS spec, a `position:fixed`
-  //     element's containing block becomes the nearest ancestor with a `transform` set, not
-  //     necessarily the viewport, if such an ancestor exists (see the <html> transform check
-  //     below — this is exactly what was happening: <html> had `transform: matrix(1,0,0,1,0,0)`,
-  //     a literal identity matrix, but still a non-'none' computed value, and with no height in
-  //     normal flow once <body> itself became position:fixed, `inset:0`/`bottom:24px`-style
-  //     math against THAT collapsed box was landing off-screen). vw/vh sidesteps the whole
-  //     containing-block question.
-  //  2. An explicit numeric `z-index` (not `auto`) on this SAME element. `position:fixed` with
-  //     `z-index:auto` still creates a stacking context, but it's placed in the "z-index 0 /
-  //     auto" painting layer, ordered by DOM position among ties in THAT layer — apparently not
-  //     reliably enough above <body>'s own same-layer stacking context in practice. An explicit
-  //     positive z-index moves it into the strictly-higher "positive z-index" painting layer,
-  //     which outranks the auto/0 layer unconditionally, regardless of DOM order.
-  // Append to <body> (not <html>) — on mobile ST themes, <body> is position:fixed
-  // and browsers elevate it to a special viewport-layer above <html>'s other
-  // children when <html> has a transform. Being INSIDE <body> lets our z-index
-  // compete within <body>'s stacking context instead of losing to <body> itself.
-  // Every actual UI element inside (.wb-fab, .wb-panel, the mobile drawers/sheets, etc.) is
-  // `position:absolute` in main.css, not `fixed` — they resolve against THIS single positioned,
-  // viewport-sized anchor, so there's only one stacking-context boundary to reason about instead
-  // of one per element (each of which would otherwise have had to independently win the same
-  // fight against <body> that this element now wins once).
+  /** 根容器挂载关键约束（踩坑要点，保留）：
+   *  - append 到 <body>（而非 <html>）：移动端 ST 主题把 <body> 设为 position:fixed，浏览器在 <html> 有 transform 时会把 <body> 提升到 viewport 层，挂在 <body> 内才能与它的 stacking context 竞争。
+   *  - 外层必须 position:fixed + 100vw/100vh（不能 inset:0 / 百分比）：vw/vh 始终按真实视口解析，避免 fixed 元素因含 transform 的祖先（<html> 上的单位矩阵也算）导致 containing block 错位、inset:0 相对坍塌的盒子计算而落到屏外。height 额外写 100dvh 兼容移动端地址栏。
+   *  - 必须显式数字 z-index（2147483647，CSS 最大值）而非 auto：position:fixed+z-index:auto 仍创建层叠上下文但处于 z-index 0 层，在实际设备上会被 <body> 同层的 stacking context 盖住；显式正值进入严格更高的"positive z-index"层，无条件盖过 auto/0 层。
+   *  - pointer-events:none：容器全屏覆盖但默认不吞事件，内部可见元素（.wb-fab/.wb-panel/.pr-var-popup 等）在 main.css 中单独设 pointer-events:auto。 */
   el.style.position = 'fixed'
   el.style.top = '0'
   el.style.left = '0'
   el.style.width = '100vw'
   el.style.height = '100vh'
-  el.style.height = '100dvh' // dynamic viewport height for mobile nav-bar safety
-  el.style.zIndex = '2147483647' // max valid CSS z-index
-  el.style.pointerEvents = 'none' // covers the full screen at all times now — see main.css's
-  // pointer-events:auto on .wb-fab/.wb-panel/.pr-var-popup, the only parts of this that are
-  // ever actually visible, so clicks anywhere else on the host page still reach it normally.
+  el.style.height = '100dvh'
+  el.style.zIndex = '2147483647'
+  el.style.pointerEvents = 'none'
   targetDoc.body.appendChild(el)
 
-  // One-time diagnostic: vw/vh sizing above already keeps this correctly sized regardless of
-  // <html>'s transform, and top:0/left:0 lands correctly as long as that transform doesn't
-  // actually translate anything (an identity matrix, a scale, a rotation about the origin, etc.
-  // are all fine). The one case this DOESN'T cover is <html> being translated by a real, nonzero
-  // amount — that would still offset top:0/left:0 away from the true viewport corner. Log it so
-  // a future "FAB is offset in this host" report has an actual lead instead of starting from
-  // zero again.
+  /** 一次性诊断：vw/vh 不受 <html> transform 影响，top/left:0 在单位矩阵/scale/旋转等非平移变换下也正常；
+   *  但若 <html> 有真实非零 translation，会把 top:0/left:0 推离视口角。仅 warn，不阻塞挂载。 */
   try {
     const htmlStyle = targetDoc.defaultView?.getComputedStyle(targetDoc.documentElement)
     if (htmlStyle && (htmlStyle.transform !== 'none' || htmlStyle.perspective !== 'none' || htmlStyle.willChange.includes('transform') || htmlStyle.filter !== 'none')) {
       console.warn('[ST_Workbench] Host <html> has a transform/perspective/filter/will-change set. Sizing (vw/vh) is unaffected, but if that transform includes an actual translation, this UI\'s top-left corner may be offset from the real viewport corner. Host page CSS is the cause, not this extension.')
     }
   } catch (e) {
-    // getComputedStyle across documents can throw in stricter embedding contexts; this check is
-    // best-effort diagnostics only, never worth failing the actual mount over.
+    // 跨文档 getComputedStyle 在严格嵌入上下文可能抛错；此处仅为诊断，绝不影响挂载。
   }
 
   const app = createApp(App)

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div v-if="store.rawData" class="rx-form">
     <FormField :label="uiStore.t('preset.metaForm.contextLabel')">
       <input class="rx-input rx-num" type="number" v-model.number="maxContext" />
@@ -49,20 +49,9 @@
 </template>
 
 <script setup lang="ts">
-/* 预设 Meta 表单（TODO.md 2.5b）——管理的是模型采样参数，属于"整份文档"而不是某个具体 prompt
- * block，所以放悬浮窗（MetaPanel.vue）而不是 SettingsDock（那边是按 activeTab 解析单条记录的）。
- * 不参数化（不像 regex 三件套那样接 props）：这个表单只服务预设 domain 一家，没有第二个宿主
- * store 会用到它，参数化没有意义，直接 usePresetStore()。
- *
- * field() 是个小工厂：14 个数值字段各自手写一遍 get/set + markDirty() 太啰嗦，収成一个函数按
- * key 生成——直接改 `store.rawData!.xxx` 这种写法在 PresetMetaForm 场景是安全的，因为整个组件
- * 树只在 `store.rawData` 非空时才挂载（模板顶层 v-if="store.rawData"），field() 内部的
- * `store.rawData!` 断言由这个前提保证，不是瞎断言。
- *
- * 【2026-07 二次重构】"采样参数" 折叠区换成共享的 AdvancedGroup.vue，去掉了本地的
- * samplingOpen ref + 手写切换按钮，跟 CharacterMetaForm.vue 是同一批遗留写法一起清理的。
- * 单字段换 FormField；temperature/topP 这几组"一行塞两对"保持手写 .wb-row，不套 FormField
- * （同样的理由，见 WorldbookSettingsForm.vue 顶部 doc comment）。 */
+/** 预设 Meta 表单：管理模型采样参数（整份文档级别，放悬浮窗而非 SettingsDock）。仅服务预设 domain，不参数化，直接 usePresetStore()。
+ *  field() 是按 key 生成 computed(get/set+markDirty) 的小工厂，避免 14 个数值字段重复样板；
+ *  `store.rawData!` 断言由模板顶层 v-if="store.rawData" 保证安全。 */
 import { computed } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
 import { useUiStore } from '../../stores/uiStore'

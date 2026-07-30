@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div v-if="store.varPopupOpen" class="pr-var-popup" :style="{ top: store.varPopupPos.top + 'px', left: store.varPopupPos.left + 'px' }">
     <div class="pr-vp-header">
       <span class="pr-vp-varname">{{ store.varPopupVarName }}</span>
@@ -30,8 +30,7 @@ import { varOpBadge } from '../../utils'
 const store = usePresetStore()
 const uiStore = useUiStore()
 
-// Close on outside click (anywhere that isn't the popup itself or the editor textarea, so
-// clicking a different {{var}} to re-target the popup still works via checkVarClick).
+/** 点击弹窗外或编辑器内另一个 {{var}} 时关闭弹窗：排除 .pr-var-popup 本身与 .wb-editor-ta（让点别的 var 重新定位弹窗正常工作）。ESC 也关闭。 */
 function onDocClick(e: MouseEvent) {
   if (!store.varPopupOpen) return
   const target = e.target as HTMLElement

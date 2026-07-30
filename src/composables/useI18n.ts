@@ -3,26 +3,15 @@ import { locales, type LocaleKey } from '../i18n'
 import type { Settings } from '../types'
 
 /**
- * Thin wrapper around the i18n locale tables — takes the *same* `settings` ref that
- * stores/uiStore.ts already owns (language lives on Settings, persisted through the existing
- * localStorage read/write path in uiStore.ts) rather than creating a second source of truth.
- *
- * Usage: uiStore.ts spreads this composable's return value into its own return object, same
- * pattern as everything else in that store — so `store.t(...)` works in every component
- * without a separate import, exactly like `store.showToast(...)`. presetStore forward-spreads
- * it one more level so preset-domain call sites keep working untouched.
+ * i18n 封装，使用与 uiStore 相同的 settings ref（单一数据源）。
+ * uiStore 展开此 composable 的返回值，presetStore 再转发一层，使 `store.t()` 在各处可用。
  */
 export function useI18n(settings: Ref<Settings>) {
   const table = computed(() => locales[settings.value.language])
 
   /**
-   * `key` must exist in zh-CN.ts (LocaleKey is derived from it). `params` fills named
-   * placeholders in the string, e.g. `t('preset.toast.saveFailed', { msg: e.message })`
-   * against a table entry `'preset.toast.saveFailed': '保存失败：{msg}'`.
-   *
-   * Fallback order: current language -> zh-CN -> the raw key itself. Falling back to the key
-   * (instead of throwing) means a missing translation shows up as an obviously-wrong string
-   * in the UI during development rather than crashing the component.
+   * 获取翻译字符串。key 须存在 zh-CN.ts 中（LocaleKey 派生自它）。params 填充命名占位符如 `{msg}`。
+   * 降级顺序：当前语言 → zh-CN → 原始 key。
    */
   function t(key: LocaleKey, params?: Record<string, string | number>): string {
     const str = table.value[key] ?? locales['zh-CN'][key] ?? key

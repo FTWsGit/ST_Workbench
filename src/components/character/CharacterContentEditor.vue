@@ -1,11 +1,9 @@
-﻿<template>
+<template>
   <div class="wb-editor-panel rx-editor" v-if="field">
     <div class="wb-editor-meta">
       <span class="rx-editor-name">{{ fieldLabel }}</span>
     </div>
-    <!-- depthPrompt（角色备注）比其它虚拟字段多两个数值/枚举字段（depth/role），角色卡故意不接
-         SettingsDock（TODO.md 2.4），没有别的地方能编辑这两个字段，所以在这里单独加一条 meta 栏
-         承载——见 types.ts Character 接口顶部 doc comment。 -->
+    <!-- depthPrompt（角色备注）独有 depth/role 两个数值/枚举字段，角色卡未接 SettingsDock，在此 meta 栏单独承载。 -->
     <div v-if="isDepthPrompt" class="wb-editor-meta">
       <label class="rx-label">{{ uiStore.t('character.editor.depthLabel') }}</label>
       <input type="number" class="rx-input rx-num" v-model.number="depthPromptDepth" />
@@ -26,9 +24,8 @@
 </template>
 
 <script setup lang="ts">
-/* 角色卡虚拟字段内容编辑区（TODO.md 2.3）：activeTab.key 是 `field:xxx` / `field:greeting:<id>`
- * 这种虚拟字段 key，不像 preset/worldbook 那样直接对应数组里的一条真实记录——解析逻辑全部收在
- * characterStore.currentField/setCurrentFieldValue 里，这里只管 v-model 桥接，不自己解析 key。 */
+/** 角色卡虚拟字段内容编辑区：activeTab.key 为 `field:xxx` / `field:greeting:<id>` 形式的虚拟 key，
+ *  非数组真实记录，解析逻辑全部在 characterStore.currentField/setCurrentFieldValue 中，本组件只管 v-model 桥接。 */
 import { ref, computed, watch } from 'vue'
 import { useCharacterStore } from '../../stores/characterStore'
 import { useUiStore } from '../../stores/uiStore'

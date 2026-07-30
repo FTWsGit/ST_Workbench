@@ -35,8 +35,6 @@
 </template>
 
 <script setup lang="ts">
-/* 正则三件套之一——参数化改造后不再 import usePresetStore()，见 regexProps.ts 顶部的
- * doc comment。tabsStore 是全局单例 store，跟背后是哪个 domain store 无关，继续直接用。 */
 import { ref, computed, watch } from 'vue'
 import { useTabsStore } from '../../stores/tabsStore'
 import { applyRegexScript, parseFindRegex } from '../../regexEngine'
@@ -49,8 +47,7 @@ const tabsStore = useTabsStore()
 const mode = ref<'edit' | 'preview'>('edit')
 const renderHtml = ref(false)
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>()
-// 简化处理：测试文本这一版是单个共享 ref，切换正则标签不会各自记住各自的测试文本——
-// 用起来发现真的需要"每条正则记自己的测试文本"再升级成 Record<id, string>，先别过度设计。
+/** 测试文本：当前为全局共享 ref，切换标签不各自保留；如有需要再升级为 Record<id,string>。 */
 const testInput = ref('')
 
 const script = computed(() => props.scripts.find(r => r.id === tabsStore.activeTab?.key) ?? null)
@@ -61,18 +58,13 @@ const previewText = computed(() => {
   catch (e: any) { return props.t('regex.editor.previewError', { msg: e?.message || e }) }
 })
 
-// v-model bridge into the currently-selected script's replaceString — same pattern as
-// PresetContentEditor.vue's `content` computed. When the active regex tab changes, this getter's
-// return value changes too, and HighlightedEditor's own "external modelValue change" detection
-// picks it up and re-renders — no extra watcher needed here for that.
+/** 当前选中脚本 replaceString 的 v-model 桥接；切换标签时 getter 返回值变化，编辑器会自动重渲染。 */
 const replaceStringModel = computed<string>({
   get: () => script.value?.replaceString ?? '',
   set: (v) => { if (script.value) script.value.replaceString = v },
 })
 
-// Settings dialog font-size/family changes don't resize the textarea itself, so
-// HighlightedEditor's own ResizeObserver won't catch them — nudge it explicitly, same as
-// PresetContentEditor.vue.
+/** 字号/字体变化不会改变 textarea 尺寸，ResizeObserver 捕捉不到，需主动 refresh。 */
 watch(() => [props.editorFontSize, props.editorFontFamily], () => {
   editorRef.value?.refreshFont()
 })

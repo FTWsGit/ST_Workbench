@@ -7,13 +7,8 @@ import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { useUiStore } from './uiStore'
 
-/** 独立文档 store（TODO.md 阶段1）：世界书是三个工作区里第一个不挂靠 presetStore 的——不共享
- *  rawData/prompts 那套，自己维护一份 entries + order。
- *
- *  t()/showToast()/settings 直接 useUiStore()——uiStore 是真正的全局单例（TODO-useUiState.md
- *  落地后从 composable 升级成 defineStore('ui')），Pinia 保证整个 app 里永远拿到同一个实例，
- *  语言/字体切换会同步过来，不再需要绕道 presetStore 借这份共享 UI 状态。saveSettings 也一并
- *  转发，供 WorldbookSidebar.vue 拖拽 resize 后落盘用。 */
+/** 独立文档 store：世界书是第一个不挂靠 presetStore 的工作区 —— 自己维护 entries + order。
+ *  t()/showToast()/settings 直接 useUiStore() —— Pinia 保证整个 app 里永远拿到同一个实例。 */
 export const useWorldbookStore = defineStore('worldbook', () => {
   const tabsStore = useTabsStore()
   const confirmStore = useConfirmStore()
@@ -28,18 +23,15 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   const worldbookList = ref<string[]>([])
 
   /* ====== 分组树（同 preset 域，见 useGroupedList.ts 顶部 doc comment）======
-   * identifier 统一用 String(entry.uid)。世界书条目没有 preset block 那种"从 order 里摘掉=隐藏"
-   * 的概念——entries 和 order 永远是同一批条目的两种视图（一个是扁平数据，一个是显示顺序+分组），
-   * 不存在"某个条目只在 entries 里、不在 order 里"的状态，所以没有 hiddenEntries/addHiddenEntry
-   * 这类 preset 域才有的东西。 */
+   * identifier 统一用 String(entry.uid)。世界书没有 preset 那种"从 order 里摘掉=隐藏"的概念——
+   * entries 和 order 永远是同一批次条目的两种视图，不存在 hiddenEntries。 */
   const {
     selectedGi, anchorGi, flatNodes, identifierToGi, revealAndFindGi,
     clearSelection, selectBlock, toggleGroupCollapse, reorderBlock,
     insertAfterActive, removeNode, bindSelected: bindSelectedNodes, unbindGroup: unbindGroupNode,
   } = useGroupedList(order, { groupName: (n) => t('worldbook.sidebar.defaultGroupName', { count: n }) })
 
-  // 标签驱动侧边栏高亮/展开——跟 presetStore.ts 里同名 watcher 是同一个模式，见那边的详细 doc
-  // comment（flush:'sync' 的理由、为什么不能监听 listScrollToken 等，这里不重复）。
+  // 标签驱动侧边栏高亮/展开 —— 同 presetStore.ts 的 watcher 模式（flush:'sync' 理由相同）。
   watch(() => tabsStore.activeTab, (tab) => {
     if (!tab || tab.domain !== 'worldbook') return
     const gi = revealAndFindGi(tab.key)
@@ -50,10 +42,8 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   }, { immediate: true, flush: 'sync' })
 
   /* ====== Dirty tracking ======
-   * entries 里包含每条 entry 的内容/设置字段（跟 preset 域的 content 一样是高频编辑热路径），
-   * 深监听整个数组开销大，所以浅监听——nested 字段变化（内容编辑、设置表单改字段）走
-   * markDirty() 显式打标，跟 presetStore.ts 的 prompts 是同一个理由。order 是分组结构，量小，
-   * 深监听没问题，跟 preset 域一致。 */
+   * entries 包含每条 entry 的内容字段（高频编辑），深监听开销大，所以浅监听 + markDirty() 显式打标。
+   * order 是分组结构，量小，深监听无问题。 */
   const dirty = ref(false)
   function markDirty() { dirty.value = true }
   watch(order, markDirty, { deep: true })
@@ -66,8 +56,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   })
   const hasData = computed(() => worldbookName.value !== '')
 
-  /* ====== order ⇄ entries 上的分组字段 互转，同 presetStore.ts importOrderWithGroups/exportOrder
-   * 的模式，只是宿主字段从 OrderItem._gid 换成 WorldbookEntry._gid（entry 本身就是"OrderItem"）。 */
+  /* ====== order ⇄ entries 上的分组字段 互转，同 presetStore.ts 的模式。 */
   function importOrderWithGroups(list: WorldbookEntry[]): OrderNode[] {
     const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: { entry: WorldbookEntry; idx: number }[] }>()
     list.forEach(entry => {
@@ -107,10 +96,8 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     return topLevel
   }
 
-  /** 把 order 树（含折叠组子节点——故意直接遍历 order.value 而不是 flatNodes，flatNodes 会跳过
-   *  折叠组的子节点，见 useGroupedList.ts 顶部 doc comment）压平成 identifier -> {displayIndex,
-   *  分组元数据} 的映射，写回每个 entry 自己身上。displayIndex 就是压平后的数组下标，这就是
-   *  TODO.md 说的"displayIndex 用数组下标隐式维护"。 */
+  /** 把 order 树压平成 identifier → 分组元数据的映射，写回每个 entry。
+   *  displayIndex 用数组下标隐式维护。 */
   function syncEntriesFromOrder() {
     let idx = 0
     const byId = new Map(entries.value.map(e => [String(e.uid), e]))
@@ -182,22 +169,15 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     try {
       await WB.createWorldbook(name)
       refreshWorldbookList()
-      // createWorldbook() 只负责在 ST 那边注册这个名字，不返回内容——按 PROJECT.md「关键设计
-      // 要点」第7条的思路，真正加载进 store 前再读一次权威数据，不是直接假设「刚建的肯定是空
-      // 的」（万一 ST 版本升级后 createNewWorldInfo 会塞默认条目，这里也不会跟丢）。读失败就
-      // 退回空世界书，不阻塞用户继续操作。
+      // 写入后用 ST 返回的权威数据重新加载进 store，不假设刚建的一定是空的。
       const loaded = await WB.getWorldbookByName(name).catch(() => null)
       applyLoaded(loaded ?? { name, entries: [] })
       showToast(t('worldbook.toast.created', { name }))
     } catch (e: any) { showToast(t('worldbook.toast.createFailed', { msg: e?.message || e })) }
   }
 
-  /** 从角色卡内嵌世界书导入（TODO.md 阶段3）。`book` 是调用方从 characterStore.oldRaw.data
-   *  .character_book 读出来的原始 v2WorldInfoBook——worldbookStore 故意不 useCharacterStore()，
-   *  不直接摸另一个 domain store 的内部状态（PROJECT.md「六个 Pinia store」的边界纪律：谁的数据
-   *  谁负责，跨 store 的读发生在调用方那一层，这里是 App.vue 的 onImportFromCharacterBook()）。
-   *  跟 createNewWorldbook() 是同一套模式：查重名 → 建空文件 → 写入内容 → 用 ST 返回的权威数据
-   *  重新加载进 store，不直接把转换结果当成"已经存在于 ST 里的样子"。 */
+  /** 从角色卡内嵌世界书导入。`book` 来自 characterStore.oldRaw.data.character_book。
+   *  跟 createNewWorldbook() 同模式：查重名 → 建空文件 → 写入内容 → 用 ST 返回的权威数据重新加载。 */
   async function importFromCharacterBook(book: { entries?: any[] } | null | undefined, name: string) {
     if (!book) { showToast(t('worldbook.toast.importNoBook')); return }
     refreshWorldbookList()

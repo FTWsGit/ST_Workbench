@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
       <span>{{ uiStore.t('character.sidebar.title') }}</span>
@@ -40,18 +40,9 @@
 </template>
 
 <script setup lang="ts">
-/* 角色卡侧边栏（TODO.md 2.2）——故意不复用 PresetSidebar 那套 flatNodes/gi 坐标系和分组：固定
- * 字段永远按 CHARACTER_FIELDS 预定义顺序展示、不可拖拽、不分组；只有 greetings 支持拖拽，用
- * useDragReorder<number>（跟 RegexSidebar 同款按数组下标的用法，不是 gi），也不接多选
- * （useListSelection）——角色卡侧边栏的两类列表都不需要"选中一批做批量操作"这个语义。
- *
- * 【2026-07 顶栏 IA 重构】fields|regex 子切换以前是这个组件自己的本地状态（localMode），在
- * 侧边栏头部塞一个小按钮切换、切到 regex 时整个替换成内嵌的 RegexSidebar（配一个
- * #modeToggle 具名插槽塞"返回字段"按钮）。这次改到 App.vue 顶栏第二行（wb-collection-switch）
- * 之后，这一层子切换不再需要——App.vue 直接按 tabsStore.sidebarCollection 决定挂载
- * CharacterSidebar（这个文件，只剩字段+开场白列表）还是 RegexSidebar（workspace='character'，
- * 数据源 characterStore.regexScripts，用法跟这里改动前完全一样，只是挂载点从这个组件内部搬到了
- * App.vue，和预设工作区的 regex 挂载点写法对齐——两边现在是同一种结构，不用再分别记两套逻辑）。 */
+/** 角色卡侧边栏：固定字段（CHARACTER_FIELDS，不可拖拽）+ greetings（可拖拽排序，复用 useDragReorder 按下标用法）。
+ *  不接多选（useListSelection），两类列表均无批量操作语义。
+ *  fields|regex 子切换已上移到 App.vue 顶栏（wb-collection-switch），由 sidebarCollection 决定挂载本组件还是 RegexSidebar（workspace='character'）。 */
 import { ref, watch } from 'vue'
 import { useCharacterStore } from '../../stores/characterStore'
 import { useUiStore } from '../../stores/uiStore'
@@ -85,7 +76,6 @@ function onGreetingClick(i: number) {
   tabsStore.open({ domain: 'character', key: 'field:greeting:' + id, label: uiStore.t('character.sidebar.greetingLabel', { n: i + 1 }), workspace: 'character' })
 }
 
-/* ---- Resize：跟 WorldbookSidebar/RegexSidebar 同一套 usePanelResize 用法 ---- */
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
   setWidth: (w) => { uiStore.settings.sidebarWidth = w },

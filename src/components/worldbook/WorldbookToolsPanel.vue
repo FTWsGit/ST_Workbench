@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <FloatingPanelShell
     :title="uiStore.t('worldbook.tools.title')"
     :close-title="uiStore.t('common.close')"
@@ -32,10 +32,7 @@
 </template>
 
 <script setup lang="ts">
-/* 世界书批量工具面板（TODO.md 阶段1最后一项）：批量启用/禁用、批量改激活方式，作用对象是侧边栏
- * 当前选中的行——选中的是组的话，展开成组内全部条目一起处理。复用 FloatingPanelShell（阶段0从
- * CopyPanel.vue 里抽出来的悬浮窗容器），不用另发明一套定位/拖拽/resize 逻辑，见
- * FloatingPanelShell.vue 顶部 doc comment。 */
+/** 世界书批量工具面板：批量启用/禁用、批量改激活方式，作用于侧边栏当前选中的行；若选中的是组，展开为组内全部条目。复用 FloatingPanelShell。 */
 import { computed } from 'vue'
 import { useWorldbookStore } from '../../stores/worldbookStore'
 import { useUiStore } from '../../stores/uiStore'
@@ -47,6 +44,7 @@ const emit = defineEmits<{ close: [] }>()
 const store = useWorldbookStore()
 const uiStore = useUiStore()
 
+/** 选中条目 id：组展开为子条目 id。 */
 const selectedIds = computed<string[]>(() => {
   const ids = new Set<string>()
   for (const gi of store.selectedGi) {

@@ -1,21 +1,10 @@
 import { ref, reactive, computed, type CSSProperties } from 'vue'
 import { getHostWindow } from './hostEnv'
 
-/** 【2026-07 从 App.vue 抽出】FAB 长按拖拽——跟任何 domain（preset/worldbook/character）都无关，
- *  纯粹是"一个自由悬浮元素怎么响应长按拖动"这一件事，之前之所以留在 App.vue 里没有单独抽出来，
- *  只是因为当时全项目只有它一个调用点，现在跟着 App.vue 瘦身一起挪过来，理由跟
- *  useMobileWorkspaceDrawer.ts 一样：机制本身不认识任何 workspace，抽成 composable 后 App.vue
- *  只剩下"把 uiStore.settings.fabPos 接给它"这一层胶水。
- *
- *  镜像 PresetSidebar.vue 里 onItemMouseDown 用的同一套长按判定参数（LONG_PRESS_MS/
- *  DRAG_THRESHOLD）、以及项目里所有落到 `settings` 的拖动统一遵守的"拖动过程只改草稿，松手才
- *  提交一次"规则（参见各处 usePanelResize 调用点）。没有直接复用 useDragReorder（那个是
- *  drop-target/列表场景）或 usePanelResize（只管单轴），FAB 是自由两轴悬浮元素，所以单独一个小
- *  composable，而不是硬套进已有的两个里。
- *
- *  区分"点击"和"长按拖动"、同时不拖慢点击响应的做法：pointerdown 时不调用 preventDefault，所以
- *  只要在 longPressMs 内 pointerup，浏览器该照常发一个原生 click，跟以前手感完全一样；只有当
- *  长按计时器真的触发了，才切换进拖动模式，并且在 onClick 里吞掉紧随其后的那次 click。 */
+/** FAB 长按拖拽——自由两轴悬浮元素的长按拖动。
+ *  拖动过程只改草稿，松手才提交一次。
+ *  区分"点击"和"长按拖动"的做法：pointerdown 时不调用 preventDefault，长按计时器触发后才
+ *  切换进拖动模式，并在 onClick 里吞掉紧随其后的那次 click。 */
 export interface FabPos { x: number; y: number }
 
 export interface UseFabDragOptions {
@@ -50,9 +39,7 @@ export function useFabDrag(opts: UseFabDragOptions) {
 
   function clampPos(x: number, y: number): FabPos {
     const hostWin = getHostWindow()
-    // 只按视口本身夹一下，不管 env(safe-area-inset-*)——在 JS 里把 CSS env() 的值读回来还得走一趟
-    // getComputedStyle，对这点边际收益不值得。CSS 默认位置（bottom/right，见 .wb-fab）本来就照顾
-    // 了安全区的媒体查询，这里只处理"用户已经手动拖动过一次"之后的情况。
+    // 只按视口本身夹一下。CSS 默认位置处理 safe-area-inset-*，这里只处理用户手动拖动后的情况。
     const maxX = Math.max(0, hostWin.innerWidth - size)
     const maxY = Math.max(0, hostWin.innerHeight - size)
     return { x: Math.min(Math.max(0, x), maxX), y: Math.min(Math.max(0, y), maxY) }
@@ -81,7 +68,7 @@ export function useFabDrag(opts: UseFabDragOptions) {
         cancelLongPress()
         return
       }
-      opts.setPos(clampPos(ev.clientX - size / 2, ev.clientY - size / 2)) // 草稿，松手才提交
+      opts.setPos(clampPos(ev.clientX - size / 2, ev.clientY - size / 2))
     }
     function onUp(ev: PointerEvent) {
       if (ev.pointerId !== pointerId) return
@@ -91,7 +78,7 @@ export function useFabDrag(opts: UseFabDragOptions) {
       hostWin.removeEventListener('pointercancel', onUp)
       if (isDragging) {
         dragging.value = false
-        opts.commit() // 松手才提交一次——跟 panel-resize/取色器等其它落到 settings 的拖动同一条规则
+        opts.commit() // 松手才提交一次
       }
     }
     hostWin.addEventListener('pointermove', onMove)
@@ -104,8 +91,8 @@ export function useFabDrag(opts: UseFabDragOptions) {
       dragging.value = true
       suppressClick = true
       if (hostWin.navigator?.vibrate) hostWin.navigator.vibrate(40)
-      // 把 FAB 当前渲染出来的框冻结成显式的 left/top（这时它可能还锚定在默认的 bottom/right），
-      // 冻结之后才能让它自由跟着指针走。
+      // 把 FAB 当前渲染位置冻结成显式的 left/top（可能还锚定在默认的 bottom/right），
+      // 之后才能让它自由跟着指针走。
       const r = el.getBoundingClientRect()
       opts.setPos(clampPos(r.left, r.top))
     }, longPressMs)
@@ -116,8 +103,7 @@ export function useFabDrag(opts: UseFabDragOptions) {
     opts.onTap()
   }
 
-  // 保存下来的位置如果被晾在可视区域外（最常见：转屏，或者把 FAB 拖到边缘后又把桌面浏览器窗口
-  // 缩窄），下次 resize 时把它拉回来，而不是让它卡在一个够不着的地方。
+  // 保存的位置如果被晾在可视区域外（转屏或窗口缩窄后），下次 resize 时拉回来。
   function onHostResize() {
     const pos = opts.getPos()
     if (!pos) return
@@ -128,7 +114,6 @@ export function useFabDrag(opts: UseFabDragOptions) {
     }
   }
 
-  // reactive() 包一层，理由同 useMobileWorkspaceDrawer.ts 的返回值——模板里 `fab.dragging`/
-  // `fab.style` 这种嵌套成员访问要靠 reactive 代理才能自动解包内部 ref/computed。
+  // reactive() 包一层，使模板里嵌套成员访问（`fab.dragging`/`fab.style`）能自动解包内部 ref/computed。
   return reactive({ dragging, style, onPointerDown, onClick, onHostResize })
 }

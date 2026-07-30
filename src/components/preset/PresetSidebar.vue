@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
     <div class="wb-sidebar-header">
       <span>{{ uiStore.t('preset.sidebar.title', { count: store.order.length }) }}</span>
@@ -13,7 +13,6 @@
     </div>
     <div class="wb-list" ref="listRef">
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">
-        <!-- Group Header -->
         <div v-if="node.isGroup"
              :ref="(el) => setItemRef(el, gi)"
              class="pr-group-header"
@@ -40,7 +39,6 @@
             <span class="pr-block-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
           </span>
         </div>
-        <!-- Block Item -->
         <div v-else
              :ref="(el) => setItemRef(el, gi)"
              class="pr-block-item"
@@ -88,13 +86,10 @@ import { useInlineRename } from '../../composables/useInlineRename'
 import { useListSelection } from '../../composables/useListSelection'
 import ListToolbar from '../shared/ListToolbar.vue'
 
-// Explicit prop rather than relying on Vue's automatic class/attr fallthrough from the parent:
-// this component's <template> has TWO root nodes (<aside> + the sibling .wb-resize-handle div,
-// see the very end of the template) — Vue only auto-inherits a parent's :class/attrs onto a
-// component's root when there's exactly ONE root; for multi-root ("fragment") components it's
-// simply dropped, silently, with no warning in this case since :class specifically is what's
-// affected. App.vue passing :class="{ 'wb-mobile-drawer-open': ... }" on <PresetSidebar /> would
-// never have reached the <aside> either way — hence this prop, bound directly on <aside> below.
+/**
+ * 显式 prop：本组件模板是双根节点（<aside> + 同级 .wb-resize-handle），Vue 不会自动把父级 :class/attrs
+ * 透传到多根组件的根元素上（会被静默丢弃），因此用 prop 显式接收移动端抽屉类名。
+ */
 const props = defineProps<{ mobileDrawerOpen?: boolean }>()
 
 const tabsStore = useTabsStore()
@@ -102,12 +97,10 @@ const store = usePresetStore()
 const uiStore = useUiStore()
 const listRef = ref<HTMLElement>()
 
-// Drag-to-reorder mechanics (pointer tracking, auto-scroll-near-edge, throttled drag-over calc,
-// text-selection suppression) all live in useDragReorder now — see its module doc comment. What
-// stays here is preset-specific: the group-insert semantics interpretation of onDrop's
-// (from, to, after), handled entirely inside store.reorderBlock (unchanged, see
-// sidebar-refactor-report.md 四.3 on why that stays out of the composable). The long-press
-// multi-select gesture is a separate interaction, wired up further down via useListSelection.
+/**
+ * 拖拽重排机制（指针跟踪、近边自动滚动、节流的拖放位置计算、文本选择抑制）位于 useDragReorder。
+ * 这里保留 preset 特有逻辑：onDrop 的 (from, to, after) 直接交给 store.reorderBlock 处理 group-insert 语义。
+ */
 const {
   dragIdx, dragOverIdx, dragOverPos, itemEls,
   setItemRef,
@@ -122,7 +115,6 @@ const canBind = computed(() => {
   return topLevel.length >= 2
 })
 const canUnbind = computed(() => {
-  // 只要选中的行里有至少一个是 group，就可以 unbind（支持多选 unbind？不，unbind 只需要选中一个 group 就行）
   return Array.from(store.selectedGi).some(gi => {
     const node = store.flatNodes[gi]
     return node?.isGroup ?? false
@@ -141,7 +133,6 @@ function itemStyle(node: FlatNode) {
   return node.depth > 0 ? { paddingLeft: (8 + node.depth * 16) + 'px' } : {}
 }
 function unbindCurrent() {
-  // 找到第一个选中的 group 来 unbind
   const groupGi = Array.from(store.selectedGi).find(gi => {
     const node = store.flatNodes[gi]
     return node?.isGroup ?? false
@@ -150,8 +141,7 @@ function unbindCurrent() {
   store.unbindGroup(groupGi)
 }
 
-// Group name editing — see useInlineRename.ts's doc comment for why this and block name editing
-// below are two separate instances rather than one shared state machine.
+/** 分组名就地编辑（useInlineRename）。 */
 const {
   editingId: editingGroupGi,
   setInputRef: setGroupNameInputRaw,
@@ -175,7 +165,7 @@ function startEditGroupName(gi: number) {
   startEditGroupNameRaw(gi)
 }
 
-// Block name editing
+/** block 名就地编辑。重命名需要同步 markDirty 并更新 tabsStore 标签名。 */
 const {
   editingId: editingBlockGi,
   setInputRef: setBlockNameInputRaw,
@@ -196,9 +186,7 @@ const {
     const p = store.prompts.find(pp => pp.identifier === item.identifier)
     if (!p) return
     p.name = newName
-    store.markDirty() // nested field mutation — the shallow `prompts` watch won't catch this
-    // PresetSettingsForm.vue has an equivalent watch, but it's unmounted whenever the settings
-    // dock is closed (see SettingsDock.vue's v-if) — can't rely on it running, so sync directly.
+    store.markDirty() // 嵌套字段变更，浅层 prompts watch 捕获不到
     tabsStore.renameTab('preset', item.identifier, newName || item.identifier)
   },
 })
@@ -213,7 +201,7 @@ function onGroupToggle(gi: number) {
   store.toggleGroupCollapse(gi)
 }
 
-/* ---- Resize ---- */
+/** 侧边栏宽度拖拽：实时改 ref，拖拽结束后持久化。 */
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
   setWidth: (w) => { uiStore.settings.sidebarWidth = w },
@@ -222,16 +210,10 @@ const resize = usePanelResize({
 function onResizeStart(e: PointerEvent) { resize.onPointerDown(e) }
 watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
 
-/* ---- Scroll active item into view on jump requests ----
-   Previously scrolled to `store.selectedGi`'s smallest member — wrong once selectedGi and
-   activeTab were split into independent state (see sidebar-refactor-report.md 一): clicking an
-   already-open TabBar tab ticks the scroll token without touching selectedGi, so that logic
-   scrolled to a stale selection instead of the tab that was just focused. useListScrollSync
-   resolves the target from activeTab.key instead — the same basis RegexSidebar.vue always used
-   — via identifierToGi(), the existing one-way "identifier -> gi" lookup (also used by
-   revealAndFindGi). Shares the same itemEls map useDragReorder already populates via setItemRef
-   in the template — one map, one source of truth, same reasoning as useDragReorder's doc comment
-   on why it exposes itemEls at all. */
+/**
+ * 跳转请求时把当前激活标签对应的行滚入视口。
+ * 基于 activeTab.key 通过 store.identifierToGi() 反查 gi，复用 useDragReorder 已填充的 itemEls 映射。
+ */
 useListScrollSync({
   domain: 'preset',
   itemEls,
@@ -243,77 +225,30 @@ useListScrollSync({
   },
 })
 
-/* ---- Drag and drop ----
-   NOTE: this used to be native HTML5 DnD (draggable="true" + dragstart/dragover/drop). That
-   works fine in a normal browser, but under Tauri/WebView2 (e.g. TauriTavern) it's broken:
-   Tauri's `dragDropEnabled` window option (default true) hands DOM drag tracking off to the
-   OS-level native drag system on Windows, and WebView2 never delivers the follow-up
-   dragover/drop coordinates back to the page. Result: dragstart fires (so the "dragging" class
-   flips on), but the item is otherwise stuck — "grabs but doesn't move". We can't flip that
-   Tauri flag ourselves (it lives in the host app's tauri.conf.json, not this script), so instead
-   we reimplement the whole interaction on plain pointerdown/pointermove/pointerup — now inside
-   useDragReorder.ts (see its module doc comment for the full reasoning, previously duplicated
-   here). This component only supplies onDrop's preset-specific interpretation: `gi`-space
-   from/to/after gets handed straight to store.reorderBlock(), which already owns the group-insert
-   semantics (dropping just inside vs. between groups) — nothing about that logic changes here,
-   see sidebar-refactor-report.md 四.3 on why that stays out of the composable. */
+/** 拖放落点：直接交给 store.reorderBlock 处理分组插入语义。 */
 function onDragDrop(from: number, to: number, after: boolean) {
   store.reorderBlock(from, to, after)
 }
 
-// Pointer events during the drag happen over the TOP document (see hostEnv.ts), so listeners
-// must go on the host window, exactly like usePanelResize does for panel resizing.
-//
-// Uses Pointer Events rather than mouse events so this also works via touch on mobile — see
-// usePanelResize.ts's doc comment for the general reasoning.
-//
-// TOUCH vs SCROLL: an earlier version let touch-drag start anywhere on the row, on the theory
-// that DRAG_THRESHOLD alone would tell an intentional drag apart from an ordinary scroll swipe.
-// In practice it didn't — a real vertical scroll gesture also moves more than DRAG_THRESHOLD's
-// 4px within the first couple of touch samples, so almost every scroll got misread as "starting
-// a drag" before the browser's own native scroll had a chance to take over, and the two fought
-// over the same touch (this is a known conflict — see e.g. gitlab-org/gitlab#16048, motion's
-// reorder-vs-scroll issue #1341). The fix used everywhere for sortable touch lists is to require
-// touch drags to start from a small dedicated handle rather than the whole row: mouse users keep
-// the desktop convenience of dragging from anywhere on the row (a mouse drag never competes with
-// a scroll gesture, so there's nothing to disambiguate), but a touch/pen pointerdown only starts
-// a drag if it actually landed on .wb-drag-handle — anywhere else on the row is left completely
-// alone, so the browser's native scroll handles it with zero interference. .wb-drag-handle gets
-// `touch-action: none` in main.css so a touch that DOES land there is never also read as "start
-// scrolling", but nothing outside the handle is touch-action-restricted, so normal list scrolling
-// is untouched everywhere else in the row.
-//
-// The long-press-to-multi-select gesture (touch/pen off the drag handle, where useDragReorder's
-// own onItemMouseDown deliberately does nothing — see its doc comment) and the click dispatch
-// below both go through useListSelection now — one recognizer for "which selection gesture is
-// this" shared by mouse and touch, dispatching into a single onSelect handler. See
-// useListSelection.ts's doc comment for why the actual state transition (applyMultiSelect for
-// ctrl/shift, via store.selectBlock; a bespoke always-select-this-row rule for plain clicks) stays
-// here rather than moving into the composable.
+/**
+ * 列表选择：鼠标/触摸的单选、Ctrl/Cmd 多选、Shift 区间选、长按多选统一由 useListSelection 识别。
+ * - 多选（ctrl/shift/长按）走 store.selectBlock（与外部跳转选中等共享同一状态转换实现）；
+ * - 普通点击：本地清空选中并只选当前行，点组标题切换折叠，点 block 打开对应标签。
+ * 触摸拖动必须落在 .wb-drag-handle 上才启动拖拽；行其它位置留给原生滚动/长按选择，避免与滚动手势冲突。
+ */
 const listSelection = useListSelection<number>({
   onSelect: (mode, gi) => {
     if (mode !== 'single') {
-      // Ctrl/Cmd+Click, Shift+Click, and long-press (dispatched as 'ctrl' — see
-      // useListSelection.ts) all go through the store's existing applyMultiSelect-backed
-      // selectBlock(), which is also called from outside this sidebar (search/var-nav jumps), so
-      // it stays the one implementation of that state transition.
       store.selectBlock(gi, { ctrl: mode === 'ctrl', shift: mode === 'shift' })
       return
     }
-    // 普通点击/长按之外的单击：选中当前行，打开标签/切换折叠
     const node = store.flatNodes[gi]
     if (!node) return
-    // Set locally rather than relying solely on presetStore's watch on tabsStore.activeTab:
-    // that watcher only fires when the active tab identity actually changes, so re-clicking a row
-    // that's ALREADY the active tab (e.g. to collapse a ctrl-multi-selection back down to just
-    // this row) wouldn't otherwise reset the highlight. When this click DOES also change the
-    // active tab, the watcher fires too and computes the identical value — harmless overlap, not
-    // a second source of truth for a different case (see presetStore.ts's doc comment there).
+    // 本地直接维护 selectedGi/anchorGi：重复点击已激活 tab 也能重置高亮
     store.selectedGi.clear()
     store.selectedGi.add(gi)
     store.anchorGi = gi
     if (node.isGroup) {
-      // 点击组标题：切换折叠状态（组没有 tab，高亮只能靠上面这几行本地设置）
       store.toggleGroupCollapse(gi)
     } else {
       const item = node.ref as OrderItem
@@ -324,9 +259,7 @@ const listSelection = useListSelection<number>({
 })
 
 function onItemMouseDown(i: number, e: PointerEvent) {
-  // Touch/pen off the drag handle: claimed for long-press tracking, nothing else to do here.
-  if (listSelection.onPointerDown(i, e)) return
-  // Mouse, or touch/pen that landed on the drag handle — hand off entirely to useDragReorder.
+  if (listSelection.onPointerDown(i, e)) return // 触摸在 drag handle 外：走长按选择，不启动拖拽
   onDragPointerDown(i, e, onDragDrop)
 }
 

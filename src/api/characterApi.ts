@@ -3,18 +3,9 @@ import { ensureTopImporter, getTopWindow } from './hostContext'
 import { deepClonePlain } from './apiUtils'
 
 /* ====== 角色卡 API ======
- * 跟 worldbookApi.ts 一样，角色数据本身不是 REST 资源——`characters` 数组、`unshallowCharacter`/
- * `getOneCharacter`/`deleteCharacter` 都是 ST 前端自己的 `/script.js` 这个 ESM 模块导出的东西，
- * 状态活在这个模块实例里，不是每次现发请求现拉。跟 worldbookApi.ts 的 getWorldInfoModule() 同一
- * 个套路：`ensureTopImporter()` 在顶层文档的模块作用域里 import，拿到跟 ST 页面本身同一个模块
- * 命名空间对象，`mod.characters` 是 ESM 的 live binding。
- *
- * 但角色的"写"这一半跟世界书完全不一样：世界书是 `saveWorldInfo(name, data)` 这种直接函数调用，
- * 角色卡的写入口 `/api/characters/create`/`/api/characters/edit` 是真正的 HTTP multipart 表单
- * POST（因为要能同时带头像文件），`/script.js` 这个模块本身不导出等价的纯函数封装。用
- * `getTopWindow().fetch(...)` 而不是裸 `fetch(...)`——这个脚本自己跑在 about:srcdoc 的 iframe 里
- * （见 hostEnv.ts 顶部注释），iframe 自己的 `fetch('/api/...')` 会按 iframe 假 origin 解析相对
- * 路径，必须在顶层 window 的 fetch 上发起才会打到 ST 服务端。 */
+ * 读侧：通过 ensureTopImporter() import ST 的 /script.js 模块，mod.characters 是 ESM live binding。
+ * 写侧：角色卡写入口是 HTTP multipart 表单 POST（/api/characters/create、/api/characters/edit），
+ * 用 getTopWindow().fetch() 发起——iframe 自己的 fetch 会按假 origin 解析相对路径。 */
 
 async function getScriptModule(): Promise<any> {
   const importer = await ensureTopImporter()
@@ -25,11 +16,8 @@ async function getScriptModule(): Promise<any> {
   return mod
 }
 
-/** ST 大多数需要认证/防 CSRF 的 POST 请求都要求带上 `getRequestHeaders()` 返回的头（含 CSRF
- *  token），这个函数同样是 `/script.js` 导出的。multipart 请求必须去掉它自带的
- *  `Content-Type: application/json`——交给浏览器根据 FormData 自动生成带正确 boundary 的
- *  `multipart/form-data`，手动指定反而会因为 boundary 缺失导致后端解析失败（TODO.md「关键设计
- *  要点」第2条）。 */
+/** 从 /script.js 获取请求头（含 CSRF token），去掉 Content-Type 交给浏览器根据 FormData 自动
+ *  生成 multipart/form-data boundary，否则后端解析失败。 */
 async function multipartHeaders(): Promise<HeadersInit> {
   const mod = await getScriptModule()
   const headers: Record<string, string> = typeof mod.getRequestHeaders === 'function' ? { ...mod.getRequestHeaders() } : {}
@@ -93,10 +81,8 @@ function fromRaw(raw: any): Character {
   }
 }
 
-/** 工作层 Character ⇄ multipart 表单，参考 TODO.md「ST 原生 API」2.1 里 create/edit 共用的
- *  body 形状。`oldRaw` 是这张角色卡最近一次读到的完整 v1CharData——`ch_name`/`avatar_url` 这类
- *  没有暴露成 Character 字段、或调用方没改过的东西从这里回退，不能让 ST 后端把没传的字段当空值
- *  覆盖掉（TODO.md「关键设计要点」第1条）。`oldRaw` 为 `null` 代表新建（createCharacter()）。 */
+/** 工作层 Character → multipart 表单。`oldRaw` 是最近一次读到的完整 v1CharData，用于回退没有
+ *  暴露成 Character 字段的值，避免后端把未传字段当空值覆盖。`null` = 新建。 */
 function buildFormData(data: Character, oldRaw: any, avatarFile?: File | Blob): FormData {
   const oldData = oldRaw?.data ?? {}
   const fd = new FormData()
@@ -144,18 +130,14 @@ function buildFormData(data: Character, oldRaw: any, avatarFile?: File | Blob): 
   return fd
 }
 
-/** 列出全部角色（轻量，只取 avatar/name，不含完整内容）。`characters` 数组里的元素可能是还没
- *  `unshallowCharacter()` 过的浅数据，但 avatar/name 两个字段浅数据里就有，不需要先展开。 */
+/** 列出全部角色（轻量，只取 avatar/name）。浅数据里的 avatar/name 已是可用值，无需先展开。 */
 export async function listCharacters(): Promise<CharacterListEntry[]> {
   const mod = await getScriptModule()
   return (mod.characters as any[]).map(c => ({ avatar: c.avatar, name: c.data?.name || c.name || '' }))
 }
 
-/** 按头像文件名读取一张角色卡的完整数据。用 `getOneCharacter(avatar)` 从服务端重新拉一次
- *  （TODO.md「ST 原生 API」2.1：会发起网络请求，拉到之后顺带更新 ST 自己的前端状态）。
- *  这是个真实网络请求，但 `getCharacterByAvatar()` 的每个调用方
- *  （初始加载/切换角色/reload/保存后刷新）本来就是希望拿到"服务端权威最新数据"的场景，用一次
- *  网络往返换正确性是划算的，没有必要为了省这一次请求去猜 ST 内存状态是否已经最新。 */
+/** 按头像文件名读取一张角色卡的完整数据。调用 `getOneCharacter(avatar)` 发起网络请求从服务端
+ *  重新拉取，同时更新 ST 前端状态。返回权威最新数据。 */
 export async function getCharacterByAvatar(avatar: string): Promise<{ character: Character; raw: any } | null> {
   const mod = await getScriptModule()
   if (typeof mod.getOneCharacter === 'function') {
@@ -168,10 +150,8 @@ export async function getCharacterByAvatar(avatar: string): Promise<{ character:
   return { character: fromRaw(raw), raw: deepClonePlain(raw) }
 }
 
-/** 新建角色卡——只负责在 ST 后端创建这个角色文件，不负责把结果加载进 store（同
- *  worldbookApi.createWorldbook() 的分工）。返回新角色的 avatar 文件名，调用方拿它去
- *  getCharacterByAvatar() 读一次权威数据。ST 的 `/api/characters/create` 直接以纯文本形式
- *  返回这个文件名。 */
+/** 新建角色卡——只负责在 ST 后端创建这个角色文件，不负责加载进 store。返回新角色的 avatar 文件名，
+ *  调用方应拿它去 getCharacterByAvatar() 读一次权威数据。 */
 export async function createCharacter(data: Character, avatarFile?: File | Blob): Promise<string> {
   const fd = buildFormData(data, null, avatarFile)
   const res = await postMultipart('/api/characters/create', fd)
@@ -183,8 +163,7 @@ export async function createCharacter(data: Character, avatarFile?: File | Blob)
 }
 
 /** 保存（编辑）已有角色卡。`oldRaw` 必须是 getCharacterByAvatar() 返回的那份 `raw`，用于字段级
- *  回退（见 buildFormData 的 doc comment）——不能凭空构造一个假的 oldRaw，否则回退的字段全是
- *  undefined，等于没有回退保护。 */
+ *  回退——不能凭空构造假的 oldRaw，否则回退保护失效。 */
 export async function editCharacter(data: Character, oldRaw: any, avatarFile?: File | Blob): Promise<void> {
   const mod = await getScriptModule()
   if (!oldRaw) throw new Error('缺少 oldRaw（characterStore 内部错误：编辑角色卡必须先成功加载过一次）')

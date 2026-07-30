@@ -3,22 +3,9 @@ import { getCtx, ensureTopImporter } from './hostContext'
 import { deepClonePlain } from './apiUtils'
 
 /* ====== PresetManager ======
- * Everything here goes through ST's own PresetManager rather than poking at
- * `ctx.chatCompletionSettings` directly. That earlier approach could only ever see "whatever
- * preset ST currently has selected" and had no reliable way to even name it (the old
- * getCurrentPresetName() fallback chain — chatCompletionSettings.preset /
- * power_user.preset.name / power_user.instruct.preset — doesn't actually correspond to how
- * chat-completion preset names are tracked; none of those reliably resolve on a real ST
- * instance). PresetManager.getPresetList() gives us the real, complete list — every preset by
- * name, not just the selected one — which is what lets loadPreset()/savePresetAs() below operate
- * on an arbitrary preset the person picks, independent of ST's own currently-selected preset.
- *
- * Explicitly requesting the 'openai' PresetManager (rather than calling getPresetManager() with
- * no argument) matters too: ST keeps a separate PresetManager per API type (kobold, novel,
- * textgenerationwebui, openai/chat-completion, ...), and the no-argument form resolves to
- * whichever API is currently "main" in ST's UI — which may not be chat-completion at all. This
- * tool only ever means the chat-completion one, so we ask for it by name every time instead of
- * hoping the ambient default happens to line up. */
+ * 一律走 ST 的 PresetManager.getPresetList() 获取完整预设列表，而非读 ctx.chatCompletionSettings
+ * （后者只对应当前选中的预设）。显式请求 'openai' PresetManager——ST 按 API 类型维护独立的
+ * PresetManager，无参版本解析到当前 UI 主 API，可能不是 chat-completion。 */
 function getPresetManager(): any {
   const ctx = getCtx()
   const pm = ctx.getPresetManager?.('openai')
@@ -47,9 +34,8 @@ export function getSelectedPresetName(): string {
   return pm.getSelectedPresetName?.() || ''
 }
 
-/** 按名字读取指定预设的完整数据，可以是任意一个预设，不要求是当前选中的那个。
- *  优先用 `getCompletionPresetByName`（较新 ST 版本上更直接），拿不到就退化到从
- *  `getPresetList()` 里按名字查下标、取数组元素。 */
+/** 按名字读取指定预设的完整数据，可以是任意一个预设。优先用 `getCompletionPresetByName`，
+ *  拿不到时从 `getPresetList()` 按名字查下标取元素。 */
 export function getPresetByName(name: string): PresetData | null {
   const pm = getPresetManager()
   let preset: any = typeof pm.getCompletionPresetByName === 'function'
@@ -67,12 +53,8 @@ export function getPresetByName(name: string): PresetData | null {
   return deepClonePlain(preset) as PresetData
 }
 
-/** Select a preset: Can switch the preset that SillyTavern selects.
- * If don't switch the selection, when the external function running
- * you will get different data that is different with what you're looking
- * like window.SillyTavern.generate() will use selected preset to run
- * But this will be SLOW.
- */
+/** 切换 ST 当前选中的预设。不切换的话外部函数（如 window.SillyTavern.generate()）会沿用旧的
+ *  选中预设生成，但切换本身较慢。 */
 
 export function selectPresetByName(name: string): boolean {
   const pm = getPresetManager()
@@ -84,20 +66,11 @@ export function selectPresetByName(name: string): boolean {
   return true
 }
 
-/** 保存到指定名字的预设——同样不要求是当前选中的那个，可以另存/切换后再存。
+/** 保存到指定名字的预设——不要求是当前选中的那个。
  *
- * 之前这里走的是 `/api/settings/save`，保存的是整个用户 settings.json，我们当时只拼了一个
- * `{ chatCompletionSettings: cs }` 传过去，这个接口不是按字段 merge 的，是整体覆盖式写入——
- * 结果是把 settings.json 里其它所有顶层字段都抹掉了。`pm.savePreset(name, data)` 只覆盖写入
- * `name` 这一个预设文件，不碰全局 settings。
- *
- * `data` 必须是一个纯对象，不能是我们自己 Pinia store 里的活跃响应式引用：ST 内部
- * `savePreset()` 会对传入对象跑 `structuredClone()`，Vue 的响应式 Proxy 过不了这一关
- * （"structuredClone ... could not be cloned"）；更麻烦的是，如果 ST 在触发这次克隆之前就已经
- * 把我们传入的对象引用赋值进了它自己的活跃状态里，我们这边的 Vue Proxy 就会残留在 ST 的内部状态
- * 里（表现为刷新前 `pm.getCompletionPresetByName()` 一直返回一个来自*我们*这个 Vue 实例的
- * `Proxy(Object)`），直到手动刷新页面才会清掉。调用方（presetStore.ts）负责在传进来之前就用
- * `deepClonePlain()` 深拷贝成纯数据——这里再断言一次，双重保险。 */
+ * `data` 必须是纯对象，不能是 Pinia/Vue 的活跃响应式引用：`structuredClone()` 克隆不了 Vue
+ * 的 Proxy，且 ST 可能在克隆前就把引用赋值进自身状态导致 Proxy 残留。调用方应先
+ * `deepClonePlain()`，这里再断言一次双重保险。 */
 export async function savePresetAs(name: string, data: PresetData): Promise<void> {
   const pm = getPresetManager()
   if (typeof pm.savePreset !== 'function') throw new Error('SillyTavern context 不可用（savePreset 缺失）')
@@ -118,10 +91,8 @@ export interface RenderedMsg {
   identifier: string
 }
 
-/** 按 identifier 分组的、真实渲染后的消息（宏/正则/其他插件都已处理）。
- *  必须先真的跑一次 dry-run，`pm.messages` 才有数据；这里每次调用都会触发一次新的 dry-run，
- *  不复用旧数据（旧数据可能是上一次不同状态下生成的）。
- *  依赖 openai.js 内部实现细节，ST 版本更新可能失效——失败时明确抛错，不静默返回空结果。 */
+/** 按 identifier 分组返回真实渲染后的消息（宏/正则/插件都已处理）。每次调用触发一次新的
+ *  dry-run，不复用旧数据。依赖 openai.js 内部实现，ST 版本更新可能失效。 */
 export async function getPromptManagerMessages(): Promise<Record<string, RenderedMsg[]>> {
   const ctx = getCtx()
   if (typeof ctx.generate !== 'function') throw new Error('SillyTavern context 不可用（ctx.generate 缺失）')
@@ -154,18 +125,9 @@ export interface RawRequestMessage {
 }
 
 /* ====== 精确预览：整体原文（CHAT_COMPLETION_SETTINGS_READY 事件）======
- * 最初用的是 GENERATE_AFTER_DATA + dry-run（`ctx.generate('normal', {}, true)`）。问题是
- * dry-run 只处理宏/变量/正则这些 ST 自己内部的文本管线，不会走到"组装完 chatCompletionSettings
- * 发给后端 API 之前"这一步——插件对请求体的二次加工、连接档案（connection profile）/ API 级别的
- * 调度逻辑等都在这之后才发生，dry-run 根本不会触发。
- *
- * 所以整体原文预览必须跑一次真实的 `ctx.generate('normal')`（不带 dry-run 参数），并监听
- * CHAT_COMPLETION_SETTINGS_READY——这个事件在请求体最终组装完成、即将发给 API 之前触发，
- * `completion.messages` 就是真正会发出去的 `[{role, content}, ...]`。拿到之后立刻调用
- * `ctx.stopGeneration()` 把这次真实生成中断掉，避免真的打一次 API 产生费用/等待。
- *
- * 和 getPromptManagerMessages()（方案B）不是同一回事：方案B 是 dry-run 够用的场景（单块精确
- * 预览只关心宏/正则处理后的文本本身），这里是"最终发送前的完整请求"，两者互不替代。 */
+ * 必须跑一次真实的 `ctx.generate('normal')`（非 dry-run），并监听 CHAT_COMPLETION_SETTINGS_READY
+ * 事件——该事件在请求体最终组装完成、即将发给 API 之前触发，`completion.messages` 即真正会发出去的
+ * 消息。拿到后立刻 `ctx.stopGeneration()` 中断真实生成，避免 API 调用产生费用/等待。 */
 export async function getFinalRequestMessages(): Promise<RawRequestMessage[]> {
   const ctx = getCtx()
   if (typeof ctx.generate !== 'function') throw new Error('SillyTavern context 不可用（ctx.generate 缺失）')

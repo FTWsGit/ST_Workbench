@@ -1,8 +1,7 @@
 import type { RegexScript } from '../types'
 
 /**
- * 通用的正则脚本管理 composable
- * 供 presetStore 和 characterStore 复用
+ * 通用的正则脚本管理 composable，供 presetStore 和 characterStore 复用。
  *
  * @param getScripts - 获取 regex scripts 数组的 getter（返回可变数组的引用）
  * @param options.markDirty - 标记脏数据的函数（可选）
