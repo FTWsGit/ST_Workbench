@@ -9,12 +9,7 @@
       <p v-else>{{ uiStore.t('preset.editorShell.loading') }}</p>
     </div>
   </div>
-  <PresetContentEditor v-else-if="tabsStore.activeTab.domain === 'preset'" />
-  <RegexContentEditor v-else-if="tabsStore.activeTab.domain === 'regex'"
-    :scripts="regexScripts" :workspace="tabsStore.activeTab.workspace" :t="uiStore.t"
-    :editor-font-size="uiStore.settings.editorFontSize" :editor-font-family="uiStore.settings.editorFontFamily" />
-  <WorldbookContentEditor v-else-if="tabsStore.activeTab.domain === 'worldbook'" />
-  <CharacterContentEditor v-else-if="tabsStore.activeTab.domain === 'character'" />
+  <component v-else :is="editorComponent" v-bind="editorProps" />
 </template>
 
 <script setup lang="ts">
@@ -35,8 +30,26 @@ const worldbookStore = useWorldbookStore()
 const characterStore = useCharacterStore()
 const tabsStore = useTabsStore()
 
-/** domain='regex' 的数据源按 activeTab.workspace 分派（预设正则 / 角色卡正则），不再硬编码 presetStore。 */
-const regexScripts = computed(() =>
-  tabsStore.activeTab?.workspace === 'character' ? characterStore.regexScripts : presetStore.regexScripts
-)
+/** domain → 编辑组件路由表；新增 domain 只需加一行。 */
+const EDITOR_COMPONENTS: Record<string, any> = {
+  preset: PresetContentEditor,
+  regex: RegexContentEditor,
+  worldbook: WorldbookContentEditor,
+  character: CharacterContentEditor,
+}
+const editorComponent = computed(() => tabsStore.activeTab ? EDITOR_COMPONENTS[tabsStore.activeTab.domain] : null)
+
+/** 各编辑组件的 props：regex 按 activeTab.workspace 分派数据源（preset/character）；其余组件自管 store，传空对象即可。 */
+const editorProps = computed<Record<string, any>>(() => {
+  if (tabsStore.activeTab?.domain !== 'regex') return {}
+  const workspace = tabsStore.activeTab.workspace
+  const scripts = workspace === 'character' ? characterStore.regexScripts : presetStore.regexScripts
+  return {
+    scripts,
+    workspace,
+    t: uiStore.t,
+    'editor-font-size': uiStore.settings.editorFontSize,
+    'editor-font-family': uiStore.settings.editorFontFamily,
+  }
+})
 </script>
