@@ -159,6 +159,7 @@
 
         <CopyPanel />
         <MetaPanel />
+        <PresetHiddenBlocksModal v-if="tabsStore.activeWorkspace === 'preset'" />
         <Modals />
       </div>
     </Transition>
@@ -175,6 +176,7 @@ import VarPanel from './components/preset/VarPanel.vue'
 import PreviewPanel from './components/preset/PreviewPanel.vue'
 import VarPopup from './components/preset/VarPopup.vue'
 import CopyPanel from './components/preset/CopyPanel.vue'
+import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue'
 import MetaPanel from './components/shared/MetaPanel.vue'
 import RegexSidebar from './components/regex/RegexSidebar.vue'
 import WorldbookSidebar from './components/worldbook/WorldbookSidebar.vue'
