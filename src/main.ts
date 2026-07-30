@@ -50,6 +50,26 @@ function mount() {
 
   const app = createApp(App)
   app.use(createPinia())
+  /** 全局错误边界：任何组件 setup/render 抛错或 watcher 异常都会进这里。
+   *  本扩展注入到宿主页面顶层 <body>，未捕获错误会导致整个面板白屏、
+   *  甚至破坏宿主页面布局。这里至少把错误打到 console + 顶层 window，
+   *  避免静默白屏——用户能看到"出错了"而非一片空白。
+   *  注意：此时 Pinia store 可能尚未初始化（错误发生在 app.mount 之前），
+   *  所以不能依赖 uiStore.showToast，只能用最原始的 console + 可选 alert。 */
+  app.config.errorHandler = (err, _instance, info) => {
+    console.error('[ST_Workbench] Vue error:', info, err)
+    // 兜底：在根容器顶部叠一个错误条，提示用户刷新。
+    try {
+      const banner = targetDoc.createElement('div')
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483646;background:#b86060;color:#fff;padding:8px 16px;font:13px sans-serif;pointer-events:auto;'
+      banner.textContent = '[ST_Workbench] 发生错误: ' + (err instanceof Error ? err.message : String(err)) + ' — 建议刷新页面。点击关闭。'
+      banner.onclick = () => banner.remove()
+      targetDoc.body.appendChild(banner)
+    } catch (e) {
+      // 连兜底 DOM 都创建失败（极罕见），唯一退路是 console。
+      console.error('[ST_Workbench] Fallback banner creation failed:', e)
+    }
+  }
   app.mount(el)
 
   /** 卸载清理：脚本在 ST 扩展面板被关掉时，承载脚本的 about:srcdoc iframe 会被销毁，
