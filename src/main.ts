@@ -51,6 +51,23 @@ function mount() {
   const app = createApp(App)
   app.use(createPinia())
   app.mount(el)
+
+  /** 卸载清理：脚本在 ST 扩展面板被关掉时，承载脚本的 about:srcdoc iframe 会被销毁，
+   *  但本扩展的根容器（含 FAB）挂在顶层 <body> 上仍残留。监听 iframe 自身的 pagehide/unload，
+   *  触发时卸载 Vue app 并移除根容器与注入样式，让 FAB 等所有可见元素一并消失。
+   *
+   *  pagehide 在 bfcache 关闭时最可靠；unload 作为旧浏览器兜底。两者都设 once 避免重复卸载。 */
+  const selfWin = window
+  function teardown() {
+    try { app.unmount() } catch {}
+    try { el.remove() } catch {}
+    // 注入的 <style> 也清掉，避免宿主页面残留本扩展的 CSS 规则。
+    const styleEl = targetDoc.getElementById('ST_Workbench-style')
+    if (styleEl) try { styleEl.remove() } catch {}
+  }
+  const teardownOnce = () => { teardown(); }
+  selfWin.addEventListener('pagehide', teardownOnce, { once: true })
+  selfWin.addEventListener('unload', teardownOnce, { once: true })
 }
 
 if (document.readyState === 'loading') {
