@@ -9,7 +9,7 @@
         <button class="wb-btn sm" :class="{ active: !renderHtml }" @click="renderHtml = false">{{ props.t('regex.editor.plainText') }}</button>
         <button class="wb-btn sm" :class="{ active: renderHtml }" @click="renderHtml = true">{{ props.t('regex.editor.html') }}</button>
       </template>
-      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="props.t('regex.editor.settingsPanel')">⚙</button>
+      <button class="wb-btn sm" :class="{ active: uiStore.settingsDockOpen }" @click="uiStore.toggleSettingsDock()" :title="props.t('regex.editor.settingsPanel')">⚙</button>
     </div>
 
     <HighlightedEditor v-if="mode === 'edit'"
@@ -37,6 +37,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useTabsStore } from '../../stores/tabsStore'
+import { useUiStore } from '../../stores/uiStore'
 import { applyRegexScript, parseFindRegex } from '../../regexEngine'
 import HighlightedEditor from '../shared/HighlightedEditor.vue'
 import type { RegexContentEditorProps } from './regexProps'
@@ -44,6 +45,7 @@ import type { RegexContentEditorProps } from './regexProps'
 const props = defineProps<RegexContentEditorProps>()
 
 const tabsStore = useTabsStore()
+const uiStore = useUiStore()
 const mode = ref<'edit' | 'preview'>('edit')
 const renderHtml = ref(false)
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>()

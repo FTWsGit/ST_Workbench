@@ -3,7 +3,7 @@
     <div class="wb-editor-meta">
       <span class="rx-editor-name">{{ entry.comment || uiStore.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
-      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="uiStore.t('regex.editor.settingsPanel')">⚙</button>
+      <button class="wb-btn sm" :class="{ active: uiStore.settingsDockOpen }" @click="uiStore.toggleSettingsDock()" :title="uiStore.t('regex.editor.settingsPanel')">⚙</button>
     </div>
 
     <HighlightedEditor

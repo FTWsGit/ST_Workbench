@@ -31,9 +31,6 @@ export const useTabsStore = defineStore('tabs', () => {
     () => tabs.value.find(t => tabId(t) === activeId.value) ?? null
   )
 
-  const settingsDockOpen = ref(true)
-  function toggleSettingsDock() { settingsDockOpen.value = !settingsDockOpen.value }
-
   /** 当前显示的顶层工作区（'preset' | 'worldbook' | 'character'）。 */
   const activeWorkspace = ref('preset')
   function setActiveWorkspace(ws: string) { activeWorkspace.value = ws }
@@ -145,7 +142,7 @@ export const useTabsStore = defineStore('tabs', () => {
 
   return {
     tabs, activeId, activeTab, open, renameTab, close, closeAll, closeDomain, closeWorkspace, focus, isOpen,
-    sidebarCollection, setSidebarCollection, settingsDockOpen, toggleSettingsDock, listScrollToken, requestListScroll,
+    sidebarCollection, setSidebarCollection, listScrollToken, requestListScroll,
     activeWorkspace, setActiveWorkspace, tabsInActiveWorkspace,
     searchOpen, varNavOpen, previewOpen, setSearchOpen, setVarNavOpen, setPreviewOpen,
   }

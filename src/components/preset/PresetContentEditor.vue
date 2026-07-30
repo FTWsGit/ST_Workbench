@@ -4,7 +4,7 @@
       <span class="rx-editor-name">{{ store.currentBlock?.name || store.currentBlock?.identifier }}</span>
       <span v-if="store.currentBlock" class="pr-block-role" :class="roleClass(store.currentBlock.role)">{{ store.currentBlock.role }}</span>
       <span class="wb-spacer"></span>
-      <button class="wb-btn sm" :class="{ active: tabsStore.settingsDockOpen }" @click="tabsStore.toggleSettingsDock()" :title="uiStore.t('preset.sidebar.settingsPanel')">⚙</button>
+      <button class="wb-btn sm" :class="{ active: uiStore.settingsDockOpen }" @click="uiStore.toggleSettingsDock()" :title="uiStore.t('preset.sidebar.settingsPanel')">⚙</button>
     </div>
     <HighlightedEditor
       ref="editorRef"

@@ -245,7 +245,7 @@ const drawer = useMobileWorkspaceDrawer({
   panels: [
     { key: 'varNav', isOpen: () => tabsStore.varNavOpen, setOpen: (open) => tabsStore.setVarNavOpen('preset', open) },
     { key: 'preview', isOpen: () => tabsStore.previewOpen, setOpen: (open) => tabsStore.setPreviewOpen('preset', open) },
-    { key: 'settingsDock', isOpen: () => tabsStore.settingsDockOpen, setOpen: (open) => { if (tabsStore.settingsDockOpen !== open) tabsStore.toggleSettingsDock() } },
+    { key: 'settingsDock', isOpen: () => uiStore.settingsDockOpen, setOpen: (open) => { if (uiStore.settingsDockOpen !== open) uiStore.toggleSettingsDock() } },
   ],
   /** 切换 workspace / "条目↔正则"集合后，自动露出侧边栏。 */
   revealSidebarOn: [() => tabsStore.activeWorkspace, () => tabsStore.sidebarCollection],

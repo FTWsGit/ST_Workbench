@@ -33,6 +33,10 @@ export const useUiStore = defineStore('ui', () => {
   // MetaPanel 打开状态 —— 横跨 preset/character 两个工作区，不属于某个 domain store。
   const metaPanelOpen = ref(false)
 
+  // SettingsDock 右侧面板开关 —— 全局，不按 workspace 分。
+  const settingsDockOpen = ref(true)
+  function toggleSettingsDock() { settingsDockOpen.value = !settingsDockOpen.value }
+
   function loadSettings(): Settings {
     try {
       const s = localStorage.getItem('st-wb-settings')
@@ -68,5 +72,5 @@ export const useUiStore = defineStore('ui', () => {
     toastTimer = setTimeout(() => { toastVisible.value = false }, ms)
   }
 
-  return { settings, cssVars, panelOpen, settingsOpen, metaPanelOpen, loadSettings, saveSettings, resetSettings, toastMsg, toastVisible, showToast, t, currentLocale }
+  return { settings, cssVars, panelOpen, settingsOpen, metaPanelOpen, settingsDockOpen, toggleSettingsDock, loadSettings, saveSettings, resetSettings, toastMsg, toastVisible, showToast, t, currentLocale }
 })

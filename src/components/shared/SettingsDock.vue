@@ -1,11 +1,11 @@
 <template>
-  <div v-if="formComponent && tabsStore.settingsDockOpen" class="wb-right-panel wb-settings-dock" :class="{ float: uiStore.settings.settingsDockFloat }" :style="{ width: uiStore.settings.settingsDockWidth + 'px' }">
+  <div v-if="formComponent && uiStore.settingsDockOpen" class="wb-right-panel wb-settings-dock" :class="{ float: uiStore.settings.settingsDockFloat }" :style="{ width: uiStore.settings.settingsDockWidth + 'px' }">
     <div class="wb-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
     <div class="wb-rp-header">
       <span>{{ uiStore.t('shared.settingsDock.title') }}</span>
       <div class="wb-row-tight">
         <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.settingsDockFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="wb-btn close-btn compact" @click="tabsStore.settingsDockOpen = false">✕</button>
+        <button class="wb-btn close-btn compact" @click="uiStore.settingsDockOpen = false">✕</button>
       </div>
     </div>
     <div class="wb-settings-dock-body">
