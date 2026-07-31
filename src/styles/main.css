@@ -1,75 +1,152 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 .st-wb {
-  --wb-bg:#0f1017;--wb-bg-s:#15161f;--wb-bg-e:#1b1d27;--wb-bg-h:#232530;--wb-bg-a:#2b2e3c;
-  --wb-bg-input:#141520;--wb-border:#282a3a;--wb-border-f:#c8954a;
-  /* 文本层级：tx 主文本 / tx2 次要文本 / tx3 弱化文本（行号、占位）。
-   * 对比度校准（WCAG AA 4.5:1，背景 --wb-bg #0f1017）：
-   *   - tx #ccc8be ≈ 11.3:1（A AAA 通过）
-   *   - tx2 #a8a4b8 ≈ 6.4:1（AA 通过，原 #78768a 仅 3.4:1，低于 AA）
-   *   - tx3 #8fa0a2 ≈ 4.7:1（AA 通过，原 #809596 仅 3.9:1，低于 AA） */
-  --wb-tx:#ccc8be;--wb-tx2:#a8a4b8;--wb-tx3:#8fa0a2;
-  --wb-ac:#c8954a;--wb-ac-h:#d8a55a;--wb-ac-d:rgba(200,149,74,.12);
-  --wb-dg:#b86060;--wb-dg-d:rgba(184,96,96,.14);--wb-ok:#60b060;
-  --wb-r:8px;--wb-rs:4px;
-  /* 编辑器内边距：textarea / 高亮 <pre> / 行号测量镜像 / 整行高度测量容器共用同一变量，
-   * 保证测量容器的换行宽度与 textarea 完全一致（行号测量正确性的硬契约，见 HighlightedEditor.vue）。 */
-  --wb-editor-pad:16px;
+  /* =========================================================================
+   * Layer 1 · Primitive tokens — 原始色阶/字号/半径，无语义，仅作 single source of truth。
+   * 改这层 = 改全局基底；上层 semantic 全靠 var() 引用，自动跟变。
+   * ========================================================================= */
+  /* Neutral ramp（中性灰阶，从深到浅）*/
+  --wb-neutral-0:#0f1017;  /* 最深底 */
+  --wb-neutral-1:#15161f;
+  --wb-neutral-2:#1b1d27;
+  --wb-neutral-3:#232530;
+  --wb-neutral-4:#2b2e3c;
+  --wb-neutral-5:#282a3a;  /* 边线 */
+  --wb-neutral-6:#3a3c4e;  /* 悬停滚动条 */
+  /* Accent ramp（主题强调色，琥珀色系）*/
+  --wb-amber-0:#c8954a;   /* 主题强调 */
+  --wb-amber-1:#d8a55a;   /* 强调高亮 */
+  /* Amber alpha ramp — 强调色带透明度的阶（边线/淡底/悬停底等），反复出现的 rgba(200,149,74,X) 全收于此 */
+  --wb-amber-a0:rgba(200,149,74,.15);  /* 焦点环 halo（input focus 2px ring）*/
+  --wb-amber-a1:rgba(200,149,74,.18);  /* 淡底（toggle on / pb-marker）*/
+  --wb-amber-a2:rgba(200,149,74,.22);  /* 强调淡底（accent hover / phl）*/
+  --wb-amber-a3:rgba(200,149,74,.25);  /* 边线弱（preview panel border）*/
+  --wb-amber-a4:rgba(200,149,74,.3);   /* 边线中（selected border / drag over）*/
+  --wb-amber-a5:rgba(200,149,74,.35);  /* 边线强（btn hover）*/
+  --wb-amber-a6:rgba(200,149,74,.4);   /* 边线最强（var-popup border / btn accent）*/
+  --wb-amber-a7:rgba(200,149,74,.5);   /* toggle on 边线 */
+  /* Shadow alpha ramp — 黑色阴影透明度阶，rgba(0,0,0,X) 全收于此 */
+  --wb-shadow-a1:rgba(0,0,0,.45);  /* var-popup / preview float */
+  --wb-shadow-a2:rgba(0,0,0,.5);   /* FAB / right-panel float / backdrop / float-mobile */
+  --wb-shadow-a3:rgba(0,0,0,.55);  /* modal-overlay / preview-panel float / big modal */
+  --wb-shadow-a4:rgba(0,0,0,.6);   /* dragging / mobile sheet */
+  /* Border alpha ramp — neutral 边线带透明度，rgba(40,42,58,X)（弱分隔线）*/
+  --wb-border-a1:rgba(40,42,58,.5);   /* pb-msg 分隔 */
+  --wb-border-a2:rgba(40,42,58,.55);  /* vr-group 顶线 */
+  --wb-border-a3:rgba(40,42,58,.6);   /* pb-header 底线 */
+  /* Semantic ramp（语义色：危险/成功）*/
+  --wb-red-0:#b86060;     /* 危险 */
+  --wb-green-0:#60b060;   /* 成功 */
+  /* Text ramp（文本灰，按对比度递弱）*/
+  --wb-text-0:#ccc8be;    /* 主文本 ≈ 11.3:1 */
+  --wb-text-1:#a8a4b8;    /* 次要 ≈ 6.4:1 */
+  --wb-text-2:#8fa0a2;    /* 弱化 ≈ 4.7:1 */
+  /* Syntax highlight primitive（编辑器语法着色，跨主题复用）*/
+  --wb-hl-b:#58b8b0;--wb-hl-k:#a078c0;--wb-hl-s:#555570;--wb-hl-v:#c8a045;--wb-hl-c:#68b868;
+  --wb-hl-cm:#555570;--wb-hl-m:#6090c0;--wb-hl-sq:#c89850;--wb-hl-dq:#78b0c0;--wb-hl-ab:#60a870;--wb-hl-sb:#d08a5c;
+
+  /* Role primitive — ST 角色 schema 色票（sys/user/asst）+ 变量类型色票（set/add/get）。
+   * 这套是跨 domain 复用、带透明度的语义色票，不进 neutral/amber ramp，独立成系。
+   * background 用 rgba（透明底），color 用纯色（标签文字），分开定义避免透明度耦合。 */
+  --wb-role-sys-bg:rgba(236,72,153,.20);--wb-role-sys-fg:#f9a8d4;
+  --wb-role-user-bg:rgba(0,178,255,.25);--wb-role-user-fg:#9ad9ff;
+  --wb-role-asst-bg:rgba(74,222,128,.18);--wb-role-asst-fg:#8af0a9;
+  --wb-role-set-bg:rgba(74,222,128,.16);--wb-role-set-fg:#4ade80;
+  --wb-role-add-bg:rgba(96,165,250,.16);--wb-role-add-fg:#60a5fa;
+  --wb-role-get-bg:rgba(251,191,36,.16);--wb-role-get-fg:#fbbf24;
+
+  /* Spacing scale（4px 基刻度）*/
+  --wb-space-1:4px;--wb-space-2:6px;--wb-space-3:10px;--wb-space-4:14px;--wb-space-5:20px;
+  /* Radius scale */
+  --wb-radius-0:3px;--wb-radius-1:4px;--wb-radius-2:8px;
+  /* Control sizing */
+  --wb-size-ctrl-h:34px;   /* 桌面端标准控件高度（按钮/下拉框）*/
+  --wb-size-icon-btn:34px; /* 纯图标按钮正方形尺寸 */
+  --wb-size-editor-pad:16px;/* 编辑器内边距，textarea/highlight/measure 共用（行号测量硬契约，见 HighlightedEditor.vue）*/
+
+  /* =========================================================================
+   * Layer 2 · Semantic tokens — 用途别名，引用 primitive。改这层 = 改主题映射。
+   * ========================================================================= */
+  /* Surfaces（背景层级：底/副/凸/悬/激活）*/
+  --wb-bg:var(--wb-neutral-0);
+  --wb-bg-s:var(--wb-neutral-1);
+  --wb-bg-e:var(--wb-neutral-2);
+  --wb-bg-h:var(--wb-neutral-3);
+  --wb-bg-a:var(--wb-neutral-4);
+  --wb-bg-input:var(--wb-neutral-1);
+  /* Borders */
+  --wb-border:var(--wb-neutral-5);
+  --wb-border-f:var(--wb-amber-0);     /* focus 边线 */
+  /* Text（主/次/弱）*/
+  --wb-tx:var(--wb-text-0);
+  --wb-tx2:var(--wb-text-1);
+  --wb-tx3:var(--wb-text-2);
+  /* Accent（主题强调：基/高亮/淡底）*/
+  --wb-ac:var(--wb-amber-0);
+  --wb-ac-h:var(--wb-amber-1);
+  --wb-ac-d:rgba(200,149,74,.12);      /* 强调淡底，需透明度，留字面量 */
+  /* Semantic states */
+  --wb-dg:var(--wb-red-0);
+  --wb-dg-d:rgba(184,96,96,.14);
+  --wb-ok:var(--wb-green-0);
+  /* Spacing（语义间距，引用刻度）*/
+  --wb-sp-1:var(--wb-space-1);--wb-sp-2:var(--wb-space-2);--wb-sp-3:var(--wb-space-3);--wb-sp-4:var(--wb-space-4);--wb-sp-5:var(--wb-space-5);
+  /* Radius */
+  --wb-r:var(--wb-radius-2);   /* 默认圆角 */
+  --wb-rs:var(--wb-radius-1);  /* 小圆角（按钮/条目）*/
+  /* Control sizing */
+  --wb-ctrl-h:var(--wb-size-ctrl-h);
+  --wb-icon-btn:var(--wb-size-icon-btn);
+  --wb-editor-pad:var(--wb-size-editor-pad);
+
+  /* =========================================================================
+   * Layer 3 · Component tokens — 组件级覆写，引用 semantic。当前扁平项目少有组件级
+   * 差异，这里暂留少数；后续加组件变体（如悬浮窗独立主题）只在这一层加，不动 primitive/semantic。
+   * ========================================================================= */
+  /* （预留：组件级令牌按需在此追加，例 --wb-btn-bg / --wb-modal-pad 等）*/
+
+  /* Fonts / transition（无分层的全局基底，不进三层体系）*/
   --wb-fm:'DM Sans',-apple-system,sans-serif;
   --wb-fc:'JetBrains Mono','Fira Code',monospace;
   --wb-tr:.2s ease;
   --wb-fs:14.5px;--wb-lh:1.65;--wb-ff:'JetBrains Mono','Fira Code',monospace;
-  --hl-b:#58b8c0;--hl-k:#a078c0;--hl-s:#555570;--hl-v:#c8a045;--hl-c:#68b868;
-  --hl-cm:#555570;--hl-m:#6090c0;--hl-sq:#c89850;--hl-dq:#78b0c0;--hl-ab:#60a870;--hl-sb:#d08a5c;
-
-  /* ---- Design tokens (spacing / control sizing) ----------------------------------------
-   * 之前散落在各处的 4px/6px/10px/12px/14px 这些魔法数字，很多其实是同一套"间距刻度"的不同
-   * 名字。这里把它们收成一条命名刻度，规则：
-   *   - 新写 CSS 一律引用 --wb-sp-*，不再手写 px 数值。
-   *   - 已有规则里，数值与某个刻度完全相等的，原样替换成对应变量（不改变现有视觉效果，纯粹
-   *     把"重复出现的魔法数字"变成"一个可统一改的变量"）。
-   *   - 数值是刻度之外的（比如某处特意要 7px 去对齐一个视觉细节），不强行凑整，保留手写数值——
-   *     令牌是用来消灭"重复的魔法数字"，不是用来消灭"所有数字"。
-   * --wb-ctrl-h / --wb-icon-btn 是控件尺寸令牌，用来解决"顶栏 add/import/delete 图标、下拉框
-   * 显得小"这个问题：改这一处，所有引用它的控件跟着变，不用再逐个组件调 padding。 */
-  --wb-sp-1:4px;--wb-sp-2:6px;--wb-sp-3:10px;--wb-sp-4:14px;--wb-sp-5:20px;
-  --wb-ctrl-h:34px;      /* 桌面端标准控件高度（按钮/下拉框），之前 .wb-btn 靠 padding 撑出来的高度约 29px，偏矮 */
-  --wb-icon-btn:34px;    /* 纯图标按钮（+ / 🗑 / ⤓）的正方形尺寸，desktop 和 mobile 共用同一个变量，
-                            mobile 端在 720px 断点里覆盖成更大的触摸尺寸，见文件底部 media query */
+  /* 兼容旧引用：语法着色令牌保留扁平名，避免改 useHighlight.ts 全量重命名 */
+  --hl-b:var(--wb-hl-b);--hl-k:var(--wb-hl-k);--hl-s:var(--wb-hl-s);--hl-v:var(--wb-hl-v);--hl-c:var(--wb-hl-c);
+  --hl-cm:var(--wb-hl-cm);--hl-m:var(--wb-hl-m);--hl-sq:var(--wb-hl-sq);--hl-dq:var(--wb-hl-dq);--hl-ab:var(--wb-hl-ab);--hl-sb:var(--wb-hl-sb);
 
   font-family:var(--wb-fm);color:var(--wb-tx);font-size:16px;line-height:1.5;
   position:relative;width:100%;height:100%;
 }
 .st-wb *,.st-wb *::before,.st-wb *::after{box-sizing:border-box;margin:0;padding:0}
 .st-wb button{font-family:var(--wb-fm);cursor:pointer;border:none;background:none;color:var(--wb-tx);font-size:13px}
-.st-wb input,.st-wb select,.st-wb textarea{font-family:var(--wb-fm);color:var(--wb-tx);background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:6px 10px;font-size:13px;outline:none;transition:border var(--wb-tr)}
+.st-wb input,.st-wb select,.st-wb textarea{font-family:var(--wb-fm);color:var(--wb-tx);background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:var(--wb-sp-2) 10px;font-size:13px;outline:none;transition:border var(--wb-tr)}
 .st-wb input:focus,.st-wb select:focus,.st-wb textarea:focus{border-color:var(--wb-border-f)}
 .st-wb select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2378768a'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:26px}
 .st-wb ::-webkit-scrollbar{width:6px;height:6px}
 .st-wb ::-webkit-scrollbar-track{background:transparent}
-.st-wb ::-webkit-scrollbar-thumb{background:var(--wb-border);border-radius:3px}
-.st-wb ::-webkit-scrollbar-thumb:hover{background:#3a3c4e}
+.st-wb ::-webkit-scrollbar-thumb{background:var(--wb-border);border-radius:var(--wb-radius-0)}
+.st-wb ::-webkit-scrollbar-thumb:hover{background:var(--wb-neutral-6)}
 
 /* FAB */
-.wb-fab{position:absolute;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;background:var(--wb-bg-e)!important;border:1px solid rgba(200,149,74,.4)!important;color:var(--wb-ac);font-size:15px;font-weight:700;cursor:pointer;z-index:9999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.5);transition:all .2s;pointer-events:auto!important;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-.wb-fab:hover{transform:scale(1.1);box-shadow:0 0 24px rgba(200,149,74,.3)}
+.wb-fab{position:absolute;bottom:24px;right:24px;width:48px;height:48px;border-radius:50%;background:var(--wb-bg-e)!important;border:1px solid var(--wb-amber-a6)!important;color:var(--wb-ac);font-size:15px;font-weight:700;cursor:pointer;z-index:9999;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px var(--wb-shadow-a2);transition:all .2s;pointer-events:auto!important;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.wb-fab:hover{transform:scale(1.1);box-shadow:0 0 24px var(--wb-amber-a4)}
 /* While the long-press-drag is active (see App.vue's onFabPointerDown): no transition (it would
    lag a whole frame behind the pointer), a "grabbing" cursor, and a slightly stronger shadow/scale
    so there's an unambiguous visual "you're moving this now" cue distinct from the plain :hover
    state above. */
-.wb-fab.dragging{transition:none;cursor:grabbing;box-shadow:0 6px 28px rgba(0,0,0,.6);transform:scale(1.08)}
+.wb-fab.dragging{transition:none;cursor:grabbing;box-shadow:0 6px 28px var(--wb-shadow-a4);transform:scale(1.08)}
 
 /* Panel (fullscreen overlay) */
 .wb-panel{position:absolute;inset:0;z-index:100000;display:flex;flex-direction:column;background:var(--wb-bg);color:var(--wb-tx);font-family:var(--wb-fm);overflow:hidden;pointer-events:auto}
 
 /* Header/Toolbar */
-.wb-header{display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--wb-bg-s);border-bottom:1px solid var(--wb-border);min-height:44px;flex-shrink:0;flex-wrap:wrap}
+.wb-header{display:flex;align-items:center;gap:var(--wb-sp-2);padding:8px 16px;background:var(--wb-bg-s);border-bottom:1px solid var(--wb-border);min-height:44px;flex-shrink:0;flex-wrap:wrap}
 .wb-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:var(--wb-rs);background:var(--wb-bg-e);border:1px solid var(--wb-border);font-size:14px;font-weight:600;letter-spacing:.02em;transition:all var(--wb-tr);white-space:nowrap}
-.wb-btn:hover{background:var(--wb-bg-h);border-color:rgba(200,149,74,.35)}
-.wb-btn.accent{background:var(--wb-ac-d);border-color:rgba(200,149,74,.4);color:var(--wb-ac)}
-.wb-btn.accent:hover{background:rgba(200,149,74,.22);border-color:var(--wb-ac)}
-.wb-btn.active{border-color:rgba(200,149,74,.4);color:var(--wb-ac)}
-.wb-btn.close-btn{font-size:16px;padding:4px 8px}
+.wb-btn:hover{background:var(--wb-bg-h);border-color:var(--wb-amber-a5)}
+.wb-btn.accent{background:var(--wb-ac-d);border-color:var(--wb-amber-a6);color:var(--wb-ac)}
+.wb-btn.accent:hover{background:var(--wb-amber-a2);border-color:var(--wb-ac)}
+.wb-btn.active{border-color:var(--wb-amber-a6);color:var(--wb-ac)}
+.wb-btn.close-btn{font-size:16px;padding:var(--wb-sp-1) 8px}
 .wb-btn.close-btn:hover{background:var(--wb-dg-d);color:var(--wb-dg)}
 .wb-sep{width:1px;height:20px;background:var(--wb-border);margin:0 4px;flex-shrink:0}
 .wb-spacer{flex:1}
@@ -79,7 +156,7 @@
  * 背景更浅、没有底部分隔线的强对比、字号更小、padding 更紧——第一行是"选工作区"，分量重；
  * 这一行是"工作区内部换个集合看"，分量应该明显更轻，用户扫一眼就能看出这两排不是同一件事的
  * 选项，不用读文字也能感觉到层级差。 */
-.wb-collection-switch{display:flex;align-items:center;gap:2px;padding:4px 16px;background:var(--wb-bg);border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.wb-collection-switch{display:flex;align-items:center;gap:2px;padding:var(--wb-sp-1) 16px;background:var(--wb-bg);border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .wb-collection-switch .wb-btn{padding:3px 11px;font-size:12.5px;font-weight:500;background:transparent;border-color:transparent;color:var(--wb-tx2)}
 .wb-collection-switch .wb-btn:hover{background:var(--wb-bg-h);color:var(--wb-tx)}
 .wb-collection-switch .wb-btn.active{background:var(--wb-ac-d);border-color:transparent;color:var(--wb-ac)}
@@ -87,12 +164,12 @@
 
 /* Search Panel */
 .wb-preset-search{background:var(--wb-bg-e);border-bottom:1px solid var(--wb-border);padding:8px 16px;flex-shrink:0}
-.wb-preset-search-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.wb-preset-search-bar{display:flex;align-items:center;gap:var(--wb-sp-2);flex-wrap:wrap}
 .wb-preset-search-bar input[type="text"]{flex:0 1 240px;min-width:120px}
 .wb-preset-search-bar .wb-preset-search-repl-input{flex:0 1 200px;min-width:100px}
 .wb-preset-search-count{font-size:13px;color:var(--wb-tx3);white-space:nowrap;font-family:var(--wb-fc)}
 .wb-preset-search-results{max-height:200px;overflow-y:auto;padding-top:4px}
-.wb-preset-sr-item{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--wb-rs);font-size:13px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr)}
+.wb-preset-sr-item{display:flex;align-items:center;gap:8px;padding:var(--wb-sp-1) 8px;border-radius:var(--wb-rs);font-size:13px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr)}
 .wb-preset-sr-item:hover{background:var(--wb-bg-h)}
 .wb-preset-sr-item.active{background:var(--wb-ac-d)}
 .wb-preset-sr-block{color:var(--wb-ac);font-weight:500;flex-shrink:0;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -117,9 +194,9 @@
 .wb-sidebar{width:340px;min-width:220px;background:var(--wb-bg-s);border-right:1px solid var(--wb-border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;user-select:none;-webkit-user-select:none}
 .wb-sidebar-header{padding:8px 14px 6px;border-bottom:1px solid var(--wb-border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--wb-tx2);flex-shrink:0}
 .wb-list{flex:1;overflow-y:auto;padding:3px 6px;scroll-behavior:smooth;user-select:none;-webkit-user-select:none}
-.wb-tree-item{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:var(--wb-rs);cursor:pointer;border:1px solid transparent;transition:background var(--wb-tr),border-color var(--wb-tr);margin-bottom:1px;user-select:none}
+.wb-tree-item{display:flex;align-items:center;gap:7px;padding:var(--wb-sp-2) 7px;border-radius:var(--wb-rs);cursor:pointer;border:1px solid transparent;transition:background var(--wb-tr),border-color var(--wb-tr);margin-bottom:1px;user-select:none}
 .wb-tree-item:hover{background:var(--wb-bg-h)}
-.wb-tree-item.selected{background:var(--wb-bg-a);border-color:rgba(200,149,74,.3)}
+.wb-tree-item.selected{background:var(--wb-bg-a);border-color:var(--wb-amber-a4)}
 .wb-tree-item.dragging{opacity:.3}
 .wb-tree-item.disabled .wb-tree-name{color:var(--wb-tx3)}
 .wb-tree-item.disabled .wb-tree-role{opacity:.4}
@@ -127,14 +204,14 @@
 .wb-tree-item:hover .wb-drag-handle{opacity:.7}
 .wb-drag-handle:active{cursor:grabbing}
 .wb-toggle-sw{width:28px;height:14px;border-radius:7px;background:var(--wb-bg-input);border:1px solid var(--wb-border);position:relative;flex-shrink:0;transition:all var(--wb-tr);cursor:pointer}
-.wb-toggle-sw.on{background:rgba(200,149,74,.18);border-color:rgba(200,149,74,.5)}
+.wb-toggle-sw.on{background:var(--wb-amber-a1);border-color:var(--wb-amber-a7)}
 .wb-toggle-sw::after{content:'';position:absolute;width:10px;height:10px;border-radius:50%;background:var(--wb-tx3);top:1px;left:1px;transition:all var(--wb-tr)}
 .wb-toggle-sw.on::after{background:var(--wb-ac);transform:translateX(14px)}
 .wb-tree-name{flex:1;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.wb-tree-role{font-size:11px;padding:1px 5px;border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
-.wb-tree-role.sys{background: rgba(236, 72, 153, 0.20);color: #f9a8d4;}
-.wb-tree-role.user{background: rgba(0, 178, 255, 0.25);color: #9ad9ff;}
-.wb-tree-role.asst{background: rgba(74, 222, 128, 0.18);color: #8af0a9;}
+.wb-tree-role{font-size:11px;padding:1px 5px;border-radius:var(--wb-radius-0);font-weight:600;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.wb-tree-role.sys{background:var(--wb-role-sys-bg);color:var(--wb-role-sys-fg)}
+.wb-tree-role.user{background:var(--wb-role-user-bg);color:var(--wb-role-user-fg)}
+.wb-tree-role.asst{background:var(--wb-role-asst-bg);color:var(--wb-role-asst-fg)}
 .wb-tree-actions{display:flex;gap:1px;flex-shrink:0;opacity:0;transition:opacity var(--wb-tr)}
 .wb-tree-item:hover .wb-tree-actions{opacity:1}
 .wb-tree-act{width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:var(--wb-rs);font-size:13px;color:var(--wb-tx3);transition:all var(--wb-tr)}
@@ -164,7 +241,7 @@
 }
 .st-wb .wb-tree-group.selected {
   background: var(--wb-bg-a);
-  border-color: rgba(200, 149, 74, 0.3);
+  border-color: var(--wb-amber-a4);
 }
 .st-wb .wb-tree-group.disabled {
   opacity: 0.5;
@@ -222,7 +299,7 @@
 }
 .st-wb .wb-tree-group-name-input:focus {
   border-color: var(--wb-ac);
-  box-shadow: 0 0 0 2px rgba(200, 149, 74, 0.15);
+  box-shadow: 0 0 0 2px var(--wb-amber-a0);
 }
 
 .st-wb .wb-tree-name-input {
@@ -239,7 +316,7 @@
 }
 .st-wb .wb-tree-name-input:focus {
   border-color: var(--wb-ac);
-  box-shadow: 0 0 0 2px rgba(200, 149, 74, 0.15);
+  box-shadow: 0 0 0 2px var(--wb-amber-a0);
 }
 
 /* Nested block indent */
@@ -253,7 +330,7 @@
 .st-wb .wb-tree-item.selected,
 .st-wb .wb-tree-group.selected {
   background: var(--wb-bg-a);
-  border-color: rgba(200, 149, 74, 0.3);
+  border-color: var(--wb-amber-a4);
 }
 
 /* Sidebar tools */
@@ -331,7 +408,7 @@
    regex content editor (RegexContentEditor.vue via .wb-regex-editor below). Keep changes here in sync
    across both; don't let one domain grow its own copy of this shell. */
 .wb-editor-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--wb-bg);min-width:280px}
-.wb-editor-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--wb-tx3);gap:10px}
+.wb-editor-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--wb-tx3);gap:var(--wb-sp-3)}
 .wb-editor-empty .icon{font-size:50px;opacity:.25}
 .wb-editor-meta{display:flex;gap:12px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--wb-border);flex-shrink:0;flex-wrap:wrap}
 .wb-editor-meta label{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--wb-tx2)}
@@ -374,8 +451,8 @@
 
 
 /* Var click popup — small floating popup near a clicked {{...var...}}, ported from MiMo */
-.st-wb .wb-preset-var-popup{position:absolute;z-index:200000;background:var(--wb-bg-e);border:1px solid rgba(200,149,74,.4);border-radius:var(--wb-r);box-shadow:0 8px 30px rgba(0,0,0,.45);min-width:340px;max-width:520px;display:flex;flex-direction:column;animation:wb-fadeUp .12s ease;pointer-events:auto}
-.st-wb .wb-preset-vp-header{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--wb-border);font-size:12px;flex-shrink:0}
+.st-wb .wb-preset-var-popup{position:absolute;z-index:200000;background:var(--wb-bg-e);border:1px solid var(--wb-amber-a6);border-radius:var(--wb-r);box-shadow:0 8px 30px var(--wb-shadow-a1);min-width:340px;max-width:520px;display:flex;flex-direction:column;animation:wb-fadeUp .12s ease;pointer-events:auto}
+.st-wb .wb-preset-vp-header{display:flex;align-items:center;gap:var(--wb-sp-2);padding:7px 10px;border-bottom:1px solid var(--wb-border);font-size:12px;flex-shrink:0}
 .st-wb .wb-preset-vp-varname{color:var(--hl-v);font-weight:600;font-family:var(--wb-fc);font-size:14px}
 .st-wb .wb-preset-vp-count{color:var(--wb-tx3);font-size:13px}
 .st-wb .wb-preset-vp-spacer{flex:1}
@@ -389,20 +466,20 @@
 
 /* Right panels */
 .wb-right-panel{width:360px;background:var(--wb-bg-s);border-left:1px solid var(--wb-border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
-.wb-right-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:50;box-shadow:-6px 0 30px rgba(0,0,0,.5);border-left:1px solid rgba(200,149,74,.25)}
+.wb-right-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:50;box-shadow:-6px 0 30px var(--wb-shadow-a2);border-left:1px solid var(--wb-amber-a3)}
 .wb-rp-header{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 6px;border-bottom:1px solid var(--wb-border);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--wb-tx2);flex-shrink:0}
-.wb-rp-tools{display:flex;gap:6px;padding:8px 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.wb-rp-tools{display:flex;gap:var(--wb-sp-2);padding:8px 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .wb-rp-tools input{flex:1;min-width:0;font-size:14px;padding:5px 8px}
-.wb-rp-nav{display:flex;gap:6px;padding:6px 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0;flex-wrap:wrap}
-.wb-rp-list{flex:1;overflow-y:auto;padding:4px 8px}
+.wb-rp-nav{display:flex;gap:var(--wb-sp-2);padding:var(--wb-sp-2) 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0;flex-wrap:wrap}
+.wb-rp-list{flex:1;overflow-y:auto;padding:var(--wb-sp-1) 8px}
 .wb-preset-vr-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--wb-rs);font-size:13px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr);margin-left:8px}
 .wb-preset-vr-item:hover{background:var(--wb-bg-h)}
 .wb-preset-vr-item.active{background:var(--wb-ac-d)}
-.wb-preset-vr-type{padding:1px 5px;border-radius:3px;font-size:11px;font-weight:700;text-transform:uppercase;flex-shrink:0}
-.wb-preset-vr-type.set{background:rgba(74,222,128,.16);color:#4ade80}
-.wb-preset-vr-type.add{background:rgba(96,165,250,.16);color:#60a5fa}
-.wb-preset-vr-type.get{background:rgba(251,191,36,.16);color:#fbbf24}
-.wb-preset-vr-group{margin:7px 4px 3px;padding:4px 6px 2px;border-top:1px solid rgba(40,42,58,.55);color:var(--wb-ac-h);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.wb-preset-vr-type{padding:1px 5px;border-radius:var(--wb-radius-0);font-size:11px;font-weight:700;text-transform:uppercase;flex-shrink:0}
+.wb-preset-vr-type.set{background:var(--wb-role-set-bg);color:var(--wb-role-set-fg)}
+.wb-preset-vr-type.add{background:var(--wb-role-add-bg);color:var(--wb-role-add-fg)}
+.wb-preset-vr-type.get{background:var(--wb-role-get-bg);color:var(--wb-role-get-fg)}
+.wb-preset-vr-group{margin:7px 4px 3px;padding:var(--wb-sp-1) 6px 2px;border-top:1px solid var(--wb-border-a2);color:var(--wb-ac-h);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .wb-preset-vr-val{color:var(--wb-tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .wb-preset-vr-block{color:var(--wb-tx);margin-left:auto;flex-shrink:0;font-size:13px}
 /* 之前 padding:2px 6px 撑出来的图标按钮视觉上明显比旁边的 .wb-btn 矮小（这批按钮承担的是
@@ -410,43 +487,43 @@
  * --wb-icon-btn 尺寸 + flex 居中，图标字符本身不放大（避免视觉上显得突兀），纯粹是可点击区域
  * 和按钮本身的存在感变大。 */
 .st-wb .icon-btn{width:var(--wb-icon-btn);height:var(--wb-icon-btn);padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
-.st-wb .icon-btn.active{color:var(--wb-ac);border-color:rgba(200,149,74,.5);background:var(--wb-ac-d)}
+.st-wb .icon-btn.active{color:var(--wb-ac);border-color:var(--wb-amber-a7);background:var(--wb-ac-d)}
 
 /* Preview — embedded by default (pushes/squeezes the editor, like Var Nav), .float switches it
    to a floating overlay drawer instead. Toggled via the 📌 button in the panel header. */
-.wb-preset-preview-panel{background:var(--wb-bg-e);border-left:1px solid rgba(200,149,74,.25);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
-.wb-preset-preview-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:60;box-shadow:-8px 0 40px rgba(0,0,0,.55)}
-.st-wb .wb-preset-pp-tools{padding:10px 16px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.wb-preset-preview-panel{background:var(--wb-bg-e);border-left:1px solid var(--wb-amber-a3);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
+.wb-preset-preview-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:60;box-shadow:-8px 0 40px var(--wb-shadow-a3)}
+.st-wb .wb-preset-pp-tools{padding:var(--wb-sp-3) 16px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .st-wb .wb-preset-pp-output-wrap{flex:1;overflow:auto;padding:8px}
-.st-wb .wb-preset-pb-body .wb-preset-phl,.st-wb .wb-preset-pp-raw .wb-preset-phl{background:rgba(200,149,74,.22);color:var(--wb-ac-h);border-radius:2px;padding:0 2px}
+.st-wb .wb-preset-pb-body .wb-preset-phl,.st-wb .wb-preset-pp-raw .wb-preset-phl{background:var(--wb-amber-a2);color:var(--wb-ac-h);border-radius:2px;padding:0 2px}
 
 /* Mode tabs (Per-Block vs Full Text) */
-.st-wb .wb-preset-preview-tabs{display:flex;gap:4px;background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:3px}
-.st-wb .wb-preset-preview-tab{flex:1;padding:6px 10px;border-radius:3px;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--wb-tx2);transition:all var(--wb-tr)}
+.st-wb .wb-preset-preview-tabs{display:flex;gap:var(--wb-sp-1);background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:3px}
+.st-wb .wb-preset-preview-tab{flex:1;padding:var(--wb-sp-2) 10px;border-radius:var(--wb-radius-0);font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--wb-tx2);transition:all var(--wb-tr)}
 .st-wb .wb-preset-preview-tab:hover{color:var(--wb-tx)}
 .st-wb .wb-preset-preview-tab.active{background:var(--wb-ac-d);color:var(--wb-ac)}
 .st-wb .wb-preset-pp-mode-hint{font-size:12px;line-height:1.5;color:var(--wb-tx3);margin-top:8px}
-.st-wb .wb-preset-pp-error{font-size:12px;color:var(--wb-dg);background:var(--wb-dg-d);border-radius:var(--wb-rs);padding:6px 10px;margin-top:8px;line-height:1.5}
+.st-wb .wb-preset-pp-error{font-size:12px;color:var(--wb-dg);background:var(--wb-dg-d);border-radius:var(--wb-rs);padding:var(--wb-sp-2) 10px;margin-top:8px;line-height:1.5}
 
 /* Preview blocks — one card per prompt block, separated & collapsible */
 .st-wb .wb-preset-pb-block{margin-bottom:6px;background:var(--wb-bg);border:1px solid var(--wb-border);border-radius:var(--wb-r);overflow:hidden}
-.st-wb .wb-preset-pb-header{font-size:13px;font-weight:700;padding:10px 14px;border-bottom:1px solid rgba(40,42,58,.6);display:flex;gap:8px;align-items:center;cursor:pointer;transition:background var(--wb-tr);background:var(--wb-bg)}
+.st-wb .wb-preset-pb-header{font-size:13px;font-weight:700;padding:var(--wb-sp-3) 14px;border-bottom:1px solid var(--wb-border-a3);display:flex;gap:8px;align-items:center;cursor:pointer;transition:background var(--wb-tr);background:var(--wb-bg)}
 .st-wb .wb-preset-pb-header:hover{background:var(--wb-bg-h)}
-.st-wb .wb-preset-pb-role{text-transform:uppercase;letter-spacing:.04em;font-size:12px;padding:2px 7px;border-radius:3px}
-.st-wb .wb-preset-pb-role.pb-sys{background: rgba(236, 72, 153, 0.20);color: #f9a8d4;}
-.st-wb .wb-preset-pb-role.pb-user{background: rgba(0, 178, 255, 0.25);color: #9ad9ff;}
-.st-wb .wb-preset-pb-role.pb-asst{background: rgba(74, 222, 128, 0.18);color: #8af0a9;}
-.st-wb .wb-preset-pb-role.pb-marker{background:rgba(200,149,74,.18);color:var(--wb-ac-h)}
+.st-wb .wb-preset-pb-role{text-transform:uppercase;letter-spacing:.04em;font-size:12px;padding:2px 7px;border-radius:var(--wb-radius-0)}
+.st-wb .wb-preset-pb-role.pb-sys{background:var(--wb-role-sys-bg);color:var(--wb-role-sys-fg)}
+.st-wb .wb-preset-pb-role.pb-user{background:var(--wb-role-user-bg);color:var(--wb-role-user-fg)}
+.st-wb .wb-preset-pb-role.pb-asst{background:var(--wb-role-asst-bg);color:var(--wb-role-asst-fg)}
+.st-wb .wb-preset-pb-role.pb-marker{background:var(--wb-amber-a1);color:var(--wb-ac-h)}
 .st-wb .wb-preset-pb-name{color:var(--wb-tx);font-size:13px;font-weight:600}
 .st-wb .wb-preset-pb-msg-count{color:var(--wb-tx3);font-size:11px;font-weight:600}
-.st-wb .wb-preset-pb-body{padding:10px 14px;margin:0}
+.st-wb .wb-preset-pb-body{padding:var(--wb-sp-3) 14px;margin:0}
 .st-wb .wb-preset-pb-block.collapsed .wb-preset-pb-body{display:none}
 .st-wb .wb-preset-pb-block.collapsed{padding-bottom:0}
 .st-wb .wb-preset-pb-toggle{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:var(--wb-rs);font-size:11px;color:var(--wb-tx2);transition:all var(--wb-tr);margin-left:auto}
 .st-wb .wb-preset-pb-header:hover .wb-preset-pb-toggle{color:var(--wb-tx)}
 .st-wb .wb-preset-pb-block.collapsed .wb-preset-pb-toggle{transform:rotate(-90deg)}
-.st-wb .wb-preset-pb-msg{padding:6px 0}
-.st-wb .wb-preset-pb-msg + .wb-preset-pb-msg{border-top:1px solid rgba(40,42,58,.5);margin-top:2px}
+.st-wb .wb-preset-pb-msg{padding:var(--wb-sp-2) 0}
+.st-wb .wb-preset-pb-msg + .wb-preset-pb-msg{border-top:1px solid var(--wb-border-a1);margin-top:2px}
 .st-wb .wb-preset-pb-msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .st-wb .wb-preset-pb-tokens{font-family:var(--wb-fc);font-size:11px;color:var(--wb-tx3)}
 .st-wb .wb-preset-pb-msg-text{font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--wb-tx);margin:0}
@@ -456,11 +533,11 @@
 
 
 /* Modals */
-.wb-modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);z-index:300000;}
+.wb-modal-overlay{position:absolute;inset:0;background:var(--wb-shadow-a3);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);z-index:300000;}
 .wb-modal{background:var(--wb-bg-e);border:1px solid var(--wb-border);border-radius:var(--wb-r);padding:24px;min-width:360px;max-width:500px;max-height:70vh;display:flex;flex-direction:column}
 .wb-modal h3{font-size:15px;font-weight:700;margin-bottom:16px}
 .wb-modal-list{flex:1;overflow-y:auto;margin-bottom:16px;max-height:300px}
-.wb-modal-item{padding:10px 12px;border-radius:var(--wb-rs);cursor:pointer;transition:background var(--wb-tr);display:flex;align-items:center;gap:8px}
+.wb-modal-item{padding:var(--wb-sp-3) 12px;border-radius:var(--wb-rs);cursor:pointer;transition:background var(--wb-tr);display:flex;align-items:center;gap:8px}
 .wb-modal-item:hover{background:var(--wb-bg-h)}
 .wb-modal-item.static{cursor:default}
 .wb-modal-item.static:hover{background:none}
@@ -486,11 +563,11 @@
 .wb-float-shell{
   position:absolute;display:flex;flex-direction:column;
   background:var(--wb-bg-e);border:1px solid var(--wb-border);border-radius:var(--wb-r);
-  box-shadow:0 16px 56px rgba(0,0,0,.55);overflow:hidden;
+  box-shadow:0 16px 56px var(--wb-shadow-a3);overflow:hidden;
 }
 .wb-float-shell.dragging{transition:none;user-select:none;-webkit-user-select:none}
 .wb-float-header{
-  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  display:flex;align-items:center;gap:8px;padding:var(--wb-sp-3) 14px;
   background:var(--wb-bg-s);border-bottom:1px solid var(--wb-border);
   cursor:move;touch-action:none;flex-shrink:0;user-select:none;-webkit-user-select:none;
 }
@@ -510,39 +587,39 @@
 .wb-float-shell.mobile{
   left:0 !important;right:0 !important;top:auto !important;bottom:0 !important;
   width:100% !important;height:82vh !important;max-height:82vh;
-  border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.6);
+  border-radius:16px 16px 0 0;box-shadow:0 -8px 40px var(--wb-shadow-a4);
 }
-.wb-float-mobile-backdrop{position:absolute;inset:0;z-index:100009;background:rgba(0,0,0,.5)}
+.wb-float-mobile-backdrop{position:absolute;inset:0;z-index:100009;background:var(--wb-shadow-a2)}
 
 /* Cross-Preset Copy Panel */
-.wb-preset-cp-body{display:flex;gap:10px;flex:1;overflow:hidden}
+.wb-preset-cp-body{display:flex;gap:var(--wb-sp-3);flex:1;overflow:hidden}
 .wb-preset-cp-col{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--wb-bg);border:1px solid var(--wb-border);border-radius:var(--wb-r);overflow:hidden}
-.wb-preset-cp-col-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
+.wb-preset-cp-col-head{display:flex;gap:var(--wb-sp-2);padding:var(--wb-sp-3);border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .wb-preset-cp-sel{flex:1;min-width:0;font-size:13px}
 .wb-preset-cp-toolbar{display:flex;align-items:center;gap:2px;padding:2px 2px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
-.wb-preset-cp-list{flex:1;overflow-y:auto;padding:4px 6px;user-select:none;-webkit-user-select:none}
+.wb-preset-cp-list{flex:1;overflow-y:auto;padding:var(--wb-sp-1) 6px;user-select:none;-webkit-user-select:none}
 .wb-preset-cp-empty{color:var(--wb-tx3);font-size:13px;padding:16px;text-align:center}
-.wb-preset-cp-mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;flex-shrink:0}
+.wb-preset-cp-mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:var(--wb-sp-3);flex-shrink:0}
 
 
 /* Small "not in the current effective order" marker for CopyPanel's hidden-block rows — same
    compact-pill visual language as .wb-preset-vr-type (badge classes in utils.ts's varOpBadge), just
    neutral/muted instead of color-coded by type. */
-.wb-hidden-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:3px;background:var(--wb-bg-input);color:var(--wb-tx3);flex-shrink:0}
+.wb-hidden-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 5px;border-radius:var(--wb-radius-0);background:var(--wb-bg-input);color:var(--wb-tx3);flex-shrink:0}
 
 /* Settings */
 .wb-settings-section{margin-bottom:18px}
 .wb-settings-section>label{font-size:13px;font-weight:700;color:var(--wb-tx2);display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
-.wb-color-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.wb-color-row input[type="color"]{width:36px;height:26px;border:1px solid var(--wb-border);border-radius:4px;cursor:pointer;padding:1px;background:var(--wb-bg-input)}
+.wb-color-row{display:flex;align-items:center;gap:var(--wb-sp-3);margin-bottom:6px}
+.wb-color-row input[type="color"]{width:36px;height:26px;border:1px solid var(--wb-border);border-radius:var(--wb-radius-1);cursor:pointer;padding:1px;background:var(--wb-bg-input)}
 .wb-color-row .cl-label{font-size:13px;color:var(--wb-tx);flex:1}
 .wb-color-row .cl-hex{font-family:var(--wb-fc);font-size:12px;color:var(--wb-tx3);min-width:60px}
 
 /* Shared small utilities — replace one-off inline style="..." attributes that were scattered
    across Modals.vue / PreviewPanel.vue / VarPanel.vue for the same handful of layout patterns. */
 .wb-row{display:flex;align-items:center;gap:12px}
-.wb-row-tight{display:flex;gap:4px}
-.wb-row-mt{display:flex;gap:6px;margin-top:8px}
+.wb-row-tight{display:flex;gap:var(--wb-sp-1)}
+.wb-row-mt{display:flex;gap:var(--wb-sp-2);margin-top:8px}
 .wb-flex1{flex:1}
 .wb-muted{color:var(--wb-tx3)}
 .wb-empty-note{color:var(--wb-tx3);padding:12px;font-size:13px}
@@ -551,7 +628,7 @@
 .wb-value-label{font-family:var(--wb-fc);font-size:14px;min-width:50px}
 .wb-var-name-em{color:var(--wb-tx);font-weight:500}
 .wb-btn.close-btn.compact{padding:2px 6px}
-.wb-btn.sm{padding:4px 10px}
+.wb-btn.sm{padding:var(--wb-sp-1) 10px}
 
 /* Toast */
 .wb-toast{position:absolute;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--wb-bg-a);border:1px solid var(--wb-border);border-radius:var(--wb-r);padding:9px 18px;font-size:12px;font-weight:500;z-index:300001;transition:transform .3s ease,opacity .3s ease;opacity:0;pointer-events:none;white-space:nowrap}
@@ -574,7 +651,7 @@
   max-width:220px;height:var(--wb-ctrl-h);background:var(--wb-bg-input);border:1px solid var(--wb-border);
   border-radius:var(--wb-rs);padding:0 8px;transition:border-color var(--wb-tr),color var(--wb-tr)
 }
-.wb-preset-select:hover{color:var(--wb-tx);border-color:rgba(200,149,74,.4)}
+.wb-preset-select:hover{color:var(--wb-tx);border-color:var(--wb-amber-a6)}
 .wb-preset-select:focus-visible{outline:2px solid var(--wb-ac);outline-offset:1px}
 
 .wb-panel{position:absolute;inset:0;z-index:100000;}
@@ -583,24 +660,24 @@
 
 /* ===== TabBar.vue ===== */
 .wb-tabbar{display:flex;align-items:stretch;overflow-x:auto;flex-shrink:0;border-bottom:1px solid var(--wb-border);background:var(--wb-bg)}
-.wb-tab{display:flex;align-items:center;gap:6px;padding:0 5px;height:32px;border-right:1px solid var(--wb-border);cursor:pointer;white-space:nowrap;color:var(--wb-tx3);font-size:13px;flex-shrink:0}
+.wb-tab{display:flex;align-items:center;gap:var(--wb-sp-2);padding:0 5px;height:32px;border-right:1px solid var(--wb-border);cursor:pointer;white-space:nowrap;color:var(--wb-tx3);font-size:13px;flex-shrink:0}
 .wb-tab:hover{background:var(--wb-bg-h)}
 .wb-tab.active{background:var(--wb-bg-e);color:var(--wb-tx);border-bottom:2px solid var(--wb-ac);margin-bottom:-1px}
 .wb-tab-domain-dot{width:6px;height:6px;border-radius:50%;background:var(--wb-tx3);opacity:.6;flex-shrink:0}
 .wb-tab-domain-dot.domain-regex{background:var(--wb-ac)}
-.wb-tab-close{font-size:24px;opacity:.5;padding:0 2px;border-radius:3px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
+.wb-tab-close{font-size:24px;opacity:.5;padding:0 2px;border-radius:var(--wb-radius-0);width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
 .wb-tab-close:hover{opacity:1;background:var(--wb-dg-d);color:var(--wb-dg)}
 
 
 .wb-mode-switch{display:flex;gap:2px}
 
 .wb-regex-editor{display:flex;flex-direction:column;flex:1;min-width:0}
-.wb-regex-editor-meta{display:flex;align-items:center;gap:6px}
+.wb-regex-editor-meta{display:flex;align-items:center;gap:var(--wb-sp-2)}
 .wb-regex-editor-name{font-size:13px;color:var(--wb-tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wb-regex-editor-body{flex:1;overflow:hidden;display:flex;min-height:0}
 .wb-regex-editor-replace{flex:1;width:100%;resize:none;font-family:var(--wb-ff);font-size:var(--wb-fs)}
-.wb-regex-editor-preview{flex:1;overflow-y:auto;padding:10px;white-space:pre-wrap;word-break:break-word;font-size:14px}
-.wb-regex-editor-testbar{flex-shrink:0;display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--wb-border)}
+.wb-regex-editor-preview{flex:1;overflow-y:auto;padding:var(--wb-sp-3);white-space:pre-wrap;word-break:break-word;font-size:14px}
+.wb-regex-editor-testbar{flex-shrink:0;display:flex;flex-direction:column;gap:var(--wb-sp-1);padding:8px 0;border-top:1px solid var(--wb-border)}
 .wb-regex-editor-testinput{width:100%;resize:vertical}
 
 .wb-form{display:flex;flex-direction:column;gap:var(--wb-sp-1)}
@@ -614,7 +691,7 @@
 .wb-regex-err{color:var(--wb-dg);font-size:12px;margin-top:2px}
 .wb-form-checks{display:flex;flex-wrap:wrap;gap:var(--wb-sp-1) var(--wb-sp-4)}
 .wb-form-check{display:inline-flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;white-space:nowrap}
-/* 之前用 accent-color 想省事，但 .st-wb input{padding:6px 10px;background:...;border:...}
+/* 之前用 accent-color 想省事，但 .st-wb input{padding:var(--wb-sp-2) 10px;background:...;border:...}
  * 这条全局规则同时也套在了 checkbox 上（复选框也是 input 元素），accent-color 只接管了勾选态
  * 的填充色，padding/background/border 这些没被 accent-color 覆盖的属性还是从那条全局规则来的——
  * checkbox 被撑成了长方形（padding 6px 10px），背景色又跟 accent-color 想画的勾选态背景打架，
@@ -624,7 +701,7 @@
 .wb-form-check input[type=checkbox]{
   appearance:none;-webkit-appearance:none;
   width:14px;height:14px;margin:0;flex-shrink:0;box-sizing:border-box;
-  padding:0;border:1px solid var(--wb-tx3);border-radius:3px;background:var(--wb-bg-input);
+  padding:0;border:1px solid var(--wb-tx3);border-radius:var(--wb-radius-0);background:var(--wb-bg-input);
   cursor:pointer;position:relative;transition:all var(--wb-tr);
 }
 .wb-form-check input[type=checkbox]:hover{border-color:var(--wb-ac)}
@@ -676,7 +753,7 @@
 .wb-group.open .wb-group-head{color:var(--wb-ac)}
 .wb-group-chevron{display:inline-block;font-size:13px;color:var(--wb-tx3);transition:transform var(--wb-tr);flex-shrink:0}
 .wb-group.open .wb-group-chevron{transform:rotate(90deg);color:var(--wb-ac)}
-.wb-group-body{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-top:1px solid var(--wb-border)}
+.wb-group-body{display:flex;flex-direction:column;gap:var(--wb-sp-1);padding:var(--wb-sp-3) 12px;border-top:1px solid var(--wb-border)}
 .wb-group-body .wb-form-label:first-child{margin-top:0}
 
 /* NumberInput.vue：原生 number input 右边接一个拖拽手柄按钮，横向拖动=改数值，不影响原本的
@@ -694,11 +771,11 @@
 }
 .wb-num-handle:hover{background:var(--wb-bg-a);color:var(--wb-ac)}
 .wb-num-wrap.dragging .wb-form-num{border-color:var(--wb-ac)}
-.wb-num-wrap.dragging .wb-num-handle{background:var(--wb-ac-d);color:var(--wb-ac);border-color:rgba(200,149,74,.4)}
+.wb-num-wrap.dragging .wb-num-handle{background:var(--wb-ac-d);color:var(--wb-ac);border-color:var(--wb-amber-a6)}
 body.wb-no-select{user-select:none !important;-webkit-user-select:none !important}
 .wb-settings-dock{position:relative;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--wb-border);overflow-y:auto;overflow-x:hidden;padding:0 12px 12px 12px;min-width:0}
 .wb-settings-dock-header{font-size:12px;color:var(--wb-tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-.wb-settings-dock-body{padding:6px;overflow-y:auto}
+.wb-settings-dock-body{padding:var(--wb-sp-2);overflow-y:auto}
 
 .wb-editor-col{display:flex;flex-direction:column;flex:1;min-width:0}
 .wb-editor-row{display:flex;flex:1;overflow:hidden;min-height:0}
@@ -742,7 +819,7 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
        drawer/sheet is open and closes it on tap.
    ========================================================================== */
 @media (max-width: 720px) {
-  .wb-header{padding:6px 8px;gap:4px}
+  .wb-header{padding:var(--wb-sp-2) 8px;gap:var(--wb-sp-1)}
   .wb-btn{padding:5px 9px;font-size:13px}
   .wb-preset-sel,.wb-preset-select,.wb-preset-name{max-width:90px}
 
@@ -758,7 +835,7 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
     z-index:150;
     width:85vw !important;max-width:340px;
     transform:translateX(-100%);
-    box-shadow:6px 0 40px rgba(0,0,0,.6);
+    box-shadow:6px 0 40px var(--wb-shadow-a4);
     transition:transform .25s ease;
   }
   .wb-sidebar.wb-mobile-drawer-open{transform:translateX(0)}
@@ -779,7 +856,7 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
     width:100% !important;
     height:82vh;max-height:82vh;
     border-radius:16px 16px 0 0;
-    box-shadow:0 -8px 40px rgba(0,0,0,.6);
+    box-shadow:0 -8px 40px var(--wb-shadow-a4);
     transform:translateY(100%);
     transition:transform .25s ease;
   }
@@ -802,7 +879,7 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
      App.vue's mobileDrawerVisible + closeMobileDrawer(). */
   .wb-mobile-backdrop{
     position:absolute;inset:0;z-index:140;
-    background:rgba(0,0,0,.5);
+    background:var(--wb-shadow-a2);
   }
 
   /* Compact mobile header row: App.vue renders a different, shorter button
@@ -824,7 +901,7 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
     position:absolute;left:0;right:0;bottom:0;z-index:150;
     background:var(--wb-bg-e);
     border-radius:16px 16px 0 0;
-    box-shadow:0 -8px 40px rgba(0,0,0,.6);
+    box-shadow:0 -8px 40px var(--wb-shadow-a4);
     padding:8px 0 max(8px, env(safe-area-inset-bottom));
     display:flex;flex-direction:column;
     transform:translateY(100%);
@@ -833,7 +910,7 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
   .wb-mobile-tools-sheet.wb-mobile-drawer-open{transform:translateY(0)}
   .wb-mobile-tools-grip{width:36px;height:4px;border-radius:2px;background:var(--wb-border);margin:8px auto 4px}
   .wb-mobile-tools-item{
-    padding:14px 20px;text-align:left;background:none;border:none;
+    padding:var(--wb-sp-4) 20px;text-align:left;background:none;border:none;
     border-bottom:1px solid var(--wb-border);
     color:var(--wb-tx);font-size:15px;
   }
@@ -891,7 +968,7 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
   .wb-sidebar-tools .wb-btn{padding:5px 9px}
 
   /* Tighten block rows so name+role+actions fit */
-  .wb-tree-item{gap:4px;padding:6px 4px}
+  .wb-tree-item{gap:var(--wb-sp-1);padding:var(--wb-sp-2) 4px}
   .wb-tree-name{font-size:13px}
   .wb-tree-role{font-size:10px;padding:0 3px;letter-spacing:0}
 
