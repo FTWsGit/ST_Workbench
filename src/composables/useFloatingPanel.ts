@@ -3,7 +3,7 @@ import { getHostWindow, useIsMobile } from './hostEnv'
 
 /** 所有悬浮窗共享同一个递增计数器来做"点哪个哪个到最上层"。
  *  基准值 100010，卡在 main.css 已有的 z-index 序列（.wb-panel 100000 / .wb-modal-overlay
- *  100001 / .wb-toast 100002 / .pr-var-popup 100003）上方，保证悬浮窗永远盖在主面板之上。 */
+ *  100001 / .wb-toast 100002 / .wb-preset-var-popup 100003）上方，保证悬浮窗永远盖在主面板之上。 */
 let topZCounter = 100010
 
 export interface UseFloatingPanelOptions {

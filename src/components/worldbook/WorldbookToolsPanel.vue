@@ -9,7 +9,7 @@
 
       <div class="wb-tools-section">
         <FormField :label="uiStore.t('worldbook.tools.enableLabel')">
-          <div class="rx-surface">
+          <div class="wb-regex-surface">
             <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setDisabled(false)">{{ uiStore.t('worldbook.tools.enableSelected') }}</button>
             <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setDisabled(true)">{{ uiStore.t('worldbook.tools.disableSelected') }}</button>
           </div>
@@ -18,7 +18,7 @@
 
       <div class="wb-tools-section">
         <FormField :label="uiStore.t('worldbook.tools.activationLabel')">
-          <div class="rx-surface">
+          <div class="wb-regex-surface">
             <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
             <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
             <button class="wb-btn sm" :disabled="!selectedIds.length" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>

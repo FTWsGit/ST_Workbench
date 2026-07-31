@@ -26,7 +26,7 @@ function mount() {
    *  - append 到 <body>（而非 <html>）：移动端 ST 主题把 <body> 设为 position:fixed，浏览器在 <html> 有 transform 时会把 <body> 提升到 viewport 层，挂在 <body> 内才能与它的 stacking context 竞争。
    *  - 外层必须 position:fixed + 100vw/100vh（不能 inset:0 / 百分比）：vw/vh 始终按真实视口解析，避免 fixed 元素因含 transform 的祖先（<html> 上的单位矩阵也算）导致 containing block 错位、inset:0 相对坍塌的盒子计算而落到屏外。height 额外写 100dvh 兼容移动端地址栏。
    *  - 必须显式数字 z-index（2147483647，CSS 最大值）而非 auto：position:fixed+z-index:auto 仍创建层叠上下文但处于 z-index 0 层，在实际设备上会被 <body> 同层的 stacking context 盖住；显式正值进入严格更高的"positive z-index"层，无条件盖过 auto/0 层。
-   *  - pointer-events:none：容器全屏覆盖但默认不吞事件，内部可见元素（.wb-fab/.wb-panel/.pr-var-popup 等）在 main.css 中单独设 pointer-events:auto。 */
+   *  - pointer-events:none：容器全屏覆盖但默认不吞事件，内部可见元素（.wb-fab/.wb-panel/.wb-preset-var-popup 等）在 main.css 中单独设 pointer-events:auto。 */
   el.style.position = 'fixed'
   el.style.top = '0'
   el.style.left = '0'

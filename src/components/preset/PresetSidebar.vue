@@ -15,55 +15,55 @@
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">
         <div v-if="node.isGroup"
              :ref="(el) => setItemRef(el, gi)"
-             class="pr-group-header"
+             class="wb-tree-group"
              :class="{ selected: store.selectedGi.has(gi), disabled: !(node.ref as OrderGroup).enabled, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom' }"
              :style="itemStyle(node)"
              @pointerdown="onItemMouseDown(gi, $event)"
              @click="onItemClick(gi, $event)">
-          <span class="pr-group-toggle" :class="{ collapsed: (node.ref as OrderGroup).collapsed }" @click.stop="onGroupToggle(gi)">
+          <span class="wb-tree-group-toggle" :class="{ collapsed: (node.ref as OrderGroup).collapsed }" @click.stop="onGroupToggle(gi)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
-          <span v-if="editingGroupGi !== gi" class="pr-block-name" @dblclick.stop="startEditGroupName(gi)">{{ (node.ref as OrderGroup).name }}</span>
+          <span v-if="editingGroupGi !== gi" class="wb-tree-name" @dblclick.stop="startEditGroupName(gi)">{{ (node.ref as OrderGroup).name }}</span>
           <input v-else
                  :ref="(el) => setGroupNameInput(el, gi)"
-                 class="pr-group-name-input"
+                 class="wb-tree-group-name-input"
                  :value="(node.ref as OrderGroup).name"
                  @blur="finishEditGroupName(gi, $event)"
                  @keydown.enter.prevent="finishEditGroupName(gi, $event)"
                  @keydown.esc.prevent="cancelEditGroupName()"
                  @click.stop
                  @pointerdown.stop />
-          <span class="pr-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
-          <span class="pr-block-actions">
-            <span class="pr-block-act" @click.stop="store.toggleBlock(gi)">👁</span>
-            <span class="pr-block-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
+          <span class="wb-tree-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
+          <span class="wb-tree-actions">
+            <span class="wb-tree-act" @click.stop="store.toggleBlock(gi)">👁</span>
+            <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
           </span>
         </div>
         <div v-else
              :ref="(el) => setItemRef(el, gi)"
-             class="pr-block-item"
+             class="wb-tree-item"
              :class="{ selected: store.selectedGi.has(gi), disabled: !(node.ref as OrderItem).enabled, dragging: dragIdx === gi, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom', nested: node.depth > 0 }"
              :style="itemStyle(node)"
              @pointerdown="onItemMouseDown(gi, $event)"
              @click="onItemClick(gi, $event)">
           <span class="wb-drag-handle">⠿</span>
           <span class="wb-toggle-sw" :class="{ on: (node.ref as OrderItem).enabled }" @click.stop="store.toggleBlock(gi)"></span>
-          <span v-if="editingBlockGi !== gi" class="pr-block-name" @dblclick.stop="startEditBlockName(gi)">
+          <span v-if="editingBlockGi !== gi" class="wb-tree-name" @dblclick.stop="startEditBlockName(gi)">
             {{ getBlock((node.ref as OrderItem).identifier)?.name || (node.ref as OrderItem).identifier }}
           </span>
           <input v-else
                  :ref="(el) => setBlockNameInput(el, gi)"
-                 class="pr-block-name-input"
+                 class="wb-tree-name-input"
                  :value="getBlock((node.ref as OrderItem).identifier)?.name || (node.ref as OrderItem).identifier"
                  @blur="finishEditBlockName(gi, $event)"
                  @keydown.enter.prevent="finishEditBlockName(gi, $event)"
                  @keydown.esc.prevent="cancelEditBlockName()"
                  @click.stop
                  @pointerdown.stop />
-          <span class="pr-block-role" :class="roleClass((node.ref as OrderItem).identifier)">{{ getBlock((node.ref as OrderItem).identifier)?.role || 'system' }}</span>
-          <span class="pr-block-actions">
-            <span class="pr-block-act" @click.stop="store.hideBlock(gi)">👁</span>
-            <span class="pr-block-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
+          <span class="wb-tree-role" :class="roleClass((node.ref as OrderItem).identifier)">{{ getBlock((node.ref as OrderItem).identifier)?.role || 'system' }}</span>
+          <span class="wb-tree-actions">
+            <span class="wb-tree-act" @click.stop="store.hideBlock(gi)">👁</span>
+            <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
           </span>
         </div>
       </template>

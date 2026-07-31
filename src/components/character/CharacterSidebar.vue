@@ -4,14 +4,14 @@
       <span>{{ uiStore.t('character.sidebar.title') }}</span>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.hasData" class="pr-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
+      <p v-if="!store.hasData" class="wb-preset-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
       <template v-else>
         <div class="wb-list-section-label">{{ uiStore.t('character.sidebar.fieldsLabel') }}</div>
         <div v-for="f in CHARACTER_FIELDS" :key="f.key"
-             class="pr-block-item"
+             class="wb-tree-item"
              :class="{ selected: tabsStore.activeId === 'character:field:' + f.key }"
              @click="openField(f.key)">
-          <span class="pr-block-name">{{ uiStore.t(f.labelKey) }}</span>
+          <span class="wb-tree-name">{{ uiStore.t(f.labelKey) }}</span>
         </div>
 
         <div class="wb-list-section-header">
@@ -20,7 +20,7 @@
         </div>
         <div v-for="(g, i) in store.character?.greetings ?? []" :key="store.greetingIds[i]"
              :ref="(el) => setItemRef(el, i)"
-             class="pr-block-item"
+             class="wb-tree-item"
              :class="{ selected: tabsStore.activeId === 'character:field:greeting:' + store.greetingIds[i],
                        dragging: dragIdx === i,
                        'drag-over-top': dragOverIdx === i && dragOverPos === 'top',
@@ -28,9 +28,9 @@
              @pointerdown="onDragStart(i, $event)"
              @click="onGreetingClick(i)">
           <span class="wb-drag-handle">⠿</span>
-          <span class="pr-block-name">{{ uiStore.t('character.sidebar.greetingLabel', { n: i + 1 }) }}</span>
-          <span class="pr-block-actions">
-            <span class="pr-block-act del" :title="uiStore.t('character.sidebar.deleteGreetingTitle')" @click.stop="store.deleteGreeting(store.greetingIds[i])">🗑</span>
+          <span class="wb-tree-name">{{ uiStore.t('character.sidebar.greetingLabel', { n: i + 1 }) }}</span>
+          <span class="wb-tree-actions">
+            <span class="wb-tree-act del" :title="uiStore.t('character.sidebar.deleteGreetingTitle')" @click.stop="store.deleteGreeting(store.greetingIds[i])">🗑</span>
           </span>
         </div>
       </template>

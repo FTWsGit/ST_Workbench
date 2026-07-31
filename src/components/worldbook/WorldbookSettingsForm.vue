@@ -1,19 +1,19 @@
 <template>
-  <div v-if="entry" class="rx-form" @change="store.markDirty()" @input="store.markDirty()">
+  <div v-if="entry" class="wb-form" @change="store.markDirty()" @input="store.markDirty()">
     <FormField inline>
-      <span class="rx-label">{{ uiStore.t('worldbook.settings.enabled') }}</span>
+      <span class="wb-form-label">{{ uiStore.t('worldbook.settings.enabled') }}</span>
       <span class="wb-toggle-sw" :class="{ on: enabled }" @click="enabled = !enabled"></span>
     </FormField>
 
     <FormField :label="uiStore.t('worldbook.settings.commentLabel')">
-      <input class="rx-input" v-model="entry.comment" :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')" @input="onCommentInput" />
+      <input class="wb-form-input" v-model="entry.comment" :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')" @input="onCommentInput" />
     </FormField>
 
     <!-- 其余字段按语义分到 4 个可折叠分组：激活策略 / 插入位置 / 递归与匹配 / 特殊效果 -->
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupActivation')" default-open>
       <FormField :label="uiStore.t('worldbook.settings.activationLabel')">
-        <div class="rx-surface">
+        <div class="wb-regex-surface">
           <button class="wb-btn sm" :class="{ active: activationMode === 'keyWord' }" @click="setActivation('keyWord')">{{ uiStore.t('worldbook.activation.keyWord') }}</button>
           <button class="wb-btn sm" :class="{ active: activationMode === 'constant' }" @click="setActivation('constant')">{{ uiStore.t('worldbook.activation.constant') }}</button>
           <button class="wb-btn sm" :class="{ active: activationMode === 'vectorized' }" @click="setActivation('vectorized')">{{ uiStore.t('worldbook.activation.vectorized') }}</button>
@@ -23,13 +23,13 @@
       <!-- 关键词框仅在 keyWord 激活下有意义；constant/vectorized 不参与关键词匹配 -->
       <template v-if="activationMode === 'keyWord'">
         <FormField :label="uiStore.t('worldbook.settings.keysLabel')">
-          <textarea class="rx-textarea" rows="2" v-model="keysText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
+          <textarea class="wb-form-textarea" rows="2" v-model="keysText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
         </FormField>
 
-        <label class="rx-check"><input type="checkbox" v-model="entry.selective" /> {{ uiStore.t('worldbook.settings.selective') }}</label>
+        <label class="wb-form-check"><input type="checkbox" v-model="entry.selective" /> {{ uiStore.t('worldbook.settings.selective') }}</label>
         <template v-if="entry.selective">
           <FormField :label="uiStore.t('worldbook.settings.keysSecondaryLabel')">
-            <textarea class="rx-textarea" rows="2" v-model="keysSecondaryText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
+            <textarea class="wb-form-textarea" rows="2" v-model="keysSecondaryText" :placeholder="uiStore.t('worldbook.settings.keysPlaceholder')"></textarea>
           </FormField>
           <FormField :label="uiStore.t('worldbook.settings.logicLabel')" inline>
             <select v-model.number="entry.selectiveLogic">
@@ -40,7 +40,7 @@
       </template>
 
       <FormField inline>
-        <label class="rx-check">
+        <label class="wb-form-check">
           <input type="checkbox" v-model="entry.useProbability" />
           {{ uiStore.t('worldbook.settings.probabilityLabel') }}
         </label>
@@ -55,9 +55,9 @@
         </select>
       </FormField>
       <div v-if="entry.position === 4" class="wb-row">
-        <label class="rx-label">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
+        <label class="wb-form-label">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
         <NumberInput v-model="entry.depth" :nullable="false" />
-        <label class="rx-label">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
+        <label class="wb-form-label">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
         <select v-model="roleModel">
           <option v-for="o in ROLE_OPTIONS" :key="String(o.value)" :value="o.value">{{ uiStore.t(o.labelKey) }}</option>
         </select>
@@ -68,9 +68,9 @@
     </AdvancedGroup>
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupRecursion')">
-      <label class="rx-check"><input type="checkbox" v-model="entry.excludeRecursion" /> {{ uiStore.t('worldbook.settings.excludeRecursion') }}</label>
-      <label class="rx-check"><input type="checkbox" v-model="entry.preventRecursion" /> {{ uiStore.t('worldbook.settings.preventRecursion') }}</label>
-      <label class="rx-check"><input type="checkbox" v-model="delayUntilRecursionModel" /> {{ uiStore.t('worldbook.settings.delayUntilRecursion') }}</label>
+      <label class="wb-form-check"><input type="checkbox" v-model="entry.excludeRecursion" /> {{ uiStore.t('worldbook.settings.excludeRecursion') }}</label>
+      <label class="wb-form-check"><input type="checkbox" v-model="entry.preventRecursion" /> {{ uiStore.t('worldbook.settings.preventRecursion') }}</label>
+      <label class="wb-form-check"><input type="checkbox" v-model="delayUntilRecursionModel" /> {{ uiStore.t('worldbook.settings.delayUntilRecursion') }}</label>
 
       <FormField :label="uiStore.t('worldbook.settings.scanDepthLabel')" inline>
         <NumberInput v-model="scanDepthModel" :placeholder="uiStore.t('worldbook.settings.sameAsGlobal')" />
@@ -89,18 +89,18 @@
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupEffects')">
       <div class="wb-row">
-        <label class="rx-label">{{ uiStore.t('worldbook.settings.stickyLabel') }}</label>
+        <label class="wb-form-label">{{ uiStore.t('worldbook.settings.stickyLabel') }}</label>
         <NumberInput v-model="stickyModel" />
-        <label class="rx-label">{{ uiStore.t('worldbook.settings.cooldownLabel') }}</label>
+        <label class="wb-form-label">{{ uiStore.t('worldbook.settings.cooldownLabel') }}</label>
         <NumberInput v-model="cooldownModel" />
-        <label class="rx-label">{{ uiStore.t('worldbook.settings.delayLabel') }}</label>
+        <label class="wb-form-label">{{ uiStore.t('worldbook.settings.delayLabel') }}</label>
         <NumberInput v-model="delayModel" />
       </div>
 
       <FormField :label="uiStore.t('worldbook.settings.groupLabel')">
-        <input class="rx-input" v-model="entry.group" :placeholder="uiStore.t('worldbook.settings.groupPlaceholder')" />
+        <input class="wb-form-input" v-model="entry.group" :placeholder="uiStore.t('worldbook.settings.groupPlaceholder')" />
       </FormField>
-      <label class="rx-check"><input type="checkbox" v-model="entry.groupPrioritized" /> {{ uiStore.t('worldbook.settings.groupPrioritized') }}</label>
+      <label class="wb-form-check"><input type="checkbox" v-model="entry.groupPrioritized" /> {{ uiStore.t('worldbook.settings.groupPrioritized') }}</label>
     </AdvancedGroup>
   </div>
 </template>
@@ -109,7 +109,7 @@
 /**
  * 世界书条目设置表单：直接 useWorldbookStore()（不参数化）。
  * 主表单只放 comment / enabled，其余字段按语义分到 4 个 AdvancedGroup。
- * markDirty 由 .rx-form 根节点 @change/@input 事件委托兜底；SegmentedControl/NumberInput
+ * markDirty 由 .wb-form 根节点 @change/@input 事件委托兜底；SegmentedControl/NumberInput
  * 通过各自 computed setter 手动 markDirty（按钮点击/拖拽不触发原生 change/input，NumberInput 内部在拖拽结束时派发 input 事件）。
  */
 import { computed, watch } from 'vue'

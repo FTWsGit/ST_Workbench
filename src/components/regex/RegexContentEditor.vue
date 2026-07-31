@@ -1,7 +1,7 @@
 <template>
-  <div class="wb-editor-panel rx-editor" v-if="script">
+  <div class="wb-editor-panel wb-regex-editor" v-if="script">
     <div class="wb-editor-meta">
-      <span class="rx-editor-name">{{ script.scriptName || props.t('common.unnamed') }}</span>
+      <span class="wb-regex-editor-name">{{ script.scriptName || props.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
       <button class="wb-btn sm" :class="{ active: mode === 'edit' }" @click="mode = 'edit'">{{ props.t('regex.editor.edit') }}</button>
       <button class="wb-btn sm" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">{{ props.t('regex.editor.preview') }}</button>
@@ -20,15 +20,15 @@
       :status-chars-label="props.t('common.chars')"
       :status-lines-label="props.t('common.lines')" />
 
-    <div v-else class="rx-editor-body">
-      <div v-if="!renderHtml" class="rx-editor-preview">{{ previewText }}</div>
-      <div v-else class="rx-editor-preview" v-html="previewText"></div>
+    <div v-else class="wb-regex-editor-body">
+      <div v-if="!renderHtml" class="wb-regex-editor-preview">{{ previewText }}</div>
+      <div v-else class="wb-regex-editor-preview" v-html="previewText"></div>
     </div>
 
-    <div class="rx-editor-testbar">
-      <label class="rx-label">{{ props.t('regex.editor.testText') }}</label>
-      <textarea class="rx-editor-testinput" rows="3" v-model="testInput" :placeholder="props.t('regex.editor.testPlaceholder')"></textarea>
-      <p v-if="!findValid" class="rx-err">{{ props.t('regex.editor.invalidFindRegex') }}</p>
+    <div class="wb-regex-editor-testbar">
+      <label class="wb-form-label">{{ props.t('regex.editor.testText') }}</label>
+      <textarea class="wb-regex-editor-testinput" rows="3" v-model="testInput" :placeholder="props.t('regex.editor.testPlaceholder')"></textarea>
+      <p v-if="!findValid" class="wb-regex-err">{{ props.t('regex.editor.invalidFindRegex') }}</p>
       <p class="wb-muted" style="font-size:12px">{{ props.t('regex.editor.previewLimitation') }}</p>
     </div>
   </div>

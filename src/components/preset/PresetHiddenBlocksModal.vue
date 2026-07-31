@@ -7,7 +7,7 @@
         <div v-if="!presetStore.hiddenBlocks.length" class="wb-empty-note">{{ uiStore.t('preset.copyPanel.noBlocks') }}</div>
         <div v-for="p in presetStore.hiddenBlocks" :key="p.identifier" class="wb-modal-item"
              @click="presetStore.addHiddenBlock(p.identifier); presetStore.hiddenOpen = false">
-          <span class="pr-block-role" :class="roleClass(p.role)">{{ p.role }}</span>
+          <span class="wb-tree-role" :class="roleClass(p.role)">{{ p.role }}</span>
           <span class="wb-flex1">{{ p.name || p.identifier }}</span>
         </div>
       </div>

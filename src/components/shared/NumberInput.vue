@@ -2,7 +2,7 @@
   <div class="wb-num-wrap" :class="{ dragging }">
     <input
       ref="inputEl"
-      class="rx-input rx-num"
+      class="wb-form-input wb-form-num"
       type="number"
       :value="modelValue ?? ''"
       :placeholder="placeholder"

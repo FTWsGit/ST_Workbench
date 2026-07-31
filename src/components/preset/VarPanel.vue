@@ -15,16 +15,16 @@
     <div class="wb-rp-nav">
       <button class="wb-btn" @click="store.navVar(-1)">{{ uiStore.t('preset.varPanel.prev') }}</button>
       <button class="wb-btn" @click="store.navVar(1)">{{ uiStore.t('preset.varPanel.next') }}</button>
-      <span class="pr-search-count">{{ store.filteredVarOps.length }}/{{ store.allVarOps.length }}</span>
+      <span class="wb-preset-search-count">{{ store.filteredVarOps.length }}/{{ store.allVarOps.length }}</span>
     </div>
     <div class="wb-rp-list">
       <template v-for="(v, i) in store.filteredVarOps" :key="i">
-        <div v-if="i === 0 || v.varName !== store.filteredVarOps[i - 1].varName" class="pr-vr-group">{{ v.varName }}</div>
-        <div class="pr-vr-item" :class="{ active: i === store.varIdx }" @click="store.jumpToVarOp(i)">
-          <span class="pr-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
+        <div v-if="i === 0 || v.varName !== store.filteredVarOps[i - 1].varName" class="wb-preset-vr-group">{{ v.varName }}</div>
+        <div class="wb-preset-vr-item" :class="{ active: i === store.varIdx }" @click="store.jumpToVarOp(i)">
+          <span class="wb-preset-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
           <span class="wb-var-name-em">{{ v.varName }}</span>
-          <span v-if="v.varValue" class="pr-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
-          <span class="pr-vr-block">[{{ v.blockName }}]</span>
+          <span v-if="v.varValue" class="wb-preset-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
+          <span class="wb-preset-vr-block">[{{ v.blockName }}]</span>
         </div>
       </template>
     </div>

@@ -1,5 +1,5 @@
 <template>
-  <div class="pr-cp-toolbar">
+  <div class="wb-preset-cp-toolbar">
     <slot />
     <span class="wb-spacer"></span>
   </div>
