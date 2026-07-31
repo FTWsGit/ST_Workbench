@@ -25,7 +25,7 @@ description: ST_Workbench 项目的文档纪律流程。三阶段：开干前用
 node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs
 ```
 
-一次拿到 stdout 里所有核心文档的完整内容，省去多次 `read_file`。理由：这些是 mental model——目录结构、六个 Pinia store 的职责边界、多 domain 路由（`domain` vs `workspace` 两个正交轴）、MetaPanel、host iframe 怪癖（`getHostWindow()`/`getHostDocument()` 铁律）、移动端断点状态机。漏任何一个都会导致改错地方、复用错模式、踩已知坑。
+一次拿到 stdout 里所有核心文档的完整内容，省去多次 `read_file`。
 
 **判已完成的口子**：本 session 已经跑过一次 print_always 且后续没换任务——不用重跑。换任务、新 session、记忆里没有这些文件的具体内容时，重跑。
 
@@ -33,7 +33,13 @@ node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs
 
 根据**要改的文件路径**匹配读对应 `alwaysApply:false` 文档。改之前读，不是改之后读。**不硬编码文件名清单**——拿映射对的清单靠 `node scripts/list_docs.mjs` 跑一遍看当前有哪些 `alwaysApply:false` 文件 + 它们的 `description`（"何时读"由每个 `.mdc` 的 front matter `description` 字段决定，本 skill 不重述）。
 
-**判定 Phase 2 要读哪几个**：跑 `list_docs.mjs`，遍历输出里 `alwaysApply: false` 的条目，问自己"要改的文件 / 区域符不符合这个条目 description 写的场景"——符合就读对应 `.mdc`。举几个高频映射作样：
+**判定 Phase 2 要读哪几个**：跑 `list_docs.mjs`
+
+```bash
+node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs
+```
+
+遍历输出里 `alwaysApply: false` 的条目，问自己"要改的文件 / 区域符不符合这个条目 description 写的场景"——符合就读对应 `.mdc`。举几个高频映射作样：
 
 | 要改的文件 / 区域 | 对应领域文档（跑 list_docs 确认当前还存在） |
 |---|---|
@@ -44,21 +50,23 @@ node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs
 | 被反馈"卡/掉帧/行号错位/打字延迟" | 跟性能相关的 `.mdc` |
 | 判断某功能是否已实现、是否刻意留口子、排查已知行为 | 跟 TODO 状态相关的 `.mdc` |
 
-**没匹配到**：要改的区域不在任何 `alwaysApply:false` 文档的 description 场景里（比如改 `App.vue` 顶栏按钮、改 `confirmStore`），Phase 2 不读额外文档——Phase 1 的核心文档已经覆盖了这些通用 UI 布局知识。
+**没匹配到**：要改的区域不在任何 `alwaysApply:false` 文档的 description 场景里，Phase 2 不读额外文档——Phase 1 的核心文档已经覆盖了这些通用 UI 布局知识。假如核心文档没有覆盖，那么要么`.doc`过期，要么`description`过期，
 
-**多文件多映射**：一次任务要改多个不同区域的文件时，把每个区域映射到的文档都读一遍。比如同时改 `presetStore.ts` 和 `useHighlight.ts`，就都读对应 `.mdc`。
+**多文件多映射**：一次任务要改多个不同区域的文件时，把每个区域映射到的文档都读一遍。
 
-**遇到不确定的边界**：改动横跨多个领域（比如改 `HighlightedEditor` 的行号测量同时影响性能），优先两个都读，不要赌"够用"。
+**遇到不确定的边界**：改动横跨多个领域，优先两个都读，不要赌"够用"。
 
 ## Phase 3 — 改完回头检查 .doc 是否需要同步
 
-代码改完、`npm run typecheck` 通过后，**回头扫一遍 Phase 1 + Phase 2 读过的所有 `.mdc` 文件**，检查有没有以下几类需要同步更新的内容：
+代码改完、`npm run typecheck` 通过后，检查是否需要同步对应的.mdc文档:
 
-1. **目录树过期**（`项目概览.mdc` 类的核心文档里的项目结构块）：加了新文件 / 删了文件 / 改了文件职责，目录树里那行的注释要不要跟着改。
-2. **store 职责边界描述过期**（架构总览类的文档里讲 store 职责的段）：把某个字段从一个 store 挪到另一个、给 store 加了新导出、改了内部数据结构，对应描述要不要改。
-3. **套路表过期**（架构总览类的文档里"新增功能套路"表）：如果是结构性改动（加了新 domain、新面板类型、新悬浮窗），套路表要不要补一行。
-4. **`description` front matter 过期**：如果改动让某个 `.mdc` 的"何时读"描述不再准确（比如某功能从 TODO 变成已实现，TODO 状态文档要删它；或者某领域文档的触发场景变了），改 front matter 的 `description`。
-5. **TODO 状态变化**（TODO 状态类的文档）：把某 TODO 项实现了 / 把"有意为之的限制"真正解除了 / 加了新的已知限制，对应条目要加/改/删。
+```bash
+node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs
+```
+
+同步检查有没有以下几类需要更新的内容：
+
+1. **front matter 过期**: 假如.mdc文件名字更改，`name`也应该相应改变。如果改动让某个 `.mdc` 的"何时读"描述不再准确，或者你工作过程中发现有`description`对你产生了误导，改 front matter 的 `description`。
 
 **判定要不要改的口子**：问自己"下次新 session 不知道这次的改动，会读错或踩坑吗"——答案是会，就改 `.doc`；不会，就跳过。
 
@@ -68,14 +76,13 @@ node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs
 node .atomcode/skills/st-workbench-docs/scripts/sync_project_doc.mjs
 ```
 
-它会按当前 front matter 重新生成那张表，替换 AGENTS.md 里 `## Project Doc` 段的表本身（保留表前的引言段，那段是给 AI 的行为约束不是数据）。不碰 AGENTS.md 的其它段。
+它会按当前 front matter 重新生成那张表，替换 AGENTS.md 里 `## Project Doc` 段的表本身。
 
-**改 `.doc` 的纪律**（来自 `AGENTS.md` 的"注释/文档纪律"段，本 skill 不重述，但提醒一句）：`.doc` 只写"当前 AI 需要的行为约束"，不写展望、不写对 AI 的喊话、不写踩坑史；`description` 只写"何时读"，不写法理论。
+**改 `.doc` 的纪律**：
+- `.doc/*` 只写"项目是什么"，不写用户的要求、展望、不写对 AI 的喊话、不写踩坑史
+- `description` 只写"是什么、何时读"，不写法理论
+- 每个`.mdc`之间不能互相直接引用，如`...见国际化.mdc`。假如有必要引用其他领域的文档，只用自然语言描述那个领域，比如: `...详情见i18n相关的文档`
 
 ## 不做的事
 
-- 不重述 `.mdc` 文件的内容——本 skill 只管"何时读哪个文件"，文件内容靠 script / `read_file` 拿。
-- 不替代 `AGENTS.md`——`AGENTS.md` 的"Dev Notes / 注释纪律 / Commands / Architecture / Critical Host-Environment Quirk / Data Flow Rules / Styling / Drag & Mobile Interaction / Key Gotchas"段是行为约束，本 skill 只管 `.doc` 文档的读取时机和同步。
-- 不读非 `.doc` 的文档（`AGENTS.md`、`CLAUDE.md`、`.atomcode.md` 这些由系统自动注入或别的机制管）。
-- 不做代码 review——改完用 `npm run typecheck` 验证是 AGENTS.md 的 Commands 段规定，不是本 skill 的职责。
 - 不硬编码 `.doc` 文件清单——清单靠 front matter 的真相源，跑 `list_docs.mjs` 拿。

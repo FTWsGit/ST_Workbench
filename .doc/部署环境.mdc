@@ -15,7 +15,11 @@ alwaysApply: false
 
 ## 挂载点本身现在长什么样
 
-（`main.ts`）：不再是一个"随便 append 上去、靠 DOM 顺序自然盖在最上面"的裸 `<div>`，而是显式给了一套完整的定位样式，直接内联写在元素上（不依赖 CSS 层叠，避免被任何后加载的规则打乱）：`position:fixed; top:0; left:0; width:100vw; height:100dvh(回退100vh); z-index:2147483647`（合法 z-index 最大值）；同时 `pointer-events:none`——挂载点本身铺满全屏但不吃任何点击，真正可见的部分（`.wb-fab`/`.wb-panel`/`.pr-var-popup` 等）各自在 CSS 里单独声明 `pointer-events:auto` 抢回来，宿主页面其它地方的点击照常穿透。这个元素 append 到 `targetDoc.body`（不是 `<html>`），原因见下面的坑列表。挂载后还有一段一次性诊断：如果检测到宿主 `<html>` 上有非 `none` 的 `transform`/`perspective`/`filter`/`will-change: transform`，会 `console.warn` 提示——这类属性本身不影响 `vw`/`dvh` 的尺寸计算，但如果 transform 真的包含位移（不只是单位矩阵/缩放/绕原点旋转），会让 `top:0;left:0` 偏离真实视口角落；留这条日志是为了下次真遇到"FAB 位置整体偏移"的报告时有据可查，而不是从零开始猜。
+（`main.ts`）：不再是一个"随便 append 上去、靠 DOM 顺序自然盖在最上面"的裸 `<div>`，而是显式给了一套完整的定位样式，直接内联写在元素上（不依赖 CSS 层叠，避免被任何后加载的规则打乱）：`position:fixed; top:0; left:0; width:100vw; height:100dvh(回退100vh); z-index:2147483647`（合法 z-index 最大值）；同时 `pointer-events:none`——挂载点本身铺满全屏但不吃任何点击，真正可见的部分（`.wb-fab`/`.wb-panel`/`.wb-preset-var-popup` 等）各自在 CSS 里单独声明 `pointer-events:auto` 抢回来，宿主页面其它地方的点击照常穿透。这个元素 append 到 `targetDoc.body`（不是 `<html>`），原因见下面的坑列表。挂载后还有一段一次性诊断：如果检测到宿主 `<html>` 上有非 `none` 的 `transform`/`perspective`/`filter`/`will-change: transform`，会 `console.warn` 提示——这类属性本身不影响 `vw`/`dvh` 的尺寸计算，但如果 transform 真的包含位移（不只是单位矩阵/缩放/绕原点旋转），会让 `top:0;left:0` 偏离真实视口角落；留这条日志是为了下次真遇到"FAB 位置整体偏移"的报告时有据可查，而不是从零开始猜。
+
+**全局错误边界**：`app.config.errorHandler` 捕获任何组件 setup/render 抛错或 watcher 异常——本扩展注入到宿主页面顶层 `<body>`，未捕获错误会导致整个面板白屏、甚至破坏宿主页面布局。handler 里至少 `console.error` 出来，再往顶层文档叠一个红色 banner 提示"出错了、建议刷新"，点击关闭——避免用户看到一片空白还以为是宿主页面的 bug。此时 Pinia store 可能尚未初始化（错误发生在 `app.mount` 之前），所以不能依赖 `uiStore.showToast`，只能用最原始的 DOM。
+
+**脚本卸载清理**：用户在 ST 扩展面板关掉脚本时，承载脚本的 `about:srcdoc` iframe 会被销毁，但本扩展的根容器（含 FAB）挂在顶层 `<body>` 上仍残留——FAB 不会自己消失。`main.ts` 监听 iframe 自身的 `pagehide`/`unload`（`pagehide` 在 bfcache 关闭时最可靠，`unload` 作旧浏览器兜底，都用 `once:true` 避免重复卸载），触发时 `app.unmount()` + 根容器 `el.remove()` + 注入的 `<style>` 也清掉，让 FAB 等所有可见元素一并消失，不残留本扩展的 CSS 规则到宿主页面。
 
 ## 宿主环境的约束
 

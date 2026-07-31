@@ -26,7 +26,7 @@ function rowFor(d) {
   return `| ${fileRef} | ${flag} | ${when} |`
 }
 
-const header = '| 文件 | alwaysApply | 何时读 |\n|------|------------|-------|'
+const header = '| 文件 | alwaysApply | description |\n|------|------------|-------|'
 
 let src
 try { src = fs.readFileSync(agents, 'utf8') }

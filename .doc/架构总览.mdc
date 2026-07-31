@@ -15,8 +15,8 @@ alwaysApply: true
 - **`stores/worldbookStore.ts`（'worldbook'）**：世界书条目的全部状态和业务逻辑，独立于 presetStore（不共享 rawData/prompts 那套，自己维护一份 entries + order）。内部数据结构与 dirty 机制见「状态与持久化」。
 - **`stores/characterStore.ts`（'character'）**：当前正在编辑的这张角色卡的全部状态和业务逻辑，独立文档 store（模式跟 worldbookStore 一致），包括它自带的 `regex_scripts`（跟预设域同一个概念，见「多 domain 路由」）。七个创作字段 + greetings 通过虚拟字段 key（`field:xxx`/`field:greeting:<id>`）路由，`CharacterContentEditor.vue` 自己不解析 key——`currentField`/`setCurrentFieldValue` 是唯一解析入口。保存走字段级 `oldRaw` 回退合并（角色卡是 multipart 表单读写，跟 preset/worldbook 的纯 JSON 读写形状不一样，见 `api/characterApi.ts`）。内部数据结构与 dirty 机制见「状态与持久化」。
 - **`stores/tabsStore.ts`（'tabs'）**：标签页（`{domain, key, label, workspace}`）、`activeWorkspace`（当前活跃工作区，`preset`/`worldbook`/`character` 三态，顶栏第一行，Save/Reload 按钮和"未保存"红点只对它生效）、`sidebarCollection`（工作区内部当前在看哪个集合，顶栏第二行，只有 `preset`/`character` 有得选，见「多 domain 路由」）、`settingsDockOpen`、`listScrollToken`（按 domain 的"请把当前项滚动进视野"信号）。这些是"UI 现在长什么样"，跟"预设/角色卡里存了什么数据"是两码事，故意分开。
-- **`stores/confirmStore.ts`（'confirm'）**：两条流——`ask()`（标题+正文+确认/取消回调，正文允许简单 HTML，`danger:false` 用于非删除类）/`askInput()`（单行输入+确认回调，空值自动挡住不关窗）/`askMulti()`（多条目确认，App.vue 关面板时聚合各工作区 dirty 提示用）。**铁律：全项目禁止调用原生 `window.confirm/prompt`，包括 `getHostWindow().confirm()`**——在 TauriTavern 的 WebView2 宿主里不可靠，一律走这三个方法。
-- **`stores/workspaceRegistry.ts`**（不是 Pinia store，是普通工厂函数 `createWorkspaceRegistry()`）：三个 domain store 新建/删除/切换/重载/保存的**对外统一表**——`preset`/`worldbook`/`character` 三个 `DocumentWorkspaceAdapter`，形状对齐（`dirty`/`currentLabel`/`currentId`/`labelForId`/`switchTo`/`reload`/`save`/`create`/`remove`，character 额外一个 `confirmCreateIfDirty`）。App.vue 顶栏三行的 `<select>`/+ 按钮/🗑 按钮、Save/Ctrl+S、Reload、✕关面板聚合 dirty、移动端工具抽屉里的新建/删除，全部查这张表写通用逻辑，不再各自 `if (workspace === 'preset')` 硬编码。**刻意不去改三个 store 内部的函数名**——它们已被别的组件各自直接调用（PresetSidebar.vue 也会调 presetStore 的方法），这一层只包一次转接，风险小。新建/删除/切换/重载的统一逻辑接的是 App.vue 的 `onNewWorkspace`/`onDeleteWorkspace`/`onWorkspaceSelect`/`onSave`/`onReload`。
+- **`stores/confirmStore.ts`（'confirm'）**：三条流——`ask()`（标题+正文+确认/取消回调，正文允许简单 HTML，`danger:false` 用于非删除类）/`askInput()`（单行输入+确认回调，空值自动挡住不关窗）/`askMulti()`（多条目确认，App.vue 关面板时聚合各工作区 dirty 提示用）。**并发闸门**：`ask`/`askInput`/`askMulti` 入口先调 `ifAnyOpenCancel()`——任一 flow 已 open 时强制 cancel 当前 flow（触发其 `onCancel` 让调用方回退 UI 状态）再开自己，避免并发覆盖静默丢回调；同时打一条 `console.warn`便于排查上游并发 bug。**铁律：全项目禁止调用原生 `window.confirm/prompt`，包括 `getHostWindow().confirm()`**——在 TauriTavern 的 WebView2 宿主里不可靠，一律走这三个方法。
+- **`stores/workspaceRegistry.ts`**（不是 Pinia store，是普通工厂函数 `createWorkspaceRegistry()`）：三个 domain store 新建/删除/切换/重载/保存的**对外统一表**——`preset`/`worldbook`/`character` 三个 `DocumentWorkspaceAdapter`，形状对齐（`dirty`/`currentLabel`/`currentId`/`labelForId`/`switchTo`/`reload`/`save`/`create`/`remove`，character �额外一个 `confirmCreateIfDirty`）。顶栏的 + 按钮/🗑 按钮、Save/Ctrl+S、Reload、✕关面板聚合 dirty、移动端工具抽屉里的新建/删除，全部查这张表写通用逻辑，不再各自 `if (workspace === 'preset')` 硬编码。**刻意不去改三个 store 内部的函数名**——它们已被别的组件各自直接调用（PresetSidebar.vue 也会调 presetStore 的方法），这一层只包一次转接，风险小。新建/删除/重载/保存的统一逻辑接的是 App.vue 的 `onNewWorkspace`/`onDeleteWorkspace`/`onSave`/`onReload`；**顶栏 `<select>` 的切换逻辑已抽到 `components/shared/WorkspaceSelect.vue`**（它自己持一份 `workspaceSelect` computed 按 `activeWorkspace` 取 list/当前 id/i18n key，dirty 时调 `confirmStore.ask` 走 `workspaceRegistry` 的 `switchTo`，不再留在 App.vue 的 `onWorkspaceSelect` 里）。
 
 `CopyPanel.vue` 是刻意的第七种例外：它不用上面任何一个 store 的数据，自己维护左右两份独立状态（`reactive<Record<'left'|'right', SideState>>`）直接调 `api/presetApi.ts`，因为它要同时摆弄两个可能都不是"当前正在编辑"的预设。**需要同时操作两份独立数据的功能，抄 CopyPanel 这个模式**；"操作当前正在编辑的那一份"的功能永远走对应 domain 的正常状态流，不要另开一份。
 
@@ -26,7 +26,7 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 
 ## 多 domain 路由：标签页决定编辑区和设置区显示什么，不是硬编码分支
 
-核心概念是 `OpenTab = {domain, key, label, workspace}`。用户点侧边栏某一项 → `tabsStore.open({domain, key, label, workspace})` → 标签栏出现/聚焦对应标签 → `EditorShell.vue`（模板分支）/`SettingsDock.vue`（`FORMS: Record<domain, Component>` 表）各自拿 `tabsStore.activeTab.domain` 挂载对应组件。**这两个容器组件完全不知道每个 domain 具体有什么字段**，新增一个 domain 不需要改它们的逻辑，只需要加一行路由。
+核心概念是 `OpenTab = {domain, key, label, workspace}`。用户点侧边栏某一项 → `tabsStore.open({domain, key, label, workspace})` → 标签栏出现/聚焦对应标签 → `EditorShell.vue`（`<component :is>` + `EDITOR_COMPONENTS: Record<domain, Component>` 路由表）/`SettingsDock.vue`（`FORMS: Record<domain, Component>` 表）各自拿 `tabsStore.activeTab.domain` 挂载对应组件。**这两个容器组件完全不知道每个 domain 具体有什么字段**，新增一个 domain 不需要改它们的逻辑，只需要加一行路由（`EDITOR_COMPONENTS`/`FORMS` 各加一行）。
 
 `domain` 和 `workspace` 是两个不同维度，别混着用：`domain` 决定"用哪个组件编辑这个标签"（`preset`/`regex`/`worldbook`/`character`），`workspace` 决定"这个标签归哪份文档所有"（`preset`/`worldbook`/`character`）。二者在大多数情况下能对上号，但 `regex` 这个 domain 是例外——正则脚本可以挂在预设上也可以挂在角色卡上，同一个 `domain: 'regex'` 的标签，`workspace` 可能是 `'preset'` 也可能是 `'character'`。`EditorShell.vue`/`SettingsDock.vue` 遇到 `domain === 'regex'` 时，数据源（`scripts`/CRUD 回调）按 `activeTab.workspace` 再分派一次，不能只看 domain。
 
@@ -53,7 +53,7 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 2. 数据如果本来就活在已有的宿主对象里（像 regex 活在 preset/character 里），对应 store 加一个 live computed + CRUD 方法；如果是全新的持久化目标，仿照 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现有函数的模式在 `api/` 下加一个新文件，`deepClonePlain()` 这类真正 domain-agnostic 的纪律放 `api/apiUtils.ts`，**故意不抽 `BaseApi<T>`**——三个 domain 的 API 形状差异太大（preset 走 PresetManager 单例、worldbook 走模块函数、character 走 multipart 表单），强行抽基类只会催生一堆 `never`/`unknown` 类型断言。新 API 文件只导入它真正需要的东西。
 3. 在 `stores/` 下加一个新 store（如果跟已有的共享模式就照 worldbookStore/characterStore 抄）。
 4. `tabsStore` 的 `domain`/`workspace` 联合类型加新值。
-5. `EditorShell.vue` 的模板分支加一行 `<XxxContentEditor v-if="domain === 'xxx'">`；`SettingsDock.vue` 的 `FORMS` 表加一条 `xxx: XxxSettingsForm`；如果新 domain 有"整份文档级别"的元信息字段，`MetaPanel.vue` 的 `META_FORMS` 表加一条，并在顶栏/工具栏加触发 `uiStore.metaPanelOpen = true` 的按钮（参考 `PresetSidebar`/`CharacterSidebar` 的 toolbar）。
+5. `EditorShell.vue` 的 `EDITOR_COMPONENTS` 路由表加一条 `xxx: XxxContentEditor`（`<component :is>` 挂载，不再写 `<XxxContentEditor v-if="domain === 'xxx'">` 模板分支）；`SettingsDock.vue` 的 `FORMS` 表加一条 `xxx: XxxSettingsForm`；如果新 domain 有"整份文档级别"的元信息字段，`MetaPanel.vue` 的 `META_FORMS` 表加一条，并在顶栏/工具栏加触发 `uiStore.metaPanelOpen = true` 的按钮（参考 `PresetSidebar`/`CharacterSidebar` 的 toolbar）。
 6. 侧边栏加 `XxxSidebar.vue`（参考 `PresetSidebar`/`WorldbookSidebar` 的模式：`useGroupedList`/`useDragReorder`/`useListScrollSync`/`useInlineRename`/`useListSelection`），在 App.vue 挂载点按 `activeWorkspace`/`sidebarCollection` 分派。
 7. i18n：`zh-CN.ts` 加键，`en.ts` 跟着加，`LocaleKey` 类型会自动收进去，`npm run typecheck` 卡得住漏译。
 
@@ -86,7 +86,7 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 | 加一个新的设置项 | 只改 `types.ts`（`Settings` + `DEFAULT_SETTINGS`） |
 | 加一个确认弹窗 | `confirmStore.ask({title, message, onConfirm, ...})`——**不要**用原生 `confirm()` |
 | 加一个要用户输入一行文本的弹窗 | `confirmStore.askInput(...)`（空值自动挡住）——**不要**用原生 `prompt()` |
-| 加一个 preset 专属的信息类弹窗 | 抄 `Modals.vue` 里 `v-if="store.xxxOpen"` 的写法 |
+| 加一个 domain 专属的信息类弹窗 | 在对应 `components/<domain>/` 下开 `.vue`（如 `PresetHiddenBlocksModal.vue`），App.vue 按 `activeWorkspace` 挂载 + 内部 `v-if`；通用 confirm/prompt/multi 仍走 `Modals.vue` |
 | 加一个复杂度较高、自成一体的悬浮工具（像 CopyPanel） | 单独开一个 `.vue` 文件，App.vue 常驻挂载 + 内部 `v-if`，是否借用 presetStore 数据看「六个 Pinia store」 |
 | 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `VarPanel`/`PreviewPanel`/`SettingsDock` 的 `.wb-right-panel`/`.float` 对称写法（移动端断点会自动接管成底部 sheet，不用额外处理） |
 | 加一个新的可编辑 domain | 看「新增一个 domain 的套路」的 7 步 |

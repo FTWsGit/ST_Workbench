@@ -41,9 +41,9 @@ alwaysApply: false
 
 FAB 长按拖拽整套机制抽成了 domain-agnostic 的 `useFabDrag(opts)` composable——只管"自由两轴悬浮元素的长按拖动 + 跟点击区分 + resize 后 clamp 回视口"，不知道 FAB 长什么样也不知道点开会发生什么。`App.vue` 喂 `getPos`/`setPos`/`commit`/`onTap` 四个回调就接完了，不自己管 `pointermove` 监听、`suppressClick`、`onHostResize` 这些机制。
 
-悬浮球默认位置由 CSS 的 `bottom:24px;right:24px` 决定（并带安全区适配，`env(safe-area-inset-*)`）。长按（`longPressMs` 默认 `100ms`，比 `PresetSidebar` 的长按多选阈值更短，因为这里没有"跟滚动手势区分"的顾虑）之后进入拖拽模式，把当前渲染位置冻结成显式 `left/top` 写进 `opts.setPos`（App.vue 路由到 `uiStore.settings.fabPos`），此后跟随指针移动，松手时一次性 `opts.commit()`（App.vue 路由到 `uiStore.saveSettings()`）落盘（拖拽过程中只改内存里的 draft，不逐帧写 `localStorage`，和设置弹窗里拖动滑块/色盘的"draft-until-release"规则一致）。
+悬浮球默认位置由 CSS 的 `bottom:24px;right:24px` 决定（并带安全区适配，`env(safe-area-inset-*)`）。**拖与点的区分只用空间维度**：`pointerdown` 只记录起点，不启计时器、不 `preventDefault`；`pointermove` 时指针移动超过 `dragThreshold`（默认 `4px`）才立即进入拖拽模式，把当前渲染位置冻结成显式 `left/top` 写进 `opts.setPos`（App.vue 路由到 `uiStore.settings.fabPos`），此后跟随指针移动，松手时一次性 `opts.commit()`（App.vue 路由到 `uiStore.saveSettings()`）落盘（拖拽过程中只改内存里的 draft，不逐帧写 `localStorage`，和设置弹窗里拖动滑块/色盘的"draft-until-release"规则一致）。**没有时间维度**——慢按快松、快按快松都是纯点击，只有真把指针挪了超过阈值才算拖，因此既"随意拖拽不用长按"又"短按即开绝不会被误判成拖拽"。
 
-判定"这是一次点击"还是"这是一次长按拖拽"时**不延迟点击本身**：普通的 `pointerdown → pointerup`（在 `longPressMs` 之内完成）从头到尾没有调用 `preventDefault()`，浏览器该发的 `click` 照发不误，所以快速点击跟改动前一样快；只有长按计时器真的触发了，才切进拖拽模式并开始吞掉紧随其后的那次 `click`（composable 内部的 `suppressClick`），防止松手时被误认成"点击打开面板"。
+判定"这是一次点击"还是"这是一次拖拽"时**不延迟点击本身**：普通的 `pointerdown → pointerup`（指针没挪过阈值）从头到尾没有调用 `preventDefault()`，浏览器该发的 `click` 照发不误，所以快速点击跟改动前一样快；只有指针真的挪了超过阈值进入拖拽模式，才设 `suppressClick` 吞掉紧随其后的那次 `click`（`onClick` 里检查并清零），防止松手时被误认成"点击打开面板"。
 
 位置在宿主窗口 resize 时会被重新 clamp 进可视区域（`onHostResize`）——最常见的触发场景是手机横竖屏切换，或者桌面浏览器窗口在拖拽后被缩窄，防止 FAB 卡在一个再也够不着的角落。`App.vue` 的 `onMounted` 把它绑到 `getHostWindow().addEventListener('resize', fab.onHostResize)`。
 
@@ -52,6 +52,6 @@ FAB 长按拖拽整套机制抽成了 domain-agnostic 的 `useFabDrag(opts)` com
 `CopyPanel`/`WorldbookToolsPanel`/`MetaPanel` 这类"不占用主面板布局、独立浮在上面"的窗口，共用同一套 domain-agnostic 的拖拽定位/resize/多开置顶机制——`useFloatingPanel.ts` 只管"这个矩形框在哪、多大、盖在最上面与否"，不知道自己里面装的是复制工具还是元信息表单；`FloatingPanelShell.vue` 是薄壳，只渲染 header（标题+拖拽发起区+✕ 关闭）/body（`v-slot`）/右下角 resize 手柄，业务内容整个通过默认 slot 塞进去。
 
 - **坐标系**：`x`/`y` 是面板左上角相对于 `.wb-panel`（`inset:0` 铺满整个宿主视口）的像素偏移，跟 pointer 事件的 `clientX`/`clientY` 直接可比，不需要额外换算——前提是 `.wb-panel` 本身相对宿主视口没有偏移，这个前提目前成立。跟 `usePanelResize.ts`/FAB 拖拽一样，所有 pointer 监听挂在 `getHostWindow()` 上而不是裸 `window`（原因见「部署环境」）。
-- **多开叠放**：所有悬浮窗实例共享**同一个模块级递增计数器**（不是数组/Set）做"点哪个哪个到最上层"，初始值 `100010`，卡在 `main.css` 已有的 z-index 序列（`.wb-panel` 100000 / `.wb-modal-overlay` 100001 / `.wb-toast` 100002 / `.pr-var-popup` 100003）上方——所以悬浮窗永远盖在主面板和这些提示类 UI 之上，新加一个悬浮窗不需要去核对现有 z-index 数字，直接复用这套机制即可。
+- **多开叠放**：所有悬浮窗实例共享**同一个模块级递增计数器**（不是数组/Set）做"点哪个哪个到最上层"，初始值 `100010`，卡在 `main.css` 已有的 z-index 序列（`.wb-panel` 100000 / `.wb-modal-overlay` 100001 / `.wb-toast` 100002 / `.wb-preset-var-popup` 100003）上方——所以悬浮窗永远盖在主面板和这些提示类 UI 之上，新加一个悬浮窗不需要去核对现有 z-index 数字，直接复用这套机制即可。
 - **移动端**：`isMobile` 为真时不下发 `left`/`top`/`width`/`height` 这几个内联样式，只下发 `z-index`——位置/尺寸完全交给 CSS 的 `.wb-float-shell.mobile` 规则（贴底满宽 sheet），拖拽/resize 的 pointerdown handler 也直接短路（`onDragStart`/`onResizeStart` 里的 `if (isMobile.value) return`），移动端 resize 手柄本身也不渲染。**内联样式和 CSS class 规则打架时内联永远赢**，所以桌面端逻辑完全不需要关心移动端分支，两者天然互不干扰。
 - **调用方只需要**：`useFloatingPanel({ width, height, minWidth, minHeight })` 拿到 `{ style, dragging, bringToFront, onDragStart, onResizeStart }`，`FloatingPanelShell.vue` 的 `title`/`close-title`/`width`/`height`/`min-width`/`min-height` props + `@close` 事件包办剩下的接线——`MetaPanel.vue` 就是这么接的，没有自己碰任何拖拽/resize 逻辑。

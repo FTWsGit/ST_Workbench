@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "docs:get_always": "node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs",
+    "docs:list": "node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs",
+    "docs:sync_agent": "node .atomcode/skills/st-workbench-docs/scripts/sync_project_doc.mjs",
+    "docs:create": "node .atomcode/skills/st-workbench-docs/scripts/create_docs.mjs"
   },
   "dependencies": {
     "pinia": "^2.1.7",

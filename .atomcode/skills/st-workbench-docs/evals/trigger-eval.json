@@ -1,6 +1,6 @@
 {
   "skill_name": "st-workbench-docs",
-  "skill_description": "ST_Workbench 项目（C:\\Users\\Administrator\\Desktop\\ST_Workbench，Vue 3 + Pinia + TypeScript 的 SillyTavern/TauriTavern 酒馆助手脚本）的文档纪律流程。三阶段：开干前用 scripts 堆读 alwaysApply:true 核心文档建立 mental model；改具体代码前按文件→文档映射按需读 alwaysApply:false 领域文档；改完回头扫一遍 .doc 是否需要同步更新，并跑 sync 脚本刷新 AGENTS.md 的 Project Doc 表。任何在这个项目里加功能、修 bug、重构、改代码、改样式、改类型、改 i18n key、改 store、改组件、改 composable、改 api、改纯函数的任务都必须用这个 skill——即使用户没提到\"文档\"二字，即使改动看起来很小。本 skill 不适用于非 ST_Workbench 项目。",
+  "skill_description": "ST_Workbench 项目（Vue 3 + Pinia + TypeScript 的 SillyTavern/TauriTavern 酒馆助手脚本）的文档纪律流程。三阶段：开干前用 scripts 堆读 alwaysApply:true 核心文档建立 mental model；改具体代码前按文件→文档映射按需读 alwaysApply:false 领域文档；改完回头扫一遍 .doc 是否需要同步更新，并跑 sync 脚本刷新 AGENTS.md 的 Project Doc 表。任何在这个项目里加功能、修 bug、重构、改代码、改样式、改类型、改 i18n key、改 store、改组件、改 composable、改 api、改纯函数的任务都必须用这个 skill——即使用户没提到\"文档\"二字，即使改动看起来很小。本 skill 不适用于非 ST_Workbench 项目。",
   "evals": [
     {
       "id": 1,

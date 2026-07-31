@@ -52,7 +52,7 @@ ST_Workbench/
     │   ├── characterStore.ts   # 'character'——当前正在编辑的那张角色卡（含它自带的 regex_scripts）的全部状态和业务逻辑，独立文档 store，模式跟 worldbookStore 一致；虚拟字段路由（`currentField`/`setCurrentFieldValue`）+ greetings 增删拖拽 + oldRaw 字段级回退保存
     │   ├── tabsStore.ts       # 'tabs'——跨 domain 的标签页状态、activeWorkspace（顶层三态）、sidebarCollection（工作区内二级切换，按 workspace 各自记忆）、settingsDockOpen、按 domain 的 listScrollToken，纯 UI 布局状态，不装任何预设数据
     │   ├── confirmStore.ts    # 'confirm'——通用确认弹窗（ask/askInput/askMulti）+ 单行输入弹窗，domain 无关
-    │   └── workspaceRegistry.ts  # 不是 Pinia store，是工厂函数 createWorkspaceRegistry()——preset/worldbook/character 三个 domain store 的新建/删除/切换/重载/保存的对外统一表（DocumentWorkspaceAdapter），App.vue 顶栏三行的 <select>/+/🗑、Save/Ctrl+S、Reload、✕关面板聚合 dirty、移动端工具抽屉新建/删除全部查这张表写通用逻辑，见「架构总览 > 六个 Pinia store」
+    │   └── workspaceRegistry.ts  # 不是 Pinia store，是工厂函数 createWorkspaceRegistry()——preset/worldbook/character 三个 domain store 的新建/删除/切换/重载/保存的对外统一表（DocumentWorkspaceAdapter），App.vue 顶栏的 +/🗑、Save/Ctrl+S、Reload、✕关面板聚合 dirty、移动端工具抽屉新建/删除全部查这张表写通用逻辑；顶栏 `<select>` 的切换逻辑已抽到 `components/shared/WorkspaceSelect.vue`（见下面），见「架构总览 > 六个 Pinia store」
     ├── styles/
     │   └── main.css           # 全部样式（唯一样式文件），作为字符串注入宿主文档；末尾一大段 `@media (max-width: 720px)` 是移动端布局
     ├── i18n/
@@ -79,7 +79,7 @@ ST_Workbench/
     └── components/
         ├── shared/                 # 真正 domain-agnostic 的组件：靠 domain/workspace 字符串路由或不认识任何 domain 概念
         │   ├── HighlightedEditor.vue  # 宏语法 textarea 内核：行号+按行 diff patch 的高亮覆盖层+真实 DOM 换行测量+括号配对+可选跳转/变量点击 + `disabled` prop（marker 块只读时用），preset/regex/worldbook/character 四个域的内容编辑器都是它的薄壳
-        │   ├── EditorShell.vue        # 内容编辑区的路由容器：按 activeTab.domain 挂载对应编辑组件，`domain === 'regex'` 时数据源再按 `activeTab.workspace` 分派到 presetStore 还是 characterStore，纯路由，不持有任何桥接状态
+        │   ├── EditorShell.vue        # 内容编辑区的路由容器：按 activeTab.domain 查 `EDITOR_COMPONENTS` 路由表用 `<component :is>` 挂载对应编辑组件，`domain === 'regex'` 时数据源再按 `activeTab.workspace` 分派到 presetStore 还是 characterStore，纯路由，不持有任何桥接状态
         │   ├── SettingsDock.vue       # 右侧设置面板的路由容器：按 activeTab.domain 查 FORMS 表挂载设置表单（故意没有 character 条目，character tab 激活时整个面板自动隐藏，见「多 domain 路由」的 character 部分），regex 表单的数据源同 EditorShell 按 workspace 分派
         │   ├── FloatingPanelShell.vue # 悬浮窗容器：可拖拽定位/可 resize/多开自动置顶/移动端变 bottom sheet，机制在 `useFloatingPanel.ts`，自己只管 header/body/resize 手柄的渲染。CopyPanel/WorldbookToolsPanel/MetaPanel 都是它的调用方，见「悬浮窗 Shell」
         │   ├── MetaPanel.vue          # "整份文档"级别的元信息悬浮窗：按 `activeWorkspace` 查 `META_FORMS` 表（`preset → PresetMetaForm`/`character → CharacterMetaForm`，worldbook 没有条目）挂载对应表单，见「MetaPanel」
@@ -89,7 +89,8 @@ ST_Workbench/
         │   ├── AdvancedGroup.vue      # 可折叠的"高级选项"分组（▸/▾ 切换 + `default-open` prop），Regex/Worldbook/Character/Preset 四处 SettingsForm/MetaForm 的折叠区共用同一个实现
         │   ├── NumberInput.vue        # 带拖拽手柄的数字输入框，`nullable` prop 控制是否允许清空
         │   ├── SegmentedControl.vue   # 2-3 个短选项的分段按钮，`.rx-surface`/`.wb-btn.sm` 的薄封装，用来替代短选项 `<select>`
-        │   └── Modals.vue             # 设置弹窗 + 通用 confirm/prompt（confirmStore）+ 隐藏块列表 + toast；内嵌一段 block 删除确认（未迁移，见 TODO）
+        │   ├── WorkspaceSelect.vue   # 顶栏 `<select>` 的统一渲染：按 activeWorkspace 持一份 computed 取 list/当前 id/i18n key，dirty 时调 confirmStore.ask 走 workspaceRegistry 的 switchTo。桌面/移动端两份顶栏共用这一个组件，不再各自重复三态 `<select>`/fallback `<span>`
+        │   └── Modals.vue             # 设置弹窗 + 通用 confirm/prompt/multi（confirmStore）+ toast；domain 专属弹窗挪到对应 `components/<domain>/` 下（如 preset 的 PresetHiddenBlocksModal.vue），这里只留通用宿主
         ├── preset/                  # preset 域（预设提示词块）专属组件
         │   ├── PresetSidebar.vue       # 侧边栏：多选（Ctrl/Shift/长按，走 `useListSelection`）、绑定分组（走 `useGroupedList`）、展开/收起、双击改名（走 `useInlineRename`）、拖拽排序（走 `useDragReorder`，本地只保留分组插入语义的 `onDrop` 回调）、滚动同步（走 `useListScrollSync`）、宽度可拖拽、`mobileDrawerOpen` prop 控制移动端左滑抽屉
         │   ├── PresetContentEditor.vue # 内容编辑区薄壳：v-model 桥接 store.currentBlock.content（currentBlock 直接从 tabsStore.activeTab.key 解析，不依赖任何数组下标）、搜索行高亮、变量点击弹窗、name/role meta 条、marker 块传 `disabled` 给 HighlightedEditor 禁止编辑内容
@@ -114,8 +115,9 @@ ST_Workbench/
             ├── CharacterSidebar.vue    # 侧边栏：固定字段静态行（CHARACTER_FIELDS 定序，不可拖拽）+ greetings 可拖拽子区（`useDragReorder`，不接多选）。只渲染字段+开场白列表——是否渲染这个组件还是 `RegexSidebar.vue`（角色卡自己的正则子集合）由 App.vue 按 `tabsStore.sidebarCollection` 决定，这个组件自己不知道 regex 的存在，见「多 domain 路由」
             ├── CharacterContentEditor.vue # 虚拟字段内容编辑区：activeTab.key 是 `field:xxx`/`field:greeting:<id>` 这种虚拟字段 key，解析逻辑全收在 characterStore 的 `currentField`/`setCurrentFieldValue` 里，这里只管 v-model 桥接；`depthPrompt` 字段额外带一条 depth/role 的 meta 栏（角色卡故意不接 SettingsDock，这两个数值/枚举字段没有别的地方能编辑）
             └── CharacterMetaForm.vue   # 整张角色卡级别的 Meta 表单：creator/creatorNotes/version/tags/talkativeness/fav + 世界书绑定下拉换绑（选项来自 worldbookStore.worldbookList，只换名字不做内嵌编辑），挂进 MetaPanel 的 META_FORMS 表
+        ├── PresetHiddenBlocksModal.vue # preset 专属的"添加隐藏块"弹窗，从 shared/Modals.vue 挪出，避免通用 modals 文件混入 domain 专属逻辑；App.vue 按 `activeWorkspace === 'preset'` 挂载
 ```
 
 ### 为什么 SearchPanel/VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 在 `preset/` 而不是 `shared/`
 
-这几个组件的**实际功能**是纯 preset 专属的（Search 只搜 preset content，VarNav 只认 `{{setvar/getvar}}` 在 preset 里的分布，Preview 只渲染 preset，PresetMetaForm 只认预设的模型参数字段）——放进 `shared/` 名不副实（暗示 domain-agnostic，代码里却全是硬编码的 preset 概念）。放在 `preset/` 更诚实地反映现状：regex 域若要加搜索/预览，需要重构成按 domain 分派。`Modals.vue`/`MetaPanel.vue`/`FloatingPanelShell.vue` 留在 `shared/` 是因为它们的主体逻辑确实是通用宿主/路由容器——`MetaPanel.vue` 自己不认识"温度"或"talkativeness"是什么，只是照着 `activeWorkspace` 查表挂载 `PresetMetaForm`/`CharacterMetaForm`，跟 `EditorShell.vue`/`SettingsDock.vue` 是同一种"路由容器不持有 domain 知识"的模式；`Modals.vue` 只有 preset 删除确认那一小段是 preset 专属（见 TODO）。
+这几个组件的**实际功能**是纯 preset 专属的（Search 只搜 preset content，VarNav 只认 `{{setvar/getvar}}` 在 preset 里的分布，Preview 只渲染 preset，PresetMetaForm 只认预设的模型参数字段）——放进 `shared/` 名不副实（暗示 domain-agnostic，代码里却全是硬编码的 preset 概念）。放在 `preset/` 更诚实地反映现状：regex 域若要加搜索/预览，需要重构成按 domain 分派。`Modals.vue`/`MetaPanel.vue`/`FloatingPanelShell.vue` 留在 `shared/` 是因为它们的主体逻辑确实是通用宿主/路由容器——`MetaPanel.vue` 自己不认识"温度"或"talkativeness"是什么，只是照着 `activeWorkspace` 查表挂载 `PresetMetaForm`/`CharacterMetaForm`，跟 `EditorShell.vue`/`SettingsDock.vue` 是同一种"路由容器不持有 domain 知识"的模式；`Modals.vue` 现已只剩通用 confirm/prompt/multi + toast，preset 专属的"添加隐藏块"弹窗挪到了 `preset/PresetHiddenBlocksModal.vue`。
