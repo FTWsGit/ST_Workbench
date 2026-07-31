@@ -6,7 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 /** 解析单个 .mdc 文件的 front matter。失败返回 null 并 warn。 */
-function parseFile(filePath) {
+export function parseFile(filePath) {
   let text
   try {
     text = fs.readFileSync(filePath, 'utf8')

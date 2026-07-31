@@ -92,6 +92,7 @@ ST_Workbench/
         │   ├── WorkspaceSelect.vue   # 顶栏 `<select>` 的统一渲染：按 activeWorkspace 持一份 computed 取 list/当前 id/i18n key，dirty 时调 confirmStore.ask 走 workspaceRegistry 的 switchTo。桌面/移动端两份顶栏共用这一个组件，不再各自重复三态 `<select>`/fallback `<span>`
         │   └── Modals.vue             # 设置弹窗 + 通用 confirm/prompt/multi（confirmStore）+ toast；domain 专属弹窗挪到对应 `components/<domain>/` 下（如 preset 的 PresetHiddenBlocksModal.vue），这里只留通用宿主
         ├── preset/                  # preset 域（预设提示词块）专属组件
+        |   ├── PresetHiddenBlocksModal.vue # preset 专属的"添加隐藏块"弹窗，从 shared/Modals.vue 挪出，避免通用 modals 文件混入 domain 专属逻辑；App.vue 按 `activeWorkspace === 'preset'` 挂载
         │   ├── PresetSidebar.vue       # 侧边栏：多选（Ctrl/Shift/长按，走 `useListSelection`）、绑定分组（走 `useGroupedList`）、展开/收起、双击改名（走 `useInlineRename`）、拖拽排序（走 `useDragReorder`，本地只保留分组插入语义的 `onDrop` 回调）、滚动同步（走 `useListScrollSync`）、宽度可拖拽、`mobileDrawerOpen` prop 控制移动端左滑抽屉
         │   ├── PresetContentEditor.vue # 内容编辑区薄壳：v-model 桥接 store.currentBlock.content（currentBlock 直接从 tabsStore.activeTab.key 解析，不依赖任何数组下标）、搜索行高亮、变量点击弹窗、name/role meta 条、marker 块传 `disabled` 给 HighlightedEditor 禁止编辑内容
         │   ├── PresetSettingsForm.vue  # 设置表单（name/role，单个 block 级别），挂进 SettingsDock 的 FORMS 表
@@ -115,7 +116,6 @@ ST_Workbench/
             ├── CharacterSidebar.vue    # 侧边栏：固定字段静态行（CHARACTER_FIELDS 定序，不可拖拽）+ greetings 可拖拽子区（`useDragReorder`，不接多选）。只渲染字段+开场白列表——是否渲染这个组件还是 `RegexSidebar.vue`（角色卡自己的正则子集合）由 App.vue 按 `tabsStore.sidebarCollection` 决定，这个组件自己不知道 regex 的存在，见「多 domain 路由」
             ├── CharacterContentEditor.vue # 虚拟字段内容编辑区：activeTab.key 是 `field:xxx`/`field:greeting:<id>` 这种虚拟字段 key，解析逻辑全收在 characterStore 的 `currentField`/`setCurrentFieldValue` 里，这里只管 v-model 桥接；`depthPrompt` 字段额外带一条 depth/role 的 meta 栏（角色卡故意不接 SettingsDock，这两个数值/枚举字段没有别的地方能编辑）
             └── CharacterMetaForm.vue   # 整张角色卡级别的 Meta 表单：creator/creatorNotes/version/tags/talkativeness/fav + 世界书绑定下拉换绑（选项来自 worldbookStore.worldbookList，只换名字不做内嵌编辑），挂进 MetaPanel 的 META_FORMS 表
-        ├── PresetHiddenBlocksModal.vue # preset 专属的"添加隐藏块"弹窗，从 shared/Modals.vue 挪出，避免通用 modals 文件混入 domain 专属逻辑；App.vue 按 `activeWorkspace === 'preset'` 挂载
 ```
 
 ### 为什么 SearchPanel/VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 在 `preset/` 而不是 `shared/`

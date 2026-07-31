@@ -7,22 +7,23 @@ description: ST_Workbench 项目的文档纪律流程。三阶段：开干前用
 
 本 skill 解决一个具体问题：`.doc/` 下的 `.mdc` 文档不会被 AtomCode 自动注入上下文，光靠 `AGENTS.md` 的骨架提示不够。漏读会导致：(1) 重复踩文档已记录的坑（host iframe 怪癖、CSS 优先级、`position:fixed` containing block）；(2) 改完代码不同步 `.doc`，下次 session 又失去这份知识。
 
-**文档清单是 front matter 的真相源**——不要在本 skill 里硬编码"哪几个文件是 alwaysApply:true"，文档会增删改。三个封装 script 从 `.doc/*.mdc` 的 YAML front matter 直接读：
+**文档清单是 front matter 的真相源**——不要在本 skill 里硬编码"哪几个文件是 alwaysApply:true"，文档会增删改。封装 script 从 `.doc/*.mdc` 的 YAML front matter 直接读：
 
 | Script | 干什么 | 用法 |
 |---|---|---|
-| `scripts/list_docs.mjs` | 枚举 `.doc` 全部 front matter，输出 JSON（`file`/`name`/`description`/`alwaysApply`） | `node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs` |
-| `scripts/print_always.mjs` | 堆读 `alwaysApply:true` 文档完整内容，stdout 纯文本 | `node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs` |
-| `scripts/sync_project_doc.mjs` | 按当前 front matter 生成 Project Doc 表，替换 AGENTS.md 那一段 | `node .atomcode/skills/st-workbench-docs/scripts/sync_project_doc.mjs` |
+| `docs:list` | 枚举 `.doc` 全部 front matter，输出 JSON（`file` / `name` / `description` / `alwaysApply`） | `npm run docs:list -- [--dir <path>]` |
+| `docs:get_always` | 堆读 `alwaysApply:true` 文档完整内容，stdout 纯文本 | `npm run docs:get_always -- [--dir <path>]` |
+| `docs:sync_agent` | 按当前 front matter 生成 Project Doc 表，替换 AGENTS.md 对应段落 | `npm run docs:sync_agent -- [--dir <path>] [--agents <agent_file>]` |
+| `docs:create` | 创建新的 .mdc 文档，自动添加规范front matter（<name>不加后缀） | `npm run docs:create -- <name> "<description>" [--always] [--dir <path>] [--force]` |
 
-三个 script 都认 `--dir <path>`（默认 `.doc`）；`sync_project_doc.mjs` 还认 `--agents <path>`（默认 `AGENTS.md`）。
+其中，--dir默认".doc"; --agents是需要同步的agent文件，默认"AGENTS.md"; --always将alwaysApply调整为true，不填默认false; --force是强制覆盖同名文件，慎用。
 
-## Phase 1 — 开干前堆读核心文档
+## Phase 1 — 开干前读核心文档
 
 **任何 ST_Workbench 编码任务，在写第一行代码 / 第一个 edit_file 之前**，跑一次 print_always 把所有 `alwaysApply:true` 文档全量读进上下文：
 
 ```bash
-node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs
+npm run docs:get_always
 ```
 
 一次拿到 stdout 里所有核心文档的完整内容，省去多次 `read_file`。
@@ -31,12 +32,12 @@ node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs
 
 ## Phase 2 — 改具体代码前按映射读领域文档
 
-根据**要改的文件路径**匹配读对应 `alwaysApply:false` 文档。改之前读，不是改之后读。**不硬编码文件名清单**——拿映射对的清单靠 `node scripts/list_docs.mjs` 跑一遍看当前有哪些 `alwaysApply:false` 文件 + 它们的 `description`（"何时读"由每个 `.mdc` 的 front matter `description` 字段决定，本 skill 不重述）。
+根据**要改的文件路径**匹配读对应 `alwaysApply:false` 文档。改之前读，不是改之后读。**不硬编码文件名清单**——拿映射对的清单靠 `npm run docs:list` 跑一遍看当前有哪些 `alwaysApply:false` 文件 + 它们的 `description`（"何时读"由每个 `.mdc` 的 front matter `description` 字段决定，本 skill 不重述）。
 
-**判定 Phase 2 要读哪几个**：跑 `list_docs.mjs`
+**判定 Phase 2 要读哪几个**：跑 `docs:list`
 
 ```bash
-node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs
+npm run docs:list
 ```
 
 遍历输出里 `alwaysApply: false` 的条目，问自己"要改的文件 / 区域符不符合这个条目 description 写的场景"——符合就读对应 `.mdc`。举几个高频映射作样：
@@ -61,19 +62,20 @@ node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs
 代码改完、`npm run typecheck` 通过后，检查是否需要同步对应的.mdc文档:
 
 ```bash
-node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs
+npm run docs:list
 ```
 
 同步检查有没有以下几类需要更新的内容：
 
 1. **front matter 过期**: 假如.mdc文件名字更改，`name`也应该相应改变。如果改动让某个 `.mdc` 的"何时读"描述不再准确，或者你工作过程中发现有`description`对你产生了误导，改 front matter 的 `description`。
+2. **正文内容过期**: Phase 1/Phase 2 读过的 .mdc，如果正文里写的具体事实（提到的文件名、字段名、函数名、某个状态"还没做/已经做了"这类描述）因为这次改动不再成立，改正文
 
 **判定要不要改的口子**：问自己"下次新 session 不知道这次的改动，会读错或踩坑吗"——答案是会，就改 `.doc`；不会，就跳过。
 
 **改了 `.doc`（增删文件、改 front matter、改 description）之后**，跑一次 sync 脚本刷新 AGENTS.md 的 Project Doc 表：
 
 ```bash
-node .atomcode/skills/st-workbench-docs/scripts/sync_project_doc.mjs
+npm run docs:sync_agent
 ```
 
 它会按当前 front matter 重新生成那张表，替换 AGENTS.md 里 `## Project Doc` 段的表本身。
@@ -85,4 +87,4 @@ node .atomcode/skills/st-workbench-docs/scripts/sync_project_doc.mjs
 
 ## 不做的事
 
-- 不硬编码 `.doc` 文件清单——清单靠 front matter 的真相源，跑 `list_docs.mjs` 拿。
+- 不硬编码 `.doc` 文件清单——清单靠 front matter 的真相源，跑 `npm run docs:list` 拿。
