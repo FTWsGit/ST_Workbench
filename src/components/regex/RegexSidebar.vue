@@ -7,10 +7,10 @@
       </ListToolbar>
     </div>
     <div class="wb-list">
-      <p v-if="!props.scripts.length" class="pr-cp-empty">{{ props.t('regex.sidebar.empty') }}</p>
+      <p v-if="!props.scripts.length" class="wb-preset-cp-empty">{{ props.t('regex.sidebar.empty') }}</p>
       <div v-for="(r, i) in props.scripts" :key="r.id"
            :ref="(el) => setItemRef(el, i)"
-           class="pr-block-item"
+           class="wb-tree-item"
            :class="{ selected: tabsStore.activeId === 'regex:' + r.id, disabled: r.disabled, dragging: dragIdx === i,
                      'drag-over-top': dragOverIdx === i && dragOverPos === 'top',
                      'drag-over-bottom': dragOverIdx === i && dragOverPos === 'bottom' }"
@@ -18,9 +18,9 @@
            @click="onItemClick(i)">
         <span class="wb-drag-handle">⠿</span>
         <span class="wb-toggle-sw" :class="{ on: !r.disabled }" :title="props.t('regex.sidebar.toggleTitle')" @click.stop="r.disabled = !r.disabled"></span>
-        <span class="pr-block-name">{{ r.scriptName || props.t('common.unnamed') }}</span>
-        <span class="pr-block-actions">
-          <span class="pr-block-act del" :title="props.t('regex.sidebar.deleteTitle')" @click.stop="onDelete(r)">🗑</span>
+        <span class="wb-tree-name">{{ r.scriptName || props.t('common.unnamed') }}</span>
+        <span class="wb-tree-actions">
+          <span class="wb-tree-act del" :title="props.t('regex.sidebar.deleteTitle')" @click.stop="onDelete(r)">🗑</span>
         </span>
       </div>
     </div>

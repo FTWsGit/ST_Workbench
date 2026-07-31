@@ -1,8 +1,8 @@
 <template>
   <div class="wb-editor-panel">
     <div class="wb-editor-meta">
-      <span class="rx-editor-name">{{ store.currentBlock?.name || store.currentBlock?.identifier }}</span>
-      <span v-if="store.currentBlock" class="pr-block-role" :class="roleClass(store.currentBlock.role)">{{ store.currentBlock.role }}</span>
+      <span class="wb-regex-editor-name">{{ store.currentBlock?.name || store.currentBlock?.identifier }}</span>
+      <span v-if="store.currentBlock" class="wb-tree-role" :class="roleClass(store.currentBlock.role)">{{ store.currentBlock.role }}</span>
       <span class="wb-spacer"></span>
       <button class="wb-btn sm" :class="{ active: uiStore.settingsDockOpen }" @click="uiStore.toggleSettingsDock()" :title="uiStore.t('preset.sidebar.settingsPanel')">⚙</button>
     </div>

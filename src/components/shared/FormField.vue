@@ -1,10 +1,10 @@
 <template>
   <div v-if="inline" class="wb-field-row">
-    <label v-if="label" class="rx-label">{{ label }}</label>
+    <label v-if="label" class="wb-form-label">{{ label }}</label>
     <slot />
   </div>
   <template v-else>
-    <label v-if="label" class="rx-label">{{ label }}</label>
+    <label v-if="label" class="wb-form-label">{{ label }}</label>
     <slot />
   </template>
 </template>

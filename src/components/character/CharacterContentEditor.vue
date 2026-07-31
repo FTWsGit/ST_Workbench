@@ -1,13 +1,13 @@
 <template>
-  <div class="wb-editor-panel rx-editor" v-if="field">
+  <div class="wb-editor-panel wb-regex-editor" v-if="field">
     <div class="wb-editor-meta">
-      <span class="rx-editor-name">{{ fieldLabel }}</span>
+      <span class="wb-regex-editor-name">{{ fieldLabel }}</span>
     </div>
     <!-- depthPrompt（角色备注）独有 depth/role 两个数值/枚举字段，角色卡未接 SettingsDock，在此 meta 栏单独承载。 -->
     <div v-if="isDepthPrompt" class="wb-editor-meta">
-      <label class="rx-label">{{ uiStore.t('character.editor.depthLabel') }}</label>
-      <input type="number" class="rx-input rx-num" v-model.number="depthPromptDepth" />
-      <label class="rx-label">{{ uiStore.t('character.editor.roleLabel') }}</label>
+      <label class="wb-form-label">{{ uiStore.t('character.editor.depthLabel') }}</label>
+      <input type="number" class="wb-form-input wb-form-num" v-model.number="depthPromptDepth" />
+      <label class="wb-form-label">{{ uiStore.t('character.editor.roleLabel') }}</label>
       <select class="wb-select-wide" v-model.number="depthPromptRole">
         <option v-for="opt in CHARACTER_DEPTH_ROLE_OPTIONS" :key="opt.value" :value="opt.value">{{ uiStore.t(opt.labelKey) }}</option>
       </select>

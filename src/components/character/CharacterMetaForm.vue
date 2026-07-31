@@ -1,6 +1,6 @@
 <template>
-  <div v-if="store.character" class="rx-form">
-    <label class="rx-check"><input type="checkbox" v-model="fav" /> {{ uiStore.t('character.metaForm.favLabel') }}</label>
+  <div v-if="store.character" class="wb-form">
+    <label class="wb-form-check"><input type="checkbox" v-model="fav" /> {{ uiStore.t('character.metaForm.favLabel') }}</label>
 
     <FormField :label="uiStore.t('character.metaForm.worldbookLabel')">
       <select class="wb-select-wide" v-model="worldbookModel">
@@ -10,28 +10,28 @@
     </FormField>
 
     <FormField :label="uiStore.t('character.metaForm.talkativenessLabel')">
-      <input class="rx-input rx-num" type="number" step="0.1" min="0" max="1" v-model.number="talkativeness" />
+      <input class="wb-form-input wb-form-num" type="number" step="0.1" min="0" max="1" v-model.number="talkativeness" />
     </FormField>
 
     <AdvancedGroup :title="uiStore.t('character.metaForm.creatorToggle')">
       <FormField :label="uiStore.t('character.metaForm.creatorLabel')">
-        <input class="rx-input" v-model="creator" />
+        <input class="wb-form-input" v-model="creator" />
       </FormField>
 
       <FormField :label="uiStore.t('character.metaForm.versionLabel')">
-        <input class="rx-input" v-model="version" />
+        <input class="wb-form-input" v-model="version" />
       </FormField>
 
       <FormField :label="uiStore.t('character.metaForm.creatorNotesLabel')">
-        <textarea class="rx-textarea" rows="4" v-model="creatorNotes"></textarea>
+        <textarea class="wb-form-textarea" rows="4" v-model="creatorNotes"></textarea>
       </FormField>
 
       <FormField :label="uiStore.t('character.metaForm.tagsLabel')">
-        <input class="rx-input" v-model="tagsText" :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')" />
+        <input class="wb-form-input" v-model="tagsText" :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')" />
       </FormField>
     </AdvancedGroup>
   </div>
-  <p v-else class="pr-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
+  <p v-else class="wb-preset-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
 </template>
 
 <script setup lang="ts">

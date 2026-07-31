@@ -12,59 +12,59 @@
       </div>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.order.length" class="pr-cp-empty">{{ uiStore.t('worldbook.sidebar.empty') }}</p>
+      <p v-if="!store.order.length" class="wb-preset-cp-empty">{{ uiStore.t('worldbook.sidebar.empty') }}</p>
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">
         <!-- 分组头 -->
         <div v-if="node.isGroup"
              :ref="(el) => setItemRef(el, gi)"
-             class="pr-group-header"
+             class="wb-tree-group"
              :class="{ selected: store.selectedGi.has(gi), disabled: !(node.ref as OrderGroup).enabled, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom' }"
              :style="itemStyle(node)"
              @pointerdown="onItemMouseDown(gi, $event)"
              @click="onItemClick(gi, $event)">
-          <span class="pr-group-toggle" :class="{ collapsed: (node.ref as OrderGroup).collapsed }" @click.stop="store.toggleGroupCollapse(gi)">
+          <span class="wb-tree-group-toggle" :class="{ collapsed: (node.ref as OrderGroup).collapsed }" @click.stop="store.toggleGroupCollapse(gi)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
-          <span v-if="editingGroupGi !== gi" class="pr-block-name" @dblclick.stop="startEditGroupName(gi)">{{ (node.ref as OrderGroup).name }}</span>
+          <span v-if="editingGroupGi !== gi" class="wb-tree-name" @dblclick.stop="startEditGroupName(gi)">{{ (node.ref as OrderGroup).name }}</span>
           <input v-else
                  :ref="(el) => setGroupNameInput(el, gi)"
-                 class="pr-group-name-input"
+                 class="wb-tree-group-name-input"
                  :value="(node.ref as OrderGroup).name"
                  @blur="finishEditGroupName(gi, $event)"
                  @keydown.enter.prevent="finishEditGroupName(gi, $event)"
                  @keydown.esc.prevent="cancelEditGroupName()"
                  @click.stop
                  @pointerdown.stop />
-          <span class="pr-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
-          <span class="pr-block-actions">
-            <span class="pr-block-act del" @click.stop="store.deleteEntry(gi)">🗑</span>
+          <span class="wb-tree-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
+          <span class="wb-tree-actions">
+            <span class="wb-tree-act del" @click.stop="store.deleteEntry(gi)">🗑</span>
           </span>
         </div>
         <!-- 条目 -->
         <div v-else
              :ref="(el) => setItemRef(el, gi)"
-             class="pr-block-item"
+             class="wb-tree-item"
              :class="{ selected: store.selectedGi.has(gi), disabled: getEntry((node.ref as OrderItem).identifier)?.disabled, dragging: dragIdx === gi, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom', nested: node.depth > 0 }"
              :style="itemStyle(node)"
              @pointerdown="onItemMouseDown(gi, $event)"
              @click="onItemClick(gi, $event)">
           <span class="wb-drag-handle">⠿</span>
           <span class="wb-toggle-sw" :class="{ on: !getEntry((node.ref as OrderItem).identifier)?.disabled }" @click.stop="onToggleEntry((node.ref as OrderItem).identifier)"></span>
-          <span v-if="editingBlockGi !== gi" class="pr-block-name" @dblclick.stop="startEditBlockName(gi)">
+          <span v-if="editingBlockGi !== gi" class="wb-tree-name" @dblclick.stop="startEditBlockName(gi)">
             {{ getEntry((node.ref as OrderItem).identifier)?.comment || uiStore.t('common.unnamed') }}
           </span>
           <input v-else
                  :ref="(el) => setBlockNameInput(el, gi)"
-                 class="pr-block-name-input"
+                 class="wb-tree-name-input"
                  :value="getEntry((node.ref as OrderItem).identifier)?.comment || ''"
                  @blur="finishEditBlockName(gi, $event)"
                  @keydown.enter.prevent="finishEditBlockName(gi, $event)"
                  @keydown.esc.prevent="cancelEditBlockName()"
                  @click.stop
                  @pointerdown.stop />
-          <span class="pr-block-role">{{ activationLabel(getEntry((node.ref as OrderItem).identifier)) }}</span>
-          <span class="pr-block-actions">
-            <span class="pr-block-act del" @click.stop="store.deleteEntry(gi)">🗑</span>
+          <span class="wb-tree-role">{{ activationLabel(getEntry((node.ref as OrderItem).identifier)) }}</span>
+          <span class="wb-tree-actions">
+            <span class="wb-tree-act del" @click.stop="store.deleteEntry(gi)">🗑</span>
           </span>
         </div>
       </template>

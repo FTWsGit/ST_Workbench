@@ -1,21 +1,21 @@
 <template>
-  <div class="pr-search">
-    <div class="pr-search-bar">
+  <div class="wb-preset-search">
+    <div class="wb-preset-search-bar">
       <input type="text" v-model="store.searchQuery" @input="store.doSearch()" :placeholder="uiStore.t('preset.search.placeholder')" @keydown.enter.prevent="store.navSearch($event.shiftKey ? -1 : 1)">
-      <input type="text" v-model="store.searchReplace" :placeholder="uiStore.t('preset.search.replacePlaceholder')" class="pr-repl-input" @keydown.enter.prevent="store.replaceCurrent()">
+      <input type="text" v-model="store.searchReplace" :placeholder="uiStore.t('preset.search.replacePlaceholder')" class="wb-preset-search-repl-input" @keydown.enter.prevent="store.replaceCurrent()">
       <button class="wb-btn" @click="store.navSearch(-1)">◀</button>
       <button class="wb-btn" @click="store.navSearch(1)">▶</button>
       <button class="wb-btn" @click="store.replaceCurrent()">{{ uiStore.t('preset.search.replace') }}</button>
       <button class="wb-btn" @click="store.replaceAll()">{{ uiStore.t('preset.search.replaceAll') }}</button>
-      <span class="pr-search-count">{{ uiStore.t('preset.search.results', { count: store.searchResults.length }) }}</span>
+      <span class="wb-preset-search-count">{{ uiStore.t('preset.search.results', { count: store.searchResults.length }) }}</span>
     </div>
-    <div class="pr-search-results" v-if="store.searchResults.length">
+    <div class="wb-preset-search-results" v-if="store.searchResults.length">
       <div v-for="(r, i) in displayResults" :key="i"
-           class="pr-sr-item" :class="{ active: i === store.searchIdx }"
+           class="wb-preset-sr-item" :class="{ active: i === store.searchIdx }"
            @click="jumpTo(i)">
-        <span class="pr-sr-block">{{ r.blockName }}</span>
-        <span class="pr-sr-line">L{{ r.line + 1 }}</span>
-        <span class="pr-sr-ctx" v-html="renderCtx(r)"></span>
+        <span class="wb-preset-sr-block">{{ r.blockName }}</span>
+        <span class="wb-preset-sr-line">L{{ r.line + 1 }}</span>
+        <span class="wb-preset-sr-ctx" v-html="renderCtx(r)"></span>
       </div>
     </div>
   </div>

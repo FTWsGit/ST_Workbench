@@ -1,12 +1,12 @@
 <template>
   <!-- 顶栏统一文档选择器：按 activeWorkspace 从 workspaceSelect 取 list/当前 id/i18n key。
        列表非空时渲染 <select>；空但有当前文档时显示只读名字；都没有则什么都不渲染。 -->
-  <select v-if="sel.hasList" class="pr-preset-select" :value="sel.currentId"
+  <select v-if="sel.hasList" class="wb-preset-select" :value="sel.currentId"
           @change="onSelect" :title="uiStore.t(sel.switchTitleKey)">
     <option v-if="orphan" :value="orphan.id" disabled>{{ orphan.label }}</option>
     <option v-for="it in sel.items" :key="it.id" :value="it.id">{{ it.label }}</option>
   </select>
-  <span v-else-if="sel.fallbackText" class="pr-preset-name">{{ sel.fallbackText }}</span>
+  <span v-else-if="sel.fallbackText" class="wb-preset-name">{{ sel.fallbackText }}</span>
 </template>
 
 <script setup lang="ts">

@@ -1,11 +1,11 @@
 <template>
-  <div v-if="store.currentBlock" class="rx-form">
+  <div v-if="store.currentBlock" class="wb-form">
     <FormField :label="uiStore.t('preset.settings.name')">
-      <input class="rx-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="uiStore.t('preset.settings.namePlaceholder')" />
+      <input class="wb-form-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="uiStore.t('preset.settings.namePlaceholder')" />
     </FormField>
 
     <FormField :label="uiStore.t('preset.settings.role')">
-      <select class="rx-input" :value="store.currentBlock.role" @change="onRoleChange">
+      <select class="wb-form-input" :value="store.currentBlock.role" @change="onRoleChange">
         <option value="system">system</option>
         <option value="user">user</option>
         <option value="assistant">assistant</option>
