@@ -30,6 +30,12 @@ const RESIZE_DEBOUNCE_MS = 20     // 编辑器尺寸变化后行号重算的防�
 
 `lineHeightCache`（行号高度缓存，模块级 `Map`）：上限 **5000 条**，LRU 淘汰（命中 `delete+set` 重排到末尾，超限淘汰 Map 头部最旧条目）。改大→占更多内存但大文件编辑时 miss 率低；改小→内存省但大文件第 N 行起每次 miss 重测。上限写死在 `updateLineNums()` 里没抽成常量，因为 LRU 后这个上限基本不会真打满，没必要暴露成可调参数。
 
+**侧边栏 watcher 必须幂等 + 模板查找必须预索引**（tavern sidebar 卡顿教训）：
+
+- `watch(() => tabsStore.activeTab, ...)` 这类"标签驱动选中态"的 watcher 必须抄 `presetStore` 的幂等守卫——`if (anchorGi === gi && selectedGi.size === 1 && selectedGi.has(gi)) return`，gi 没变就不换新 Set 引用。缺这个守卫每次切 tab 都换新 Set → 整个 sidebar v-for 全量重渲染 → 每节点调 `getScript/getFolder/isFolder` 对全数组做 O(n) 线性 find/some → **O(n²) 响应式属性访问** → 大脚本树下秒级卡死。
+- 模板里按 id 查找节点的辅助函数（`getScript/getFolder/isFolder`）必须用 `Map<id, ScriptTree>` 预索引 computed 摊成 O(1) 查表，不要每次渲染都 `scripts.find(...)`/`scripts.some(...)` 线性扫全数组。`scriptsById` computed 依赖 `tavernHelper.scripts`，数组变（add/delete/reorder/sync）时自动重建 Map。
+- 这两个 seam 叠加才出秒级卡顿：单缺守卫（小树不卡）或单缺预索引（不切 tab 不重渲染就不卡）都不显，大树 × 每次切 tab 全量重渲染 × 每节点 O(n) 查找三者叠加才出问题。后续加新 sidebar 抄 `PresetSidebar`/`ScriptTreeSidebar` 模式时，守卫 + 预索引都是标配不能漏。
+
 `utils.ts`（`wordDiff`/`macroAwareDiff` 相关）：
 
 ```ts
