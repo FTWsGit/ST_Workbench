@@ -23,11 +23,15 @@
             <div class="wb-sep"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <button class="wb-btn" @click="presetStore.copyPanelOpen = true">{{ uiStore.t('preset.header.copyBlocks') }}</button>
-              <button class="wb-btn" :class="{ active: tabsStore.searchOpen }" @click="toggleSearch">{{ uiStore.t('preset.header.search') }}</button>
+              <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
               <button class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
+            </template>
+            <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
+              <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
               <button class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
+              <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
             </template>
             <div class="wb-spacer"></div>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -81,26 +85,14 @@
           </button>
         </div>
 
-        <SearchPanel v-if="tabsStore.searchOpen" /> 
-
         <div class="wb-main">
           <PresetSidebar v-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection !== 'regex'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'regex'"
-            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
-            :scripts="presetStore.regexScripts" workspace="preset" :t="uiStore.t"
-            :on-add="presetStore.addRegexScript" :on-delete="presetStore.deleteRegexScript" :on-reorder="presetStore.reorderRegexScript"
-            :sidebar-width="uiStore.settings.sidebarWidth"
-            :on-sidebar-width-change="setRegexSidebarWidth"
-            :on-sidebar-width-commit="uiStore.saveSettings" />
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <WorldbookSidebar v-else-if="tabsStore.activeWorkspace === 'worldbook'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <CharacterSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection !== 'regex'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'regex'"
-            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
-            :scripts="characterStore.regexScripts" workspace="character" :t="uiStore.t"
-            :on-add="characterStore.addRegexScript" :on-delete="characterStore.deleteRegexScript" :on-reorder="characterStore.reorderRegexScript"
-            :sidebar-width="uiStore.settings.sidebarWidth"
-            :on-sidebar-width-change="setRegexSidebarWidth"
-            :on-sidebar-width-commit="uiStore.saveSettings" />
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <div class="wb-editor-col">
             <TabBar />
             <div class="wb-editor-row">
@@ -110,6 +102,7 @@
           </div>
           <VarPanel v-if="tabsStore.varNavOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'varNav' }" />
           <PreviewPanel v-if="tabsStore.previewOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'preview' }" />
+          <ToolBoxPanel v-if="tabsStore.toolBoxOpen" />
         </div>
 
         <!-- 移动端遮罩：任一抽屉/操作表打开时覆盖编辑区，点击关闭；桌面端不渲染。 -->
@@ -133,11 +126,12 @@
           </template>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
             <button class="wb-mobile-tools-item" @click="drawer.runTool(() => { presetStore.copyPanelOpen = true })">{{ uiStore.t('preset.header.copyBlocks') }}</button>
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.searchOpen }" @click="drawer.runTool(toggleSearch)">{{ uiStore.t('preset.header.search') }}</button>
+            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
             <button class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="drawer.runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'character'">
             <button class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="drawer.runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
+            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
           </template>
           <button class="wb-mobile-tools-item" @click="drawer.runTool(() => { uiStore.settingsOpen = true })">{{ uiStore.t('shared.header.settings') }}</button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -147,6 +141,7 @@
             <button class="wb-mobile-tools-item" :disabled="!presetStore.presetName" @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.preset))">{{ uiStore.t('preset.header.delete') }}</button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
+            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
             <button class="wb-mobile-tools-item" @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.worldbook))">{{ uiStore.t('worldbook.header.new') }}</button>
             <button class="wb-mobile-tools-item" :disabled="!embeddedCharacterBook" @click="drawer.runTool(onImportFromCharacterBook)">{{ uiStore.t('worldbook.header.importFromCharacter') }}</button>
             <button class="wb-mobile-tools-item" :disabled="!worldbookStore.worldbookName" @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.worldbook))">{{ uiStore.t('worldbook.header.delete') }}</button>
@@ -170,10 +165,13 @@
 <script setup lang="ts">
 import { usePresetStore } from './stores/presetStore'
 import { useUiStore } from './stores/uiStore'
-import SearchPanel from './components/preset/SearchPanel.vue'
 import PresetSidebar from './components/preset/PresetSidebar.vue'
 import VarPanel from './components/preset/VarPanel.vue'
 import PreviewPanel from './components/preset/PreviewPanel.vue'
+import ToolBoxPanel from './components/toolbox/ToolBoxPanel.vue'
+// side-effect import：触发 register.ts 把 Search/Batch 工具填进 TOOL_REGISTRY。
+// ToolBoxPanel 只查表不填表，不接这一行 TOOL_REGISTRY 永远空、工具箱显示"无可用工具"。
+import './components/toolbox/register'
 import VarPopup from './components/preset/VarPopup.vue'
 import CopyPanel from './components/preset/CopyPanel.vue'
 import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue'
@@ -268,9 +266,6 @@ function openPanel() {
   characterStore.refreshCharacterList()
 }
 
-/** RegexSidebar 拖拽改宽度的实时回调（只改 ref）；拖拽结束时通过 onSidebarWidthCommit 触发一次持久化。 */
-function setRegexSidebarWidth(w: number) { uiStore.settings.sidebarWidth = w }
-
 /** Save / Ctrl+S 永远只作用于当前活跃工作区。 */
 function onSave() {
   workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry]?.save()
@@ -327,16 +322,16 @@ function onClosePanel() {
 }
 
 /** Search/VarNav/Preview 目前仅 preset 工作区使用，workspace 硬编码为 'preset'。 */
-function toggleSearch() {
-  const next = !tabsStore.searchOpen
-  tabsStore.setSearchOpen('preset', next)
-  if (next) presetStore.doSearch()
-}
 function toggleVarNav() {
   tabsStore.setVarNavOpen('preset', !tabsStore.varNavOpen)
 }
 function togglePreview() {
   tabsStore.setPreviewOpen('preset', !tabsStore.previewOpen)
+}
+/** 工具箱是跨 workspace 通用的（preset/worldbook/character 都能开），按当前 activeWorkspace 分桶开关。 */
+function toggleToolBox() {
+  const ws = tabsStore.activeWorkspace
+  tabsStore.setToolBoxOpen(ws, !tabsStore.toolBoxOpen)
 }
 
 /** 动态 i18n key 拼接统一入口：`${adapter.key}.${suffix}`，显式 cast 为 LocaleKey；新增 workspace 时需配齐对应 key 集。 */

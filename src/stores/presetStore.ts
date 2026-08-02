@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
-import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, SearchResult, VarOp, PreviewBlockGroup, RegexScript } from '../types'
+import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, VarOp, PreviewBlockGroup, RegexScript } from '../types'
 import * as ST from '../api/presetApi'
 import type { PresetListEntry } from '../api/presetApi'
 import * as Host from '../api/hostContext'
@@ -85,6 +85,123 @@ export const usePresetStore = defineStore('main', () => {
     defaultPlacement: [2],
   })
 
+  /* ====== Regex 分组树（独立于 preset 域的 order，同 useGroupedList 模式）======
+   * regexScripts 是裸数组（后端数据），regexOrder 是分组树视图。identifier 填 regex script id。
+   * add/delete 直接改 regexScripts 裸数组（useRegexScripts），watch 变化后 rebuildRegexOrder 重建树；
+   * reorder/bind/unbind 改 regexOrder 树，随后 syncRegexScriptsFromOrder 把树展平写回裸数组
+   * （更新顺序与 _gid/_gname/_gcollapsed/_genabled/_gidx 字段）。双向模式同 preset 域的 order⇄prompts。 */
+  const regexOrder = ref<OrderNode[]>([])
+  const {
+    flatNodes: regexFlatNodes, selectedGi: regexSelectedGi, anchorGi: regexAnchorGi,
+    identifierToGi: regexIdentifierToGi, revealAndFindGi: regexRevealAndFindGi,
+    clearSelection: regexClearSelection, selectBlock: regexSelectBlock,
+    toggleBlock: regexToggleBlockRaw, toggleGroupCollapse: regexToggleGroupCollapse,
+    reorderBlock: regexReorderBlockRaw, insertAfterActive: regexInsertAfterActive,
+    removeNode: regexRemoveNode, bindSelected: regexBindSelectedRaw, unbindGroup: regexUnbindGroupRaw,
+  } = useGroupedList(regexOrder, { groupName: (n) => t('regex.sidebar.defaultGroupName', { count: n }) })
+
+  /** regex 单条开关包装：toggle 改树后 sync 回 regexScripts 的 script.disabled（修双状态镜像 seam——
+   *  裸 toggle 只翻树 enabled 不写回真数据，保存时会把改动丢掉）。 */
+  function regexToggleBlock(gi: number) {
+    regexToggleBlockRaw(gi)
+    syncRegexScriptsFromOrder()
+    markDirty()
+  }
+
+  /** 从 regexScripts 裸数组重建 regexOrder 分组树——读每个 script 的 _gid/_gname/_gcollapsed/_genabled/_gidx。
+   *  同 _gid 的复用同一个 group ref（折叠态/名字不丢）。抄 importOrderWithGroups 的逻辑。 */
+  function rebuildRegexOrder() {
+    const scripts = regexScripts.value
+    const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: { script: RegexScript; idx: number }[] }>()
+    scripts.forEach(script => {
+      if (script._gid) {
+        if (!groups.has(script._gid)) {
+          groups.set(script._gid, {
+            name: script._gname || 'Group',
+            collapsed: script._gcollapsed !== false,
+            enabled: script._genabled !== false,
+            items: [],
+          })
+        }
+        groups.get(script._gid)!.items.push({ script, idx: script._gidx ?? 0 })
+      }
+    })
+    groups.forEach(g => g.items.sort((a, b) => a.idx - b.idx))
+    const usedGroups = new Set<string>()
+    const topLevel: OrderNode[] = []
+    scripts.forEach(script => {
+      if (script._gid) {
+        if (usedGroups.has(script._gid)) return
+        const g = groups.get(script._gid)!
+        topLevel.push({
+          id: 'group_' + script._gid,
+          _gid: script._gid,
+          name: g.name,
+          collapsed: g.collapsed,
+          enabled: g.enabled,
+          children: g.items.map(x => ({ identifier: x.script.id, enabled: !x.script.disabled })),
+        } as OrderGroup)
+        usedGroups.add(script._gid)
+      } else {
+        topLevel.push({ identifier: script.id, enabled: !script.disabled } as OrderItem)
+      }
+    })
+    regexOrder.value = topLevel
+  }
+
+  /** 把 regexOrder 树展平写回 regexScripts 裸数组：重排 scripts 顺序 + 更新 _gid 等分组字段。 */
+  function syncRegexScriptsFromOrder() {
+    const scripts = getRegexScripts()
+    if (!scripts) return
+    const byId = new Map(scripts.map(s => [s.id, s]))
+    const reordered: RegexScript[] = []
+    regexOrder.value.forEach(node => {
+      if (isGroup(node)) {
+        node.children.forEach((child, cidx) => {
+          const s = byId.get(child.identifier)
+          if (!s) return
+          s.disabled = !child.enabled
+          s._gid = node._gid; s._gname = node.name
+          s._gcollapsed = node.collapsed; s._genabled = node.enabled; s._gidx = cidx
+          reordered.push(s)
+        })
+      } else {
+        const s = byId.get(node.identifier)
+        if (!s) return
+        s.disabled = !node.enabled
+        delete s._gid; delete s._gname; delete s._gcollapsed; delete s._genabled; delete s._gidx
+        reordered.push(s)
+      }
+    })
+    // 原地替换内容（保持 regexScripts computed 引用的数组对象不变）
+    scripts.length = 0
+    scripts.push(...reordered)
+  }
+
+  /** regex sidebar 拖拽重排：改 regexOrder 树后 sync 回 regexScripts。 */
+  function reorderRegexBlock(fromGi: number, toGi: number, after: boolean) {
+    regexReorderBlockRaw(fromGi, toGi, after)
+    syncRegexScriptsFromOrder()
+    markDirty()
+  }
+  /** regex sidebar 绑定：合并选中顶层 item 成新组后 sync 回 regexScripts。 */
+  function regexBindSelected() {
+    const result = regexBindSelectedRaw()
+    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    syncRegexScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
+  }
+  /** regex sidebar 解绑：拆组成顶层 item 后 sync 回 regexScripts。 */
+  function regexUnbindGroup(gi: number) {
+    if (!regexUnbindGroupRaw(gi)) return
+    syncRegexScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.unbound'))
+  }
+
+  watch([regexScripts], () => rebuildRegexOrder(), { immediate: true })
+
   /* ====== 脏标记（驱动 header Save 按钮上的 `*`） ======
    * `order`/`regexScripts` 深度 watch：两者数组都很小，全量 traverse 成本可忽略。
    * `prompts` 浅 watch：holds 每个 block 的完整内容字符串，深 watch 会在每次嵌套字段
@@ -92,23 +209,16 @@ export const usePresetStore = defineStore('main', () => {
    *   仍能捕获顶层变异（push/splice/重赋值），即 add/delete/duplicate block。
    * 嵌套字段（content/name/role）变更不在浅 watch 范围内，相关调用点显式 markDirty()：
    *   PresetContentEditor.vue 的 content setter、PresetSettingsForm.vue 的 name/role 处理、
-   *   PresetSidebar.vue 的 inline rename commit、以及下面的 replaceCurrent()/replaceAll()。
+   *   PresetSidebar.vue 的 inline rename commit。
    * 加载新预设时对 prompts/order 的赋值看起来像"变更"会触发 watch 标脏——applyLoadedPreset()
    *   在 nextTick 里清回 false（Vue 在该 nextTick 回调前 flush 掉这次赋值排入的 watcher）。 */
   const dirty = ref(false)
   function markDirty() { dirty.value = true }
   watch([order, regexScripts], markDirty, { deep: true })
   watch(prompts, markDirty)
+  watch(regexOrder, markDirty, { deep: true })
 
-  /* ====== Search ======
-   * searchOpen 开关本身已搬去 tabsStore（按 workspace 分桶存）。这里只留搜索本身的状态。
-   * 组件判断"要不要显示 SearchPanel"改成读 `tabsStore.searchOpen`。 */
-  const searchQuery = ref('')
-  const searchReplace = ref('')
-  const searchResults = ref<SearchResult[]>([])
-  const searchIdx = ref(-1)
-
-  /* ====== Var Nav ====== 开关同样搬去了 tabsStore，见上面 Search 的说明。 */
+  /* ====== Var Nav ====== 开关同样搬去了 tabsStore。 */
   const varFilterQ = ref('')
   const allVarOps = ref<VarOp[]>([])
   const filteredVarOps = ref<VarOp[]>([])
@@ -424,80 +534,20 @@ export const usePresetStore = defineStore('main', () => {
     showToast(t('preset.toast.unbound'))
   }
 
-  /* ====== Search ====== */
-  function doSearch() {
-    const q = searchQuery.value
-    searchResults.value = []
-    searchIdx.value = -1
-    if (!q) return
-    const ql = q.toLowerCase()
-    prompts.value.forEach(p => {
-      (p.content || '').split('\n').forEach((line, li) => {
-        const ll = line.toLowerCase()
-        let si = 0
-        while (true) {
-          const f = ll.indexOf(ql, si)
-          if (f === -1) break
-          const cs = Math.max(0, f - 30), ce = Math.min(line.length, f + q.length + 30)
-          searchResults.value.push({
-            blockId: p.identifier, blockName: p.name || p.identifier,
-            line: li, col: f,
-            context: (cs > 0 ? '…' : '') + line.substring(cs, ce) + (ce < line.length ? '…' : ''),
-            ms: f - cs + (cs > 0 ? 1 : 0), ml: q.length,
-          })
-          si = f + 1
-        }
-      })
-    })
-    // 预览第一个匹配项：滚动到可见区但不抢焦点（搜索框打字时不中断输入）。
-    if (searchResults.value.length) previewSearchResult(0)
-  }
-  function previewSearchResult(i: number) {
-    if (i < 0 || i >= searchResults.value.length) return
-    searchIdx.value = i
-    const r = searchResults.value[i]
-    revealAndFindGi(r.blockId) // 自动展开折叠组
-    tabsStore.requestListScroll('preset')
-    requestEditorJump(r.line, r.col, r.ml, true)
-  }
-  function jumpToSearchResult(i: number) {
-    if (i < 0 || i >= searchResults.value.length) return
-    searchIdx.value = i
-    const r = searchResults.value[i]
-    // 直接打开标签——编辑器内容、展开折叠组、侧边栏高亮全由标签驱动
-    const block = prompts.value.find(p => p.identifier === r.blockId)
-    tabsStore.open({ domain: 'preset', key: r.blockId, label: block?.name || r.blockName, workspace: 'preset' })
-    requestEditorJump(r.line, r.col, r.ml, false)
-  }
-  function navSearch(dir: number) {
-    if (!searchResults.value.length) return
-    searchIdx.value = (searchIdx.value + dir + searchResults.value.length) % searchResults.value.length
-    jumpToSearchResult(searchIdx.value)
-  }
-  function replaceCurrent() {
-    if (searchIdx.value < 0) return
-    const r = searchResults.value[searchIdx.value]
-    const p = prompts.value.find(pp => pp.identifier === r.blockId)
-    if (!p) return
-    const ls = (p.content || '').split('\n')
-    const line = ls[r.line] || ''
-    ls[r.line] = line.substring(0, r.col) + searchReplace.value + line.substring(r.col + r.ml)
-    p.content = ls.join('\n')
-    markDirty() // 嵌套字段变更，浅 watch 抓不到
-    doSearch()
-    showToast(t('preset.toast.replaced1'))
-  }
-  function replaceAll() {
-    const q = searchQuery.value
-    if (!q) return
-    let cnt = 0
-    prompts.value.forEach(p => {
-      if (!p.content) return
-      const pts = p.content.split(q)
-      if (pts.length > 1) { cnt += pts.length - 1; p.content = pts.join(searchReplace.value); markDirty() }
-    })
-    doSearch()
-    showToast(`Replaced ${cnt}`)
+  /* ====== Search（工具箱通用版） ====== */
+  /** 工具箱 Search 的通用"跳到命中"出口：按 itemId 定位（预设块 identifier 或正则脚本 id），
+   *  开对应标签；content 文本命中再叠加编辑器跳转。不依赖 SearchResult 结构，跨域 SearchTool 可复用。 */
+  function jumpToFieldHit(itemId: string, fieldKey: string, line: number, col: number, len: number) {
+    const script = getRegexScripts()?.find(r => r.id === itemId)
+    if (script) {
+      tabsStore.open({ domain: 'regex', key: script.id, label: script.scriptName || script.id, workspace: 'preset' })
+      return
+    }
+    const block = prompts.value.find(p => p.identifier === itemId)
+    if (!block) return
+    tabsStore.open({ domain: 'preset', key: block.identifier, label: block.name || block.identifier, workspace: 'preset' })
+    // 只有 content 文本命中才有编辑器坐标；name/role/identifier 等字段只开标签不跳光标
+    if (fieldKey === 'content' && line >= 0) requestEditorJump(line, col, len, false)
   }
 
   /* ====== Var Nav ====== */
@@ -690,14 +740,18 @@ export const usePresetStore = defineStore('main', () => {
 
   return {
     rawData, prompts, order, presetName, presetList,
-    flatNodes, selectedGi, anchorGi, identifierToGi,
-    searchQuery, searchReplace, searchResults, searchIdx,
+    flatNodes, selectedGi, anchorGi, identifierToGi, revealAndFindGi,
     varFilterQ, allVarOps, filteredVarOps, varIdx,
     varPopupOpen, varPopupVarName, varPopupOps, varPopupIdx, varPopupPos,
     showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
     previewMode, previewLoading, previewError,
     previewCollapsed, previewBlockGroups, previewRawText,
     regexScripts, addRegexScript, deleteRegexScript, reorderRegexScript,
+    regexOrder, regexFlatNodes, regexSelectedGi, regexAnchorGi,
+    regexIdentifierToGi, regexRevealAndFindGi, regexClearSelection,
+    regexSelectBlock, regexToggleBlock, regexToggleGroupCollapse,
+    reorderRegexBlock, regexBindSelected, regexUnbindGroup, regexRemoveNode,
+    rebuildRegexOrder, syncRegexScriptsFromOrder,
     hiddenOpen, copyPanelOpen, dirty, markDirty,
     currentBlock, hasData, hiddenBlocks,
     editorJump, requestEditorJump,
@@ -705,7 +759,7 @@ export const usePresetStore = defineStore('main', () => {
     selectBlock, addBlock, deleteBlock, hideBlock, addHiddenBlock,
     toggleBlock, reorderBlock,
     bindSelected, unbindGroup, toggleGroupCollapse,
-    doSearch, navSearch, jumpToSearchResult, replaceCurrent, replaceAll,
+    jumpToFieldHit,
     rebuildVarIndex, filterVarNav, navVar, jumpToVarOp,
     generatePreviewBlocks, generatePreviewRaw, togglePreviewBlock, toggleAllPreviewBlocks, selectPresetByName,
   }

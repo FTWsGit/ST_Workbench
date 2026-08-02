@@ -163,12 +163,7 @@
 .wb-preset-sel{max-width:200px;font-size:13px}
 
 /* Search Panel */
-.wb-preset-search{background:var(--wb-bg-e);border-bottom:1px solid var(--wb-border);padding:8px 16px;flex-shrink:0}
-.wb-preset-search-bar{display:flex;align-items:center;gap:var(--wb-sp-2);flex-wrap:wrap}
-.wb-preset-search-bar input[type="text"]{flex:0 1 240px;min-width:120px}
-.wb-preset-search-bar .wb-preset-search-repl-input{flex:0 1 200px;min-width:100px}
 .wb-preset-search-count{font-size:13px;color:var(--wb-tx3);white-space:nowrap;font-family:var(--wb-fc)}
-.wb-preset-search-results{max-height:200px;overflow-y:auto;padding-top:4px}
 .wb-preset-sr-item{display:flex;align-items:center;gap:8px;padding:var(--wb-sp-1) 8px;border-radius:var(--wb-rs);font-size:13px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr)}
 .wb-preset-sr-item:hover{background:var(--wb-bg-h)}
 .wb-preset-sr-item.active{background:var(--wb-ac-d)}
@@ -415,8 +410,6 @@
 .wb-editor-content{flex:1;display:flex;overflow:hidden;position:relative}
 .wb-line-nums{width:46px;background:var(--wb-bg-s);border-right:1px solid var(--wb-border);overflow:hidden;padding:var(--wb-editor-pad) 0;flex-shrink:0;user-select:none}
 .wb-line-nums .ln{display:flex;align-items:flex-start;justify-content:flex-end;padding-right:8px;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:var(--wb-lh);color:var(--wb-tx3);overflow:hidden;box-sizing:border-box}
-.wb-line-nums .ln.search-hit{color:var(--wb-ac)}
-.wb-line-nums .ln.search-cur{color:var(--wb-bg);background:var(--wb-ac);border-radius:2px}
 .wb-editor-wrap{flex:1;position:relative;overflow:hidden}
 /* Qualified with the .wb-editor-wrap ancestor (not just the bare class) so these reliably
    beat the base ".st-wb textarea{...}" rule above, which has higher specificity (0,1,1) than
@@ -530,6 +523,42 @@
 
 /* Full-text raw preview */
 .st-wb .wb-preset-pp-raw{font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--wb-tx);margin:0}
+
+/* ====== Toolbox Panel (cross-workspace) ======
+   Embedded by default — sits on the right edge of the main area (like Preview) with the shared
+   .wb-right-resize-handle; floating mode is delegated to FloatingPanelShell (see above).
+   Tool-switch tabs reuse the preview mode-tabs look. */
+.wb-toolbox-panel{background:var(--wb-bg-e);border-left:1px solid var(--wb-amber-a3);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
+.st-wb .wb-toolbox-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:var(--wb-sp-2);padding:var(--wb-sp-3) 12px;overflow:auto}
+.st-wb .wb-toolbox-tabs{display:flex;gap:var(--wb-sp-1);background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:3px;flex-shrink:0}
+.st-wb .wb-toolbox-tab{flex:1;padding:var(--wb-sp-2) 10px;border-radius:var(--wb-radius-0);font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--wb-tx2);transition:all var(--wb-tr)}
+.st-wb .wb-toolbox-tab:hover{color:var(--wb-tx)}
+.st-wb .wb-toolbox-tab.active{background:var(--wb-ac-d);color:var(--wb-ac)}
+.st-wb .wb-toolbox-empty{font-size:12px;color:var(--wb-tx3);padding:8px 2px}
+/* Floating shell title slot (📌 toggle next to the panel title) — self-contained, only affects the toolbox. */
+.st-wb .wb-toolbox-float-title{display:flex;align-items:center;gap:var(--wb-sp-1);flex:1;min-width:0}
+.st-wb .wb-toolbox-float-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-wb .wb-toolbox-float-title .icon-btn{flex-shrink:0}
+/* Mobile: same bottom-sheet treatment as the other right-side panels, but always visible when
+   open — the toolbox is not wired into App.vue's drawer state machine. */
+@media (max-width: 720px) {
+  .wb-toolbox-panel{
+    position:absolute;left:0;right:0;top:auto;bottom:0;
+    z-index:150;
+    width:100% !important;
+    height:82vh;max-height:82vh;
+    border-radius:16px 16px 0 0;
+    box-shadow:0 -8px 40px var(--wb-shadow-a4);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wb-toolbox-panel::before{
+    content:'';position:absolute;top:8px;left:50%;
+    width:36px;height:4px;border-radius:2px;
+    background:var(--wb-border);transform:translateX(-50%);
+  }
+  .wb-toolbox-panel .wb-rp-header{padding-top:20px}
+  .wb-toolbox-panel .wb-right-resize-handle{display:none}
+}
 
 
 /* Modals */
@@ -978,3 +1007,31 @@ body.wb-no-select{user-select:none !important;-webkit-user-select:none !importan
 
   .wb-fab{bottom:calc(16px + env(safe-area-inset-bottom));right:calc(16px + env(safe-area-inset-right))}
 }
+
+/* 批量工具：regex 勾选清单 */
+.wb-batch-script-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  padding: 6px;
+}
+.wb-batch-script-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wb-batch-script-item input[type="checkbox"] {
+  flex-shrink: 0;
+}
+
+/* 搜索工具：字段下拉占满整行 */
+.wb-toolbox-field-select { width: 100%; }

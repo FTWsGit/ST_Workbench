@@ -259,6 +259,15 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     markDirty()
   }
 
+  /** 工具箱 Search 的通用"跳到命中"出口：展开折叠组 + 打开条目标签。世界书编辑器（HighlightedEditor）
+   *  没有 jump 接口，不做编辑器跳转，滚侧边栏 + 开标签即可。 */
+  function jumpToFieldHit(itemId: string, fieldKey: string, line: number, col: number, len: number) {
+    const entry = entries.value.find(e => String(e.uid) === itemId)
+    if (!entry) return
+    revealAndFindGi(String(entry.uid)) // 展开包含它的折叠组
+    tabsStore.open({ domain: 'worldbook', key: String(entry.uid), label: entry.comment || t('common.unnamed'), workspace: 'worldbook' })
+  }
+
   function bindSelected() {
     const result = bindSelectedNodes()
     if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
@@ -270,11 +279,11 @@ export const useWorldbookStore = defineStore('worldbook', () => {
 
   return {
     entries, order, worldbookName, worldbookList,
-    flatNodes, selectedGi, anchorGi, identifierToGi,
+    flatNodes, selectedGi, anchorGi, identifierToGi, revealAndFindGi,
     dirty, markDirty, currentEntry, hasData,
     refreshWorldbookList, loadWorldbookByName, switchWorldbook, reloadWorldbook,
     doSaveWorldbook, createNewWorldbook, removeCurrentWorldbook, importFromCharacterBook,
-    selectBlock, addEntry, deleteEntry, toggleEntryDisabled,
+    selectBlock, addEntry, deleteEntry, toggleEntryDisabled, jumpToFieldHit,
     toggleGroupCollapse, reorderBlock, bindSelected, unbindGroup,
   }
 })

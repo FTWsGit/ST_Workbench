@@ -23,8 +23,11 @@ export default {
   'common.tokens': 'tok',
   'common.lines': '{count} lines',
   'common.chars': '{count} chars',
+  'common.text': 'Text',
   'common.on': 'On',
   'common.off': 'Off',
+  'common.list': 'List',
+  'common.enum': 'Enum',
 
   // ========================================
   // shared：跨域通用组件/逻辑
@@ -38,6 +41,7 @@ export default {
   'shared.header.mode.regex': 'Regex',
   'shared.header.mode.worldbook': 'Worldbook',
   'shared.header.mode.character': 'Character',
+  'shared.header.toolBox': '🔧 Toolbox',
 
   // ---- Sidebar ListTools ----
   'shared.sidebar.bind': '🔗 Bind',
@@ -89,7 +93,6 @@ export default {
   // ---- 头部工具栏 ----
   'preset.header.copyBlocks': '⇆ Copy Blocks',
   'preset.header.collectionItems': 'Prompts',
-  'preset.header.search': '🔎 Search',
   'preset.header.varNav': '📊 Variable Navigator',
   'preset.header.preview': '👁 Preview',
   'preset.header.new': 'New Preset',
@@ -127,7 +130,6 @@ export default {
   'preset.toast.select2PlusBlocks': 'Select at least 2 top-level blocks',
   'preset.toast.boundBlocks': 'Bound {count} blocks',
   'preset.toast.unbound': 'Unbound',
-  'preset.toast.replaced1': 'Replaced 1 occurrence',
   'preset.toast.previewFailed': 'Preview failed: {msg}',
   'preset.toast.renderedFullPrompt': 'Rendered full prompt',
   'preset.toast.renderedBlocks': 'Rendered {count} blocks',
@@ -171,11 +173,16 @@ export default {
   'preset.settings.empty': 'Select a block to edit its settings',
 
   // ---- 搜索替换 ----
-  'preset.search.placeholder': 'Search all blocks…',
-  'preset.search.replacePlaceholder': 'Replace…',
-  'preset.search.replace': 'Replace',
-  'preset.search.replaceAll': 'Replace All',
   'preset.search.results': '{count} results',
+
+  // ---- Field labels (toolbox search) ----
+  'preset.field.content': 'Content',
+  'preset.field.name': 'Name',
+  'preset.field.role': 'Role',
+  'preset.field.identifier': 'Identifier',
+  'preset.role.system': 'system',
+  'preset.role.user': 'user',
+  'preset.role.assistant': 'assistant',
 
   // ---- 变量导航面板 ----
   'preset.varPanel.title': '📊 Variables',
@@ -248,6 +255,7 @@ export default {
   'regex.sidebar.empty': 'No bound regex scripts yet',
   'regex.sidebar.toggleTitle': 'Enable/Disable',
   'regex.sidebar.deleteTitle': 'Delete',
+  'regex.sidebar.defaultGroupName': 'Group ({count})',
 
   // ---- 内容编辑 ----
   'regex.editor.edit': '✏️ Edit',
@@ -291,6 +299,15 @@ export default {
   'regex.substitute.none': 'No substitution',
   'regex.substitute.raw': 'Substitute (raw)',
   'regex.substitute.escaped': 'Substitute (escaped)',
+
+  // ---- Field labels (toolbox search) ----
+  'regex.field.findRegex': 'Find Regex',
+  'regex.field.replaceString': 'Replacement Text',
+  'regex.field.scriptName': 'Script Name',
+  'regex.field.placement': 'Placement',
+  'regex.field.trimStrings': 'Trim Strings',
+  'regex.field.substituteRegex': 'Substitute Regex',
+  'regex.field.disabled': 'Disabled',
 
   // ---- 确认弹窗 ----
   'regex.confirm.delete.title': 'Delete regex script?',
@@ -350,18 +367,8 @@ export default {
   'worldbook.sidebar.newEntry': '+ New',
   'worldbook.sidebar.empty': 'No worldbook loaded yet. Select one from the top right, or create a new one',
   'worldbook.sidebar.defaultGroupName': 'Group ({count})',
-  'worldbook.sidebar.tools': '🛠 Bulk',
 
-  // ---- 批量工具面板 ----
-  'worldbook.tools.title': 'Bulk Tools',
-  'worldbook.tools.selectedCount': '{count} entries selected',
-  'worldbook.tools.enableLabel': 'Enabled State',
-  'worldbook.tools.enableSelected': 'Enable Selected',
-  'worldbook.tools.disableSelected': 'Disable Selected',
-  'worldbook.tools.activationLabel': 'Activation Type',
-  'worldbook.tools.noSelection': 'Select some entries in the left list first (Ctrl/Shift for multi-select)',
-  'worldbook.tools.applied': 'Applied to {count} entries',
-
+  // ---- 激活方式（settings 表 + 工具箱 BatchTool 共用） ----
   // ---- 选项枚举 ----
   'worldbook.activation.keyWord': '🟢 Keyword',
   'worldbook.activation.constant': '🔵 Constant',
@@ -382,6 +389,22 @@ export default {
   'worldbook.role.system': 'System',
   'worldbook.role.user': 'User',
   'worldbook.role.assistant': 'Assistant',
+
+  // ---- Field labels (toolbox search) ----
+  'worldbook.field.content': 'Content',
+  'worldbook.field.comment': 'Comment',
+  'worldbook.field.keys': 'Primary Keywords',
+  'worldbook.field.keysecondary': 'Secondary Keywords',
+  'worldbook.field.group': 'Group',
+  'worldbook.field.position': 'Position',
+  'worldbook.field.role': 'Role',
+  'worldbook.field.depth': 'Depth',
+  'worldbook.field.order': 'Order',
+  'worldbook.field.probability': 'Probability',
+  'worldbook.field.disabled': 'Disabled',
+  'worldbook.field.constant': 'Constant',
+  'worldbook.field.keyWord': 'Keyword',
+  'worldbook.field.vectorized': 'Vectorized',
 
   // ---- 编辑器 ----
   'worldbook.editor.placeholder': 'Edit worldbook entry content here…',
@@ -506,4 +529,40 @@ export default {
   // ---- 编辑区空状态 ----
   'character.editorShell.empty': 'No character loaded yet. Create or select one',
   'character.editorShell.emptyField': 'Select a field to edit',
+
+  // ========================================
+  // toolbox：cross-workspace toolbox panel (container shell)
+  // ========================================
+  'toolbox.title': '🔧 Toolbox',
+  'toolbox.empty': 'No tools available for this scene',
+
+  // ---- Tool switch tabs ----
+  'toolbox.tool.search': 'Search',
+  'toolbox.tool.batch': 'Batch',
+
+  // ---- Search tool ----
+  'toolbox.search.field': 'Field',
+  'toolbox.search.placeholder': 'Search…',
+  'toolbox.search.replacePlaceholder': 'Replace…',
+  'toolbox.search.replace': 'Replace',
+  'toolbox.search.replaceAll': 'Replace All',
+  'toolbox.search.results': '{count} results',
+  'toolbox.search.selectSide': 'Select to Sidebar',
+  'toolbox.search.selectSideHint': 'Sync hits to sidebar selection, then use Batch tool to modify them',
+  'toolbox.search.enumHint': 'Enum field: pick a candidate value to apply to selected hits',
+  'toolbox.search.noEnumChoices': 'No batch-editable candidates for this field (read-only)',
+
+  // ---- Batch tool ----
+  'toolbox.batch.selectedCount': '{count} selected',
+  'toolbox.batch.enableLabel': 'Enabled State',
+  'toolbox.batch.enableSelected': 'Enable Selected',
+  'toolbox.batch.disableSelected': 'Disable Selected',
+  'toolbox.batch.roleLabel': 'Set Role',
+  'toolbox.batch.activationLabel': 'Set Activation',
+  'toolbox.batch.deleteSelected': 'Delete Selected',
+  'toolbox.batch.noSelection': 'Select items in the left list (Ctrl/Shift) or check them in this panel first',
+  'toolbox.batch.applied': 'Applied to {count} items',
+  'toolbox.batch.deleteConfirm.title': 'Delete selected items?',
+  'toolbox.batch.deleteConfirm.message': 'This will permanently remove the {count} selected items. This cannot be undone.',
+  'toolbox.batch.noBatchTools': 'No batch tools available for this scene',
 } satisfies Record<keyof typeof zhCN, string>

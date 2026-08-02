@@ -83,16 +83,6 @@ export interface PreviewBlockGroup {
   messages: PreviewMessage[]
 }
 
-export interface SearchResult {
-  blockId: string
-  blockName: string
-  line: number
-  col: number
-  context: string
-  ms: number
-  ml: number
-}
-
 export interface VarOp {
   blockId: string
   blockName: string
@@ -120,6 +110,8 @@ export interface Settings {
   previewWidth: number
   varPanelFloat: boolean
   previewFloat: boolean
+  toolBoxWidth: number
+  toolBoxFloat: boolean
   settingsDockWidth: number
   settingsDockFloat: boolean
   language: 'zh-CN' | 'en'
@@ -144,16 +136,16 @@ export const DEFAULT_SETTINGS: Settings = {
   previewWidth: 640,
   varPanelFloat: true,
   previewFloat: true, 
+  toolBoxWidth: 420,
+  toolBoxFloat: false,
   settingsDockWidth: 320,
   settingsDockFloat: true,
   language: 'zh-CN',
   fabPos: null,
 }
 
-/** Cap on how many search-result rows SearchPanel.vue renders in the results list — doSearch()
- *  in presetStore.ts still collects every match (used for prev/next/replace-all), this only limits the
- *  DOM list. Lives here instead of a local const in SearchPanel.vue so there's one source of
- *  truth if this ever needs to become a user setting. */
+/** Cap on how many search-result rows the results list renders — searchFields() 纯函数仍收集每条命中，
+ *  this only limits the DOM list. 工具箱 SearchTool.vue 复用。 */
 export const SEARCH_MAX = 200
 
 export const FONT_OPTIONS = [
