@@ -8,7 +8,6 @@
       <div class="wb-sidebar-tools">
         <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('shared.sidebar.bind') }}</button>
         <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('shared.sidebar.unbind') }}</button>
-        <button class="wb-btn" :class="{ active: toolsOpen }" @click="toolsOpen = !toolsOpen">{{ uiStore.t('worldbook.sidebar.tools') }}</button>
       </div>
     </div>
     <div class="wb-list" ref="listRef">
@@ -71,7 +70,6 @@
     </div>
   </aside>
   <div class="wb-resize-handle" :class="{ active: resize.active.value }" @pointerdown="onResizeStart"></div>
-  <WorldbookToolsPanel v-if="toolsOpen" @close="toolsOpen = false" />
 </template>
 
 <script setup lang="ts">
@@ -89,10 +87,8 @@ import { useDragReorder } from '../../composables/useDragReorder'
 import { useInlineRename } from '../../composables/useInlineRename'
 import { useListSelection } from '../../composables/useListSelection'
 import ListToolbar from '../shared/ListToolbar.vue'
-import WorldbookToolsPanel from './WorldbookToolsPanel.vue'
 
 const props = defineProps<{ mobileDrawerOpen?: boolean }>()
-const toolsOpen = ref(false)
 
 const tabsStore = useTabsStore()
 const store = useWorldbookStore()

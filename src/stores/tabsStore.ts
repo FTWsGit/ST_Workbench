@@ -47,15 +47,17 @@ export const useTabsStore = defineStore('tabs', () => {
   /** Search/VarNav/Preview 三个面板的"开关状态"，按 workspace 分桶存。
    *  各自业务逻辑（doSearch()/rebuildVarIndex()/generatePreviewBlocks() 等）留在对应 store 里。
    *  copyPanelOpen 留在 presetStore —— CopyPanel 永远只属于 preset 工作区。 */
-  const searchOpenByWorkspace = ref<Record<string, boolean>>({})
   const varNavOpenByWorkspace = ref<Record<string, boolean>>({})
   const previewOpenByWorkspace = ref<Record<string, boolean>>({})
-  const searchOpen = computed(() => searchOpenByWorkspace.value[activeWorkspace.value] ?? false)
   const varNavOpen = computed(() => varNavOpenByWorkspace.value[activeWorkspace.value] ?? false)
   const previewOpen = computed(() => previewOpenByWorkspace.value[activeWorkspace.value] ?? false)
-  function setSearchOpen(workspace: string, open: boolean) { searchOpenByWorkspace.value[workspace] = open }
   function setVarNavOpen(workspace: string, open: boolean) { varNavOpenByWorkspace.value[workspace] = open }
   function setPreviewOpen(workspace: string, open: boolean) { previewOpenByWorkspace.value[workspace] = open }
+
+  /** 工具箱面板开关，同样按 workspace 分桶。工具箱是跨 workspace 通用的（preset/worldbook/character 都能开）。 */
+  const toolBoxOpenByWorkspace = ref<Record<string, boolean>>({})
+  const toolBoxOpen = computed(() => toolBoxOpenByWorkspace.value[activeWorkspace.value] ?? false)
+  function setToolBoxOpen(workspace: string, open: boolean) { toolBoxOpenByWorkspace.value[workspace] = open }
 
   /** 按 domain 的"请滚动到当前选中项"信号。每个 domain 的侧边栏只监听自己的计数器。
    *  放在这里（tabsStore）而不是 presetStore 是因为它是 UI 布局状态（标签/侧边栏）而非业务数据，
@@ -144,6 +146,7 @@ export const useTabsStore = defineStore('tabs', () => {
     tabs, activeId, activeTab, open, renameTab, close, closeAll, closeDomain, closeWorkspace, focus, isOpen,
     sidebarCollection, setSidebarCollection, listScrollToken, requestListScroll,
     activeWorkspace, setActiveWorkspace, tabsInActiveWorkspace,
-    searchOpen, varNavOpen, previewOpen, setSearchOpen, setVarNavOpen, setPreviewOpen,
+    varNavOpen, previewOpen, setVarNavOpen, setPreviewOpen,
+    toolBoxOpen, setToolBoxOpen,
   }
 })

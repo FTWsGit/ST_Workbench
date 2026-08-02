@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref, computed, nextTick } from 'vue'
-import { type Character, type CharacterListEntry, type RegexScript, CHARACTER_FIELDS } from '../types'
+import { ref, computed, nextTick, watch } from 'vue'
+import { type Character, type CharacterListEntry, type RegexScript, type OrderNode, type OrderGroup, type OrderItem, CHARACTER_FIELDS } from '../types'
 import * as CH from '../api/characterApi'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { useUiStore } from './uiStore'
 import { useRegexScripts } from '../composables/useRegexScripts'
+import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 function genLocalId(prefix: string): string {
   return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
@@ -100,6 +101,21 @@ export const useCharacterStore = defineStore('character', () => {
     markDirty()
   }
 
+  /** 工具箱 Search 的通用"跳到命中"出口：itemId 就是虚拟字段 tab key（'field:xxx' / 'field:greeting:<id>'），
+   *  直接开对应标签。character 没有 groupedList，无需 revealAndFindGi。 */
+  function jumpToFieldHit(itemId: string, fieldKey: string, line: number, col: number, len: number) {
+    if (!character.value) return
+    if (itemId.startsWith('field:greeting:')) {
+      const gid = itemId.slice('field:greeting:'.length)
+      const idx = greetingIds.value.indexOf(gid)
+      tabsStore.open({ domain: 'character', key: itemId, label: t('character.sidebar.greetingLabel', { n: (idx >= 0 ? idx : greetingIds.value.length) + 1 }), workspace: 'character' })
+      return
+    }
+    const fieldKeyPart = itemId.slice('field:'.length)
+    const field = CHARACTER_FIELDS.find(f => f.key === fieldKeyPart)
+    tabsStore.open({ domain: 'character', key: itemId, label: field ? t(field.labelKey) : fieldKeyPart, workspace: 'character' })
+  }
+
   /* ====== Bound Regex Scripts（同 presetStore.regexScripts 的模式，宿主换成 character） ====== */
   const regexScripts = computed<RegexScript[]>(() => {
     if (!character.value) return []
@@ -122,6 +138,115 @@ export const useCharacterStore = defineStore('character', () => {
     loadFirstMessageKey: 'character.toast.loadFirst',
     defaultPlacement: [2],
   })
+
+  /* ====== Regex 分组树（同 presetStore regex 段，identifier 填 regex script id）====== */
+  const regexOrder = ref<OrderNode[]>([])
+  const {
+    flatNodes: regexFlatNodes, selectedGi: regexSelectedGi, anchorGi: regexAnchorGi,
+    identifierToGi: regexIdentifierToGi, revealAndFindGi: regexRevealAndFindGi,
+    clearSelection: regexClearSelection, selectBlock: regexSelectBlock,
+    toggleBlock: regexToggleBlockRaw, toggleGroupCollapse: regexToggleGroupCollapse,
+    reorderBlock: regexReorderBlockRaw, insertAfterActive: regexInsertAfterActive,
+    removeNode: regexRemoveNode, bindSelected: regexBindSelectedRaw, unbindGroup: regexUnbindGroupRaw,
+  } = useGroupedList(regexOrder, { groupName: (n) => t('regex.sidebar.defaultGroupName', { count: n }) })
+
+  /** regex 单条开关包装：toggle 改树后 sync 回 regexScripts 的 script.disabled（修双状态镜像 seam——
+   *  裸 toggle 只翻树 enabled 不写回真数据，保存时会把改动丢掉）。 */
+  function regexToggleBlock(gi: number) {
+    regexToggleBlockRaw(gi)
+    syncRegexScriptsFromOrder()
+    markDirty()
+  }
+
+  /** 从 regexScripts 裸数组重建 regexOrder 分组树——读每个 script 的 _gid/_gname/_gcollapsed/_genabled/_gidx。 */
+  function rebuildRegexOrder() {
+    const scripts = regexScripts.value
+    const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: { script: RegexScript; idx: number }[] }>()
+    scripts.forEach(script => {
+      if (script._gid) {
+        if (!groups.has(script._gid)) {
+          groups.set(script._gid, {
+            name: script._gname || 'Group',
+            collapsed: script._gcollapsed !== false,
+            enabled: script._genabled !== false,
+            items: [],
+          })
+        }
+        groups.get(script._gid)!.items.push({ script, idx: script._gidx ?? 0 })
+      }
+    })
+    groups.forEach(g => g.items.sort((a, b) => a.idx - b.idx))
+    const usedGroups = new Set<string>()
+    const topLevel: OrderNode[] = []
+    scripts.forEach(script => {
+      if (script._gid) {
+        if (usedGroups.has(script._gid)) return
+        const g = groups.get(script._gid)!
+        topLevel.push({
+          id: 'group_' + script._gid,
+          _gid: script._gid,
+          name: g.name,
+          collapsed: g.collapsed,
+          enabled: g.enabled,
+          children: g.items.map(x => ({ identifier: x.script.id, enabled: !x.script.disabled })),
+        } as OrderGroup)
+        usedGroups.add(script._gid)
+      } else {
+        topLevel.push({ identifier: script.id, enabled: !script.disabled } as OrderItem)
+      }
+    })
+    regexOrder.value = topLevel
+  }
+
+  /** 把 regexOrder 树展平写回 regexScripts 裸数组：重排 scripts 顺序 + 更新 _gid 等分组字段。 */
+  function syncRegexScriptsFromOrder() {
+    const scripts = getRegexScripts()
+    if (!scripts) return
+    const byId = new Map(scripts.map(s => [s.id, s]))
+    const reordered: RegexScript[] = []
+    regexOrder.value.forEach(node => {
+      if (isGroup(node)) {
+        node.children.forEach((child, cidx) => {
+          const s = byId.get(child.identifier)
+          if (!s) return
+          s.disabled = !child.enabled
+          s._gid = node._gid; s._gname = node.name
+          s._gcollapsed = node.collapsed; s._genabled = node.enabled; s._gidx = cidx
+          reordered.push(s)
+        })
+      } else {
+        const s = byId.get(node.identifier)
+        if (!s) return
+        s.disabled = !node.enabled
+        delete s._gid; delete s._gname; delete s._gcollapsed; delete s._genabled; delete s._gidx
+        reordered.push(s)
+      }
+    })
+    scripts.length = 0
+    scripts.push(...reordered)
+  }
+
+  function reorderRegexBlock(fromGi: number, toGi: number, after: boolean) {
+    regexReorderBlockRaw(fromGi, toGi, after)
+    syncRegexScriptsFromOrder()
+    markDirty()
+  }
+  function regexBindSelected() {
+    const result = regexBindSelectedRaw()
+    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    syncRegexScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
+  }
+  function regexUnbindGroup(gi: number) {
+    if (!regexUnbindGroupRaw(gi)) return
+    syncRegexScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.unbound'))
+  }
+
+  watch([regexScripts], () => rebuildRegexOrder(), { immediate: true })
+  watch(regexOrder, markDirty, { deep: true })
 
   /* ====== Greetings：增删拖拽 ====== */
   function addGreeting() {
@@ -248,9 +373,14 @@ export const useCharacterStore = defineStore('character', () => {
 
   return {
     character, oldRaw, characterList, pendingAvatarFile, dirty, markDirty, hasData,
-    currentField, setCurrentFieldValue,
+    currentField, setCurrentFieldValue, jumpToFieldHit,
     greetingIds, addGreeting, deleteGreeting, reorderGreeting,
     regexScripts, addRegexScript, deleteRegexScript, reorderRegexScript,
+    regexOrder, regexFlatNodes, regexSelectedGi, regexAnchorGi,
+    regexIdentifierToGi, regexRevealAndFindGi, regexClearSelection,
+    regexSelectBlock, regexToggleBlock, regexToggleGroupCollapse,
+    reorderRegexBlock, regexBindSelected, regexUnbindGroup, regexRemoveNode,
+    rebuildRegexOrder, syncRegexScriptsFromOrder,
     refreshCharacterList, loadCharacterByAvatar, switchCharacter, reloadCharacter,
     createNewCharacter, removeCurrentCharacter, doSaveCharacter,
   }

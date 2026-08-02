@@ -11,7 +11,6 @@
       v-model="content"
       :disabled="store.currentBlock?.marker ?? false"
       :jump="store.editorJump"
-      :line-class="lineClass"
       enable-var-click
       :status-cursor-label="uiStore.t('shared.highlightedEditor.cursor')"
       :status-chars-label="uiStore.t('common.chars')"
@@ -43,17 +42,6 @@ const content = computed<string>({
 
 /** 切换激活 block 时关闭可能残留的 var-popup（避免指向旧 block 的变量上下文错误）。 */
 watch(() => tabsStore.activeTab?.key, () => { store.hideVarPopup() }, { immediate: true })
-
-/** 搜索结果行号高亮：行号槽用的 block 专属逻辑，放在这里而非通用编辑器内。 */
-function lineClass(ln: number) {
-  if (!store.searchResults.length) return ''
-  const blockId = store.currentBlock?.identifier
-  if (!blockId) return ''
-  const hit = store.searchResults.some(r => r.blockId === blockId && r.line === ln)
-  if (!hit) return ''
-  const cur = store.searchIdx >= 0 && store.searchResults[store.searchIdx]?.blockId === blockId && store.searchResults[store.searchIdx]?.line === ln
-  return cur ? 'search-cur' : 'search-hit'
-}
 
 function onVarClick(payload: { varName: string; cursorPos: number; pos: { top: number; left: number } }) {
   store.showVarPopup(payload.varName, store.currentBlock?.identifier ?? null, payload.cursorPos, payload.pos)

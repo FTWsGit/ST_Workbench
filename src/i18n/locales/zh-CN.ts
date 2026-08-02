@@ -26,8 +26,11 @@ export default {
   'common.tokens': 'tok',
   'common.lines': '{count} 行',
   'common.chars': '{count} 字符',
+  'common.text': '文本',
   'common.on': '开',
   'common.off': '关',
+  'common.list': '列表',
+  'common.enum': '枚举',
 
   // ========================================
   // shared：跨域通用组件/逻辑
@@ -41,6 +44,7 @@ export default {
   'shared.header.mode.regex': '正则',
   'shared.header.mode.worldbook': '世界书',
   'shared.header.mode.character': '角色卡',
+  'shared.header.toolBox': '🔧 工具箱',
 
   // ---- 侧边栏 ----
   'shared.sidebar.bind': '🔗 绑定',
@@ -92,7 +96,6 @@ export default {
   // ---- 头部工具栏 ----
   'preset.header.copyBlocks': '⇆ 复制块',
   'preset.header.collectionItems': '提示词',
-  'preset.header.search': '🔎 搜索',
   'preset.header.varNav': '📊 变量导航',
   'preset.header.preview': '👁 预览',
   'preset.header.new': '新建预设',
@@ -130,7 +133,6 @@ export default {
   'preset.toast.select2PlusBlocks': '请选择至少 2 个顶层块',
   'preset.toast.boundBlocks': '已绑定 {count} 个块',
   'preset.toast.unbound': '已解除绑定',
-  'preset.toast.replaced1': '已替换 1 处',
   'preset.toast.previewFailed': '预览失败：{msg}',
   'preset.toast.renderedFullPrompt': '已渲染完整提示词',
   'preset.toast.renderedBlocks': '已渲染 {count} 个块',
@@ -174,11 +176,16 @@ export default {
   'preset.settings.empty': '选择一个块以编辑其设置',
 
   // ---- 搜索替换 ----
-  'preset.search.placeholder': '搜索所有块…',
-  'preset.search.replacePlaceholder': '替换…',
-  'preset.search.replace': '替换',
-  'preset.search.replaceAll': '替换全部',
   'preset.search.results': '{count} 个结果',
+
+  // ---- 字段标签（工具箱搜索用）----
+  'preset.field.content': '内容',
+  'preset.field.name': '名称',
+  'preset.field.role': '角色',
+  'preset.field.identifier': '标识符',
+  'preset.role.system': 'system',
+  'preset.role.user': 'user',
+  'preset.role.assistant': 'assistant',
 
   // ---- 变量导航面板 ----
   'preset.varPanel.title': '📊 变量',
@@ -251,6 +258,7 @@ export default {
   'regex.sidebar.empty': '还没有绑定的正则',
   'regex.sidebar.toggleTitle': '启用/禁用',
   'regex.sidebar.deleteTitle': '删除',
+  'regex.sidebar.defaultGroupName': '分组 ({count})',
 
   // ---- 内容编辑 ----
   'regex.editor.edit': '✏️ 编辑',
@@ -294,6 +302,15 @@ export default {
   'regex.substitute.none': '不替换',
   'regex.substitute.raw': '替换（原始）',
   'regex.substitute.escaped': '替换（转义）',
+
+  // ---- 字段标签（工具箱搜索用）----
+  'regex.field.findRegex': '查找正则',
+  'regex.field.replaceString': '替换文本',
+  'regex.field.scriptName': '脚本名称',
+  'regex.field.placement': '作用范围',
+  'regex.field.trimStrings': '修剪文本',
+  'regex.field.substituteRegex': '替换宏',
+  'regex.field.disabled': '已禁用',
 
   // ---- 确认弹窗 ----
   'regex.confirm.delete.title': '删除正则脚本？',
@@ -353,18 +370,8 @@ export default {
   'worldbook.sidebar.newEntry': '+ 新建',
   'worldbook.sidebar.empty': '还没有加载世界书，从右上角选一个，或者新建一个',
   'worldbook.sidebar.defaultGroupName': '分组 ({count})',
-  'worldbook.sidebar.tools': '🛠 批量',
 
-  // ---- 批量工具面板 ----
-  'worldbook.tools.title': '批量工具',
-  'worldbook.tools.selectedCount': '已选中 {count} 个条目',
-  'worldbook.tools.enableLabel': '启用状态',
-  'worldbook.tools.enableSelected': '启用选中',
-  'worldbook.tools.disableSelected': '禁用选中',
-  'worldbook.tools.activationLabel': '激活方式',
-  'worldbook.tools.noSelection': '先在左侧列表里选中一些条目（Ctrl/Shift 多选）',
-  'worldbook.tools.applied': '已应用到 {count} 个条目',
-
+  // ---- 激活方式（settings 表 + 工具箱 BatchTool 共用） ----
   // ---- 选项枚举 ----
   'worldbook.activation.keyWord': '🟢 关键词',
   'worldbook.activation.constant': '🔵 恒定',
@@ -385,6 +392,22 @@ export default {
   'worldbook.role.system': '系统',
   'worldbook.role.user': '用户',
   'worldbook.role.assistant': '助手',
+
+  // ---- 字段标签（工具箱搜索用）----
+  'worldbook.field.content': '内容',
+  'worldbook.field.comment': '标题/备注',
+  'worldbook.field.keys': '主要关键词',
+  'worldbook.field.keysecondary': '次要关键词',
+  'worldbook.field.group': '互斥组',
+  'worldbook.field.position': '插入位置',
+  'worldbook.field.role': '角色',
+  'worldbook.field.depth': '深度',
+  'worldbook.field.order': '插入顺序',
+  'worldbook.field.probability': '触发概率',
+  'worldbook.field.disabled': '已禁用',
+  'worldbook.field.constant': '恒定激活',
+  'worldbook.field.keyWord': '关键词激活',
+  'worldbook.field.vectorized': '向量化激活',
 
   // ---- 编辑器 ----
   'worldbook.editor.placeholder': '在这里编辑世界书条目的内容…',
@@ -509,4 +532,40 @@ export default {
   // ---- 编辑区空状态 ----
   'character.editorShell.empty': '还没有加载任何角色，新建或选择一个',
   'character.editorShell.emptyField': '选一个字段进行编辑',
+
+  // ========================================
+  // toolbox：跨 workspace 的工具箱面板（容器壳）
+  // ========================================
+  'toolbox.title': '🔧 工具箱',
+  'toolbox.empty': '当前场景还没有可用的工具',
+
+  // ---- 工具切换标签 ----
+  'toolbox.tool.search': '搜索',
+  'toolbox.tool.batch': '批量',
+
+  // ---- Search 工具 ----
+  'toolbox.search.field': '搜索字段',
+  'toolbox.search.placeholder': '搜索…',
+  'toolbox.search.replacePlaceholder': '替换…',
+  'toolbox.search.replace': '替换',
+  'toolbox.search.replaceAll': '替换全部',
+  'toolbox.search.results': '{count} 个结果',
+  'toolbox.search.selectSide': '选中到侧栏',
+  'toolbox.search.selectSideHint': '把命中同步到侧栏选中态，再用工具箱批量工具作用于这些块',
+  'toolbox.search.enumHint': '枚举字段：从候选值选一个应用到选中命中',
+  'toolbox.search.noEnumChoices': '此字段无可批量修改的候选值（只读展示命中）',
+
+  // ---- Batch 工具 ----
+  'toolbox.batch.selectedCount': '已选中 {count} 项',
+  'toolbox.batch.enableLabel': '启用状态',
+  'toolbox.batch.enableSelected': '启用选中',
+  'toolbox.batch.disableSelected': '禁用选中',
+  'toolbox.batch.roleLabel': '批量改角色',
+  'toolbox.batch.activationLabel': '批量改激活方式',
+  'toolbox.batch.deleteSelected': '删除选中',
+  'toolbox.batch.noSelection': '先在左侧列表里选中一些条目（Ctrl/Shift 多选），或在本面板勾选',
+  'toolbox.batch.applied': '已应用到 {count} 项',
+  'toolbox.batch.deleteConfirm.title': '删除选中项？',
+  'toolbox.batch.deleteConfirm.message': '这将永久移除选中的 {count} 项，无法撤销。',
+  'toolbox.batch.noBatchTools': '此场景暂无批量工具',
 } satisfies LocaleTable
