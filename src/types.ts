@@ -60,7 +60,7 @@ export interface PresetData {
 
   prompts: PresetBlock[]
   prompt_order: { order: OrderItem[]; [k: string]: any }[]
-  extensions?: { regex_scripts?: RegexScript[]; [k: string]: any }
+  extensions?: { regex_scripts?: RegexScript[]; tavern_helper?: TavernHelper; [k: string]: any }
   [k: string]: any
 }
 
@@ -179,6 +179,51 @@ export interface RegexScript {
   minDepth: number | null
   maxDepth: number | null
   [k: string]: any
+}
+
+/** tavern_helper 脚本树的单条脚本。button.enabled 控制是否随脚本一起导出按钮区，
+ *  buttons 是脚本内嵌的快捷按钮列表。data 留给脚本自定义键值数据，export_with 控制导出范围。
+ *  分组字段 _gid/_gname/_gcollapsed/_genabled/_gidx 通过 `[k: string]: any` 塞进 script 里
+ *  （跟 RegexScript 的分组字段同模式），顶层 folder 不需要分组字段。 */
+export interface ScriptButton {
+  text: string
+  slug?: string
+  [k: string]: any
+}
+
+export interface Script {
+  type: 'script'
+  enabled: boolean
+  name: string
+  id: string
+  content: string
+  info: string
+  button: { enabled: boolean; buttons: ScriptButton[] }
+  data: Record<string, any>
+  export_with: { data: boolean; button: boolean }
+  [k: string]: any
+}
+
+/** tavern_helper 脚本树的顶层 folder——本身就是 folder，不参与 _gid 分组（直接挂树顶层）。 */
+export interface ScriptFolder {
+  type: 'folder'
+  enabled: boolean
+  name: string
+  id: string
+  icon: string
+  color: string
+  scripts: Script[]
+}
+
+export type ScriptTree = Script | ScriptFolder
+
+/** tavern_helper 扩展段。注意：Character.extensions.tavern_helper 用 `variables` 字段名，
+ *  PresetData.extensions.tavern_helper 用 `variales`（拼写差异按用户给的保留，不统一）。
+ *  类型层统一用本 interface，运行时按 workspace 分派读对应字段名（见 useScriptTree/composable
+ *  分派逻辑，类型层不体现这拼写差异）。 */
+export interface TavernHelper {
+  scripts: ScriptTree[]
+  variables: Record<string, any>
 }
 
 /**No value 4 here, decided by SillyTavern-v1.18*/
@@ -347,6 +392,10 @@ export interface Character {
      *  概念、同一个字段名，只是宿主换成了角色卡。characterStore 暴露的 live computed 叫
      *  `regexScripts`（跟 presetStore.regexScripts 同名同模式），指向这里。 */
     regex_scripts: RegexScript[]
+    /** 脚本树扩展（tavern_helper）。注意内部变量字段名是 `variables`（跟 PresetData 的
+     *  `variales` 拼写不同，按用户给的保留差异；类型层统一用 TavernHelper，运行时按 workspace
+     *  分派读对应字段名）。必填——characterStore 的 tavernHelper computed 缺则补默认。 */
+    tavern_helper: TavernHelper
     [k: string]: any
   }
   [k: string]: any

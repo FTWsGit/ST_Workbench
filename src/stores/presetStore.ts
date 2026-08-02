@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
-import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, VarOp, PreviewBlockGroup, RegexScript } from '../types'
+import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, VarOp, PreviewBlockGroup, RegexScript, ScriptTree, Script, ScriptFolder, TavernHelper } from '../types'
 import * as ST from '../api/presetApi'
 import type { PresetListEntry } from '../api/presetApi'
 import * as Host from '../api/hostContext'
@@ -8,6 +8,7 @@ import { macroAwareDiff, findVarOps } from '../utils'
 import { useUiStore } from './uiStore'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 import { useRegexScripts } from '../composables/useRegexScripts'
+import { useScriptTree } from '../composables/useScriptTree'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { DEFAULT_PRESET } from '../types'
@@ -202,6 +203,187 @@ export const usePresetStore = defineStore('main', () => {
 
   watch([regexScripts], () => rebuildRegexOrder(), { immediate: true })
 
+  /* ====== Bound Tavern Helper（tavern_helper 段，照 regex 段模式）======
+   * preset 域注意：PresetData.extensions.tavern_helper 的内部变量字段名是 `variales`（拼写差异，
+   * 按 PresetData 接口保留），缺则补默认 `{ scripts: [], variales: {} }`。读 preset 的宽松
+   * scripts 数组时 coerce 成严格 ScriptTree 形状（缺 type 补 'script'，缺 id 补 genId）。 */
+  const tavernHelper = computed<TavernHelper>(() => {
+    if (!rawData.value) return { scripts: [], variales: {} } as unknown as TavernHelper
+    if (!rawData.value.extensions) rawData.value.extensions = {}
+    const ext = rawData.value.extensions as any
+    if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variales: {} }
+    return ext.tavern_helper as TavernHelper
+  })
+
+  /** coerce 宽松 Record<string,any>[] 成严格 ScriptTree[] 形状：缺 type 补 'script'，缺 id 补 'th_...'。
+   *  在 load 时一次性 mutate 原数据，不在 computed getter 里做（getter 里 mutate 触发响应式重算 → coerce 又跑 → 死循环）。 */
+  function coerceScriptTrees(scripts: any[]) {
+    if (!Array.isArray(scripts)) return
+    scripts.forEach((node: any) => {
+      if (!node || typeof node !== 'object') return
+      if (!node.type) node.type = 'script'
+      if (!node.id) node.id = 'th_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+    })
+  }
+
+  function getScriptTrees(): ScriptTree[] | null {
+    if (!rawData.value) return null
+    if (!rawData.value.extensions) rawData.value.extensions = {}
+    const ext = rawData.value.extensions as any
+    if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variales: {} }
+    const th = ext.tavern_helper as any
+    if (!Array.isArray(th.scripts)) th.scripts = []
+    if (!th.variales) th.variales = {}
+    return th.scripts as ScriptTree[]
+  }
+
+  const { addScriptTree, deleteScriptTree, reorderScriptTree } = useScriptTree(getScriptTrees, {
+    markDirty,
+    showToast,
+    t,
+    loadFirstMessageKey: 'preset.toast.loadFirst',
+    defaultPlacement: [2],
+  })
+
+  /* ====== tavern_helper 分组树（独立于 regexOrder/preset 域的 order，同 useGroupedList 模式）======
+   * tavernHelper.scripts 是裸数组（后端数据，顶层是 ScriptTree = Script 或 ScriptFolder），
+   * scriptTreeOrder 是分组树视图。identifier 填 script/folder 的 id。
+   * Script 带 _gid 的归组（分组字段塞进 Script 的 [k:string]:any）；ScriptFolder 直接挂顶层
+   * 不 coerce（它本身就是 folder，不参与 _gid 分组）。
+   * add/delete 直接改 scripts 裸数组（useScriptTree），CRUD 后 store 显式调 rebuildScriptTreeOrder
+   * （浅 watch seam：watch([tavernHelper.value.scripts]) 是浅 watch 永不触发原地变异，照 regex 段修法）。
+   * reorder/bind/unbind/toggle 改 scriptTreeOrder 树，随后 syncScriptsFromOrder 把树展平写回裸数组
+   * （更新顺序与 _gid/_gname/_gcollapsed/_genabled/_gidx 字段）。 */
+  const scriptTreeOrder = ref<OrderNode[]>([])
+  const {
+    flatNodes: scriptTreeFlatNodes, selectedGi: scriptTreeSelectedGi, anchorGi: scriptTreeAnchorGi,
+    identifierToGi: scriptTreeIdentifierToGi, revealAndFindGi: scriptTreeRevealAndFindGi,
+    clearSelection: scriptTreeClearSelection, selectBlock: scriptTreeSelectBlock,
+    toggleBlock: scriptTreeToggleBlockRaw, toggleGroupCollapse: scriptTreeToggleGroupCollapse,
+    reorderBlock: scriptTreeReorderBlockRaw, insertAfterActive: scriptTreeInsertAfterActive,
+    removeNode: scriptTreeRemoveNode, bindSelected: scriptTreeBindSelectedRaw, unbindGroup: scriptTreeUnbindGroupRaw,
+  } = useGroupedList(scriptTreeOrder, { groupName: (n) => t('tavern.sidebar.defaultGroupName', { count: n }) })
+
+  /** tavern 单条开关包装：toggle 改树后 sync 回 scripts 的 script.enabled（修双状态镜像 seam——
+   *  裸 toggle 只翻树 enabled 不写回真数据，保存时会把改动丢掉）。 */
+  function scriptTreeToggleBlock(gi: number) {
+    scriptTreeToggleBlockRaw(gi)
+    syncScriptsFromOrder()
+    markDirty()
+  }
+
+  /** 从 tavernHelper.scripts 裸数组重建 scriptTreeOrder 分组树——读每个 Script 的
+   *  _gid/_gname/_gcollapsed/_genabled/_gidx。同 _gid 的复用同一个 group ref。
+   *  ScriptFolder 不参与 _gid 分组，直接挂顶层。抄 rebuildRegexOrder 的逻辑。 */
+  function rebuildScriptTreeOrder() {
+    const scripts = tavernHelper.value.scripts as ScriptTree[]
+    const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: { script: Script; idx: number }[] }>()
+    scripts.forEach(node => {
+      if (node.type === 'folder') return // folder 直接挂顶层，不参与 _gid 分组
+      const script = node as Script
+      if (script._gid) {
+        if (!groups.has(script._gid)) {
+          groups.set(script._gid, {
+            name: script._gname || 'Group',
+            collapsed: script._gcollapsed !== false,
+            enabled: script._genabled !== false,
+            items: [],
+          })
+        }
+        groups.get(script._gid)!.items.push({ script, idx: script._gidx ?? 0 })
+      }
+    })
+    groups.forEach(g => g.items.sort((a, b) => a.idx - b.idx))
+    const usedGroups = new Set<string>()
+    const topLevel: OrderNode[] = []
+    scripts.forEach(node => {
+      if (node.type === 'folder') {
+        // ScriptFolder 直接挂顶层，enabled 取 folder.enabled，identifier 取 folder.id
+        topLevel.push({ identifier: node.id, enabled: node.enabled } as OrderItem)
+        return
+      }
+      const script = node as Script
+      if (script._gid) {
+        if (usedGroups.has(script._gid)) return
+        const g = groups.get(script._gid)!
+        topLevel.push({
+          id: 'group_' + script._gid,
+          _gid: script._gid,
+          name: g.name,
+          collapsed: g.collapsed,
+          enabled: g.enabled,
+          children: g.items.map(x => ({ identifier: x.script.id, enabled: x.script.enabled })),
+        } as OrderGroup)
+        usedGroups.add(script._gid)
+      } else {
+        topLevel.push({ identifier: script.id, enabled: script.enabled } as OrderItem)
+      }
+    })
+    scriptTreeOrder.value = topLevel
+  }
+
+  /** 把 scriptTreeOrder 树展平写回 tavernHelper.scripts 裸数组：重排 scripts 顺序 + 更新 Script 的
+   *  _gid 等分组字段。ScriptFolder（顶层 folder）原样保留位置——它在树里是顶层 OrderItem，
+   *  sync 时按 identifier 反查原 folder 对象挂回。 */
+  function syncScriptsFromOrder() {
+    const scripts = getScriptTrees()
+    if (!scripts) return
+    const byId = new Map(scripts.map(s => [s.id, s]))
+    const reordered: ScriptTree[] = []
+    scriptTreeOrder.value.forEach(node => {
+      if (isGroup(node)) {
+        node.children.forEach((child, cidx) => {
+          const s = byId.get(child.identifier) as Script | undefined
+          if (!s || s.type !== 'script') return
+          s.enabled = child.enabled
+          s._gid = node._gid; s._gname = node.name
+          s._gcollapsed = node.collapsed; s._genabled = node.enabled; s._gidx = cidx
+          reordered.push(s)
+        })
+      } else {
+        const s = byId.get(node.identifier)
+        if (!s) return
+        if (s.type === 'folder') {
+          // folder 不参与 _gid 分组，只更新 enabled
+          s.enabled = node.enabled
+          reordered.push(s)
+        } else {
+          const script = s as Script
+          script.enabled = node.enabled
+          delete script._gid; delete script._gname; delete script._gcollapsed; delete script._genabled; delete script._gidx
+          reordered.push(script)
+        }
+      }
+    })
+    // 原地替换内容（保持 tavernHelper computed 引用的数组对象不变）
+    scripts.length = 0
+    scripts.push(...reordered)
+  }
+
+  /** tavern sidebar 拖拽重排：改 scriptTreeOrder 树后 sync 回 scripts。 */
+  function reorderScriptTreeBlock(fromGi: number, toGi: number, after: boolean) {
+    scriptTreeReorderBlockRaw(fromGi, toGi, after)
+    syncScriptsFromOrder()
+    markDirty()
+  }
+  /** tavern sidebar 绑定：合并选中顶层 item 成新组后 sync 回 scripts。 */
+  function scriptTreeBindSelected() {
+    const result = scriptTreeBindSelectedRaw()
+    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    syncScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
+  }
+  /** tavern sidebar 解绑：拆组成顶层 item 后 sync 回 scripts。 */
+  function scriptTreeUnbindGroup(gi: number) {
+    if (!scriptTreeUnbindGroupRaw(gi)) return
+    syncScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.unbound'))
+  }
+
+  watch([tavernHelper.value.scripts], () => rebuildScriptTreeOrder(), { immediate: true })
+
   /* ====== 脏标记（驱动 header Save 按钮上的 `*`） ======
    * `order`/`regexScripts` 深度 watch：两者数组都很小，全量 traverse 成本可忽略。
    * `prompts` 浅 watch：holds 每个 block 的完整内容字符串，深 watch 会在每次嵌套字段
@@ -217,6 +399,7 @@ export const usePresetStore = defineStore('main', () => {
   watch([order, regexScripts], markDirty, { deep: true })
   watch(prompts, markDirty)
   watch(regexOrder, markDirty, { deep: true })
+  watch(scriptTreeOrder, markDirty, { deep: true })
 
   /* ====== Var Nav ====== 开关同样搬去了 tabsStore。 */
   const varFilterQ = ref('')
@@ -345,6 +528,9 @@ export const usePresetStore = defineStore('main', () => {
     presetName.value = name
     rebuildVarIndex()
     tabsStore.closeWorkspace('preset') // 旧标签（block、regex都算）都指向即将被替换的数据
+    // coerce tavern_helper.scripts 宽松数组成严格 ScriptTree（load 时一次性 mutate，不在 computed getter 里）
+    if (rawData.value.extensions?.tavern_helper) coerceScriptTrees(rawData.value.extensions.tavern_helper.scripts)
+    rebuildScriptTreeOrder() // load 背真数据后显式 rebuild：watch([tavernHelper.value.scripts]) 是浅 watch，load 时 ext.tavern_helper 对象引用没变（只 scripts 属性被替），watch 不触发 → 树空
     nextTick(() => { dirty.value = false })
   }
 
@@ -541,6 +727,14 @@ export const usePresetStore = defineStore('main', () => {
     const script = getRegexScripts()?.find(r => r.id === itemId)
     if (script) {
       tabsStore.open({ domain: 'regex', key: script.id, label: script.scriptName || script.id, workspace: 'preset' })
+      return
+    }
+    const thNode = getScriptTrees()?.find(s => s.id === itemId)
+    if (thNode) {
+      tabsStore.open({ domain: 'tavern', key: thNode.id, label: thNode.name || thNode.id, workspace: 'preset' })
+      // 反查 scriptTreeIdentifierToGi 展组到该行（同 preset 域 jumpToFieldHit 的 revealAndFindGi）
+      const gi = scriptTreeIdentifierToGi(thNode.id)
+      if (gi >= 0) scriptTreeRevealAndFindGi(thNode.id)
       return
     }
     const block = prompts.value.find(p => p.identifier === itemId)
@@ -752,6 +946,12 @@ export const usePresetStore = defineStore('main', () => {
     regexSelectBlock, regexToggleBlock, regexToggleGroupCollapse,
     reorderRegexBlock, regexBindSelected, regexUnbindGroup, regexRemoveNode,
     rebuildRegexOrder, syncRegexScriptsFromOrder,
+    tavernHelper, getScriptTrees, addScriptTree, deleteScriptTree, reorderScriptTree,
+    scriptTreeOrder, scriptTreeFlatNodes, scriptTreeSelectedGi, scriptTreeAnchorGi,
+    scriptTreeIdentifierToGi, scriptTreeRevealAndFindGi, scriptTreeClearSelection,
+    scriptTreeSelectBlock, scriptTreeToggleBlock, scriptTreeToggleGroupCollapse,
+    reorderScriptTreeBlock, scriptTreeBindSelected, scriptTreeUnbindGroup, scriptTreeRemoveNode,
+    rebuildScriptTreeOrder, syncScriptsFromOrder,
     hiddenOpen, copyPanelOpen, dirty, markDirty,
     currentBlock, hasData, hiddenBlocks,
     editorJump, requestEditorJump,

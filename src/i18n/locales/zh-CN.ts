@@ -44,6 +44,7 @@ export default {
   'shared.header.mode.regex': '正则',
   'shared.header.mode.worldbook': '世界书',
   'shared.header.mode.character': '角色卡',
+  'shared.header.mode.tavern': '脚本',
   'shared.header.toolBox': '🔧 工具箱',
 
   // ---- 侧边栏 ----
@@ -318,6 +319,38 @@ export default {
 
   // ---- 编辑区空状态 ----
   'regex.editorShell.empty': '选一条正则，或者新建一条',
+
+  // ========================================
+  // tavern：tavern_helper 脚本域
+  // ========================================
+  // ---- 侧边栏 ----
+  'tavern.sidebar.title': '脚本 ({count})',
+  'tavern.sidebar.newScript': '+ 新建',
+  'tavern.sidebar.empty': '还没有脚本',
+  'tavern.sidebar.toggleTitle': '开关',
+  'tavern.sidebar.deleteTitle': '删除',
+  'tavern.sidebar.defaultGroupName': '分组 ({count})',
+  'tavern.sidebar.defaultScriptName': '新脚本',
+
+  // ---- 确认弹窗 ----
+  'tavern.confirm.delete.title': '确认删除',
+  'tavern.confirm.delete.message': '确定删除「{name}」吗？',
+
+  // ---- 编辑器 ----
+  'tavern.editor.placeholder': '写脚本内容...',
+  'tavern.editor.settingsPanel': '设置',
+  'tavern.editorShell.empty': '还没有选中脚本',
+
+  // ---- 设置表单 ----
+  'tavern.settings.enabled': '启用',
+  'tavern.settings.nameLabel': '名称',
+  'tavern.settings.namePlaceholder': '脚本名称',
+  'tavern.settings.infoLabel': '说明',
+  'tavern.settings.infoPlaceholder': '脚本说明...',
+  'tavern.settings.buttonEnabledLabel': '导出按钮区',
+  'tavern.settings.buttonsLabel': '按钮数',
+  'tavern.settings.exportDataLabel': '导出 data',
+  'tavern.settings.exportButtonLabel': '导出按钮',
 
   // ========================================
   // worldbook：世界书域

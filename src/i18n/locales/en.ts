@@ -41,6 +41,7 @@ export default {
   'shared.header.mode.regex': 'Regex',
   'shared.header.mode.worldbook': 'Worldbook',
   'shared.header.mode.character': 'Character',
+  'shared.header.mode.tavern': 'Scripts',
   'shared.header.toolBox': '🔧 Toolbox',
 
   // ---- Sidebar ListTools ----
@@ -315,6 +316,38 @@ export default {
 
   // ---- 编辑区空状态 ----
   'regex.editorShell.empty': 'Select a regex script, or create a new one',
+
+  // ========================================
+  // tavern：tavern_helper 脚本域
+  // ========================================
+  // ---- 侧边栏 ----
+  'tavern.sidebar.title': 'Scripts ({count})',
+  'tavern.sidebar.newScript': '+ New',
+  'tavern.sidebar.empty': 'No scripts yet',
+  'tavern.sidebar.toggleTitle': 'Toggle',
+  'tavern.sidebar.deleteTitle': 'Delete',
+  'tavern.sidebar.defaultGroupName': 'Group ({count})',
+  'tavern.sidebar.defaultScriptName': 'New script',
+
+  // ---- 确认弹窗 ----
+  'tavern.confirm.delete.title': 'Confirm delete',
+  'tavern.confirm.delete.message': 'Delete "{name}"?',
+
+  // ---- 编辑器 ----
+  'tavern.editor.placeholder': 'Write script content...',
+  'tavern.editor.settingsPanel': 'Settings',
+  'tavern.editorShell.empty': 'No script selected',
+
+  // ---- 设置表单 ----
+  'tavern.settings.enabled': 'Enabled',
+  'tavern.settings.nameLabel': 'Name',
+  'tavern.settings.namePlaceholder': 'Script name',
+  'tavern.settings.infoLabel': 'Info',
+  'tavern.settings.infoPlaceholder': 'Script description...',
+  'tavern.settings.buttonEnabledLabel': 'Export buttons',
+  'tavern.settings.buttonsLabel': 'Button count',
+  'tavern.settings.exportDataLabel': 'Export data',
+  'tavern.settings.exportButtonLabel': 'Export buttons',
 
   // ========================================
   // worldbook：世界书域

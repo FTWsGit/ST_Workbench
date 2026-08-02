@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed, nextTick, watch } from 'vue'
-import { type Character, type CharacterListEntry, type RegexScript, type OrderNode, type OrderGroup, type OrderItem, CHARACTER_FIELDS } from '../types'
+import { type Character, type CharacterListEntry, type RegexScript, type OrderNode, type OrderGroup, type OrderItem, type ScriptTree, type Script, type ScriptFolder, type TavernHelper, CHARACTER_FIELDS } from '../types'
 import * as CH from '../api/characterApi'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { useUiStore } from './uiStore'
 import { useRegexScripts } from '../composables/useRegexScripts'
+import { useScriptTree } from '../composables/useScriptTree'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 function genLocalId(prefix: string): string {
   return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -30,7 +31,7 @@ function emptyCharacter(name: string): Character {
     depthPrompt: { prompt: '', depth: 4, role: 0 },
     greetings: [''],
     creator: '', creatorNotes: '', version: '', tags: [], talkativeness: 0.5, fav: false, worldbook: null,
-    extensions: { regex_scripts: [] },
+    extensions: { regex_scripts: [], tavern_helper: { scripts: [], variables: {} } },
   }
 }
 
@@ -105,6 +106,15 @@ export const useCharacterStore = defineStore('character', () => {
    *  直接开对应标签。character 没有 groupedList，无需 revealAndFindGi。 */
   function jumpToFieldHit(itemId: string, fieldKey: string, line: number, col: number, len: number) {
     if (!character.value) return
+    // tavern 域：按 script/folder id 反查，开对应标签 + 展组到该行（scriptTreeIdentifierToGi 在
+    //  下文 tavern 段声明，函数调用时才解析闭包引用，TDZ 不触发）
+    const thNode = getScriptTrees()?.find(s => s.id === itemId)
+    if (thNode) {
+      tabsStore.open({ domain: 'tavern', key: thNode.id, label: thNode.name || thNode.id, workspace: 'character' })
+      const gi = scriptTreeIdentifierToGi(thNode.id)
+      if (gi >= 0) scriptTreeRevealAndFindGi(thNode.id)
+      return
+    }
     if (itemId.startsWith('field:greeting:')) {
       const gid = itemId.slice('field:greeting:'.length)
       const idx = greetingIds.value.indexOf(gid)
@@ -119,14 +129,14 @@ export const useCharacterStore = defineStore('character', () => {
   /* ====== Bound Regex Scripts（同 presetStore.regexScripts 的模式，宿主换成 character） ====== */
   const regexScripts = computed<RegexScript[]>(() => {
     if (!character.value) return []
-    if (!character.value.extensions) character.value.extensions = { regex_scripts: [] }
+    if (!character.value.extensions) character.value.extensions = { regex_scripts: [], tavern_helper: { scripts: [], variables: {} } }
     if (!Array.isArray(character.value.extensions.regex_scripts)) character.value.extensions.regex_scripts = []
     return character.value.extensions.regex_scripts
   })
 
   function getRegexScripts(): RegexScript[] | null {
     if (!character.value) return null
-    if (!character.value.extensions) character.value.extensions = { regex_scripts: [] }
+    if (!character.value.extensions) character.value.extensions = { regex_scripts: [], tavern_helper: { scripts: [], variables: {} } }
     if (!Array.isArray(character.value.extensions.regex_scripts)) character.value.extensions.regex_scripts = []
     return character.value.extensions.regex_scripts
   }
@@ -248,6 +258,172 @@ export const useCharacterStore = defineStore('character', () => {
   watch([regexScripts], () => rebuildRegexOrder(), { immediate: true })
   watch(regexOrder, markDirty, { deep: true })
 
+  /* ====== Bound Tavern Helper（tavern_helper 段，照 regex 段模式，宿主换成 character）======
+   * character 域注意：Character.extensions.tavern_helper 的内部变量字段名是 `variables`（拼写差异，
+   * 按 Character 接口保留），缺则补默认 `{ scripts: [], variables: {} }`。读 character 的宽松
+   * scripts 数组时 coerce 成严格 ScriptTree 形状（缺 type 补 'script'，缺 id 补 genId）。 */
+  const tavernHelper = computed<TavernHelper>(() => {
+    if (!character.value) return { scripts: [], variables: {} } as unknown as TavernHelper
+    if (!character.value.extensions) character.value.extensions = { regex_scripts: [], tavern_helper: { scripts: [], variables: {} } }
+    const ext = character.value.extensions as any
+    if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variables: {} }
+    return ext.tavern_helper as TavernHelper
+  })
+
+  /** coerce 宽松 Record<string,any>[] 成严格 ScriptTree[] 形状：缺 type 补 'script'，缺 id 补 'th_...'。
+   *  在 load 时一次性 mutate 原数据，不在 computed getter 里做（getter 里 mutate 触发响应式重算 → coerce 又跑 → 死循环）。 */
+  function coerceScriptTrees(scripts: any[]) {
+    if (!Array.isArray(scripts)) return
+    scripts.forEach((node: any) => {
+      if (!node || typeof node !== 'object') return
+      if (!node.type) node.type = 'script'
+      if (!node.id) node.id = 'th_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+    })
+  }
+
+  function getScriptTrees(): ScriptTree[] | null {
+    if (!character.value) return null
+    if (!character.value.extensions) character.value.extensions = { regex_scripts: [], tavern_helper: { scripts: [], variables: {} } }
+    const ext = character.value.extensions as any
+    if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variables: {} }
+    const th = ext.tavern_helper as any
+    if (!Array.isArray(th.scripts)) th.scripts = []
+    if (!th.variables) th.variables = {}
+    return th.scripts as ScriptTree[]
+  }
+
+  const { addScriptTree, deleteScriptTree, reorderScriptTree } = useScriptTree(getScriptTrees, {
+    markDirty,
+    showToast,
+    t,
+    loadFirstMessageKey: 'character.toast.loadFirst',
+    defaultPlacement: [2],
+  })
+
+  /* ====== tavern_helper 分组树（同 presetStore tavern 段，identifier 填 script/folder 的 id）====== */
+  const scriptTreeOrder = ref<OrderNode[]>([])
+  const {
+    flatNodes: scriptTreeFlatNodes, selectedGi: scriptTreeSelectedGi, anchorGi: scriptTreeAnchorGi,
+    identifierToGi: scriptTreeIdentifierToGi, revealAndFindGi: scriptTreeRevealAndFindGi,
+    clearSelection: scriptTreeClearSelection, selectBlock: scriptTreeSelectBlock,
+    toggleBlock: scriptTreeToggleBlockRaw, toggleGroupCollapse: scriptTreeToggleGroupCollapse,
+    reorderBlock: scriptTreeReorderBlockRaw, insertAfterActive: scriptTreeInsertAfterActive,
+    removeNode: scriptTreeRemoveNode, bindSelected: scriptTreeBindSelectedRaw, unbindGroup: scriptTreeUnbindGroupRaw,
+  } = useGroupedList(scriptTreeOrder, { groupName: (n) => t('tavern.sidebar.defaultGroupName', { count: n }) })
+
+  /** tavern 单条开关包装：toggle 改树后 sync 回 scripts 的 script.enabled（修双状态镜像 seam）。 */
+  function scriptTreeToggleBlock(gi: number) {
+    scriptTreeToggleBlockRaw(gi)
+    syncScriptsFromOrder()
+    markDirty()
+  }
+
+  /** 从 tavernHelper.scripts 裸数组重建 scriptTreeOrder 分组树——读每个 Script 的
+   *  _gid/_gname/_gcollapsed/_genabled/_gidx。ScriptFolder 不参与 _gid 分组，直接挂顶层。 */
+  function rebuildScriptTreeOrder() {
+    const scripts = tavernHelper.value.scripts as ScriptTree[]
+    const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: { script: Script; idx: number }[] }>()
+    scripts.forEach(node => {
+      if (node.type === 'folder') return
+      const script = node as Script
+      if (script._gid) {
+        if (!groups.has(script._gid)) {
+          groups.set(script._gid, {
+            name: script._gname || 'Group',
+            collapsed: script._gcollapsed !== false,
+            enabled: script._genabled !== false,
+            items: [],
+          })
+        }
+        groups.get(script._gid)!.items.push({ script, idx: script._gidx ?? 0 })
+      }
+    })
+    groups.forEach(g => g.items.sort((a, b) => a.idx - b.idx))
+    const usedGroups = new Set<string>()
+    const topLevel: OrderNode[] = []
+    scripts.forEach(node => {
+      if (node.type === 'folder') {
+        topLevel.push({ identifier: node.id, enabled: node.enabled } as OrderItem)
+        return
+      }
+      const script = node as Script
+      if (script._gid) {
+        if (usedGroups.has(script._gid)) return
+        const g = groups.get(script._gid)!
+        topLevel.push({
+          id: 'group_' + script._gid,
+          _gid: script._gid,
+          name: g.name,
+          collapsed: g.collapsed,
+          enabled: g.enabled,
+          children: g.items.map(x => ({ identifier: x.script.id, enabled: x.script.enabled })),
+        } as OrderGroup)
+        usedGroups.add(script._gid)
+      } else {
+        topLevel.push({ identifier: script.id, enabled: script.enabled } as OrderItem)
+      }
+    })
+    scriptTreeOrder.value = topLevel
+  }
+
+  /** 把 scriptTreeOrder 树展平写回 tavernHelper.scripts 裸数组：重排 scripts 顺序 + 更新 Script 的
+   *  _gid 等分组字段。ScriptFolder（顶层 folder）原样保留位置——它在树里是顶层 OrderItem，
+   *  sync 时按 identifier 反查原 folder 对象挂回。 */
+  function syncScriptsFromOrder() {
+    const scripts = getScriptTrees()
+    if (!scripts) return
+    const byId = new Map(scripts.map(s => [s.id, s]))
+    const reordered: ScriptTree[] = []
+    scriptTreeOrder.value.forEach(node => {
+      if (isGroup(node)) {
+        node.children.forEach((child, cidx) => {
+          const s = byId.get(child.identifier) as Script | undefined
+          if (!s || s.type !== 'script') return
+          s.enabled = child.enabled
+          s._gid = node._gid; s._gname = node.name
+          s._gcollapsed = node.collapsed; s._genabled = node.enabled; s._gidx = cidx
+          reordered.push(s)
+        })
+      } else {
+        const s = byId.get(node.identifier)
+        if (!s) return
+        if (s.type === 'folder') {
+          s.enabled = node.enabled
+          reordered.push(s)
+        } else {
+          const script = s as Script
+          script.enabled = node.enabled
+          delete script._gid; delete script._gname; delete script._gcollapsed; delete script._genabled; delete script._gidx
+          reordered.push(script)
+        }
+      }
+    })
+    scripts.length = 0
+    scripts.push(...reordered)
+  }
+
+  function reorderScriptTreeBlock(fromGi: number, toGi: number, after: boolean) {
+    scriptTreeReorderBlockRaw(fromGi, toGi, after)
+    syncScriptsFromOrder()
+    markDirty()
+  }
+  function scriptTreeBindSelected() {
+    const result = scriptTreeBindSelectedRaw()
+    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    syncScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
+  }
+  function scriptTreeUnbindGroup(gi: number) {
+    if (!scriptTreeUnbindGroupRaw(gi)) return
+    syncScriptsFromOrder()
+    markDirty()
+    showToast(t('preset.toast.unbound'))
+  }
+
+  watch([tavernHelper.value.scripts], () => rebuildScriptTreeOrder(), { immediate: true })
+  watch(scriptTreeOrder, markDirty, { deep: true })
+
   /* ====== Greetings：增删拖拽 ====== */
   function addGreeting() {
     if (!character.value) { showToast(t('character.toast.loadFirst')); return }
@@ -292,6 +468,9 @@ export const useCharacterStore = defineStore('character', () => {
     greetingIds.value = c.greetings.map(() => genGreetingId())
     pendingAvatarFile.value = null
     tabsStore.closeWorkspace('character')
+    // coerce tavern_helper.scripts 宽松数组成严格 ScriptTree（load 时一次性 mutate，不在 computed getter 里）
+    if (character.value.extensions?.tavern_helper) coerceScriptTrees(character.value.extensions.tavern_helper.scripts)
+    rebuildScriptTreeOrder() // load 背真数据后显式 rebuild：watch([tavernHelper.value.scripts]) 是浅 watch，load 时 ext.tavern_helper 对象引用没变（只 scripts 属性被替），watch 不触发 → 树空
     nextTick(() => { dirty.value = false })
   }
 
@@ -381,6 +560,12 @@ export const useCharacterStore = defineStore('character', () => {
     regexSelectBlock, regexToggleBlock, regexToggleGroupCollapse,
     reorderRegexBlock, regexBindSelected, regexUnbindGroup, regexRemoveNode,
     rebuildRegexOrder, syncRegexScriptsFromOrder,
+    tavernHelper, getScriptTrees, addScriptTree, deleteScriptTree, reorderScriptTree,
+    scriptTreeOrder, scriptTreeFlatNodes, scriptTreeSelectedGi, scriptTreeAnchorGi,
+    scriptTreeIdentifierToGi, scriptTreeRevealAndFindGi, scriptTreeClearSelection,
+    scriptTreeSelectBlock, scriptTreeToggleBlock, scriptTreeToggleGroupCollapse,
+    reorderScriptTreeBlock, scriptTreeBindSelected, scriptTreeUnbindGroup, scriptTreeRemoveNode,
+    rebuildScriptTreeOrder, syncScriptsFromOrder,
     refreshCharacterList, loadCharacterByAvatar, switchCharacter, reloadCharacter,
     createNewCharacter, removeCurrentCharacter, doSaveCharacter,
   }

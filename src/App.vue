@@ -75,7 +75,7 @@
 
         <!-- 顶栏第二行：仅 preset/character 工作区需要"条目 vs 正则"二级切换；worldbook 没有独立于条目之外的集合，不渲染此行。 -->
         <div v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'" class="wb-collection-switch">
-          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection !== 'regex' }"
+          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern' }"
                   @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, tabsStore.activeWorkspace === 'character' ? 'fields' : 'items')">
             {{ tabsStore.activeWorkspace === 'character' ? uiStore.t('character.header.collectionFields') : uiStore.t('preset.header.collectionItems') }}
           </button>
@@ -83,15 +83,23 @@
                   @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex')">
             {{ uiStore.t('shared.header.mode.regex') }}
           </button>
+          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
+                  @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern')">
+            {{ uiStore.t('shared.header.mode.tavern') }}
+          </button>
         </div>
 
         <div class="wb-main">
-          <PresetSidebar v-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection !== 'regex'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
+          <PresetSidebar v-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'regex'"
             :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
+          <ScriptTreeSidebar v-else-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'tavern'"
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <WorldbookSidebar v-else-if="tabsStore.activeWorkspace === 'worldbook'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
-          <CharacterSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection !== 'regex'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
+          <CharacterSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'regex'"
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
+          <ScriptTreeSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'tavern'"
             :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
           <div class="wb-editor-col">
             <TabBar />
@@ -115,13 +123,17 @@
           <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'worldbook' }" @click="drawer.runTool(() => switchWorkspace('worldbook'))">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
           <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'character' }" @click="drawer.runTool(() => switchWorkspace('character'))">{{ uiStore.t('shared.header.mode.character') }}</button>
           <template v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'">
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection !== 'regex' }"
+            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern' }"
                     @click="drawer.runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, tabsStore.activeWorkspace === 'character' ? 'fields' : 'items'))">
               {{ tabsStore.activeWorkspace === 'character' ? uiStore.t('character.header.collectionFields') : uiStore.t('preset.header.collectionItems') }}
             </button>
             <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection === 'regex' }"
                     @click="drawer.runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex'))">
               {{ uiStore.t('shared.header.mode.regex') }}
+            </button>
+            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
+                    @click="drawer.runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern'))">
+              {{ uiStore.t('shared.header.mode.tavern') }}
             </button>
           </template>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
@@ -177,6 +189,7 @@ import CopyPanel from './components/preset/CopyPanel.vue'
 import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue'
 import MetaPanel from './components/shared/MetaPanel.vue'
 import RegexSidebar from './components/regex/RegexSidebar.vue'
+import ScriptTreeSidebar from './components/tavern/ScriptTreeSidebar.vue'
 import WorldbookSidebar from './components/worldbook/WorldbookSidebar.vue'
 import { useWorldbookStore } from './stores/worldbookStore'
 import CharacterSidebar from './components/character/CharacterSidebar.vue'
