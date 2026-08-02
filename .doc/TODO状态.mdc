@@ -13,8 +13,8 @@ alwaysApply: false
 
 ## 明确的过渡状态
 
-- `regex`/`character` 两个域都没有多选/批量操作/分组功能（preset 域已通过长按+`useListSelection.ts`解决——composable 接口已经是 domain-agnostic 的，要不要接是产品决策，不是技术门槛，接口已经就绪）。`character` 域的 greetings 本来就不需要"选一批做批量操作"这个语义，大概率不会补。
-- `worldbook` 域有完整的 CRUD + 分组 + 批量工具，但还没有搜索/变量导航/预览（这些是 preset 专属功能，worldbook 以后是否需要是产品决策）。
+- `regex`/`character` 两个域都没有多选/分组功能（preset 域已通过长按+`useListSelection.ts`解决——composable 接口已经是 domain-agnostic 的，要不要接是产品决策，不是技术门槛，接口已经就绪）。`character` 域的 greetings 本来就不需要"选一批做批量操作"这个语义，大概率不会补。工具箱 BatchTool 的 regex scene 自带勾选清单做批量，不依赖侧边栏多选态。
+- `worldbook` 域有完整的 CRUD + 分组，但还没有搜索/变量导航/预览（这些是 preset 专属功能，worldbook 以后是否需要是产品决策）。**工具箱的通用 Search/BatchTool 已覆盖 worldbook/items scene**——批量启用/禁用/改激活方式/删除统一走工具箱；原侧边栏顶批量按钮 + `WorldbookToolsPanel.vue` 已删，不并存。
 - `confirmStore.ts` 内部仍保留英文默认值（`'Delete'`/`'Cancel'`/`'OK'`）作为 fallback；虽然所有调用方已显式传 i18n 文案，但默认值没有彻底移除。
 - 角色卡导出（把当前编辑内容写回绑定的世界书）本期不做，用户走 ST 原生 UI，或以后收进某个 ToolsPanel。
 
@@ -24,7 +24,7 @@ alwaysApply: false
 
 - Var Nav 只对 `preset` 有意义，但不管当前是什么标签都一直显示。
 - Preview 理论上 `preset`/`character`（两边都有正则和创作文本）都该有，目前只对 `preset` 生效。
-- Search 完全是 `preset` 专用逻辑（搜的是 `content` 字段），`regex`/`worldbook`/`character` 域没有搜索入口。
+- Search 完全是 `preset` 专用逻辑（搜的是 `content` 字段），`regex`/`worldbook`/`character` 域没有搜索入口。**工具箱的通用 Search 已覆盖全 scene**——`utils.searchFields` 纯函数 + 按 scene 喂字段表，preset/items/worldbook/items/regex/character 各有可搜字段清单。preset 原顶栏 `SearchPanel.vue` + `presetStore.doSearch` 那套"只搜 content"快速入口**已删**，工具箱通用版独任；新 scene 的搜索统一走工具箱。
 - 移动端的 ⋯ 工具抽屉同样不是每一项都按 domain/workspace 裁剪——Var Nav/Search 这几项对 regex/worldbook/character 域完全没意义，但抽屉里照样列出；`copyBlocks`/`Meta` 这几项倒是已经按 `activeWorkspace` 裁过了。
 
 ## 其它已知限制，有意为之

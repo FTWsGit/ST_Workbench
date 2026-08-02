@@ -59,7 +59,7 @@ npm run docs:list
 
 ## Phase 3 — 改完回头检查 .doc 是否需要同步
 
-代码改完、`npm run typecheck` 通过后，检查是否需要同步对应的.mdc文档:
+代码改完、`npm run typecheck` 和 `npm run build` 通过后，检查是否需要同步对应的.mdc文档:
 
 ```bash
 npm run docs:list

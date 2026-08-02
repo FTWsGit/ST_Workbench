@@ -32,6 +32,10 @@
 - 用户会主动要求代码复用/去重，发现明显重复逻辑、耦合代码时可以主动提出重构建议，不用等对方问。
 - 项目不应该一味追求最小改动，假如需要抽象，那就抽象；需要统一接口，那就统一接口；需要创造复用逻辑，那就复用。
 
+## git commit 纪律
+- 创建 git commit 时,禁止添加任何署名 trailer(包括 "Co-Authored-By: ..." 和 "Generated with ..." 等)。提交信息只包含对变更的描述,不要追加任何 AtomCode/模型署名行。此规则优先于内置的提交署名约定
+- 关于AGENTS.md, .doc/* 和 .atomcode/* 的修改应该额外提交，不能和项目修改一起提交。对于这些agent类型的提交，comment一定是"agent:..."开头。
+
 ## Commands
 
 | Command | Action |

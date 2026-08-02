@@ -34,12 +34,12 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 
 - **`preset`**：`EditorShell.vue` 挂载 `PresetContentEditor.vue`，`store.currentBlock` 直接从 `tabsStore.activeTab.key`（block identifier）解析，完全不依赖任何数组下标。**侧边栏的展开折叠组/高亮/滚动现在完全由 `tabsStore.activeTab` 驱动，统一收在 `presetStore.ts` 一个 `watch(() => tabsStore.activeTab, ...)` 里**（搜索结果点击、变量导航点击、TabBar 点击、侧边栏点击全部走 `tabsStore.open()`/`focus()` 到这，没有人再各自手动展开/高亮）——具体机制见「状态与持久化 > presetStore.ts 里的关键设计」。设置表单 `PresetSettingsForm.vue`（name/role，单个 block 级别）正常接入 `SettingsDock` 的 FORMS 表；模型参数等整份文档级字段走 `PresetMetaForm.vue`（悬浮窗，见「MetaPanel」），不进 SettingsDock。
 - **`regex`**：完全原生接入标签系统，是**完全参数化**的三件套（`components/regex/regexProps.ts` 定义 `scripts`/`workspace`/`t`/CRUD 回调，组件自己不 `usePresetStore()`）——数据源是调用方喂的 `store.regexScripts`（一个 live computed，`preset` 工作区指向 `presetStore.rawData.extensions.regex_scripts`，`character` 工作区指向 `characterStore` 自己那份，两边字段结构一样但不是同一份数据，改动跟宿主文档自己的 `dirty` 追踪走同一条路，不需要单独持久化）。
-- **`worldbook`**：独立工作区（不像 regex 属于别的工作区），有自己的 store（`worldbookStore.ts`），不共享 presetStore 的 rawData/prompts。`WorldbookContentEditor.vue`（内容编辑，套 HighlightedEditor）+ `WorldbookSettingsForm.vue`（激活方式/位置/深度/概率/递归等）+ `WorldbookSidebar.vue`（列表+分组+拖拽排序，同 PresetSidebar 的模式）+ `WorldbookToolsPanel.vue`（批量工具悬浮面板）。`store.currentEntry` 从 `tabsStore.activeTab.key`（`String(entry.uid)`）解析，跟 preset 域的 `currentBlock` 同一个模式。故意**不接** MetaPanel（没有整份文档级的元信息需要单独编辑）。
+- **`worldbook`**：独立工作区（不像 regex 属于别的工作区），有自己的 store（`worldbookStore.ts`），不共享 presetStore 的 rawData/prompts。`WorldbookContentEditor.vue`（内容编辑，套 HighlightedEditor）+ `WorldbookSettingsForm.vue`（激活方式/位置/深度/概率/递归等）+ `WorldbookSidebar.vue`（列表+分组+拖拽排序，同 PresetSidebar 的模式）。批量操作（启用/禁用/改激活方式）已并入工具箱 `BatchTool.vue` 的 worldbook/items scene，sidebar 顶栏不再挂独立批量按钮。`store.currentEntry` 从 `tabsStore.activeTab.key`（`String(entry.uid)`）解析，跟 preset 域的 `currentBlock` 同一个模式。故意**不接** MetaPanel（没有整份文档级的元信息需要单独编辑）。
 - **`character`**：独立工作区，有自己的 store（`characterStore.ts`）。`CharacterContentEditor.vue` 走虚拟字段 key 路由（不是数组下标也不是 uid，是 `field:description`/`field:greeting:<合成id>` 这种字符串前缀，解析全在 `characterStore.currentField`/`setCurrentFieldValue` 里）。**故意不接 `SettingsDock` 的 FORMS 表**——character tab 激活时右侧设置面板自动隐藏（`formComponent` 查不到对应条目），因为角色卡没有"单个字段级别"的额外设置需要挂表单，`depthPrompt` 唯一的 depth/role 两个数值/枚举字段直接做进 `CharacterContentEditor.vue` 自己的 meta 栏了。整份角色卡级别的 creator/tags/talkativeness/世界书绑定走 `CharacterMetaForm.vue`（悬浮窗，见「MetaPanel」）。
 
 **顶栏是两行，对应两个正交的轴，别混着用**：第一行 `activeWorkspace`（`preset`/`worldbook`/`character` 三态）决定"现在编辑哪份文档"；第二行 `sidebarCollection` 决定"这份文档内部在看哪个集合"，只有 `preset`/`character` 两个工作区有得选（各自的 items/fields 集合 vs 各自绑定的正则脚本集合），`worldbook` 没有第二个集合，顶栏第二行对它不渲染。两者都决定侧边栏渲染哪个 `XxxSidebar.vue`——这一层跟标签页是分开的，切换这两个状态只影响"侧边栏现在给你选什么"，不影响已经打开的标签（可以同时开着 preset 标签和 worldbook 标签，随时点标签互相切换）。
 
-**`regex` 不是顶层工作区，是 `preset`/`character` 两个工作区各自的 `sidebarCollection` 取值之一**——预设的正则子集合和角色卡的正则子集合复用同一个参数化 `RegexSidebar.vue`/`RegexContentEditor.vue`/`RegexSettingsForm.vue`，区别只是 App.vue 挂载时喂给它的是 `presetStore.regexScripts`+`workspace:'preset'` 还是 `characterStore.regexScripts`+`workspace:'character'`。挂载点、切换逻辑现在统一收在 App.vue 一处（顶栏第二行的两个按钮直接调 `tabsStore.setSidebarCollection(activeWorkspace, collection)`），`CharacterSidebar.vue`/`PresetSidebar.vue` 自己都不知道 regex 集合的存在——新增一个"工作区内部还有子集合"的 domain 时，抄这个模式，不要在某个 Sidebar 组件内部再发明一个本地 `localMode`。
+**`regex` 不是顶层工作区，是 `preset`/`character` 两个工作区各自的 `sidebarCollection` 取值之一**——预设的正则子集合和角色卡的正则子集合复用同一个 `RegexSidebar.vue`/`RegexContentEditor.vue`/`RegexSettingsForm.vue`。`RegexSidebar` 改成直接用 store 后（同 `PresetSidebar`/`WorldbookSidebar` 模式），按 `tabsStore.activeWorkspace` 在组件内选 `presetStore`/`characterStore`，不再走 App.vue props 驱动；`RegexContentEditor`/`RegexSettingsForm` 仍是 props 驱动（`RegexTrioProps` 那套，App.vue 挂载时喂 `workspace` + store 出口）。挂载点、切换逻辑现在统一收在 App.vue 一处（顶栏第二行的两个按钮直接调 `tabsStore.setSidebarCollection(activeWorkspace, collection)`），`CharacterSidebar.vue`/`PresetSidebar.vue` 自己都不知道 regex 集合的存在——新增一个"工作区内部还有子集合"的 domain 时，抄这个模式，不要在某个 Sidebar 组件内部再发明一个本地 `localMode`。
 
 ## MetaPanel：整份文档级别的元信息悬浮窗
 
@@ -72,12 +72,12 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 - **可选中的列表行**：`.pr-block-item` + `.selected` + `.pr-block-name` + `.pr-block-role`/`.sys`/`.user`/`.asst` + `.pr-block-act`/`.del`。`PresetSidebar`/`CopyPanel`/`RegexSidebar` 共用同一套。
 - **角色徽标 class**：`utils.ts` 的 `roleClass(role, prefix?)`，不要手写三元表达式。
 - **`{{setvar}}`/`{{addvar}}`/`{{getvar}}` 徽标**：`utils.ts` 的 `varOpBadge(type)`。
-- **嵌入/悬浮双模式右侧面板**：`.wb-right-panel` + `.float` 修饰 + `.wb-rp-header`（📌 float 切换 + ✕ 关闭）+ `.wb-right-resize-handle`。`VarPanel`/`PreviewPanel`/`SettingsDock` 三个都是这一套，新加同类面板照抄；移动端断点内这套面板自动变成底部弹出 sheet（`.wb-mobile-drawer-open` 触发滑入），`.float` 修饰在断点内被同优先级的移动端规则覆盖，不用单独处理。
+- **嵌入/悬浮双模式右侧面板**：`.wb-right-panel` + `.float` 修饰 + `.wb-rp-header`（📌 float 切换 + ✕ 关闭）+ `.wb-right-resize-handle`。`VarPanel`/`PreviewPanel`/`SettingsDock` 三个都是这一套，新加同类面板照抄；移动端断点内这套面板自动变成底部弹出 sheet（`.wb-mobile-drawer-open` 触发滑入），`.float` 修饰在断点内被同优先级的移动端规则覆盖，不用单独处理。`ToolBoxPanel.vue`（工具箱，见下）也走这套，区别是它悬浮态借用 `FloatingPanelShell`（而非自己写 `.float` 切换），因为它同时还要承接多个工具的 segmented tab 切换。
 - **侧边栏列表顶部工具条**：`ListToolbar.vue`（新建按钮 slot + 计数），`PresetSidebar.vue`/`WorldbookSidebar.vue`/`RegexSidebar.vue` 三个共用（`CharacterSidebar.vue` 没有走这个，固定字段列表没有"新建"语义、greetings 的"+"按钮就地放在自己的分区标题行里）。
 - **拖拽排序 / 面板 resize**：`composables/useDragReorder.ts` / `usePanelResize.ts`，只关心 Pointer Events 机制本身，具体怎么排序（数组 splice 还是树结构）由调用方的 `onDrop(from, to, after)` 回调决定。触屏专属规则：把手类元素（`.wb-drag-handle`、`.wb-resize-handle`、`.wb-right-resize-handle`）都要有 `touch-action: none`，否则触摸拖拽会被浏览器同时当成滚动手势。
 - **小型布局工具类**：`.wb-row`/`.wb-row-tight`/`.wb-row-mt`/`.wb-flex1`/`.wb-range-wide`/`.wb-select-wide`/`.wb-value-label`——一次性 flex 行/宽度值优先用这些，不要写内联 `style`。
 - **正则表单**（`.rx-*`）：`.rx-form` 内的输入框要用 `.rx-input`/`textarea`/`select` 才会 `width:100%`——**绝对不能写裸 `input` 选择器**，会连 checkbox 一起撑成整行（见「部署环境 > CSS 优先级 / 作用域的坑」）。
-- **搜索结果展示上限** `SEARCH_MAX` 唯一来源在 `types.ts`（`doSearch()` 收集是全量的，只限制 DOM 渲染行数）。
+- **搜索结果展示上限** `SEARCH_MAX` 唯一来源在 `types.ts`（`searchFields()` 纯函数收集是全量的，只限制 DOM 渲染行数，工具箱 `SearchTool.vue` 复用）。
 
 ### 新增功能时的套路
 
@@ -88,7 +88,8 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 | 加一个要用户输入一行文本的弹窗 | `confirmStore.askInput(...)`（空值自动挡住）——**不要**用原生 `prompt()` |
 | 加一个 domain 专属的信息类弹窗 | 在对应 `components/<domain>/` 下开 `.vue`（如 `PresetHiddenBlocksModal.vue`），App.vue 按 `activeWorkspace` 挂载 + 内部 `v-if`；通用 confirm/prompt/multi 仍走 `Modals.vue` |
 | 加一个复杂度较高、自成一体的悬浮工具（像 CopyPanel） | 单独开一个 `.vue` 文件，App.vue 常驻挂载 + 内部 `v-if`，是否借用 presetStore 数据看「六个 Pinia store」 |
-| 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `VarPanel`/`PreviewPanel`/`SettingsDock` 的 `.wb-right-panel`/`.float` 对称写法（移动端断点会自动接管成底部 sheet，不用额外处理） |
+| 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `VarPanel`/`PreviewPanel`/`SettingsDock` 的 `.wb-right-panel`/`.float` 对称写法（移动端断点会自动接管成底部 sheet，不用额外处理）。工具箱面板 `ToolBoxPanel.vue` 也走这套，悬浮态借用 `FloatingPanelShell` |
+| 加一个跨 workspace 通用的工具（按 scene 派工具） | 抄 `components/toolbox/` 套路：`registry.ts` 的 `registerTool(workspace, collection, def)` 命表 + `getToolsForScene` 查表 + `register.ts` 启动期 side-effect import 填表 + `ToolBoxPanel.vue` 按 `(activeWorkspace, sidebarCollection)` 派发到具体 Tool `.vue`。新增工具只在自己的 `register.ts` 调一次 `registerTool`，不用改容器 |
 | 加一个新的可编辑 domain | 看「新增一个 domain 的套路」的 7 步 |
 | 加一个"列表 + 点击选中"交互 | `utils.ts` 的 `applyMultiSelect()` |
 | 加一个"列表 + 拖拽排序"交互（支持触屏） | `composables/useDragReorder.ts`（Pointer Events），自己只写 `onDrop` 回调里的排序逻辑，把手元素记得加 `touch-action: none` |
@@ -101,3 +102,25 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 | 要往 SillyTavern 读/存数据 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现成的函数（domain 各自的读写层）；传给 ST 自己 API 的对象**必须**先深拷贝，见「状态与持久化 > 与 ST API 的数据契约」 |
 | 改动 `utils.ts`/`regexEngine.ts` 里的纯函数算法 | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
 | 判断当前是不是移动端布局 | `composables/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |
+
+## 工具箱（ToolBox）：跨 workspace 的工具面板，按 scene 派工具
+
+**为什么独立成节**：之前的顶栏工具（Search/VarNav/Preview）都是 preset 专属、硬绑在顶栏按钮上，互不通约。工具箱是第一个**按 (workspace, sidebarCollection) scene 派工具**的容器——同一个面板壳，preset/items 下挂搜索+批量、character/regex 下挂另一套，scene 切了工具清单自动换。这套设计是为将来 LLM Agent 的 tool calling 铺路：每个 scene 一份工具清单 = tool definition 的 availableWhen 谓词，工具的输入输出形状镜像 LLM 调用形状。
+
+### 关键文件
+
+- `src/components/toolbox/registry.ts`：注册表脚手架。`registerTool(workspace, collection, def)` 是唯一填表入口（禁止直接 mutate `TOOL_REGISTRY`），`getToolsForScene(ws, col)` 查表。**表本身是空的**，靠工具各自的 `register.ts` 启动期 side-effect import 命填。
+- `src/components/toolbox/register.ts`：把 SearchTool/BatchTool 注册到各适用 scene 的 side-effect 模块。**必须在启动链路里被 import 一次才会填表**——当前由 `App.vue` 顶层 `import './components/toolbox/register'` 触发（幂等）。漏这行则工具箱显示"无可用工具"。
+- `src/components/toolbox/ToolBoxPanel.vue`：容器壳。嵌入态抄 `.wb-right-panel` 套路（`.wb-toolbox-panel` + `.wb-right-resize-handle` + `usePanelResize` 挂 `settings.toolBoxWidth`），悬浮态借 `FloatingPanelShell`（同 MetaPanel）。顶栏 segmented control 列 `getToolsForScene` 命中工具，`<component :is>` 挂载，统一传 `scene/workspace/collection` 三个 props。开关按 workspace 分桶存 `tabsStore.toolBoxOpen`（沿用 preview 雨格，不另起状态）。
+- `src/components/toolbox/searchFields.ts`：scene 适配器。`getSearchScene(workspace, collection)` 返回当前 store 的 `items + SearchField[] + getItemMeta`——preset/items 喂 `presetStore.prompts`、regex scene 喂对应 store 的 `regexScripts`、worldbook/items 喂 `entries`、character/fields 把 `CHARACTER_FIELDS` + greetings 展平成 items。`jumpToFieldHit`/`applyReplace` 是按 scene 派到对应 store 的修改出口。
+- `src/components/toolbox/tools/SearchTool.vue` / `BatchTool.vue`：两个具体工具。Search 是 `utils.searchFields` 纯函数的人机壳——字段下拉选 + text/list 走字符串 query/replace、enum 字段走候选 toggle（禁止字符串替换避免把布尔/数值改坏，候选清单来自 `searchFields.ts` 的 `getEnumChoices`），"modify what matched"回路把搜索命中同步到 sidebar 自己那份 useGroupedList 选中态（preset/worldbook 走 `store.selectedGi`，regex 走 `store.regexSelectedGi`——regex sidebar 已接 useGroupedList 同模式），再切到 BatchTool 直接批改选中块——Search 不自己另搞勾选/批改 UI；BatchTool 按 scene 给批量操作（preset/items 批量开关+改 role、regex 读 `store.regexSelectedGi` 拿选中 script 对象引用批量开关+删除、worldbook/items 批量开关+改激活方式+删除、character/fields 无批量工具占位提示）。regex 批量不绕本地 gi→identifier 反查（regexOrder 是 watch regexScripts 触发 rebuild 的，gi 会 stale 指错 node），直接从 store 拿真对象引用改字段/splice 删。
+
+### Search 的 LLM-friendly 形状
+
+`utils.ts` 抽出的 `searchFields(items, fields, query, getItemMeta)` 是纯函数，不碰 Vue 响应式。`SearchField.kind` 三态：`text`（按行 IndexOf 裁窗±30）、`list`（数组逐元素按行搜，line=元素下标）、`enum`（`String(item[field])===query` 整值，line/col=-1）。未来 LLM 调 `search({workspace, collection, field, query})` 直接拿同样的 `SearchHit[]`——UI 只是这层契约的人机壳，不是第二套实现。
+
+### 跟旧实现的复用关系
+
+- preset 域原顶栏 `SearchPanel.vue` + `presetStore.doSearch/navSearch/jumpToSearchResult/replaceCurrent/replaceAll` + `tabsStore.searchOpen` **已删**——它们只搜 `content` 字段、是 preset 专属快速入口，工具箱通用版 Search 已覆盖全 scene（按字段选、跨 scene、enum 走候选）。`PresetContentEditor.vue` 的"搜索命中行高亮"（`lineClass`/`.search-hit`/`.search-cur`）一并删——工具箱 SearchTool 自己渲染命中上下文，不需要编辑器再叠一层高亮。
+- worldbook 域原 `WorldbookToolsPanel.vue`（侧边栏顶批量按钮悬浮窗）**已删**——批量启用/禁用/改激活方式移植到工具箱 `BatchTool.vue` 的 worldbook/items scene，sidebar 顶栏只留绑定/解绑，不再有独立批量入口。
+
