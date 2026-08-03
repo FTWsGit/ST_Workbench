@@ -61,9 +61,21 @@ DEFAULT_PORT = 8791
 DEFAULT_TIMEOUT = 60        # poll 默认等待秒数
 MAX_TIMEOUT = 300           # 与 bash 工具最大超时对齐
 MAX_BODY_LEN = 64 * 1024    # 单条消息 64KB 上限，防滥用
+WIRE_BODY_CAP_FACTOR = 4    # wire cap 放宽系数：Content-Length 含 JSON 包装/转义/宽字符，真实长度由 _push 兜底校验
 MAX_QUEUE = 1000            # 单信箱最多堆积 1000 条，溢出丢弃并记日志
-HISTORY_KEEP = 200          # 每个信箱保留最近 200 条已消费消息（复盘用）
-LOG_BODY_MAX = 1000          # 日志里消息正文截断长度（含省略号），避免日志被刷爆
+HISTORY_KEEP = 200          # 每个信箱保留最近 200 条已读消息（复盘用）
+LOG_BODY_MAX = 400          # 日志里消息正文截断长度（含省略号），避免日志被刷爆
+DEFAULT_HISTORY_LIMIT = 20  # history 默认条数（与 cli 端 cmd_history 默认一致）
+
+# HTTP 状态码（do_POST/do_GET 用，避免散落硬编码）
+HTTP_OK = 200
+HTTP_BAD_REQUEST = 400
+HTTP_NOT_FOUND = 404
+
+
+class MailboxClosed(Exception):
+    """信箱被 unregister 删除时抛出，让 MailServer.poll 捕获后回 left 信号。"""
+    pass
 
 
 def _truncate(s, max_len=LOG_BODY_MAX):
@@ -81,8 +93,9 @@ class Mailbox:
         self.name = name
         self._lock = threading.Lock()
         self._queue = deque()       # 消息列表
-        self._history = deque(maxlen=HISTORY_KEEP)  # 已消费消息留档（复盘用）
+        self._history = deque(maxlen=HISTORY_KEEP)  # 已读消息留档（复盘用）
         self._waiters = []          # 阻塞中的 poll 消费者
+        self._closed = False        # 被 unregister 删除后置 True，唤醒等待者让其抛 MailboxClosed
         self.last_from = None
         self.total_received = 0
         self.total_dropped = 0
@@ -127,8 +140,11 @@ class Mailbox:
                 msg = self._pop_after_wake(evt)
                 if msg is not None:
                     return msg
-                # 被唤醒但队列空（消息被 drain/其他消费者抢走）——未到
-                # deadline，继续下一轮等待
+                # 被唤醒但队列空（消息被 drain/其他消费者抢走）——若未到
+                # deadline 且信箱没被删，继续下一轮等待。
+                # 信箱被 unregister 删了：抛 MailboxClosed，让 poll 立即回 left。
+                if self._closed:
+                    raise MailboxClosed(self.name)
                 continue
             # 超时
             return self._cancel_waiter(evt)
@@ -173,8 +189,24 @@ class Mailbox:
                 items.append(self._take_locked())
             return items
 
-    def history(self, limit=20):
-        """最近已消费消息（新的在前），最多 limit 条。"""
+    def drain_from(self, from_):
+        """只取走队列里 from==from_ 的消息，旁人的留在队列（留档取走的）。
+        返回取走的列表（FIFO 顺序）。"""
+        with self._lock:
+            taken = []
+            kept = deque()
+            while self._queue:
+                m = self._queue.popleft()
+                if m.get("from") == from_:
+                    taken.append(m)
+                    self._history.append(m)
+                else:
+                    kept.append(m)
+            self._queue = kept
+            return taken
+
+    def history(self, limit=DEFAULT_HISTORY_LIMIT):
+        """最近已读消息（新的在前），最多 limit 条。"""
         with self._lock:
             items = list(self._history)
         items.reverse()
@@ -309,6 +341,7 @@ class MailServer:
             return True, None
         # 唤醒该信箱上仍在等待的 poll，让它们立即返回
         with b._lock:
+            b._closed = True
             for evt in b._waiters:
                 evt.set()
             b._waiters.clear()
@@ -317,8 +350,9 @@ class MailServer:
 
     def broadcast(self, from_, body):
         """群发：发给当前所有已存在的信箱（排除自己）。best-effort：
-        单个目标失败不中断其他目标。返回 (ok, seqs, err)——部分成功时
-        err 是 {"failed": [(target, err), ...]}，全部失败时是
+        单个目标失败不中断其他目标。返回 (ok, delivered, err)——
+        delivered 是 [(seq, target), ...] 成功送达列表；
+        部分成功时 err 是 {"failed": [(target, err), ...]}，全部失败时是
         "all targets failed: ..." 字符串。"""
         if not isinstance(from_, str) or not from_:
             return False, None, "'from' must be string"
@@ -326,18 +360,18 @@ class MailServer:
             targets = [n for n in self._boxes if n != from_]
         if not targets:
             return True, [], None  # 没有其他信箱：成功但零送达（无空转）
-        seqs = []
+        delivered = []
         failed = []
         for t in targets:
             ok, seq, err = self._push(t, from_, body)
             if ok:
-                seqs.append(seq)
+                delivered.append((seq, t))
             else:
                 failed.append((t, err))
-        if seqs:
-            return True, seqs, {"failed": failed}
+        if delivered:
+            return True, delivered, {"failed": failed}
         detail = "; ".join(f"{t}: {err}" for t, err in failed)
-        return False, seqs, "all targets failed: " + detail
+        return False, delivered, "all targets failed: " + detail
 
     def poll(self, to, timeout):
         if not to:
@@ -353,7 +387,12 @@ class MailServer:
             self._log("POLL_TIMEOUT", {"to": to, "timeout": timeout})
             return True, None, None
         deadline = time.time() + timeout
-        msg = box.pop(deadline)
+        try:
+            msg = box.pop(deadline)
+        except MailboxClosed:
+            # 信箱在 poll 期间被 unregister 删了：回 left，让消费者立即知道目标已离开
+            self._log("POLL_LEFT", {"to": to, "timeout": timeout})
+            return False, None, f"left: {to} 已离开"
         if msg is None:
             self._log("POLL_TIMEOUT", {"to": to, "timeout": timeout})
             return True, None, None
@@ -363,18 +402,22 @@ class MailServer:
         })
         return True, msg, None
 
-    def drain(self, to):
-        """一次取走某信箱当前全部消息（非阻塞，每条都留档），返回 (ok, items, err)。"""
+    def drain(self, to, from_=None):
+        """一次取走某信箱当前全部消息（非阻塞，每条都留档），返回 (ok, items, err)。
+        from_ 非空时只取该发信人的消息，旁人的留在队列。"""
         if not to:
             return False, None, "missing 'to'"
         box = self._box(to, create_if_missing=False)
         if box is None:
             # 已 exit/从未登记：不复活，当作空信箱
-            self._log("DRAIN", {"to": to, "count": 0, "seqs": [], "bodies": []})
+            self._log("DRAIN", {"to": to, "from": from_, "count": 0, "seqs": [], "bodies": []})
             return True, [], None
-        items = box.drain_all()
+        if from_:
+            items = box.drain_from(from_)
+        else:
+            items = box.drain_all()
         self._log("DRAIN", {
-            "to": to, "count": len(items),
+            "to": to, "from": from_, "count": len(items),
             "seqs": [m["seq"] for m in items],
             "bodies": [_truncate(m.get("body", "")) for m in items],
         })
@@ -392,8 +435,8 @@ class MailServer:
             boxes = {name: b.snapshot() for name, b in self._boxes.items()}
         return True, {"boxes": boxes, "uptime": time.time() - self._started_at}, None
 
-    def history(self, to, limit=20):
-        """某信箱最近已消费的消息（新的在前）。"""
+    def history(self, to, limit=DEFAULT_HISTORY_LIMIT):
+        """某信箱最近已读的消息（新的在前）。"""
         if not to:
             return False, None, "missing 'to'"
         try:
@@ -441,10 +484,10 @@ class Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             n = 0
-        # wire cap 放宽到 MAX_BODY_LEN*4：Content-Length 含 JSON 包装（引号/括号/
+        # wire cap 放宽到 MAX_BODY_LEN*WIRE_BODY_CAP_FACTOR：Content-Length 含 JSON 包装（引号/括号/
         # 转义），中文等宽字符转义后字节数会放大；真实 body 长度由 _push 里
         # len(body) > MAX_BODY_LEN 严格校验兜底。
-        if n <= 0 or n > MAX_BODY_LEN * 4:
+        if n <= 0 or n > MAX_BODY_LEN * WIRE_BODY_CAP_FACTOR:
             return None, "empty or oversized body"
         raw = self.rfile.read(n)
         try:
@@ -457,10 +500,10 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/send":
             data, err = self._read_json_body()
             if err:
-                self._send_json(400, {"ok": False, "err": err})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": err})
                 return
             if not isinstance(data, dict):
-                self._send_json(400, {"ok": False, "err": "body must be JSON object"})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": "body must be JSON object"})
                 return
             body = data.get("body", "")
             from_ = data.get("from", "")
@@ -470,70 +513,70 @@ class Handler(BaseHTTPRequestHandler):
             bc = data.get("broadcast")
             is_broadcast = bc is True or bc == 1 or bc in ("true", "True", "1") or to == "*"
             if is_broadcast:
-                ok, seqs, e = self.mail.broadcast(from_, body)
+                ok, delivered, e = self.mail.broadcast(from_, body)
                 if ok:
-                    payload = {"ok": True, "seqs": seqs}
+                    payload = {"ok": True, "delivered": delivered}
                     if isinstance(e, dict) and e.get("failed"):
                         payload["failed"] = e["failed"]
-                    self._send_json(200, payload)
+                    self._send_json(HTTP_OK, payload)
                 else:
-                    self._send_json(400, {"ok": False, "err": e})
+                    self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
                 return
             if not to:
-                self._send_json(400, {"ok": False, "err": "missing 'to'"})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": "missing 'to'"})
                 return
             # 单发：目标未登记视为"已离开"
             if not self.mail.exists(to):
-                self._send_json(400, {"ok": False, "err": f"left: {to} 已离开"})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": f"left: {to} 已离开"})
                 return
             ok, seq, e = self.mail.send(to, from_, body)
             if ok:
-                self._send_json(200, {"ok": True, "seq": seq})
+                self._send_json(HTTP_OK, {"ok": True, "seq": seq})
             else:
-                self._send_json(400, {"ok": False, "err": e})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
             return
         if parsed.path == "/register":
             data, err = self._read_json_body()
             if err:
-                self._send_json(400, {"ok": False, "err": err})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": err})
                 return
             if not isinstance(data, dict):
-                self._send_json(400, {"ok": False, "err": "body must be JSON object"})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": "body must be JSON object"})
                 return
             names = data.get("names") or []
             ok, e = self.mail.register(names)
             if ok:
-                self._send_json(200, {"ok": True, "count": len([n for n in names if n])})
+                self._send_json(HTTP_OK, {"ok": True, "count": len([n for n in names if n])})
             else:
-                self._send_json(400, {"ok": False, "err": e})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
             return
         if parsed.path == "/unregister":
             data, err = self._read_json_body()
             if err:
-                self._send_json(400, {"ok": False, "err": err})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": err})
                 return
             if not isinstance(data, dict):
-                self._send_json(400, {"ok": False, "err": "body must be JSON object"})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": "body must be JSON object"})
                 return
             name = data.get("name", "")
             ok, e = self.mail.unregister(name)
             if ok:
-                self._send_json(200, {"ok": True, "left": name})
+                self._send_json(HTTP_OK, {"ok": True, "left": name})
             else:
-                self._send_json(400, {"ok": False, "err": e})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
             return
         if parsed.path == "/shutdown":
             # 顺序不能反：先回响应（_send_json 已 flush，响应一定写回 socket），
             # 再唤醒 poll 等待者、最后换线程关 server——否则客户端会收到
             # "Remote end closed connection without response"（连接被掐断、响应没拿到）。
-            self._send_json(200, {"ok": True})
+            self._send_json(HTTP_OK, {"ok": True})
             self.mail.shutdown()
             # 真正让进程退出：httpd.shutdown() 会让 main() 里的 serve_forever() 返回，
             # 从而 main() 正常 return、进程随之退出。换一个线程去调用，
             # 避免在当前请求线程里同步阻塞导致响应发不出去。
             threading.Thread(target=self.httpd.shutdown, daemon=True).start()
             return
-        self._send_json(404, {"ok": False, "err": "not found"})
+        self._send_json(HTTP_NOT_FOUND, {"ok": False, "err": "not found"})
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -543,55 +586,59 @@ class Handler(BaseHTTPRequestHandler):
             timeout = qs.get("timeout", [str(DEFAULT_TIMEOUT)])[0]
             ok, msg, e = self.mail.poll(to, timeout)
             if ok and msg is not None:
-                self._send_json(200, {"ok": True, "msg": msg})
+                self._send_json(HTTP_OK, {"ok": True, "msg": msg})
             elif ok:
-                self._send_json(200, {"ok": False, "timeout": True})
+                self._send_json(HTTP_OK, {"ok": False, "timeout": True})
+            elif e and e.startswith("left:"):
+                # poll 期间目标被 unregister 删了：回 left 信号，cli 端识别后立即返回不再空等
+                self._send_json(HTTP_OK, {"ok": False, "left": True, "err": e})
             else:
-                self._send_json(400, {"ok": False, "err": e})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
             return
         if parsed.path == "/drain":
             qs = parse_qs(parsed.query)
             to = qs.get("to", [""])[0]
-            ok, items, e = self.mail.drain(to)
+            from_ = qs.get("from", [None])[0]
+            ok, items, e = self.mail.drain(to, from_=from_)
             if ok:
-                self._send_json(200, {"ok": True, "items": items})
+                self._send_json(HTTP_OK, {"ok": True, "items": items})
             else:
-                self._send_json(400, {"ok": False, "err": e})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
             return
         if parsed.path == "/history":
             qs = parse_qs(parsed.query)
             to = qs.get("to", [""])[0]
-            limit = qs.get("limit", ["20"])[0]
+            limit = qs.get("limit", [str(DEFAULT_HISTORY_LIMIT)])[0]
             ok, items, e = self.mail.history(to, limit)
             if ok:
-                self._send_json(200, {"ok": True, "items": items})
+                self._send_json(HTTP_OK, {"ok": True, "items": items})
             else:
-                self._send_json(400, {"ok": False, "err": e})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
             return
         if parsed.path == "/status":
             qs = parse_qs(parsed.query)
             to = qs.get("to", [None])[0]
             ok, data, e = self.mail.status(to)
             if ok:
-                self._send_json(200, {"ok": True, **data})
+                self._send_json(HTTP_OK, {"ok": True, **data})
             else:
-                self._send_json(400, {"ok": False, "err": e})
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
             return
         if parsed.path == "/presence":
             qs = parse_qs(parsed.query)
             exclude = qs.get("exclude", [None])[0]
             names = self.mail.presence(exclude=exclude)
-            self._send_json(200, {"ok": True, "present": names})
+            self._send_json(HTTP_OK, {"ok": True, "present": names})
             return
         if parsed.path == "/exists":
             qs = parse_qs(parsed.query)
             name = qs.get("name", [""])[0]
-            self._send_json(200, {"ok": True, "exists": self.mail.exists(name)})
+            self._send_json(HTTP_OK, {"ok": True, "exists": self.mail.exists(name)})
             return
         if parsed.path == "/":
-            self._send_json(200, {"ok": True, "service": "submail", "uptime": time.time() - self.mail._started_at})
+            self._send_json(HTTP_OK, {"ok": True, "service": "submail", "uptime": time.time() - self.mail._started_at})
             return
-        self._send_json(404, {"ok": False, "err": "not found"})
+        self._send_json(HTTP_NOT_FOUND, {"ok": False, "err": "not found"})
 
     def log_message(self, fmt, *args):
         # 让 stderr 干净点；详细日志走 submail-server.log

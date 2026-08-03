@@ -37,11 +37,11 @@ submail 是本机loopback的一个轻量 HTTP 信箱服务，subagent 通过 bas
 
 ### 第 1 步：开始前检查
 ```bash
-where submail 2>&1 && echo 'Submail is installed.' || echo 'Cannot found submail. Install it first.' && submail server status
-``` 
+if where submail >/dev/null 2>&1; then echo 'Submail is installed.'; submail server status; else echo 'Cannot find submail. Install it first.'; exit 1; fi
+```
 
-假如输出`Submail is installed.`，那么可以正常继续；
-假如输出`Cannot found submail. Install it first.`，那么终止Skill，向用户汇报，等待用户安装submail.
+假如 `Submail is installed.` + server 状态，那么可以正常继续；
+假如 `Cannot find submail. Install it first.` 并 exit 1，那么终止 Skill，向用户汇报，等待用户安装 submail。
 
 
 ### 第 2 步：给这批 worker 起代号
@@ -101,3 +101,4 @@ submail server register --names builder,explorer,designer
 2. **先派发、后 register** → 早出发的 worker 广播问候时，晚注册的搭档还不在花名册里，收不到问候，白白浪费一轮。顺序永远是：确认submail状态 → 起名 → register → 派发。
 3. **给 `explore` 类型也塞了身份** → 它没有 bash 工具，塞了也用不了，纯粹浪费 prompt 空间。
 4. **依赖关系没写进 prompt，指望subagent 靠信箱自己猜** → submail 只是通信渠道，不会告诉subagent"你的队友是谁"，这层逻辑你得在派发时就点破。
+5. **派过一次subagent后第二次不register** → 每次subagent结束后server会自动重启，所以每次派subagent都要 register 名字
