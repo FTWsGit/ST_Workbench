@@ -91,9 +91,47 @@ def _rotate_log_if_large(path, max_bytes=5 * 1024 * 1024):
         pass
 
 
+def _human_line(cmd, args_dict, result):
+    """人类可读的语义化日志行：`[HH:MM:SS] 谁 cmd 方向 "body摘要" → result`。
+    send/hello 的 body 从参数取（result 里只有 sent seq，看不到内容）；
+    poll/history/status 的内容已含在 result 里，直接展示。
+    result 多行（poll 的正文、status 的在场名单）压平成单行 ` | ` 分隔，保证日志每行完整。"""
+    me = args_dict.get("me") or ""
+    to = args_dict.get("to") or ""
+    body = args_dict.get("body") or ""
+    body_q = json.dumps(_body_summary(body), ensure_ascii=False) if body else ""
+    flat = " | ".join((result or "").splitlines())
+
+    if cmd == "send":
+        if args_dict.get("broadcast"):
+            return f"{me} send broadcast {body_q} → {flat}" if body_q else f"{me} send broadcast → {flat}"
+        return f"{me} send → {to} {body_q} → {flat}" if body_q else f"{me} send → {to} → {flat}"
+    if cmd == "poll":
+        frm = args_dict.get("from_") or ""
+        opts = (" --all" if args_dict.get("all") else "") + (f" --from {frm}" if frm else "")
+        return f"{me} poll{opts} → {flat}"
+    if cmd == "hello":
+        return f"{me} hello {body_q} → {flat}" if body_q else f"{me} hello → {flat}"
+    if cmd == "history":
+        return f"{me} history → {flat}"
+    if cmd == "status":
+        box = args_dict.get("box") or ""
+        return f"{me} status{(' --box ' + box) if box else ''} → {flat}"
+    if cmd == "exit":
+        return f"{me} exit → {flat}"
+    if cmd == "init":
+        return f"{me} init → 协议全文({len(result or '')}字)"
+    if cmd == "register":
+        return f"server register {args_dict.get('names')} → {flat}"
+    if cmd == "server":
+        return f"server {args_dict.get('server_cmd') or ''} → {flat}"
+    return f"{cmd} → {flat}"
+
+
 def _log_cli(cmd, args_dict, result):
     """记录 subagent 执行的 CLI 命令到 submail-cli.log/.jsonl。
-    result 是命令返回字符串；error/no-reply/timeout 都记。"""
+    submail-cli.log 是人类可读的语义化行（含 body 内容，视觉无成本）；
+    submail-cli.jsonl 保留结构化字段。error/no-reply/timeout 都记。"""
     log_dir = _cli_log_dir()
     try:
         os.makedirs(log_dir, exist_ok=True)
@@ -114,12 +152,14 @@ def _log_cli(cmd, args_dict, result):
         "from": from_val,
         "to": args_dict.get("to"),
         "broadcast": args_dict.get("broadcast"),
+        "body": _body_summary(args_dict.get("body") or ""),
         "result": (result or "")[:1000],
     }
     # 清理 None 值，让日志更干净
     record = {k: v for k, v in record.items() if v is not None}
-    stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
-    line = f"[{stamp}] {cmd} {json.dumps(record, ensure_ascii=False)}\n"
+    # 人类可读行：简短时间 + 语义顺序（谁 对谁 做了什么 "内容" → 结果）
+    stamp = time.strftime('%H:%M:%S', time.localtime(ts))
+    line = f"[{stamp}] {_human_line(cmd, args_dict, result)}\n"
     try:
         # #23：写日志前检查文件大小，超过 5MB 先轮转，避免 cli 日志无限膨胀。
         _rotate_log_if_large(lines_path)
