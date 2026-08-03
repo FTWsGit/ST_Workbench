@@ -44,6 +44,11 @@
   /* Syntax highlight primitive（编辑器语法着色，跨主题复用）*/
   --wb-hl-b:#58b8b0;--wb-hl-k:#a078c0;--wb-hl-s:#555570;--wb-hl-v:#c8a045;--wb-hl-c:#68b868;
   --wb-hl-cm:#555570;--wb-hl-m:#6090c0;--wb-hl-sq:#c89850;--wb-hl-dq:#78b0c0;--wb-hl-ab:#60a870;--wb-hl-sb:#d08a5c;
+  /* JS syntax highlight primitive（tavern_helper 脚本编辑器，Prism 语法高亮专用，见 useHighlight.ts
+   * 的 tokenizeJs）。语义相近的复用上面已有色相（keyword/comment/string/number），没有既有
+   * 类比的（函数名/参数名/类名/操作符与标点）新开三个色相，标点/操作符刻意用低对比度的
+   * text-2 灰调，避免结构噪音比标识符还抢眼。*/
+  --wb-hl-js-fn:#6bb8e0;--wb-hl-js-param:#d08a5c;--wb-hl-js-cls:#78c0a0;--wb-hl-js-op:#8fa0a2;
 
   /* Role primitive — ST 角色 schema 色票（sys/user/asst）+ 变量类型色票（set/add/get）。
    * 这套是跨 domain 复用、带透明度的语义色票，不进 neutral/amber ramp，独立成系。
@@ -113,6 +118,7 @@
   /* 兼容旧引用：语法着色令牌保留扁平名，避免改 useHighlight.ts 全量重命名 */
   --hl-b:var(--wb-hl-b);--hl-k:var(--wb-hl-k);--hl-s:var(--wb-hl-s);--hl-v:var(--wb-hl-v);--hl-c:var(--wb-hl-c);
   --hl-cm:var(--wb-hl-cm);--hl-m:var(--wb-hl-m);--hl-sq:var(--wb-hl-sq);--hl-dq:var(--wb-hl-dq);--hl-ab:var(--wb-hl-ab);--hl-sb:var(--wb-hl-sb);
+  --hl-js-fn:var(--wb-hl-js-fn);--hl-js-param:var(--wb-hl-js-param);--hl-js-cls:var(--wb-hl-js-cls);--hl-js-op:var(--wb-hl-js-op);
 
   font-family:var(--wb-fm);color:var(--wb-tx);font-size:16px;line-height:1.5;
   position:relative;width:100%;height:100%;
@@ -441,6 +447,21 @@
 .st-wb .hl-dq{color:var(--hl-dq)}
 .st-wb .hl-ab{color:var(--hl-ab)}
 .st-wb .hl-sb{color:var(--hl-sb)}
+
+/* JS syntax highlight (tavern_helper 脚本编辑器，见 useHighlight.ts 的 tokenizeJs)。class 名
+   直接对应 Prism token.type（hl-js-<type>），同样只设 color/font-style，不设 border/background——
+   见文件头 useHighlight.ts 里"嵌套 span 靠视觉不可区分扁平化"的说明。类型很多，只覆盖常见的，
+   没列出的（Prism 还有几十种冷门 type）就没有颜色，回退成默认文本色，不算 bug。*/
+.st-wb .hl-js-keyword,.st-wb .hl-js-control-flow{color:var(--hl-k)}
+.st-wb .hl-js-string,.st-wb .hl-js-template-string,.st-wb .hl-js-template-punctuation{color:var(--hl-dq)}
+.st-wb .hl-js-comment{color:var(--hl-cm);font-style:italic}
+.st-wb .hl-js-number,.st-wb .hl-js-boolean,.st-wb .hl-js-constant{color:var(--hl-v)}
+.st-wb .hl-js-function,.st-wb .hl-js-method{color:var(--hl-js-fn)}
+.st-wb .hl-js-parameter,.st-wb .hl-js-property,.st-wb .hl-js-literal-property{color:var(--hl-js-param)}
+.st-wb .hl-js-class-name{color:var(--hl-js-cls)}
+.st-wb .hl-js-operator,.st-wb .hl-js-punctuation,.st-wb .hl-js-interpolation-punctuation{color:var(--hl-js-op)}
+.st-wb .hl-js-regex{color:var(--hl-sq)}
+.st-wb .hl-js-interpolation{color:var(--hl-ab)}
 
 
 /* Var click popup — small floating popup near a clicked {{...var...}}, ported from MiMo */

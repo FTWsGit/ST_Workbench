@@ -32,9 +32,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { highlightLines } from '../../composables/useHighlight'
+import { highlightLines, type HighlightLanguage } from '../../composables/useHighlight'
 import { getHostWindow, getHostDocument } from '../../composables/hostEnv'
-import { findMacroEnd } from '../../utils'
+import { findMacroEnd, esc } from '../../utils'
 
 interface JumpRequest { line: number; col: number; len: number; token: number; keepFocus: boolean }
 
@@ -55,6 +55,11 @@ const props = withDefaults(defineProps<{
   /** i18n：行数标签，如 "{count} lines"，接收 {count} 参数。 */
   statusLinesLabel?: string
   disabled?: boolean
+  /** 高亮语法选择。默认 'macro'（ST 宏语法 {{...}}，四个域共用，见 useHighlight.ts）。
+   *  'js' 用于 tavern_helper 脚本内容——纯 JS，不会混 ST 宏，走 Prism 的真正 JS 语法
+   *  高亮（关键字/字符串/注释/数字/函数名等），而不是为提示词文本设计的宏语法扫描器。
+   *  仍然是纯 UI 配置，不碰任何 store，符合本组件 domain-agnostic 的契约。 */
+  language?: HighlightLanguage
 }>(), {
   jump: null,
   lineClass: () => '',
@@ -65,6 +70,7 @@ const props = withDefaults(defineProps<{
   statusCharsLabel: '{count} chars',
   statusLinesLabel: '{count} lines',
   disabled: false,
+  language: 'macro',
 })
 
 const emit = defineEmits<{
@@ -81,6 +87,16 @@ const measureRef = ref<HTMLDivElement>()
 
 /** 编辑器尺寸变化（拖动侧边栏/面板宽度手柄）后，等待此毫秒再重测量换行高度。 */
 const RESIZE_DEBOUNCE_MS = 20
+/** 逻辑行数超过这个数才启用"视口内才彩色高亮"（见下面 refreshHighlight）——
+ *  常规 preset/regex 内容通常远小于这个数，直接维持原来的"全量高亮"路径，零行为变化。 */
+const VIEWPORT_LINE_THRESHOLD = 200
+/** 视口上下各预留这么多行也一起彩色高亮（不是恰好卡在可视边界），缓冲快速滚动/wrap 高度
+ *  估算的误差——这里用的是单行高度 measureSingleLineHeight() 做近似，长行 wrap 后的真实
+ *  视口行数会比估算的少，缓冲区弥补这个偏差，代价是极端情况下多渲染一些本来看不见的行。 */
+const VIEWPORT_BUFFER_LINES = 60
+/** 滚动停下这么久之后，才把新滚入视口、还处于纯文本占位状态的行补上彩色高亮——
+ *  滚动过程中不做这件事，避免每个 scroll 事件都触发 DOM 写入。 */
+const SCROLL_SETTLE_MS = 120
 
 const content = ref(props.modelValue)
 const cursorLine = ref(1)
@@ -94,23 +110,59 @@ const linesLabel = computed(() => props.statusLinesLabel.replace(/\{count\}/g, S
 const lineHeights = ref<number[]>([])
 
 /**
+ * 估算当前视口覆盖的逻辑行范围（含缓冲区），供 refreshHighlight() 判断"这行要不要花代价
+ * 彩色高亮"。用的是单行高度（不考虑 wrap）做近似——精确的按行 wrap 高度在 lineHeights 里，
+ * 但那需要 updateLineNums() 先跑过一次，容易跟 refreshHighlight() 的调用顺序绕在一起；
+ * 近似 + 足够大的缓冲区（VIEWPORT_BUFFER_LINES）足够便宜也足够准，长行 wrap 造成的偏差
+ * 顶多让缓冲区两端多算/少算几行，不影响正确性（只影响"这次要不要顺手也高亮"这个优化决策）。
+ */
+function getVisibleLineRange(totalLines: number): [number, number] {
+  const ta = taRef.value
+  if (!ta) return [0, totalLines - 1]
+  const lh = measureSingleLineHeight()
+  const first = Math.max(0, Math.floor(ta.scrollTop / lh) - VIEWPORT_BUFFER_LINES)
+  const last = Math.min(totalLines - 1, Math.ceil((ta.scrollTop + ta.clientHeight) / lh) + VIEWPORT_BUFFER_LINES)
+  return [first, last]
+}
+
+/**
  * 重绘高亮：按逻辑行与现有 DOM 做 diff，只 innerHTML 真正变化的行（通常就是正在编辑的那一行），
  * 其余节点保留不动——单次按键 DOM 写入 O(变更行数)，无需打字时隐藏叠加层的折中。
+ *
+ * 大文件（> VIEWPORT_LINE_THRESHOLD 行）额外做一层"视口内才彩色"：token 化本身已经够便宜
+ * （见 useHighlight.ts），真正贵的是把结果写进 DOM——一次性给几千个 <div> 塞带 <span> 的
+ * innerHTML 会有明显的解析 + 排版代价。视口外的行改成写纯文本（esc 过的 textContent 等价物，
+ * 不含任何 <span>），文字仍然完整可读，只是没有颜色；用户滚动过去时 syncScroll() 里的防抖会
+ * 补上彩色版本（见下面 SCROLL_SETTLE_MS）。已经彩色过、且内容没变的行不会被这次判断降级回
+ * 纯文本——只在"当前候选彩色 HTML 与上次实际写入的不一致"时才会二选一，天然做到"只升级不降级"
+ * （见下面注释）。
  */
 let prevHlLines: string[] = []
 function refreshHighlight() {
   const el = hlRef.value
   if (!el) return
-  const lines = highlightLines(content.value)
+  const lines = highlightLines(content.value, props.language)
+  const useWindowing = lines.length > VIEWPORT_LINE_THRESHOLD
+  const [visFrom, visTo] = useWindowing ? getVisibleLineRange(lines.length) : [0, lines.length - 1]
   const hostDoc = getHostDocument() // 命令式创建的节点必须来自宿主文档（hostEnv.ts）
+  let plainSource: string[] | null = null
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i] === prevHlLines[i]) continue // 未变化——保留 <div> 不动
+    let html = lines[i]
+    // 视口外、且当前候选彩色版本跟上次实际写入的不一样——说明这行还没被彩色化过，或者内容
+    // 变了但视口外没必要现在就重新彩色化，先用纯文本占位。若彩色版本跟上次写入的相同（早就
+    // 彩色化过、内容也没变），保持 html = 彩色版，走下面"未变化"分支直接跳过，不会被降级。
+    if (useWindowing && (i < visFrom || i > visTo) && prevHlLines[i] !== lines[i]) {
+      if (!plainSource) plainSource = content.value.split('\n')
+      html = esc(plainSource[i]) || '\u00A0'
+    }
+    if (html === prevHlLines[i]) continue // 未变化——保留 <div> 不动
     let child = el.children[i] as HTMLElement | undefined
     if (!child) { child = hostDoc.createElement('div'); el.appendChild(child) }
-    child.innerHTML = lines[i]
+    child.innerHTML = html
+    prevHlLines[i] = html
   }
   while (el.children.length > lines.length) el.lastElementChild!.remove() // 行被删除
-  prevHlLines = lines
+  if (prevHlLines.length > lines.length) prevHlLines.length = lines.length
 }
 
 /** modelValue 外部变更（切换 block、Replace All、切换 regex 标签等），立即刷新。 */
@@ -220,10 +272,17 @@ function updateLineNums() {
   lineHeights.value = heights
 }
 
+let scrollSettleTimer: ReturnType<typeof setTimeout> | undefined
 function syncScroll() {
   if (!taRef.value || !hlRef.value || !lnRef.value) return
   hlRef.value.scrollTop = taRef.value.scrollTop; hlRef.value.scrollLeft = taRef.value.scrollLeft
   lnRef.value.scrollTop = taRef.value.scrollTop
+  // 大文件才需要：滚动过程中不重算高亮（scroll 事件密集，避免每次都做 DOM 写入），
+  // 停下 SCROLL_SETTLE_MS 后再补一次，把新滚入视口、还是纯文本占位的行升级成彩色。
+  if (lineCount.value > VIEWPORT_LINE_THRESHOLD) {
+    clearTimeout(scrollSettleTimer)
+    scrollSettleTimer = setTimeout(refreshHighlight, SCROLL_SETTLE_MS)
+  }
 }
 
 function updateCursor() {
@@ -406,7 +465,7 @@ onMounted(() => {
   if (taRef.value) ro!.observe(taRef.value)
   nextTick(() => { refreshHighlight(); updateLineNums(); updateCursor() })
 })
-onUnmounted(() => { if (ro) ro.disconnect() })
+onUnmounted(() => { if (ro) ro.disconnect(); clearTimeout(scrollSettleTimer) })
 
 /** 字体 CSS 变量变化（设置对话框修改字号/字体）时调用：清空高度缓存并重测。字体变化不会触发 ResizeObserver，必须外部显式调用。 */
 function refreshFont() {

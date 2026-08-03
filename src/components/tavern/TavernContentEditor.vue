@@ -6,6 +6,7 @@
       <button class="wb-btn sm" :class="{ active: uiStore.settingsDockOpen }" @click="uiStore.toggleSettingsDock()" :title="props.t('tavern.editor.settingsPanel')">⚙</button>
     </div>
     <HighlightedEditor v-model="contentModel"
+      language="js"
       :placeholder="props.t('tavern.editor.placeholder')"
       :status-cursor-label="props.t('shared.highlightedEditor.cursor')"
       :status-chars-label="props.t('common.chars')"

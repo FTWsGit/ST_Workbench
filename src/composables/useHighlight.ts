@@ -1,4 +1,6 @@
 import { esc, span } from '../utils'
+import Prism from 'prismjs'
+import 'prismjs/components/prism-javascript.js'
 
 // 优先级，从高到低：{{}} 宏（始终优先，无条件检查）> <...> > [...] > "..." / '...'
 // （引号共享最低层级，彼此不嵌套）。
@@ -189,10 +191,47 @@ function tokenize(text: string): Token[] {
   return scan(text, 0, 1, null, null).tokens
 }
 
-/** 将全文高亮为一个 HTML 字符串（macro/引号内容会递归进去），供复制导出等场景使用。 */
-export function highlightContent(text: string): string {
+export type HighlightLanguage = 'macro' | 'js'
+
+// Prism.tokenize() 返回值是 (string | Prism.Token)[]，Token.content 又可以是
+// string | Prism.Token | (string | Prism.Token)[]（同类型递归嵌套）——这里把它拍平成
+// 我们自己的扁平 {text, cls}[]，好让 highlightContent/highlightLines 复用同一套
+// 拼 HTML / 按行切割逻辑，不用关心具体是哪个 tokenizer 产出的。
+// class 名前缀 hl-js-，跟 Prism 的 token.type 一一对应（keyword/string/comment/number/
+// function/operator/punctuation/...），颜色在 main.css 里配，规则跟其余 hl-* 一样：
+// 只设 color，不设 border/background。
+function flattenPrismTokens(tokens: (string | Prism.Token)[], out: Token[] = []): Token[] {
+  for (const t of tokens) {
+    if (typeof t === 'string') {
+      if (t) out.push({ text: t, cls: null })
+      continue
+    }
+    const content = Array.isArray(t.content) ? t.content : [t.content]
+    const before = out.length
+    flattenPrismTokens(content, out)
+    // t.content 也可能直接是字符串（不是数组/嵌套 Token），上面已经统一转成数组处理；
+    // 这里把这次递归新产出的 token 全部打上当前 token.type 的 class——因为 Prism 的
+    // token.content 里嵌套的字符串没有自己的 cls，需要从外层继承。
+    for (let i = before; i < out.length; i++) if (out[i].cls === null) out[i].cls = `hl-js-${t.type}`
+  }
+  return out
+}
+
+function tokenizeJs(text: string): Token[] {
+  return flattenPrismTokens(Prism.tokenize(text, Prism.languages.javascript))
+}
+
+function tokenizeFor(language: HighlightLanguage, text: string): Token[] {
+  return language === 'js' ? tokenizeJs(text) : tokenize(text)
+}
+
+/** 将全文高亮为一个 HTML 字符串（macro/引号内容会递归进去），供复制导出等场景使用。
+ *  `language` 默认 'macro'（酒馆宏语法，四个域共用）；tavern_helper 脚本内容传 'js'
+ *  走 Prism 的真正 JS 语法高亮——脚本内容是纯 JS，不会混 ST 宏，所以两套 tokenizer
+ *  互不需要感知对方，按 language 分流即可，不用合并。 */
+export function highlightContent(text: string, language: HighlightLanguage = 'macro'): string {
   let out = ''
-  for (const t of tokenize(text)) {
+  for (const t of tokenizeFor(language, text)) {
     const e = esc(t.text)
     out += t.cls ? span(t.cls, e) : e
   }
@@ -201,14 +240,14 @@ export function highlightContent(text: string): string {
 
 /**
  * 同样高亮，但按逻辑行分割为每行一个 HTML 字符串（与 `text.split('\n')` 对齐）。
- * token 文本可能包含 '\n'（宏/定界符/引号允许跨行），所以必须在 token 流上分割，
- * 每行重新打开同一 class，而不是在组装好的 HTML 上按 '\n' 切割（会切坏 <span>）。
- * 空行输出单个 U+00A0 而非 ''——空块元素在某些浏览器中高度为 0，会导致与
+ * token 文本可能包含 '\n'（宏/定界符/引号/JS 模板字符串/块注释都允许跨行），所以必须在
+ * token 流上分割，每行重新打开同一 class，而不是在组装好的 HTML 上按 '\n' 切割（会切坏
+ * <span>）。空行输出单个 U+00A0 而非 ''——空块元素在某些浏览器中高度为 0，会导致与
  * textarea 行高不同步。
  */
-export function highlightLines(text: string): string[] {
+export function highlightLines(text: string, language: HighlightLanguage = 'macro'): string[] {
   const lines: string[] = ['']
-  for (const t of tokenize(text)) {
+  for (const t of tokenizeFor(language, text)) {
     const parts = t.text.split('\n')
     for (let p = 0; p < parts.length; p++) {
       if (p > 0) lines.push('')
