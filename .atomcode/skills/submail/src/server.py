@@ -20,7 +20,7 @@ submail server — localhost 信箱服务，给 atomcode 子 agent 之间做互�
 特性：
   - 阻塞轮询：服务端 hold 最多 timeout 秒等消息到达（默认 60，上限 300）
   - 消息序号单调递增（跨信箱全局 seq），便于调试与去重
-  - 双格式日志：人类可读 lines（submail.log）+ 结构化 JSONL（submail.jsonl）
+  - 双格式日志：人类可读 lines（submail-server.log）+ 结构化 JSONL（submail-server.jsonl）
   - 只监听 127.0.0.1，不暴露网络
 
 关于 /register（解决 broadcast 的启动顺序竞态）：
@@ -46,8 +46,7 @@ import os
 import sys
 import threading
 import time
-import uuid
-from collections import defaultdict, deque
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -64,7 +63,7 @@ MAX_TIMEOUT = 300           # 与 bash 工具最大超时对齐
 MAX_BODY_LEN = 64 * 1024    # 单条消息 64KB 上限，防滥用
 MAX_QUEUE = 1000            # 单信箱最多堆积 1000 条，溢出丢弃并记日志
 HISTORY_KEEP = 200          # 每个信箱保留最近 200 条已消费消息（复盘用）
-LOG_BODY_MAX = 200          # 日志里消息正文截断长度（含省略号），避免日志被刷爆
+LOG_BODY_MAX = 1000          # 日志里消息正文截断长度（含省略号），避免日志被刷爆
 
 
 def _truncate(s, max_len=LOG_BODY_MAX):
@@ -106,22 +105,33 @@ class Mailbox:
         return True, None
 
     def pop(self, deadline):
-        """阻塞到 deadline 取最早一条消息；超时返回 None。"""
-        evt = threading.Event()
-        with self._lock:
-            if self._queue:
-                return self._take_locked()
-            self._waiters.append(evt)
+        """阻塞到 deadline 取最早一条消息；超时返回 None。
 
-        # 释放锁后等待：要么被 push 唤醒，要么到 deadline
-        remaining = deadline - time.time()
-        if remaining <= 0:
+        循环等待：被唤醒但队列已被 drain/其他消费者抢空（_pop_after_wake
+        返回 None）时，若 deadline 未到，换全新 Event 重新挂起续等，避免
+        单次 poll 假超时。每轮用新 Event（未 set），防止上次唤醒残留的
+        set 状态造成自旋。"""
+        while True:
+            evt = threading.Event()
+            with self._lock:
+                if self._queue:
+                    return self._take_locked()
+                self._waiters.append(evt)
+
+            # 释放锁后等待：要么被 push 唤醒，要么到 deadline
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                return self._cancel_waiter(evt)
+            if evt.wait(remaining):
+                # 被唤醒：可能有多个消费者竞争，重新走一次取队逻辑
+                msg = self._pop_after_wake(evt)
+                if msg is not None:
+                    return msg
+                # 被唤醒但队列空（消息被 drain/其他消费者抢走）——未到
+                # deadline，继续下一轮等待
+                continue
+            # 超时
             return self._cancel_waiter(evt)
-        if evt.wait(remaining):
-            # 被唤醒：可能有多个消费者竞争，重新走一次 pop
-            return self._pop_after_wake(evt)
-        # 超时
-        return self._cancel_waiter(evt)
 
     def _take_locked(self):
         """持锁时取走最早一条消息并留档。"""
@@ -192,8 +202,8 @@ class MailServer:
         self._log_lock = threading.Lock()
 
         os.makedirs(log_dir, exist_ok=True)
-        self._lines_path = os.path.join(log_dir, "submail.log")
-        self._jsonl_path = os.path.join(log_dir, "submail.jsonl")
+        self._lines_path = os.path.join(log_dir, "submail-server.log")
+        self._jsonl_path = os.path.join(log_dir, "submail-server.jsonl")
         # 截断旧日志（每次 server 重启就是新会话）
         for p in (self._lines_path, self._jsonl_path):
             try:
@@ -212,16 +222,20 @@ class MailServer:
             with open(self._jsonl_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    def _box(self, name):
+    def _box(self, name, create_if_missing=True):
         with self._boxes_lock:
             b = self._boxes.get(name)
-            if b is None:
+            if b is None and create_if_missing:
                 b = Mailbox(name)
                 self._boxes[name] = b
             return b
 
     def _push(self, to, from_, body):
         """生成一条消息并投递到信箱，返回 (ok, seq, err)。"""
+        if not isinstance(body, str):
+            return False, 0, "body must be string"
+        if not isinstance(to, str) or not isinstance(from_, str):
+            return False, 0, "'to'/'from' must be string"
         if not to or not from_:
             return False, 0, "missing 'to' or 'from'"
         if len(body) > MAX_BODY_LEN:
@@ -236,10 +250,13 @@ class MailServer:
             "body": body,
             "ts": time.time(),
         }
-        box = self._box(to)
+        # 不自动创建信箱：目标未登记视为"已离开"，避免给已 exit 的人复活僵尸信箱
+        box = self._box(to, create_if_missing=False)
+        if box is None:
+            return False, 0, f"left: {to} 未登记/已离开"
         ok, err = box.push(msg)
         self._log("SEND", {
-            "seq": seq, "to": to, "from": from_,
+            "seq": seq, "from": from_, "to": to,
             "body_len": len(body), "ok": ok, "err": err,
             "body": _truncate(body),
             "depth_after": box.depth(),
@@ -257,17 +274,19 @@ class MailServer:
         用于 superagent 派发新一批 sub-agent 之前，先把这批的名字登记进 server，
         避免 broadcast 只能看到"已经被碰过"的信箱、漏发给还没上线的搭档。
         不会清空/覆盖已有信箱，纯增量登记。"""
-        if not names:
-            return False, "missing 'names'"
-        for n in names:
-            if n:
-                self._box(n)
-        self._log("REGISTER", {"names": [n for n in names if n]})
+        if not isinstance(names, list) or not names:
+            return False, "names must be a non-empty list"
+        clean = [n for n in names if isinstance(n, str) and n]
+        if not clean:
+            return False, "names must be non-empty strings"
+        for n in clean:
+            self._box(n)
+        self._log("REGISTER", {"names": clean})
         return True, None
 
     def exists(self, name):
         """某代号是否已登记。未登记视为"已离开"。"""
-        if not name:
+        if not isinstance(name, str) or not name:
             return False
         with self._boxes_lock:
             return name in self._boxes
@@ -282,8 +301,8 @@ class MailServer:
         """把一个代号从花名册里删掉（已不在线/已离开）。
         删除该信箱本身（清空队列/历史/等待者），后续 send/broadcast 找不到它会返回 left。
         幂等：删不存在的代号也返回 ok=True。"""
-        if not name:
-            return False, "missing 'name'"
+        if not isinstance(name, str) or not name:
+            return False, "'name' must be string"
         with self._boxes_lock:
             b = self._boxes.pop(name, None)
         if b is None:
@@ -297,34 +316,49 @@ class MailServer:
         return True, None
 
     def broadcast(self, from_, body):
-        """群发：发给当前所有已存在的信箱（排除自己）。返回 (ok, seqs, err)。"""
-        if not from_:
-            return False, None, "missing 'from'"
+        """群发：发给当前所有已存在的信箱（排除自己）。best-effort：
+        单个目标失败不中断其他目标。返回 (ok, seqs, err)——部分成功时
+        err 是 {"failed": [(target, err), ...]}，全部失败时是
+        "all targets failed: ..." 字符串。"""
+        if not isinstance(from_, str) or not from_:
+            return False, None, "'from' must be string"
         with self._boxes_lock:
             targets = [n for n in self._boxes if n != from_]
         if not targets:
             return True, [], None  # 没有其他信箱：成功但零送达（无空转）
         seqs = []
+        failed = []
         for t in targets:
             ok, seq, err = self._push(t, from_, body)
             if ok:
                 seqs.append(seq)
             else:
-                return False, seqs, err
-        return True, seqs, None
+                failed.append((t, err))
+        if seqs:
+            return True, seqs, {"failed": failed}
+        detail = "; ".join(f"{t}: {err}" for t, err in failed)
+        return False, seqs, "all targets failed: " + detail
 
     def poll(self, to, timeout):
         if not to:
             return False, None, "missing 'to'"
-        timeout = max(0, min(int(timeout), MAX_TIMEOUT))
-        box = self._box(to)
+        try:
+            timeout = int(timeout)
+        except (TypeError, ValueError):
+            return False, None, "invalid timeout"
+        timeout = max(0, min(timeout, MAX_TIMEOUT))
+        box = self._box(to, create_if_missing=False)
+        if box is None:
+            # 已 exit/从未登记：不复活，当作空信箱直接超时
+            self._log("POLL_TIMEOUT", {"to": to, "timeout": timeout})
+            return True, None, None
         deadline = time.time() + timeout
         msg = box.pop(deadline)
         if msg is None:
             self._log("POLL_TIMEOUT", {"to": to, "timeout": timeout})
             return True, None, None
         self._log("POLL", {
-            "to": to, "seq": msg["seq"], "from": msg["from"],
+            "from": msg["from"], "to": to, "seq": msg["seq"],
             "body": _truncate(msg.get("body", "")),
         })
         return True, msg, None
@@ -333,7 +367,11 @@ class MailServer:
         """一次取走某信箱当前全部消息（非阻塞，每条都留档），返回 (ok, items, err)。"""
         if not to:
             return False, None, "missing 'to'"
-        box = self._box(to)
+        box = self._box(to, create_if_missing=False)
+        if box is None:
+            # 已 exit/从未登记：不复活，当作空信箱
+            self._log("DRAIN", {"to": to, "count": 0, "seqs": [], "bodies": []})
+            return True, [], None
         items = box.drain_all()
         self._log("DRAIN", {
             "to": to, "count": len(items),
@@ -344,7 +382,10 @@ class MailServer:
 
     def status(self, to=None):
         if to:
-            b = self._box(to)
+            # 不自动创建信箱：查已 exit 的人返回空快照，不复活
+            b = self._box(to, create_if_missing=False)
+            if b is None:
+                return True, {"exists": False}, None
             snap = b.snapshot()
             return True, snap, None
         with self._boxes_lock:
@@ -355,8 +396,16 @@ class MailServer:
         """某信箱最近已消费的消息（新的在前）。"""
         if not to:
             return False, None, "missing 'to'"
-        limit = max(1, min(int(limit), HISTORY_KEEP))
-        box = self._box(to)
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            return False, None, "invalid limit"
+        limit = max(1, min(limit, HISTORY_KEEP))
+        box = self._box(to, create_if_missing=False)
+        if box is None:
+            # 已 exit/从未登记：不复活，当作空信箱
+            self._log("HISTORY", {"to": to, "limit": limit})
+            return True, [], None
         self._log("HISTORY", {"to": to, "limit": limit})
         return True, box.history(limit), None
 
@@ -392,7 +441,10 @@ class Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             n = 0
-        if n <= 0 or n > MAX_BODY_LEN + 1024:
+        # wire cap 放宽到 MAX_BODY_LEN*4：Content-Length 含 JSON 包装（引号/括号/
+        # 转义），中文等宽字符转义后字节数会放大；真实 body 长度由 _push 里
+        # len(body) > MAX_BODY_LEN 严格校验兜底。
+        if n <= 0 or n > MAX_BODY_LEN * 4:
             return None, "empty or oversized body"
         raw = self.rfile.read(n)
         try:
@@ -407,16 +459,28 @@ class Handler(BaseHTTPRequestHandler):
             if err:
                 self._send_json(400, {"ok": False, "err": err})
                 return
+            if not isinstance(data, dict):
+                self._send_json(400, {"ok": False, "err": "body must be JSON object"})
+                return
             body = data.get("body", "")
             from_ = data.get("from", "")
-            # broadcast 语义：to 为空 + broadcast=true，或 to == "*"，发给全部已知信箱。
             to = data.get("to", "")
-            if data.get("broadcast") or to in ("", "*"):
+            # broadcast 语义：只有显式 broadcast=true 或 to == "*" 才群发；
+            # to 为空且非广播 → 当作缺失 'to' 返回 400，绝不静默群发。
+            bc = data.get("broadcast")
+            is_broadcast = bc is True or bc == 1 or bc in ("true", "True", "1") or to == "*"
+            if is_broadcast:
                 ok, seqs, e = self.mail.broadcast(from_, body)
                 if ok:
-                    self._send_json(200, {"ok": True, "seqs": seqs})
+                    payload = {"ok": True, "seqs": seqs}
+                    if isinstance(e, dict) and e.get("failed"):
+                        payload["failed"] = e["failed"]
+                    self._send_json(200, payload)
                 else:
                     self._send_json(400, {"ok": False, "err": e})
+                return
+            if not to:
+                self._send_json(400, {"ok": False, "err": "missing 'to'"})
                 return
             # 单发：目标未登记视为"已离开"
             if not self.mail.exists(to):
@@ -433,6 +497,9 @@ class Handler(BaseHTTPRequestHandler):
             if err:
                 self._send_json(400, {"ok": False, "err": err})
                 return
+            if not isinstance(data, dict):
+                self._send_json(400, {"ok": False, "err": "body must be JSON object"})
+                return
             names = data.get("names") or []
             ok, e = self.mail.register(names)
             if ok:
@@ -444,6 +511,9 @@ class Handler(BaseHTTPRequestHandler):
             data, err = self._read_json_body()
             if err:
                 self._send_json(400, {"ok": False, "err": err})
+                return
+            if not isinstance(data, dict):
+                self._send_json(400, {"ok": False, "err": "body must be JSON object"})
                 return
             name = data.get("name", "")
             ok, e = self.mail.unregister(name)
@@ -524,7 +594,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json(404, {"ok": False, "err": "not found"})
 
     def log_message(self, fmt, *args):
-        # 让 stderr 干净点；详细日志走 submail.log
+        # 让 stderr 干净点；详细日志走 submail-server.log
         sys.stderr.write(f"{self.address_string()} - {fmt % args}\n")
 
 
@@ -546,6 +616,9 @@ def main():
     Handler.mail = mail
 
     server = ThreadingHTTPServer((HOST, port), Handler)
+    # poll 请求会把 handler 线程阻塞最多 MAX_TIMEOUT 秒；必须设为 daemon 线程，
+    # 否则 shutdown 后进程会一直等到 poll 超时才退出（最多挂 300s）。
+    server.daemon_threads = True
     Handler.httpd = server
     print(f"submail server on http://{HOST}:{port}  (logs: {log_dir})", flush=True)
     print(f"  POST /send     GET /poll?to=&timeout=    GET /drain?to=    GET /status[?to=]    GET /history?to=&limit=    POST /shutdown", flush=True)

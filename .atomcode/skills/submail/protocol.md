@@ -65,7 +65,7 @@ submail exit --me w1
 - `send --to w2 --wait 90`：一次调用搞定，发信 + 等回复。
 - `send --to w2` 然后 `poll --from w2 --wait 90`：分两次调用也完全没问题，只要 `poll` 记得带上 `--from w2`。**如果 `poll` 不带 `--from`，你可能会先读到别人的信，把该等的回复当成"没来"而漏掉。**
 
-短别名：`-m`=`--me` `-t`=`--to` `-f`=`--from` `-b`=`--body` `-w`=`--wait` `-a`=`--all`
+短别名：`-m`=`--me` `-t`=`--to` `-f`=`--from` `-b`=`--body` `-w`=`--wait` `-a`=`--all` `-l`=`--limit`
 
 **结果怎么看？**
 
@@ -74,13 +74,13 @@ submail exit --me w1
 | `send --to w2` | `sent seq=3 to=w2` | ✅ 送达成功（`seq` 是信件编号） |
 | `send --broadcast` | `broadcast sent=2 seqs=[seq=3, seq=4]` | ✅ 群发送达（发给当前全部已知信箱） |
 | `send ...` | `error: ...` | ❌ 重试一次仍失败，把 body 改短点再试，还不行就放弃并在结果里说明 |
-| `send --wait` / `poll --from` | `msg from=w2 seq=5` + 换行 + 正文 | ✅ 等到回复了，**正文要用起来** |
+| `send --wait` / `poll --from` | `msg 14:32:05 from=w2 seq=5` + 换行 + 正文 | ✅ 等到回复了（开头 HH:MM:SS 是发信时间），**正文要用起来** |
 | `send --wait` / `poll --from` | `no-reply from=w2 after=90s` | ⏳ 等到超时，队友还没空回。**不是错误**，按兜底规则处理 |
-| `poll`（不带 `--from`） | `msg from=w2 seq=3` + 换行 + 正文 | ✅ 收到（谁的都算），**正文要用起来** |
+| `poll`（不带 `--from`） | `msg 14:32:05 from=w2 seq=3` + 换行 + 正文 | ✅ 收到（谁的都算），**正文要用起来** |
 | `poll`（不带 `--from`） | `timeout no-message-after=60s` | ⏳ 这段时间没人来信，**不是错误**，别慌，正常继续干活 |
-| `poll --all` | `drained 2` + 每封 `[seq=N from=X] body` | 📥 一次取走全部来信；`drained 0` 表示信箱是空的 |
-| `send/poll --from/broadcast` | `error: left: w2 已离开` | ❌ 目标已 exit 或从未登记——换别人、自己兜底，或退出 |
-| `history` | `[seq=3 from=w2] <摘要>` | 📊 聊天记录，新的在前 |
+| `poll --all` | `drained 2` + 每封 `[14:32:05 seq=N from=X] body` | 📥 一次取走全部来信；`drained 0` 表示信箱是空的 |
+| `send/poll --from` | `error: left: w2 已离开` | ❌ 目标已 exit 或从未登记——换别人、自己兜底，或退出 |
+| `history` | `[14:32:05 seq=3 from=w2] <摘要>` | 📊 聊天记录（带发信时间），新的在前 |
 | `status` | `status: 在场队友 N` + 换行 + 代号列表 | 📊 看当前谁还在场；`--me X` 会把 X 自己排除 |
 | `exit --me w1` | `exit: w1 已离开` | 🚪 收工把自己删掉，之后别人找你会拿到 left |
 
@@ -117,6 +117,14 @@ submail exit --me w1
 3. **最终结果要交代清楚**：收尾时写明——收到过谁的信（`seq` 列表）、没等到谁的。可以用 `history` 复盘确认。
 4. **离开一定要exit**：当你完成任务，想要返回的时候，必须要 `exit --me ME` 来离开submail服务器，避免你的搭档以为你还在工作，结果找你却没有下文。
 
+
+## ☮️ 协作纪律：
+- 发信前先 `submail status` 核对在场名单，别对着已离开的人发（收到 `error: left: X 已离开`
+  表示对方已退场，不是可重试的错误——立即停止对该目标的重试，改用 status 看还有谁在场）。
+- 需要等搭档回复时，`--wait` 用 90s 以上；若开工后要很久才能产出，先广播一条
+  "我负责 X，预计 N 分钟"（`submail send --broadcast`），避免搭档以为你失联。
+- 收尾：任务完成后若还有搭档在场，用 `submail send --broadcast` 群发你的最终结论；
+  若 `status` 显示已无人在场，结论必须写进任务返回结果，不要指望信箱送达。
 ---
 
 ## 🚪 `left`：搭档已经退场

@@ -9,7 +9,7 @@ description: 当你准备用 tasks 工具并行派发多个 worker subagent，�
 
 你派出去的 worker subagent 之间没有任何内置的通信手段——它们是各自独立的 `run_to_completion`，互相看不见，你（主控）也要等这一批**全部跑完**才能拿回结果继续。如果这批任务之间存在依赖（A 要等 B 的产出、A 和 B 都要改同一个文件的不同部分、需要互相知会进度），subagent 之间没法协调，只能各干各的，容易冲突或者互相踩脚，不能合作完成任务，只能并行。
 
-submail 是本机loopback的一个轻量 HTTP 信箱服务，subagent 通过 bash 调用一个 CLI 互相发信/收信。
+submail 是本机loopback的一个轻量 HTTP 信箱服务，subagent 通过 bash 调用一个 CLI 互相发信/收信。根目录的.hooks.json会自动启动和关闭submail server，一般不用你动.
 
 ---
 

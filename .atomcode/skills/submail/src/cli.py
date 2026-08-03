@@ -42,15 +42,17 @@ submail CLI — 子 agent 互通的命令包装（不裸 curl）。
       → 复盘：本信箱最近已消费的消息（新的在前，默认每行摘要）。
 
   submail status [--me w1]
-      → 信箱深度 / 最后发信人 / 累计收信数（省略 --me 查全部）。
+      → 看当前谁在场（presence）；给了 --me X 就把 X 自己从在场列表里排掉。
 
   submail init
       → 打印协作协议全文（protocol.md）——开工读协议用这个，不用 read_file、不用维护路径。
 
 短别名（想少打字就用）: -m=--me  -t=--to  -f=--from  -b=--body  -w=--wait  -a=--all  -l=--limit
 
-环境变量: SUBMAIL_URL 可覆盖服务地址（默认 http://127.0.0.1:8791）。
-所有命令 exit 0 = 命令本身执行成功（timeout/no-reply 也是成功）；exit 1 = 用法/网络/协议错误。
+环境变量: SUBMAIL_URL 可覆盖服务地址。
+所有子 agent 命令（send/poll/hello/history/status/exit）都支持 --port 指定 server 端口，
+覆盖 SUBMAIL_URL/DEFAULT_URL —— 与 `server start --port <非默认端口>` 配套使用。
+所有命令 exit 0 = 命令本身执行成功（timeout/no-reply 也是成功）；exit 1 = 网络/协议/逻辑错误（error: 前缀）；exit 2 = 参数用法错误（argparse 默认）。
 """
 
 import argparse
@@ -64,9 +66,70 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-DEFAULT_URL = "http://127.0.0.1:8791"
+DEFAULT_PORT = 8791  # server 默认监听端口（#25 共享常量）
+DEFAULT_URL = f"http://127.0.0.1:{DEFAULT_PORT}"
 MAX_TIMEOUT = 300  # 与 server 服务端上限一致
 POLL_SLICE = 45    # ask 内部每轮 poll 的最长切片，便于穿插检查剩余时间
+
+
+def _cli_log_dir():
+    """subagent CLI 命令日志目录，与 server 日志同放 submail/log/。"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, "..", "log")
+
+
+def _rotate_log_if_large(path, max_bytes=5 * 1024 * 1024):
+    """#23：日志文件超过 max_bytes（默认 5MB）就轮转：当前文件改名 <name>.old（覆盖旧 .old），再开新文件。
+    用 os.path.getsize 检查大小，整体 try/except 兜住，失败静默跳过（继续 append）。"""
+    try:
+        if os.path.exists(path) and os.path.getsize(path) > max_bytes:
+            old_path = path + ".old"
+            if os.path.exists(old_path):
+                os.remove(old_path)
+            os.rename(path, old_path)
+    except OSError:
+        pass
+
+
+def _log_cli(cmd, args_dict, result):
+    """记录 subagent 执行的 CLI 命令到 submail-cli.log/.jsonl。
+    result 是命令返回字符串；error/no-reply/timeout 都记。"""
+    log_dir = _cli_log_dir()
+    try:
+        os.makedirs(log_dir, exist_ok=True)
+    except OSError:
+        return
+    lines_path = os.path.join(log_dir, "submail-cli.log")
+    jsonl_path = os.path.join(log_dir, "submail-cli.jsonl")
+    ts = time.time()
+    # from 语义：poll --from 是等待的对象（dest=from_）；send/hello 的发信人就是 me
+    from_val = args_dict.get("from_")
+    if from_val is None and cmd in ("send", "hello"):
+        from_val = args_dict.get("me")
+    # 构造 from→to 顺序的语义字段
+    record = {
+        "ts": ts,
+        "cmd": cmd,
+        "me": args_dict.get("me"),
+        "from": from_val,
+        "to": args_dict.get("to"),
+        "broadcast": args_dict.get("broadcast"),
+        "result": (result or "")[:1000],
+    }
+    # 清理 None 值，让日志更干净
+    record = {k: v for k, v in record.items() if v is not None}
+    stamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts))
+    line = f"[{stamp}] {cmd} {json.dumps(record, ensure_ascii=False)}\n"
+    try:
+        # #23：写日志前检查文件大小，超过 5MB 先轮转，避免 cli 日志无限膨胀。
+        _rotate_log_if_large(lines_path)
+        _rotate_log_if_large(jsonl_path)
+        with open(lines_path, "a", encoding="utf-8") as f:
+            f.write(line)
+        with open(jsonl_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 def _base_url():
@@ -121,39 +184,46 @@ def _do_send(to, from_, body):
 
 
 def _do_broadcast(from_, body):
-    """群发（发给当前全部已知信箱，排除自己）+ 失败自动重试一次。返回 (ok, 描述)。"""
+    """群发（发给当前全部已知信箱，排除自己）+ 失败自动重试一次。
+    返回 (ok, seqs, failed)；seqs 是信件序号列表，failed 是 [(target, err), ...]。"""
     payload = {"from": from_, "body": body, "broadcast": True}
     data, err = _request("POST", "/send", payload=payload)
     if not err and data.get("ok"):
-        seqs = data.get("seqs") or []
-        return True, "broadcast sent={} seqs=[{}]".format(
-            len(seqs), ", ".join(f"seq={s}" for s in seqs)
-        )
+        return True, data.get("seqs") or [], data.get("failed") or []
     # 自动重试一次
     data2, err2 = _request("POST", "/send", payload=payload)
     if err2:
-        return False, f"error: {err2}"
+        return False, [], err2
     if data2.get("ok"):
-        seqs = data2.get("seqs") or []
-        return True, "broadcast sent={} seqs=[{}] (after retry)".format(
-            len(seqs), ", ".join(f"seq={s}" for s in seqs)
-        )
-    return False, f"error: {data2.get('err', 'unknown')}"
+        return True, data2.get("seqs") or [], data2.get("failed") or []
+    return False, [], data2.get("err", "unknown")
 
 
 def cmd_send(args):
     """send --to w2 --me w1 --body "..."            单发，发完就走
        send --to w2 --me w1 --body "..." --wait 90  发完顺带等对方回信（原 ask）
        send --broadcast --me w1 --body "..."        群发（不填 --to；不能和 --wait 一起用）"""
+    if args.port:
+        _pin_server_url_to_port(args.port)
     if args.broadcast:
         if args.wait:
-            return "error: --wait 只能配合单发 --to 使用，不能和 --broadcast 一起用"
+            return "error: --wait 只能配合单发 --to 使用，不能和 --broadcast 一起用（可用 submail send --help 查看）"
+        if args.to:
+            return "error: --to 和 --broadcast 互斥：群发自动发给全部已知信箱，不能同时指定 --to（可用 submail send --help 查看）"
         if not args.me:
-            return "error: --me 必须提供（如 w1）"
-        ok, out = _do_broadcast(args.me, args.body)
+            return "error: --me 必须提供（如 w1）（可用 submail send --help 查看）"
+        ok, seqs, failed = _do_broadcast(args.me, args.body)
+        if not ok:
+            return f"error: {seqs}"
+        out = "broadcast sent={} seqs=[{}]".format(
+            len(seqs), ", ".join(f"seq={s}" for s in seqs)
+        )
+        if failed:
+            fl = ", ".join(f"{t}({e})" for t, e in failed)
+            out += " failed=[{}]".format(fl)
         return out
     if not args.to or not args.me:
-        return "error: 单发需要 --to 和 --me（如 w1/w2/w3）；群发用 --broadcast 可省略 --to"
+        return "error: 单发需要 --to 和 --me（如 w1/w2/w3）；群发用 --broadcast 可省略 --to（可用 submail send --help 查看）"
     ok, out = _do_send(args.to, args.me, args.body)
     if not ok:
         return out  # error: 前缀
@@ -162,25 +232,48 @@ def cmd_send(args):
     return out
 
 
+def _fmt_ts(ts):
+    """epoch 秒 → HH:MM:SS 简短时间（用消息自带的 ts，便于 sub 判断消息新旧）；无 ts 返回空串。"""
+    if not ts:
+        return ""
+    return time.strftime("%H:%M:%S", time.localtime(ts))
+
+
+def _body_summary(body, limit=80):
+    """body 摘要（#19）：压平换行、截断到 limit 字符（超长加 …）。"""
+    text = (body or "").replace("\n", " ")
+    if len(text) > limit:
+        text = text[:limit] + "…"
+    return text
+
+
+def _stray_desc(stray):
+    """把等待期间顺手取走的 stray 消息列表格式化成 `seq=N(from=X HH:MM:SS: 摘要)` 逗号串（#19 + 时间戳）。"""
+    return ", ".join(
+        f"seq={s}(from={f} {_fmt_ts(t)}: {_body_summary(b)})" for s, f, b, t in stray
+    )
+
+
 def _wait_for_from(target_from, own_id, wait):
     """阻塞等 own_id 信箱里来自 target_from 的消息；跳过其他搭档的信继续等。
     send --wait 和 poll --from 都走这一个函数，行为完全一致。
     返回输出文本；只有 error: 前缀是失败。
     target_from 已离开时立即返回 error: left。"""
+    # 先 clamp 到服务端上限：--wait 400 实际只等 300s，超时文案也用 clamp 后的值。
+    wait = max(0, min(wait, MAX_TIMEOUT))
     # 先校验对方还在场，避免对着一个已离开的人死等。
     data, err = _request("GET", "/exists?name=" + urllib.parse.quote(target_from, safe=""), timeout=5)
     if err:
         return f"error: {err}"
     if not data.get("exists"):
         return f"error: left: {target_from} 已离开"
-    deadline = time.time() + max(0, min(wait, MAX_TIMEOUT))
-    stray = []  # [(seq, from)] 期间被跳过（顺手取走）的其他人的消息
+    deadline = time.time() + wait
+    stray = []  # [(seq, from, body, ts)] 期间被跳过（顺手取走）的其他人的消息
     while True:
         remaining = deadline - time.time()
         if remaining <= 0:
             if stray:
-                seqs = ", ".join(f"seq={s}(from={f})" for s, f in stray)
-                return f"no-reply from={target_from} after={wait}s (saw others: {seqs})"
+                return f"no-reply from={target_from} after={wait}s (saw others: {_stray_desc(stray)})"
             return f"no-reply from={target_from} after={wait}s"
         slice_secs = min(POLL_SLICE, remaining)
         # 下限 1 秒：避免 remaining<1 时 int()=0 导致 0 秒空转（狂刷几十个请求）。
@@ -191,17 +284,28 @@ def _wait_for_from(target_from, own_id, wait):
         data, err = _request("GET", path, timeout=poll_secs + 10)
         if err:
             return f"error: {err}"
+        # #18：每轮 poll 切片后重查 target 是否已离开；已离开立即返回，不再空等剩余时间。
+        # 重查失败按"还在场"处理（别因一次网络抖动误报 left，下轮还会再查）。
+        gdata, gerr = _request("GET", "/exists?name=" + urllib.parse.quote(target_from, safe=""), timeout=5)
+        if not gerr and not gdata.get("exists"):
+            return f"error: left: {target_from} 已离开"
         if not data.get("ok"):
             if data.get("timeout"):
                 continue  # 本轮无人来信，剩余时间继续等
             return f"error: {data.get('err', 'unknown')}"
         msg = data.get("msg") or {}
         if msg.get("from") == target_from:
-            return "msg from={} seq={}\n{}".format(
-                msg.get("from"), msg.get("seq"), msg.get("body", "")
+            base = "msg {} from={} seq={}\n{}".format(
+                _fmt_ts(msg.get("ts")), msg.get("from"), msg.get("seq"), msg.get("body", "")
             )
-        # 别人的消息：记一笔，继续等目标回复
-        stray.append((msg.get("seq"), msg.get("from")))
+            # 等到目标回复时，若有顺手取走的旁人消息，附一行提示（带 body 摘要）让用户知道
+            if stray:
+                return base + "\nnote: consumed {} stray messages while waiting (seqs: {})".format(
+                    len(stray), _stray_desc(stray)
+                )
+            return base
+        # 别人的消息：记一笔（seq/from/body 摘要/ts），继续等目标回复
+        stray.append((msg.get("seq"), msg.get("from"), msg.get("body"), msg.get("ts")))
 
 
 def cmd_register(args):
@@ -222,6 +326,8 @@ def cmd_poll(args):
     """poll --me w1 --wait 60             收一封（谁的信都行）
        poll --me w1 --wait 60 --from w2   只要 w2 的信，旁人的信跳过继续等，直到等到或超时
        poll --me w1 --all                 一次取走信箱当前全部消息（非阻塞，忽略 --wait/--from）"""
+    if args.port:
+        _pin_server_url_to_port(args.port)
     if args.all:
         # 批量收信：一次取走信箱当前全部消息
         path = "/drain?to=" + urllib.parse.quote(args.me, safe="")
@@ -235,8 +341,8 @@ def cmd_poll(args):
             return "drained 0"
         lines = ["drained {}".format(len(items))]
         for m in items:
-            lines.append("[seq={} from={}] {}".format(
-                m.get("seq"), m.get("from"), (m.get("body", "") or "").replace("\n", " ")
+            lines.append("[{} seq={} from={}] {}".format(
+                _fmt_ts(m.get("ts")), m.get("seq"), m.get("from"), (m.get("body", "") or "").replace("\n", " ")
             ))
         return "\n".join(lines)
     if args.from_:
@@ -255,11 +361,15 @@ def cmd_poll(args):
             return f"timeout no-message-after={wait}s"
         return f"error: {data.get('err', 'unknown')}"
     msg = data.get("msg") or {}
-    return "msg from={} seq={}\n{}".format(msg.get("from"), msg.get("seq"), msg.get("body", ""))
+    return "msg {} from={} seq={}\n{}".format(
+        _fmt_ts(msg.get("ts")), msg.get("from"), msg.get("seq"), msg.get("body", "")
+    )
 
 
 def cmd_hello(args):
     """hello 别名：开工自检 + 上线问候；--to 给了问候列表，省略则问候全部已知信箱。"""
+    if args.port:
+        _pin_server_url_to_port(args.port)
     if not args.me:
         return "error: --me 必须提供（如 w1）"
     # 1) 自检：server 在线 + 自己信箱可写
@@ -268,30 +378,41 @@ def cmd_hello(args):
         return f"error: {err}"
     if not data.get("ok"):
         return f"error: {data.get('err', 'unknown')}"
-    # 2) 广播上线问候
+    # 2) 上线问候
     body = "嗨，我是 {me}！我上线了，随时找我协作～".format(me=args.me)
     targets = [t.strip() for t in (args.to or "").split(",") if t.strip()]
     if targets:
-        ok, res = _do_send(targets[0], args.me, body)
-        if not ok:
-            return res
-        seqs = [res]
-        for t in targets[1:]:
-            ok2, res2 = _do_send(t, args.me, body)
-            if ok2:
-                seqs.append(res2)
-        return "hello: server ok, mailbox={} writable, greeted {} seqs=[{}]".format(
-            args.me, ",".join(targets), ", ".join(seqs)
+        # 逐目标问候：用 _send_once 拿原始 seq；失败的（left 等）单独列出，不谎报
+        seqs = []
+        failed = []
+        for t in targets:
+            ok, res = _send_once(t, args.me, body)
+            if ok:
+                seqs.append(res)
+            else:
+                failed.append((t, res))
+        out = "hello: server ok, mailbox={} writable, greeted {} seqs=[{}]".format(
+            args.me, ",".join(targets), ", ".join(f"seq={s}" for s in seqs)
         )
-    ok, out = _do_broadcast(args.me, body)
-    if not ok:
+        if failed:
+            fl = ", ".join(f"{t}({e})" for t, e in failed)
+            out += " failed=[{}]".format(fl)
         return out
-    return "hello: server ok, mailbox={} writable, greeted all seqs=[{}]".format(
-        args.me, out.replace("broadcast sent=", "").replace(" seqs=", "")
+    ok, seqs, failed = _do_broadcast(args.me, body)
+    if not ok:
+        return f"error: {seqs}"
+    out = "hello: server ok, mailbox={} writable, greeted all seqs=[{}]".format(
+        args.me, ", ".join(f"seq={s}" for s in seqs)
     )
+    if failed:
+        fl = ", ".join(f"{t}({e})" for t, e in failed)
+        out += " failed=[{}]".format(fl)
+    return out
 
 
 def cmd_history(args):
+    if args.port:
+        _pin_server_url_to_port(args.port)
     path = "/history?to={}&limit={}".format(
         urllib.parse.quote(args.me, safe=""), max(1, min(args.limit, 200))
     )
@@ -302,21 +423,46 @@ def cmd_history(args):
         return f"error: {data.get('err', 'unknown')}"
     items = data.get("items") or []
     if not items:
+        # 空态引导：顺手查一下未读数，有信就提示 poll，避免误判"没人发过信"
+        sdata, serr = _request("GET", "/status?to=" + urllib.parse.quote(args.me, safe=""), timeout=10)
+        depth = 0
+        if not serr and sdata.get("ok"):
+            depth = sdata.get("depth") or 0
+        if depth > 0:
+            return f"history: {args.me} 暂无已消费消息，但有 {depth} 封未读 —— 用 `submail poll --me {args.me} --all` 收取"
         return f"history: {args.me} 暂无已消费消息"
     lines = []
     for m in items:
         head = "{}".format(m.get("body", ""))
         if not args.full and len(head) > 120:
             head = head[:120] + "…"
-        lines.append("[seq={} from={}] {}".format(
-            m.get("seq"), m.get("from"), head.replace("\n", " ")
+        lines.append("[{} seq={} from={}] {}".format(
+            _fmt_ts(m.get("ts")), m.get("seq"), m.get("from"), head.replace("\n", " ")
         ))
-    return "history {} ({})\n{}".format(args.me, len(items), "\n".join(lines))
+    return "\n".join(lines)
 
 
 def cmd_status(args):
-    """子 agent 用的 status：只看当前谁在场（presence），不暴露 server 内部状态。
-    --me X 时把 X 从列表里排掉（自己不算"队友"）。"""
+    """子 agent 用的 status：默认看当前谁在场（presence）；--box X 查指定信箱的
+    未读/已读状态（depth/last_from/total_received），让发送者能看到对方 poll 过没有。"""
+    if args.port:
+        _pin_server_url_to_port(args.port)
+    if args.box:
+        path = "/status?to=" + urllib.parse.quote(args.box, safe="")
+        data, err = _request("GET", path, timeout=10)
+        if err:
+            return f"error: {err}"
+        if not data.get("ok"):
+            return f"error: {data.get('err', 'unknown')}"
+        if data.get("exists") is False:
+            return f"status: box={args.box} 未登记/已离开"
+        depth = data.get("depth") or 0
+        last_from = data.get("last_from") or "-"
+        received = data.get("total_received") or 0
+        dropped = data.get("total_dropped") or 0
+        return "status: box={} depth={} 未读 last_from={} total_received={} dropped={}".format(
+            args.box, depth, last_from, received, dropped
+        )
     exclude = None
     if args.me:
         exclude = args.me
@@ -337,8 +483,10 @@ def cmd_status(args):
 
 
 def cmd_exit(args):
-    """exit --me X：把自己从花名册里删掉（已离开）。
-    幂等；之后别人 send/poll --from X 会拿到 left 错误。"""
+    """exit --me X：把自己从服务器里删掉（已离开）。
+    幂等；之后别人 send/poll --from X 会拿到 left 提示。"""
+    if args.port:
+        _pin_server_url_to_port(args.port)
     if not args.me:
         return "error: --me 必须提供（如 w1）"
     data, err = _request("POST", "/unregister", payload={"name": args.me}, timeout=10)
@@ -346,7 +494,7 @@ def cmd_exit(args):
         return f"error: {err}"
     if not data.get("ok"):
         return f"error: {data.get('err', 'unknown')}"
-    return "exit: {} 已离开（从花名册删除）".format(args.me)
+    return "exit: {} 已离开".format(args.me)
 
 
 def cmd_init(args):
@@ -435,7 +583,7 @@ def _start_via_posix(server_py, port):
 
 
 def _pin_server_url_to_port(port):
-    """让本次进程内的 _base_url() 指向 --port 指定的端口（而不是默认/环境变量里的 8791）。
+    """让本次进程内的 _base_url() 指向 --port 指定的端口。
     只影响当前 cli.py 进程自己的后续请求，不污染外部环境。"""
     if port:
         os.environ["SUBMAIL_URL"] = f"http://127.0.0.1:{port}"
@@ -470,7 +618,7 @@ def cmd_server_start(args):
             return f"server: started pid={pid} port={args.port}"
         time.sleep(0.15)
     return (f"server: started pid={pid} port={args.port} 但 3s 内探活未成功 —— "
-            f"看看 submail/log/submail.log 排查，或稍后 `server status` 再确认")
+            f"看看 submail/log/submail-server.log 排查，或稍后 `server status` 再确认")
 
 
 def cmd_server_stop(args):
@@ -534,7 +682,8 @@ def main():
     p_send.add_argument("--me", "-m", required=True, help="我是谁，如 w1")
     p_send.add_argument("--body", "-b", required=True, help="消息内容（≤64KB 文本）")
     p_send.add_argument("--wait", "-w", type=int, default=0,
-                         help=f"发完顺带等对方回信，最长秒数；不填=发完就走（最大 {MAX_TIMEOUT}）")
+                         help=f"发完顺带等对方回信，最长秒数；不填=发完就走（实际有效上限 {MAX_TIMEOUT-20}，避免撞 bash 工具超时）")
+    p_send.add_argument("--port", type=int, default=None, help=f"server 端口（默认 {DEFAULT_PORT}，一般不用填）")
     p_send.set_defaults(fn=cmd_send)
 
     p_poll = sub.add_parser(
@@ -542,25 +691,30 @@ def main():
         help="收信；--from 可选=只要指定人的信（旁人的信自动跳过）；--all=一次取走全部",
     )
     p_poll.add_argument("--me", "-m", required=True, help="我是谁，即查哪个信箱")
-    p_poll.add_argument("--wait", "-w", type=int, default=60, help=f"阻塞秒数（默认 60，最大 {MAX_TIMEOUT}）")
-    p_poll.add_argument("--from", "-f", dest="from_", default="",
+    p_poll.add_argument("--wait", "-w", type=int, default=60, help=f"阻塞秒数（默认 60，上限 {MAX_TIMEOUT-20}，避免撞 bash 工具超时）")
+    p_poll.add_argument("--from", "-f", dest="from_", metavar="FROM", default="",
                          help="只要这个人的信；不填=谁的信都算，来一封拿一封")
     p_poll.add_argument("--all", "-a", action="store_true", help="一次取走信箱当前全部消息（非阻塞，忽略 --wait/--from）")
+    p_poll.add_argument("--port", type=int, default=None, help=f"server 端口（默认 {DEFAULT_PORT}，一般不用填）")
     p_poll.set_defaults(fn=cmd_poll)
 
     p_hi = sub.add_parser("hello", help="开工自检 + 上线问候（别名）：--to 给了问候列表，省略则问候全部已知信箱")
     p_hi.add_argument("--me", "-m", required=True, help="我是谁，如 w1")
     p_hi.add_argument("--to", "-t", default="", help="搭档列表（可选），如 w2,w3；省略则问候全部已知信箱")
+    p_hi.add_argument("--port", type=int, default=None, help=f"server 端口（默认 {DEFAULT_PORT}，一般不用填）")
     p_hi.set_defaults(fn=cmd_hello)
 
     p_hist = sub.add_parser("history", help="复盘：最近已消费消息（新的在前）")
     p_hist.add_argument("--me", "-m", required=True, help="我是谁，即查哪个信箱")
     p_hist.add_argument("--limit", "-l", type=int, default=20, help="最多返回条数（默认 20，最大 200）")
     p_hist.add_argument("--full", action="store_true", help="显示完整 body（默认截断到 120 字）")
+    p_hist.add_argument("--port", type=int, default=None, help=f"server 端口（默认 {DEFAULT_PORT}，一般不用填）")
     p_hist.set_defaults(fn=cmd_history)
 
-    p_status = sub.add_parser("status", help="看当前谁在场（presence），--me X 排除自己")
+    p_status = sub.add_parser("status", help="看当前谁在场（presence），--me X 排除自己；--box X 查指定信箱未读/已读状态")
     p_status.add_argument("--me", "-m", help="我是谁；给了就从在场列表里排掉自己")
+    p_status.add_argument("--box", dest="box", default="", help="查指定信箱的未读/已读状态（depth/last_from/total_received）")
+    p_status.add_argument("--port", type=int, default=None, help=f"server 端口（默认 {DEFAULT_PORT}，一般不用填）")
     p_status.set_defaults(fn=cmd_status)
 
     p_init = sub.add_parser("init", help="开工读协议：打印 protocol.md 全文（不用 read_file、不用维护路径）")
@@ -568,18 +722,19 @@ def main():
 
     p_exit = sub.add_parser("exit", help="完成任务想返回时用：把自己从花名册删掉（已离开）")
     p_exit.add_argument("--me", "-m", required=True, help="我是谁，如 w1")
+    p_exit.add_argument("--port", type=int, default=None, help=f"server 端口（默认 {DEFAULT_PORT}，一般不用填）")
     p_exit.set_defaults(fn=cmd_exit)
 
     p_server = sub.add_parser("server", help="server 守护进程生命周期（给 superagent 用：start/stop/restart/status/register）")
     server_sub = p_server.add_subparsers(dest="server_cmd", required=True)
     p_server_start = server_sub.add_parser("start", help="确保 server 在后台跑起来（已在跑则直接返回，不会重复启动）")
-    p_server_start.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_start.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"server 监听端口（默认 {DEFAULT_PORT}）")
     p_server_stop = server_sub.add_parser("stop", help="POST /shutdown 优雅关闭 server 进程")
-    p_server_stop.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_stop.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"server 监听端口（默认 {DEFAULT_PORT}）")
     p_server_restart = server_sub.add_parser("restart", help="重启 server：清空旧信箱/旧消息/旧日志后重新拉起")
-    p_server_restart.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_restart.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"server 监听端口（默认 {DEFAULT_PORT}）")
     p_server_status_p = server_sub.add_parser("status", help="探活 + 打印所有信箱概览")
-    p_server_status_p.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_status_p.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"server 监听端口（默认 {DEFAULT_PORT}）")
     p_server_reg = server_sub.add_parser("register", help="派发新一批子 agent 前预登记信箱名（幂等，只影响 broadcast 能看到谁）")
     p_server_reg.add_argument("--names", required=True, help="逗号分隔的信箱名，如 w1,w2,w3")
     p_server_reg.set_defaults(fn=cmd_register)
@@ -587,6 +742,8 @@ def main():
 
     args = parser.parse_args()
     out = args.fn(args)
+    # 记录 subagent 执行的 CLI 命令到 submail-cli.log/.jsonl（debug 真实命令使用）
+    _log_cli(args.cmd, vars(args), out)
     print(out)
     # timeout / no-reply / sent / msg / reply / broadcast / hello / history / status 都是成功路径；
     # 只有 error: 前缀是失败。
