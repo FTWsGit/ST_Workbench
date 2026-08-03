@@ -61,17 +61,29 @@ function pushMacroTokens(out: Token[], inner: string): void {
  * 原始 `text` 中第一个未消费字符的绝对索引——要么是 `stopChar` 的位置（如果找到），要么是
  * `text.length`（未找到）。
  */
-function scan(text: string, start: number, minTier: Tier, stopChar: string | null, baseCls: string | null): { tokens: Token[]; endIndex: number } {
+function scan(text: string, start: number, minTier: Tier, stopChar: string | null, baseCls: string | null, memo: Map<string, { tokens: Token[]; endIndex: number }> = new Map()): { tokens: Token[]; endIndex: number } {
+  // 记忆化：(start, minTier, stopChar) 唯一确定"从 start 找匹配闭合符"这次尝试的结果——
+  // baseCls 由 (minTier, stopChar) 决定，不需要进 key。缺记忆化时，一串连续未匹配的定界符
+  // （典型场景：JS 代码里一串没有对应 `>` 的比较运算符 `<`）会让每个起点各自重新扫一遍它之后
+  // 的全部后续定界符——嵌套调用之间不共享任何已算出的结果，构成指数级重复计算（scan(p_k) 内部
+  // 完整重跑一遍 scan(p_k+1)、scan(p_k+2)……而这些子调用又各自重跑一遍它们自己之后的），
+  // 几十个未匹配定界符就能卡死几秒到几分钟。记忆化后每个 (start, minTier, stopChar) 只真正
+  // 计算一次，后续命中直接复用，指数级砍成线性。
+  const key = start + '\u0000' + minTier + '\u0000' + (stopChar ?? '')
+  const cached = memo.get(key)
+  if (cached) return cached
+
   const out: Token[] = []
   let i = start, plainStart = start
   const flushPlain = (upTo: number) => { if (upTo > plainStart) out.push({ text: text.substring(plainStart, upTo), cls: baseCls }) }
+  const finish = (result: { tokens: Token[]; endIndex: number }) => { memo.set(key, result); return result }
 
   while (i < text.length) {
     if (stopChar !== null && text[i] === stopChar) {
       // 闭合单引号的 word-boundary 检查，模拟原 regex 的 (?!\w)
       if ((stopChar === "'" || stopChar === '\u2019') && /\w/.test(text[i + 1] || '')) { i++; continue }
       flushPlain(i)
-      return { tokens: out, endIndex: i }
+      return finish({ tokens: out, endIndex: i })
     }
 
     // 每个嵌套层级无条件检查：{{ macro }} 始终优先。
@@ -89,7 +101,7 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
     // 内部 minTier 保持在 3（不是 4），这样双重的 "<<>>" 能递归着色两层，
     // 而不是外层 span 遇到第一个 ">" 就停下，剩下内容变纯文本。
     if (minTier <= 3 && text[i] === '<') {
-      const inner = scan(text, i + 1, 3, '>', 'hl-ab')
+      const inner = scan(text, i + 1, 3, '>', 'hl-ab', memo)
       if (inner.endIndex < text.length && text[inner.endIndex] === '>') {
         flushPlain(i)
         out.push({ text: '<', cls: 'hl-ab' }, ...inner.tokens, { text: '>', cls: 'hl-ab' })
@@ -101,7 +113,7 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
     // Tier 2：[...] — 更高优先级的 <...> 可以在内部打开，另一个嵌套 [...] 也可以
     // （内部 minTier 保持在 2，和 <> 同理，支持 "[[]]"）。
     if (minTier <= 2 && text[i] === '[') {
-      const inner = scan(text, i + 1, 2, ']', 'hl-sb')
+      const inner = scan(text, i + 1, 2, ']', 'hl-sb', memo)
       if (inner.endIndex < text.length && text[inner.endIndex] === ']') {
         flushPlain(i)
         out.push({ text: '[', cls: 'hl-sb' }, ...inner.tokens, { text: ']', cls: 'hl-sb' })
@@ -113,7 +125,7 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
     // Tier 1: 中文双引号 “...” — 颜色同英文双引号
     if (minTier <= 1 && text[i] === '\u201C') {  // U+201C = “
       const cls = 'hl-dq'
-      const inner = scan(text, i + 1, 2, '\u201D', cls)  // stopChar = ” (U+201D)
+      const inner = scan(text, i + 1, 2, '\u201D', cls, memo)  // stopChar = ” (U+201D)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u201D') {
         flushPlain(i)
         out.push({ text: '\u201C', cls }, ...inner.tokens, { text: '\u201D', cls })
@@ -126,7 +138,7 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
     // Tier 1: 中文单引号 ‘...’ — 颜色同英文单引号
     if (minTier <= 1 && text[i] === '\u2018') {  // U+2018 = ‘
       const cls = 'hl-sq'
-      const inner = scan(text, i + 1, 2, '\u2019', cls)  // stopChar = ’ (U+2019)
+      const inner = scan(text, i + 1, 2, '\u2019', cls, memo)  // stopChar = ’ (U+2019)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u2019') {
         flushPlain(i)
         out.push({ text: '\u2018', cls }, ...inner.tokens, { text: '\u2019', cls })
@@ -138,7 +150,7 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
 
     if (minTier <= 1 && text[i] === '\u300C') { 
       const cls = 'hl-dq' 
-      const inner = scan(text, i + 1, 2, '\u300D', cls)
+      const inner = scan(text, i + 1, 2, '\u300D', cls, memo)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u300D') {
         flushPlain(i)
         out.push({ text: '\u300C', cls }, ...inner.tokens, { text: '\u300D', cls })
@@ -157,7 +169,7 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
       const prevOk = qc === "'" ? !/\w/.test(text[i - 1] || '') : true
       if (prevOk) {
         const cls = qc === '"' ? 'hl-dq' : 'hl-sq'
-        const inner = scan(text, i + 1, 2, qc, cls)
+        const inner = scan(text, i + 1, 2, qc, cls, memo)
         if (inner.endIndex < text.length && text[inner.endIndex] === qc) {
           flushPlain(i)
           out.push({ text: qc, cls }, ...inner.tokens, { text: qc, cls })
@@ -170,7 +182,7 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
     i++
   }
   flushPlain(text.length)
-  return { tokens: out, endIndex: text.length }
+  return finish({ tokens: out, endIndex: text.length })
 }
 
 function tokenize(text: string): Token[] {

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "submail-relay-start": {
+      "event": "pre_tool_use",
+      "matcher": "task",
+      "command": "submail relay start",
+      "timeout_ms": 10000
+    },
+    "submail-relay-stop": {
+      "event": "post_tool_use",
+      "matcher": "task",
+      "command": "submail relay stop",
+      "timeout_ms": 10000
+    }
+  }
+}
