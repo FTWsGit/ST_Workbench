@@ -36,13 +36,16 @@ submail CLI — 子 agent 互通的命令包装（不裸 curl）。
         没信: `drained 0`（不是错误）
 
   submail hello --me w1 --to w2,w3
-      → 开工自检 + 上线问候：验证 relay 在线、自己信箱可写，向搭档广播问候（--to 可省略则问候全部）。
+      → 开工自检 + 上线问候：验证 server 在线、自己信箱可写，向搭档广播问候（--to 可省略则问候全部）。
 
   submail history --me w1 [--limit 20] [--full]
       → 复盘：本信箱最近已消费的消息（新的在前，默认每行摘要）。
 
   submail status [--me w1]
       → 信箱深度 / 最后发信人 / 累计收信数（省略 --me 查全部）。
+
+  submail init
+      → 打印协作协议全文（protocol.md）——开工读协议用这个，不用 read_file、不用维护路径。
 
 短别名（想少打字就用）: -m=--me  -t=--to  -f=--from  -b=--body  -w=--wait  -a=--all  -l=--limit
 
@@ -62,7 +65,7 @@ import urllib.parse
 import urllib.request
 
 DEFAULT_URL = "http://127.0.0.1:8791"
-MAX_TIMEOUT = 300  # 与 relay 服务端上限一致
+MAX_TIMEOUT = 300  # 与 server 服务端上限一致
 POLL_SLICE = 45    # ask 内部每轮 poll 的最长切片，便于穿插检查剩余时间
 
 
@@ -87,11 +90,11 @@ def _request(method, path, payload=None, timeout=10):
             body = json.loads(e.read().decode("utf-8"))
             return body, None
         except Exception:
-            return None, f"relay http {e.code}: {e.reason}"
+            return None, f"server http {e.code}: {e.reason}"
     except urllib.error.URLError as e:
-        return None, f"relay unreachable: {e.reason}"
+        return None, f"server unreachable: {e.reason}"
     except Exception as e:
-        return None, f"relay error: {e}"
+        return None, f"server error: {e}"
 
 
 def _send_once(to, from_, body):
@@ -162,7 +165,14 @@ def cmd_send(args):
 def _wait_for_from(target_from, own_id, wait):
     """阻塞等 own_id 信箱里来自 target_from 的消息；跳过其他搭档的信继续等。
     send --wait 和 poll --from 都走这一个函数，行为完全一致。
-    返回输出文本；只有 error: 前缀是失败。"""
+    返回输出文本；只有 error: 前缀是失败。
+    target_from 已离开时立即返回 error: left。"""
+    # 先校验对方还在场，避免对着一个已离开的人死等。
+    data, err = _request("GET", "/exists?name=" + urllib.parse.quote(target_from, safe=""), timeout=5)
+    if err:
+        return f"error: {err}"
+    if not data.get("exists"):
+        return f"error: left: {target_from} 已离开"
     deadline = time.time() + max(0, min(wait, MAX_TIMEOUT))
     stray = []  # [(seq, from)] 期间被跳过（顺手取走）的其他人的消息
     while True:
@@ -252,7 +262,7 @@ def cmd_hello(args):
     """hello 别名：开工自检 + 上线问候；--to 给了问候列表，省略则问候全部已知信箱。"""
     if not args.me:
         return "error: --me 必须提供（如 w1）"
-    # 1) 自检：relay 在线 + 自己信箱可写
+    # 1) 自检：server 在线 + 自己信箱可写
     data, err = _request("GET", "/status?to=" + urllib.parse.quote(args.me, safe=""), timeout=10)
     if err:
         return f"error: {err}"
@@ -270,13 +280,13 @@ def cmd_hello(args):
             ok2, res2 = _do_send(t, args.me, body)
             if ok2:
                 seqs.append(res2)
-        return "hello: relay ok, mailbox={} writable, greeted {} seqs=[{}]".format(
+        return "hello: server ok, mailbox={} writable, greeted {} seqs=[{}]".format(
             args.me, ",".join(targets), ", ".join(seqs)
         )
     ok, out = _do_broadcast(args.me, body)
     if not ok:
         return out
-    return "hello: relay ok, mailbox={} writable, greeted all seqs=[{}]".format(
+    return "hello: server ok, mailbox={} writable, greeted all seqs=[{}]".format(
         args.me, out.replace("broadcast sent=", "").replace(" seqs=", "")
     )
 
@@ -305,39 +315,72 @@ def cmd_history(args):
 
 
 def cmd_status(args):
-    path = "/status"
+    """子 agent 用的 status：只看当前谁在场（presence），不暴露 server 内部状态。
+    --me X 时把 X 从列表里排掉（自己不算"队友"）。"""
+    exclude = None
     if args.me:
-        path += "?to=" + urllib.parse.quote(args.me, safe="")
+        exclude = args.me
+    path = "/presence"
+    if exclude:
+        path += "?exclude=" + urllib.parse.quote(exclude, safe="")
     data, err = _request("GET", path, timeout=10)
     if err:
         return f"error: {err}"
     if not data.get("ok"):
         return f"error: {data.get('err', 'unknown')}"
-    return json.dumps(data, ensure_ascii=False)
+    present = data.get("present") or []
+    if not present:
+        return "status: 当前没有其他队友在场"
+    return "status: 在场队友 {}\n{}".format(
+        len(present), ", ".join(present)
+    )
+
+
+def cmd_exit(args):
+    """exit --me X：把自己从花名册里删掉（已离开）。
+    幂等；之后别人 send/poll --from X 会拿到 left 错误。"""
+    if not args.me:
+        return "error: --me 必须提供（如 w1）"
+    data, err = _request("POST", "/unregister", payload={"name": args.me}, timeout=10)
+    if err:
+        return f"error: {err}"
+    if not data.get("ok"):
+        return f"error: {data.get('err', 'unknown')}"
+    return "exit: {} 已离开（从花名册删除）".format(args.me)
+
+
+def cmd_init(args):
+    """打印协作协议全文（protocol.md）。子 agent 开工读协议用：不用 read_file、不用知道 skill 目录在哪。"""
+    proto = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "protocol.md")
+    try:
+        with open(proto, encoding="utf-8") as f:
+            return f.read().rstrip("\n")
+    except OSError as e:
+        return f"error: 读取 protocol.md 失败: {e}"
 
 
 # ---------------------------------------------------------------------------
-# relay 守护进程生命周期（给 superagent 用，不是给子 agent 用）。
+# server 守护进程生命周期（给 superagent 用，不是给子 agent 用）。
 #
-# 场景：superagent 派发一批子 agent 之前，需要确保 relay 已经在后台跑起来，
+# 场景：superagent 派发一批子 agent 之前，需要确保 server 已经在后台跑起来，
 # 且这一步调用本身必须"发出去就能立刻拿回控制权"——因为 superagent 自己没有
-# loop，下一步紧接着就要用另一个工具调用去派发任务。`python relay.py` 本身是
+# loop，下一步紧接着就要用另一个工具调用去派发任务。`python server.py` 本身是
 # 前台阻塞进程，不能直接当这一步来跑；这里改用平台原生的方式把它拉成一个
 # 独立的后台进程，然后轮询探活，探活成功（或最多等 ~3s）就返回。
 # ---------------------------------------------------------------------------
 
-def _relay_healthy(timeout=2):
+def _server_healthy(timeout=2):
     """探活：GET / 能不能拿到 submail 的身份应答。"""
     data, err = _request("GET", "/", timeout=timeout)
     return bool(data) and not err and data.get("ok") and data.get("service") == "submail"
 
 
-def _relay_paths():
+def _server_paths():
     here = os.path.dirname(os.path.abspath(__file__))  # .../submail/src
     return {
         "src_dir": here,
-        "relay_py": os.path.join(here, "relay.py"),
-        "start_ps1": os.path.join(here, "..", "scripts", "start_relay.ps1"),
+        "server_py": os.path.join(here, "server.py"),
+        "start_ps1": os.path.join(here, "..", "scripts", "start_server.ps1"),
         "log_dir": os.path.join(here, "..", "log"),
     }
 
@@ -361,15 +404,15 @@ def _looks_like_windows():
     return "windows" in os.environ.get("OS", "").lower()
 
 
-def _start_via_powershell(relay_py, port):
-    """Windows：经 WMI 托管创建 relay 进程（start_relay.ps1）。
+def _start_via_powershell(server_py, port):
+    """Windows：经 WMI 托管创建 server 进程（start_server.ps1）。
     WMI 创建的进程不在调用方的进程树/Job Object 里，跨 bash 调用存活，且不弹控制台窗口。"""
-    paths = _relay_paths()
+    paths = _server_paths()
     win_python = _to_windows_path(sys.executable)
-    win_relay = _to_windows_path(relay_py)
+    win_server = _to_windows_path(server_py)
     result = subprocess.run(
         ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", paths["start_ps1"],
-         "-PythonPath", win_python, "-RelayPath", win_relay, "-Port", str(port)],
+         "-PythonPath", win_python, "-ServerPath", win_server, "-Port", str(port)],
         capture_output=True, text=True, timeout=15,
     )
     if result.returncode != 0:
@@ -378,11 +421,11 @@ def _start_via_powershell(relay_py, port):
     return int(pid_text)
 
 
-def _start_via_posix(relay_py, port):
+def _start_via_posix(server_py, port):
     """非 Windows 兜底：setsid 风格全脱离（start_new_session=True 相当于 setsid），
     stdio 全部丢掉/关闭，避免拖住父进程的管道。"""
     proc = subprocess.Popen(
-        [sys.executable, relay_py, str(port)],
+        [sys.executable, server_py, str(port)],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -391,29 +434,29 @@ def _start_via_posix(relay_py, port):
     return proc.pid
 
 
-def _pin_relay_url_to_port(port):
+def _pin_server_url_to_port(port):
     """让本次进程内的 _base_url() 指向 --port 指定的端口（而不是默认/环境变量里的 8791）。
     只影响当前 cli.py 进程自己的后续请求，不污染外部环境。"""
     if port:
         os.environ["SUBMAIL_URL"] = f"http://127.0.0.1:{port}"
 
 
-def cmd_relay_start(args):
-    _pin_relay_url_to_port(args.port)
-    if _relay_healthy():
-        return "relay: already running (healthy)"
+def cmd_server_start(args):
+    _pin_server_url_to_port(args.port)
+    if _server_healthy():
+        return "server: already running (healthy)"
 
-    paths = _relay_paths()
+    paths = _server_paths()
     os.makedirs(paths["log_dir"], exist_ok=True)
-    pid_file = os.path.join(paths["log_dir"], "relay.pid")
+    pid_file = os.path.join(paths["log_dir"], "server.pid")
 
     try:
         if _looks_like_windows():
-            pid = _start_via_powershell(paths["relay_py"], args.port)
+            pid = _start_via_powershell(paths["server_py"], args.port)
         else:
-            pid = _start_via_posix(paths["relay_py"], args.port)
+            pid = _start_via_posix(paths["server_py"], args.port)
     except Exception as e:
-        return f"error: 启动 relay 失败: {e}"
+        return f"error: 启动 server 失败: {e}"
 
     try:
         with open(pid_file, "w") as f:
@@ -423,39 +466,56 @@ def cmd_relay_start(args):
 
     # 轮询探活，最多约 3 秒；不管等没等到都会返回，不会无限阻塞。
     for _ in range(20):
-        if _relay_healthy(timeout=1):
-            return f"relay: started pid={pid} port={args.port}"
+        if _server_healthy(timeout=1):
+            return f"server: started pid={pid} port={args.port}"
         time.sleep(0.15)
-    return (f"relay: started pid={pid} port={args.port} 但 3s 内探活未成功 —— "
-            f"看看 submail/log/submail.log 排查，或稍后 `relay status` 再确认")
+    return (f"server: started pid={pid} port={args.port} 但 3s 内探活未成功 —— "
+            f"看看 submail/log/submail.log 排查，或稍后 `server status` 再确认")
 
 
-def cmd_relay_stop(args):
-    _pin_relay_url_to_port(args.port)
-    if not _relay_healthy(timeout=2):
-        return "relay: not running (or already down)"
+def cmd_server_stop(args):
+    _pin_server_url_to_port(args.port)
+    if not _server_healthy(timeout=2):
+        return "server: not running (or already down)"
     data, err = _request("POST", "/shutdown", payload={}, timeout=5)
     if err:
         return f"error: {err}"
     for _ in range(15):
-        if not _relay_healthy(timeout=1):
-            return "relay: stopped"
+        if not _server_healthy(timeout=1):
+            return "server: stopped"
         time.sleep(0.2)
-    return "relay: 已发送 shutdown，但仍在响应 —— 可能需要手动结束进程（看 log/relay.pid）"
+    return "server: 已发送 shutdown，但仍在响应 —— 可能需要手动结束进程（看 log/server.pid）"
 
 
-def cmd_relay_status(args):
-    _pin_relay_url_to_port(args.port)
-    if not _relay_healthy(timeout=2):
-        return "relay: not running"
+def cmd_server_restart(args):
+    """重启 server：先停掉旧进程（若在跑），再重新拉起。
+    信箱/全局序号/日志都存在内存里，新进程一启动就是全零状态，旧通信被清空。"""
+    _pin_server_url_to_port(args.port)
+    if _server_healthy(timeout=2):
+        data, err = _request("POST", "/shutdown", payload={}, timeout=5)
+        if err:
+            return f"error: {err}"
+        for _ in range(15):
+            if not _server_healthy(timeout=1):
+                break
+            time.sleep(0.2)
+        if _server_healthy(timeout=1):
+            return "error: 旧 server 收到 shutdown 后 3s 内未退出 —— 手动结束进程（看 log/server.pid）后重试"
+    return cmd_server_start(args)
+
+
+def cmd_server_status(args):
+    _pin_server_url_to_port(args.port)
+    if not _server_healthy(timeout=2):
+        return "server: not running"
     data, err = _request("GET", "/status", timeout=5)
     if err:
         return f"error: {err}"
-    return "relay: running\n" + json.dumps(data, ensure_ascii=False)
+    return "server: running\n" + json.dumps(data, ensure_ascii=False)
 
 
-def cmd_relay(args):
-    return {"start": cmd_relay_start, "stop": cmd_relay_stop, "status": cmd_relay_status}[args.relay_cmd](args)
+def cmd_server(args):
+    return {"start": cmd_server_start, "stop": cmd_server_stop, "restart": cmd_server_restart, "status": cmd_server_status}[args.server_cmd](args)
 
 
 def main():
@@ -499,23 +559,31 @@ def main():
     p_hist.add_argument("--full", action="store_true", help="显示完整 body（默认截断到 120 字）")
     p_hist.set_defaults(fn=cmd_history)
 
-    p_status = sub.add_parser("status", help="查询信箱状态")
-    p_status.add_argument("--me", "-m", help="只查自己；省略则查全部信箱")
+    p_status = sub.add_parser("status", help="看当前谁在场（presence），--me X 排除自己")
+    p_status.add_argument("--me", "-m", help="我是谁；给了就从在场列表里排掉自己")
     p_status.set_defaults(fn=cmd_status)
 
-    p_reg = sub.add_parser("register", help="派发新一批子 agent 前预登记信箱名（幂等，只影响 broadcast 能看到谁）")
-    p_reg.add_argument("--names", required=True, help="逗号分隔的信箱名，如 w1,w2,w3")
-    p_reg.set_defaults(fn=cmd_register)
+    p_init = sub.add_parser("init", help="开工读协议：打印 protocol.md 全文（不用 read_file、不用维护路径）")
+    p_init.set_defaults(fn=cmd_init)
 
-    p_relay = sub.add_parser("relay", help="relay 守护进程生命周期（给 superagent 用：start/stop/status）")
-    relay_sub = p_relay.add_subparsers(dest="relay_cmd", required=True)
-    p_relay_start = relay_sub.add_parser("start", help="确保 relay 在后台跑起来（已在跑则直接返回，不会重复启动）")
-    p_relay_start.add_argument("--port", type=int, default=8791, help="relay 监听端口（默认 8791）")
-    p_relay_stop = relay_sub.add_parser("stop", help="POST /shutdown 优雅关闭 relay 进程")
-    p_relay_stop.add_argument("--port", type=int, default=8791, help="relay 监听端口（默认 8791）")
-    p_relay_status_p = relay_sub.add_parser("status", help="探活 + 打印所有信箱概览")
-    p_relay_status_p.add_argument("--port", type=int, default=8791, help="relay 监听端口（默认 8791）")
-    p_relay.set_defaults(fn=cmd_relay)
+    p_exit = sub.add_parser("exit", help="完成任务想返回时用：把自己从花名册删掉（已离开）")
+    p_exit.add_argument("--me", "-m", required=True, help="我是谁，如 w1")
+    p_exit.set_defaults(fn=cmd_exit)
+
+    p_server = sub.add_parser("server", help="server 守护进程生命周期（给 superagent 用：start/stop/restart/status/register）")
+    server_sub = p_server.add_subparsers(dest="server_cmd", required=True)
+    p_server_start = server_sub.add_parser("start", help="确保 server 在后台跑起来（已在跑则直接返回，不会重复启动）")
+    p_server_start.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_stop = server_sub.add_parser("stop", help="POST /shutdown 优雅关闭 server 进程")
+    p_server_stop.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_restart = server_sub.add_parser("restart", help="重启 server：清空旧信箱/旧消息/旧日志后重新拉起")
+    p_server_restart.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_status_p = server_sub.add_parser("status", help="探活 + 打印所有信箱概览")
+    p_server_status_p.add_argument("--port", type=int, default=8791, help="server 监听端口（默认 8791）")
+    p_server_reg = server_sub.add_parser("register", help="派发新一批子 agent 前预登记信箱名（幂等，只影响 broadcast 能看到谁）")
+    p_server_reg.add_argument("--names", required=True, help="逗号分隔的信箱名，如 w1,w2,w3")
+    p_server_reg.set_defaults(fn=cmd_register)
+    p_server.set_defaults(fn=cmd_server)
 
     args = parser.parse_args()
     out = args.fn(args)

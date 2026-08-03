@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-submail relay — localhost 信箱服务，给 atomcode 子 agent 之间做互通。
+submail server — localhost 信箱服务，给 atomcode 子 agent 之间做互通。
 
 零依赖（仅 Python 3.6+ 标准库）。单进程内存队列，天然原子。
 
@@ -28,16 +28,16 @@ submail relay — localhost 信箱服务，给 atomcode 子 agent 之间做互�
   的目标列表里。如果 superagent 并行拉起多个 sub-agent，A 在 B 还没来得及碰自己
   信箱之前就发了 broadcast，B 会收不到。所以 superagent 在派发一批 sub-agent
   **之前**，应该先调一次 `submail register --names w1,w2,w3`，把这批的名字
-  预先登记进 relay，再派发任务。纯增量、幂等，不会清空已有信箱。
+  预先登记进 server，再派发任务。纯增量、幂等，不会清空已有信箱。
 
 用法：
-  python submail/src/relay.py              # 默认 127.0.0.1:8791，日志写到 submail/log/
-  python submail/src/relay.py 9100         # 指定端口
-  python submail/src/relay.py 9100 /path   # 指定日志目录
+  python submail/src/server.py              # 默认 127.0.0.1:8791，日志写到 submail/log/
+  python submail/src/server.py 9100         # 指定端口
+  python submail/src/server.py 9100 /path   # 指定日志目录
 
 不建议直接裸跑上面这行——它是前台阻塞进程。作为后台守护进程的启动/停止/探活，
-一律走 `submail relay start` / `submail relay stop` / `submail relay status`
-（见 src/cli.py），子 agent 之间的收发也一律走 `submail send/ask/poll/...`，
+一律走 `submail server start` / `submail server stop` / `submail server status`
+（见 src/cli.py），子 agent 之间的收发也一律走 `submail send/poll/...`，
 不要在 prompt 里教子 agent 裸 curl。
 """
 
@@ -180,7 +180,7 @@ class Mailbox:
             }
 
 
-class Relay:
+class MailServer:
     """所有信箱 + 全局序号 + 日志。"""
 
     def __init__(self, log_dir):
@@ -194,7 +194,7 @@ class Relay:
         os.makedirs(log_dir, exist_ok=True)
         self._lines_path = os.path.join(log_dir, "submail.log")
         self._jsonl_path = os.path.join(log_dir, "submail.jsonl")
-        # 截断旧日志（每次 relay 重启就是新会话）
+        # 截断旧日志（每次 server 重启就是新会话）
         for p in (self._lines_path, self._jsonl_path):
             try:
                 os.remove(p)
@@ -254,7 +254,7 @@ class Relay:
 
     def register(self, names):
         """预注册一批信箱名（get-or-create，幂等）。
-        用于 superagent 派发新一批 sub-agent 之前，先把这批的名字登记进 relay，
+        用于 superagent 派发新一批 sub-agent 之前，先把这批的名字登记进 server，
         避免 broadcast 只能看到"已经被碰过"的信箱、漏发给还没上线的搭档。
         不会清空/覆盖已有信箱，纯增量登记。"""
         if not names:
@@ -263,6 +263,37 @@ class Relay:
             if n:
                 self._box(n)
         self._log("REGISTER", {"names": [n for n in names if n]})
+        return True, None
+
+    def exists(self, name):
+        """某代号是否已登记。未登记视为"已离开"。"""
+        if not name:
+            return False
+        with self._boxes_lock:
+            return name in self._boxes
+
+    def presence(self, exclude=None):
+        """当前在场代号列表（已登记信箱名），可选排除自己。"""
+        with self._boxes_lock:
+            names = [n for n in self._boxes.keys() if n != exclude]
+        return sorted(names)
+
+    def unregister(self, name):
+        """把一个代号从花名册里删掉（已不在线/已离开）。
+        删除该信箱本身（清空队列/历史/等待者），后续 send/broadcast 找不到它会返回 left。
+        幂等：删不存在的代号也返回 ok=True。"""
+        if not name:
+            return False, "missing 'name'"
+        with self._boxes_lock:
+            b = self._boxes.pop(name, None)
+        if b is None:
+            return True, None
+        # 唤醒该信箱上仍在等待的 poll，让它们立即返回
+        with b._lock:
+            for evt in b._waiters:
+                evt.set()
+            b._waiters.clear()
+        self._log("UNREGISTER", {"name": name})
         return True, None
 
     def broadcast(self, from_, body):
@@ -342,7 +373,8 @@ class Relay:
 
 
 class Handler(BaseHTTPRequestHandler):
-    relay = None       # 注入实例
+    mail = None       # 注入 MailServer 实例
+    httpd = None      # 注入 ThreadingHTTPServer 实例（shutdown 用）
 
     def _send_json(self, code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -380,13 +412,17 @@ class Handler(BaseHTTPRequestHandler):
             # broadcast 语义：to 为空 + broadcast=true，或 to == "*"，发给全部已知信箱。
             to = data.get("to", "")
             if data.get("broadcast") or to in ("", "*"):
-                ok, seqs, e = self.relay.broadcast(from_, body)
+                ok, seqs, e = self.mail.broadcast(from_, body)
                 if ok:
                     self._send_json(200, {"ok": True, "seqs": seqs})
                 else:
                     self._send_json(400, {"ok": False, "err": e})
                 return
-            ok, seq, e = self.relay.send(to, from_, body)
+            # 单发：目标未登记视为"已离开"
+            if not self.mail.exists(to):
+                self._send_json(400, {"ok": False, "err": f"left: {to} 已离开"})
+                return
+            ok, seq, e = self.mail.send(to, from_, body)
             if ok:
                 self._send_json(200, {"ok": True, "seq": seq})
             else:
@@ -398,9 +434,21 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(400, {"ok": False, "err": err})
                 return
             names = data.get("names") or []
-            ok, e = self.relay.register(names)
+            ok, e = self.mail.register(names)
             if ok:
                 self._send_json(200, {"ok": True, "count": len([n for n in names if n])})
+            else:
+                self._send_json(400, {"ok": False, "err": e})
+            return
+        if parsed.path == "/unregister":
+            data, err = self._read_json_body()
+            if err:
+                self._send_json(400, {"ok": False, "err": err})
+                return
+            name = data.get("name", "")
+            ok, e = self.mail.unregister(name)
+            if ok:
+                self._send_json(200, {"ok": True, "left": name})
             else:
                 self._send_json(400, {"ok": False, "err": e})
             return
@@ -409,11 +457,11 @@ class Handler(BaseHTTPRequestHandler):
             # 再唤醒 poll 等待者、最后换线程关 server——否则客户端会收到
             # "Remote end closed connection without response"（连接被掐断、响应没拿到）。
             self._send_json(200, {"ok": True})
-            self.relay.shutdown()
-            # 真正让进程退出：server.shutdown() 会让 main() 里的 serve_forever() 返回，
+            self.mail.shutdown()
+            # 真正让进程退出：httpd.shutdown() 会让 main() 里的 serve_forever() 返回，
             # 从而 main() 正常 return、进程随之退出。换一个线程去调用，
             # 避免在当前请求线程里同步阻塞导致响应发不出去。
-            threading.Thread(target=self.server.shutdown, daemon=True).start()
+            threading.Thread(target=self.httpd.shutdown, daemon=True).start()
             return
         self._send_json(404, {"ok": False, "err": "not found"})
 
@@ -423,7 +471,7 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             to = qs.get("to", [""])[0]
             timeout = qs.get("timeout", [str(DEFAULT_TIMEOUT)])[0]
-            ok, msg, e = self.relay.poll(to, timeout)
+            ok, msg, e = self.mail.poll(to, timeout)
             if ok and msg is not None:
                 self._send_json(200, {"ok": True, "msg": msg})
             elif ok:
@@ -434,7 +482,7 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/drain":
             qs = parse_qs(parsed.query)
             to = qs.get("to", [""])[0]
-            ok, items, e = self.relay.drain(to)
+            ok, items, e = self.mail.drain(to)
             if ok:
                 self._send_json(200, {"ok": True, "items": items})
             else:
@@ -444,7 +492,7 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(parsed.query)
             to = qs.get("to", [""])[0]
             limit = qs.get("limit", ["20"])[0]
-            ok, items, e = self.relay.history(to, limit)
+            ok, items, e = self.mail.history(to, limit)
             if ok:
                 self._send_json(200, {"ok": True, "items": items})
             else:
@@ -453,14 +501,25 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/status":
             qs = parse_qs(parsed.query)
             to = qs.get("to", [None])[0]
-            ok, data, e = self.relay.status(to)
+            ok, data, e = self.mail.status(to)
             if ok:
                 self._send_json(200, {"ok": True, **data})
             else:
                 self._send_json(400, {"ok": False, "err": e})
             return
+        if parsed.path == "/presence":
+            qs = parse_qs(parsed.query)
+            exclude = qs.get("exclude", [None])[0]
+            names = self.mail.presence(exclude=exclude)
+            self._send_json(200, {"ok": True, "present": names})
+            return
+        if parsed.path == "/exists":
+            qs = parse_qs(parsed.query)
+            name = qs.get("name", [""])[0]
+            self._send_json(200, {"ok": True, "exists": self.mail.exists(name)})
+            return
         if parsed.path == "/":
-            self._send_json(200, {"ok": True, "service": "submail", "uptime": time.time() - self.relay._started_at})
+            self._send_json(200, {"ok": True, "service": "submail", "uptime": time.time() - self.mail._started_at})
             return
         self._send_json(404, {"ok": False, "err": "not found"})
 
@@ -483,17 +542,18 @@ def main():
     if len(args) >= 2:
         log_dir = args[1]
 
-    relay = Relay(log_dir)
-    Handler.relay = relay
+    mail = MailServer(log_dir)
+    Handler.mail = mail
 
     server = ThreadingHTTPServer((HOST, port), Handler)
-    print(f"submail relay on http://{HOST}:{port}  (logs: {log_dir})", flush=True)
+    Handler.httpd = server
+    print(f"submail server on http://{HOST}:{port}  (logs: {log_dir})", flush=True)
     print(f"  POST /send     GET /poll?to=&timeout=    GET /drain?to=    GET /status[?to=]    GET /history?to=&limit=    POST /shutdown", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nshutting down…", flush=True)
-        relay.shutdown()
+        mail.shutdown()
         server.shutdown()
 
 
