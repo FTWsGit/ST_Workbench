@@ -565,31 +565,6 @@ def cmd_history(args):
             blocks.append("  {} {}".format(_fmt_ts(m.get("ts")), head.replace("\n", " ")))
     return "\n".join(blocks)
 
-
-# ── 临时反馈通道（正式版会移除）──────────────────────────────────
-# 用 `submail feedback -m ME -b "..."` 让 subagent 在运行时把抱怨/建议
-# 追加进 log/submail-feedback.log。纯本地写文件，不走 server。
-# 删除时：移除本函数 + main() 里 p_feedback 那一段 argparse。
-def cmd_feedback(args):
-    log_dir = _cli_log_dir()
-    try:
-        os.makedirs(log_dir, exist_ok=True)
-    except OSError:
-        return "error: 无法创建日志目录"
-    path = os.path.join(log_dir, "submail-feedback.log")
-    stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    me = args.me or "?"
-    body = (args.body or "").replace("\n", " ")
-    line = "[{}] from={} | {}\n".format(stamp, me, body)
-    try:
-        with open(path, "a", encoding="utf-8") as f:
-            f.write(line)
-    except OSError as e:
-        return f"error: 写入反馈日志失败: {e}"
-    return "ok: now={} feedback logged".format(_now_prefix())
-# ── 临时反馈通道结束 ──────────────────────────────────────────────
-
-
 def cmd_status(args):
     """子 agent 用的 status：默认看当前谁在场（presence）；--box X 查指定信箱的
     未读/已读状态（depth/last_from/total_received），让发送者能看到对方 poll 过没有。"""
@@ -887,13 +862,6 @@ def main():
     p_exit.add_argument("--me", "-m", required=True, help="我是谁，如 w1")
     p_exit.add_argument("--port", type=int, default=None, help=f"server 端口（默认 {DEFAULT_PORT}，一般不用填）")
     p_exit.set_defaults(fn=cmd_exit)
-
-    # ── 临时反馈通道（正式版会移除）──
-    p_feedback = sub.add_parser("feedback", help="临时：把抱怨/建议写进 log/submail-feedback.log")
-    p_feedback.add_argument("--me", "-m", default="", help="谁在反馈（可选）")
-    p_feedback.add_argument("--body", "-b", required=True, help="反馈内容")
-    p_feedback.set_defaults(fn=cmd_feedback)
-    # ── 临时反馈通道结束 ──
 
     p_server = sub.add_parser("server", help="server 守护进程生命周期（给 superagent 用：start/stop/restart/status/register）")
     server_sub = p_server.add_subparsers(dest="server_cmd", required=True)
