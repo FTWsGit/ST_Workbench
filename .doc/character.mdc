@@ -21,15 +21,21 @@ type Character = {
   mes_example: string;
   creatorcomment: string;    // 旧版创建者备注
   tags: string[];
-  talkativeness: number;
-  fav: boolean;
+  talkativeness: number;       // 旧卡可能是字符串，读取后由 extensions.talkativeness 规范成 number
+  fav: boolean;                // v1 旧卡可能是 boolean | string
   create_date: string;
   chat: string;              // 当前对话文件名（服务端附加）
   avatar: string;            // '<名字>.png'，唯一 id（服务端附加）
   json_data: string;         // 完整原始 JSON（服务端附加）
+  date_added: number;        // 文件创建时间（服务端附加）
+  date_last_chat: number;    // 最近聊天时间（服务端附加）
+  chat_size: number;         // 聊天文件大小（服务端附加）
+  data_size: number;         // 卡数据大小（服务端附加）
   shallow?: boolean;         // 懒加载标记：true 时 data 只有浅层字段
 
   // —— V2 卡片数据 ——
+  spec?: string;             // 'chara_card_v2'（文件顶层，内存对象里保留）
+  spec_version?: string;     // '2.0'
   data: {
     name: string;
     description: string;
@@ -51,6 +57,8 @@ type Character = {
       fav: boolean;
       world: string;                  // 绑定的世界书名
       depth_prompt: { depth: number; prompt: string; role: 'system' | 'user' | 'assistant' };
+                                      // 注：ST_Workbench 工作层 Character.depthPrompt.role 用数字
+                                      // 0/1/2 表示 system/user/assistant，转换在 api/characterApi.ts
       regex_scripts: RegexScript[];   // 正则脚本
       // Tavern Helper 注入：绑定到该角色卡的脚本与面板变量
       tavern_helper: {
@@ -66,7 +74,7 @@ type Character = {
 ### ScriptTree
 
 ```ts
-// 脚本树：Tavern Helper 面板里的脚本结构，可递归嵌套
+// 脚本树：Tavern Helper 面板里的脚本结构；folder 是顶层组织单元，不递归嵌套
 type ScriptTree = Script | ScriptFolder;
 
 type Script = {
@@ -76,9 +84,9 @@ type Script = {
   id: string;
   content: string;        // 脚本源码
   info: string;
-  button: { enabled: boolean; buttons: unknown[] };
-  data: unknown;          // 扩展自定义数据
-  export_with: boolean;   // 是否随角色卡导出
+  button: { enabled: boolean; buttons: ScriptButton[] };
+  data: Record<string, any>;  // 扩展自定义数据
+  export_with: { data: boolean; button: boolean };   // 是否随角色卡导出（数据/按钮分别控制）
 };
 
 type ScriptFolder = {
@@ -88,7 +96,7 @@ type ScriptFolder = {
   id: string;
   icon: string;
   color: string;
-  scripts: ScriptTree[];  // 子脚本/子文件夹，递归
+  scripts: Script[];      // 直接挂树顶层的子脚本，不递归
 };
 ```
 
@@ -99,11 +107,14 @@ type ScriptFolder = {
 type CharacterBook = {
   name: string;
   entries: {
+    id: number;               // 条目 id（ST 依赖它反查原数据）
     keys: string[];           // 触发词
+    secondary_keys?: string[]; // 次要触发词
     content: string;
     enabled: boolean;
     insertion_order: number;  // 排序
     position: string;         // 'before_char' | 'after_char' | ...
+    use_regex?: boolean;      // 是否按正则匹配
     comment?: string;
     constant?: boolean;
     selective?: boolean;
@@ -129,8 +140,9 @@ characters.forEach(c => console.log(c.name, c.avatar));
 const current = characters[this_chid];
 console.log(current.data.extensions.tavern_helper);
 
-// 按头像名重拉完整卡（会替换 characters 里对应项）
-const full = await getOneCharacter('名字.png');
+// 按头像名重拉完整卡（无返回值，只替换 characters 里对应项；随后从数组里取）
+await getOneCharacter('名字.png');
+const full = characters.find(c => c.avatar === '名字.png');
 
 // 编辑面板用的解析字段（system/mesExamples/description/... 已拼好）
 getCharacterCardFields({ chid: this_chid });
@@ -150,9 +162,9 @@ const { writeExtensionField, UNSET_VALUE } = await import('/scripts/extensions.j
 await writeExtensionField(this_chid, 'tavern_helper', { scripts: [], variables: { a: 1 } });
 await writeExtensionField(this_chid, 'my_key', UNSET_VALUE);   // 删除 my_key
 
-// 删除角色（第二个参数控制是否一并删聊天）
+// 删除角色（第一个参数是 avatar 文件名而非角色名；第二个参数控制是否一并删聊天）
 const { deleteCharacter } = await import('/script.js');
-await deleteCharacter('名字', { deleteChats: true });
+await deleteCharacter('名字.png', { deleteChats: true });
 ```
 
 ### 刷新
@@ -172,3 +184,5 @@ eventSource.on(event_types.CHARACTER_EDITED, () => { /* 角色卡已保存 */ })
 ```
 
 > 提示：`characters` 数组是活的引用——改完 `saveCharacterDebounced()` 即持久化；`writeExtensionField` 是写单个扩展键的最省事方式（合并旧值）。
+
+> ST_Workbench 的读写不 import 这些模块，统一走 `api/characterApi.ts` 封装：写侧是 HTTP multipart POST `/api/characters/create|edit`（`buildFormData` 会回传旧卡的 `chat`/`create_date`，否则服务端把这两个字段当 undefined 丢弃），读侧经顶层窗口 import `/script.js` 拿 `characters` 活引用。

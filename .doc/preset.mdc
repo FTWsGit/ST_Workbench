@@ -44,29 +44,36 @@ type Preset = {
     // Tavern Helper 注入：绑定到该预设的脚本与面板变量
     tavern_helper: {
       scripts: ScriptTree[];          // 展开见下方「ScriptTree」
-      variables: Record<string, any>; // 面板变量键值对
+      variales: Record<string, any>;  // 面板变量键值对（字段名是 variales，ST 与 ST_Workbench
+                                      // 代码里都保留这个拼写；Character 卡的 tavern_helper 才是
+                                      // variables）
     };
     // 其他扩展可继续加键
   };
 };
 
-// 单个提示词
+// 单个提示词（Prompt 对象，PromptManager 构造；启用/禁用不在 prompt 上，在 prompt_order.order[].enabled）
 type PresetPrompt = {
-  id: string;               // 提示词标识：'main' | 'jailbreak' | 'worldInfoBefore' ...
+  identifier: string;       // 提示词标识：'main' | 'jailbreak' | 'worldInfoBefore' ...
   name: string;             // 显示名
-  enabled: boolean;
   role: 'system' | 'user' | 'assistant';
   content?: string;         // 占位提示词无内容，靠 marker 定位
-  marker?: string;
-  identifier: string;
-  position?: { type: 'relative' } | { type: 'in_chat'; depth: number; order: number };
+  system_prompt: boolean;   // 是否作为系统提示词
+  marker?: boolean;         // 是否占位提示词
+  position: string | number;          // 列表内位置
+  injection_position: number;         // 0=relative / 1=absolute in-chat
+  injection_depth: number;            // in-chat 注入深度
+  injection_order: number;            // in-chat 注入顺序
+  injection_trigger?: string;         // in-chat 注入触发词
+  forbid_overrides?: boolean;
+  extension?: Record<string, any>;
 };
 ```
 
 ### ScriptTree
 
 ```ts
-// 脚本树：Tavern Helper 面板里的脚本结构，可递归嵌套
+// 脚本树：Tavern Helper 面板里的脚本结构；folder 是顶层组织单元，不递归嵌套
 type ScriptTree = Script | ScriptFolder;
 
 type Script = {
@@ -76,9 +83,9 @@ type Script = {
   id: string;
   content: string;        // 脚本源码
   info: string;
-  button: { enabled: boolean; buttons: unknown[] };
-  data: unknown;          // 扩展自定义数据
-  export_with: boolean;   // 是否随预设导出
+  button: { enabled: boolean; buttons: ScriptButton[] };
+  data: Record<string, any>;  // 扩展自定义数据
+  export_with: { data: boolean; button: boolean };   // 是否随预设导出（数据/按钮分别控制）
 };
 
 type ScriptFolder = {
@@ -88,7 +95,7 @@ type ScriptFolder = {
   id: string;
   icon: string;
   color: string;
-  scripts: ScriptTree[];  // 子脚本/子文件夹，递归
+  scripts: Script[];      // 直接挂树顶层的子脚本，不递归
 };
 ```
 
@@ -108,9 +115,9 @@ console.log(oai_settings.prompts);            // 全部提示词
 const { getPresetManager } = await import('/scripts/preset-manager.js');
 const pm = getPresetManager('openai');
 
-pm.getAllPresets();                           // ['in_use', ...] 全部预设名
+pm.getAllPresets();                           // 全部预设名
 pm.getPresetList();                           // { presets, preset_names, settings }
-pm.getPresetSettings('MyPreset');             // 指定预设的完整对象
+pm.getCompletionPresetByName('MyPreset');     // 指定预设的完整对象（openai 下读取具名预设用这个）
 pm.getSelectedPresetName();                   // 当前选中的预设名
 
 // 读预设扩展字段（含 tavern_helper），path 支持 'a.b.c'
@@ -123,7 +130,7 @@ pm.readPresetExtensionField({ name: 'MyPreset', path: 'tavern_helper' });
 // 改"在用"参数：直接改 oai_settings 字段，再触发保存
 const { saveSettingsDebounced } = await import('/script.js');
 oai_settings.temperature = 0.9;
-oai_settings.extensions.tavern_helper.variables.myVar = 1;
+oai_settings.extensions.tavern_helper.variales.myVar = 1;
 saveSettingsDebounced();                      // 防抖保存到服务端
 
 // 写具名预设的扩展字段（自动合并旧值并保存）
@@ -154,3 +161,5 @@ eventSource.on(event_types.OAI_PRESET_CHANGED_AFTER, () => { /* 预设已切换 
 ```
 
 > 提示：`oai_settings` 是活的引用——改完并 `saveSettingsDebounced()` 就是最直接的刷新；具名预设改动后用 `savePreset` 落盘，下次 `loadPreset`/切换时生效。
+
+> ST_Workbench 不直接 import 这些模块，统一走 `api/presetApi.ts` 封装（内部经顶层窗口 import，见部署环境相关文档）；读取具名预设用的是 `getCompletionPresetByName`（ST 原生 `getPresetSettings` 对 openai 返回空对象）。

@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## 数据结构
 
-世界书以 `<名字>.json` 落盘，**按文件名引用**（文件里没有内嵌 uid/name）。结构是 uid → 条目 的字典。
+世界书以 `<名字>.json` 落盘，**按文件名引用**（顶层 `name` 可选，服务端读取时兜底）。结构是 uid → 条目 的字典，**uid 既是 Record 的键，也内嵌在每条 entry 的 `uid` 字段里**（双份）。
 
 ```ts
 type Worldbook = {
@@ -40,7 +40,7 @@ type WorldbookEntry = {
   matchCharacterDepthPrompt: boolean;
   matchScenario: boolean;
   matchCreatorNotes: boolean;
-  delayUntilRecursion: number;
+  delayUntilRecursion: number | boolean;   // 0（默认）或编辑器写出的 true/false
   probability: number;         // 0-100
   useProbability: boolean;
   depth: number;               // atDepth 时的深度
@@ -53,17 +53,19 @@ type WorldbookEntry = {
   matchWholeWords: boolean | null;
   useGroupScoring: boolean | null;
   automationId: string;
-  role: 0 | 1 | 2;             // system / user / assistant
+  role: 0 | 1 | 2 | null;      // system / user / assistant；position 非 atDepth 时为 null
   sticky: number | null;
   cooldown: number | null;
   delay: number | null;
-  displayIndex?: number;       // 渲染排序用，缺省 = uid
-  extensions?: Record<string, any>;   // 不少字段实际序列化在 extensions.* 下（读取时前端会回填）
-  extra?: Record<string, any>;        // 任意扩展数据透传
+  triggers: string[];          // 生成类型触发的关键词（模板默认 []）
+  characterFilter: { isExclude: boolean; names: string[]; tags: string[] } | undefined;
+                               // 加载时给每条回填
+  displayIndex?: number;       // 渲染排序用，缺省 = 数组下标
+  extensions?: Record<string, any>;   // 扩展数据槽位；角色卡转世界书时保留的 snake_case 镜像副本
 };
 ```
 
-> 注意：Tavern Helper **不**向世界书/条目注入 `tavern_helper` 字段（只有 preset 和 character 有）。世界书扩展数据的槽位是 entry 的 `extra`（原样透传）。
+> 注意：Tavern Helper **不**向世界书/条目注入 `tavern_helper` 字段（只有 preset 和 character 有）。世界书条目的扩展数据槽位是 `extensions`（原样透传）。权威字段一律是顶层扁平字段（扫描/渲染/编辑器都读顶层）；`extensions.*` 只是角色卡转世界书时保留的 snake_case 镜像副本，ST 不会在读取时从 extensions.* 回填顶层字段。
 
 ## 读写
 
@@ -96,9 +98,8 @@ book.entries[uid].content = '...';
 book.entries[uid].extensions = { myExt: 1 };  // 扩展数据
 await saveWorldInfo('MyWorld', book);
 
-// 新增条目（自动分配空闲 uid，模板默认值齐全）
+// 新增条目（自动分配空闲 uid，模板默认值齐全；createWorldInfoEntry 内部已写回 entries）
 const entry = createWorldInfoEntry('MyWorld', book);
-book.entries[entry.uid] = entry;
 await saveWorldInfo('MyWorld', book);
 
 // 新建空书
@@ -121,3 +122,5 @@ eventSource.on(event_types.WORLDINFO_UPDATED, () => { /* 某本书已保存 */ }
 ```
 
 > 提示：读写都走 `loadWorldInfo` / `saveWorldInfo` 即可保证缓存一致；不要绕过它们直接改文件。`createWorldInfoEntry` 会填好 `newWorldInfoEntryDefinition` 的全部默认字段，比手写条目安全。
+
+> ST_Workbench 工作层把 `key`/`disable`/`groupOverride` 改名为 `keys`/`disabled`/`groupPrioritized`，并派生 `keyWord`（constant/vectorized 都 false 时）——转换在 `api/worldbookApi.ts`，store/组件只认工作层名字。
