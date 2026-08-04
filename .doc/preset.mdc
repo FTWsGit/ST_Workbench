@@ -1,0 +1,156 @@
+---
+name: "preset"
+description: "SillyTavern 预设(Preset)的原始数据结构与前端 import 读写接口"
+alwaysApply: false
+---
+
+# preset
+
+## 数据结构
+
+预设是某一类 API（openai 等）生成参数与提示词配置的快照，按名字保存、落盘为 JSON。前端"当前在用"的参数对象本身就是这个形状（叫 `oai_settings`），具名预设是它的快照副本。
+
+```ts
+type Preset = {
+  // —— 采样/连接参数（数量众多，只列代表字段）——
+  chat_completion_source: string;   // 当前 API：'openai' | 'claude' | 'custom' ...
+  temperature: number;
+  top_p: number;
+  top_k: number;
+  min_p: number;
+  repetition_penalty: number;
+  frequency_penalty: number;
+  presence_penalty: number;
+  stream_openai: boolean;
+  openai_max_context: number;       // 上下文上限（token）
+  openai_max_tokens: number;        // 单次回复上限（token）
+  n: number;
+  seed: number;                     // -1 = 随机
+  names_behavior: number;           // 角色名显示策略
+  squash_system_messages: boolean;
+  show_thoughts: boolean;
+  reasoning_effort: string;
+  request_images: boolean;
+  function_calling: boolean;
+  enable_web_search: boolean;
+  // ...各模型专属字段（*_model / *_endpoint / proxy 等）省略
+
+  // —— 提示词配置 ——
+  prompts: PresetPrompt[];                              // 全部提示词
+  prompt_order: { character_id: number; order: { identifier: string; enabled: boolean }[] }[];
+
+  // —— 扩展字段 ——
+  extensions: {
+    // Tavern Helper 注入：绑定到该预设的脚本与面板变量
+    tavern_helper: {
+      scripts: ScriptTree[];          // 展开见下方「ScriptTree」
+      variables: Record<string, any>; // 面板变量键值对
+    };
+    // 其他扩展可继续加键
+  };
+};
+
+// 单个提示词
+type PresetPrompt = {
+  id: string;               // 提示词标识：'main' | 'jailbreak' | 'worldInfoBefore' ...
+  name: string;             // 显示名
+  enabled: boolean;
+  role: 'system' | 'user' | 'assistant';
+  content?: string;         // 占位提示词无内容，靠 marker 定位
+  marker?: string;
+  identifier: string;
+  position?: { type: 'relative' } | { type: 'in_chat'; depth: number; order: number };
+};
+```
+
+### ScriptTree
+
+```ts
+// 脚本树：Tavern Helper 面板里的脚本结构，可递归嵌套
+type ScriptTree = Script | ScriptFolder;
+
+type Script = {
+  type: 'script';
+  enabled: boolean;
+  name: string;
+  id: string;
+  content: string;        // 脚本源码
+  info: string;
+  button: { enabled: boolean; buttons: unknown[] };
+  data: unknown;          // 扩展自定义数据
+  export_with: boolean;   // 是否随预设导出
+};
+
+type ScriptFolder = {
+  type: 'folder';
+  enabled: boolean;
+  name: string;
+  id: string;
+  icon: string;
+  color: string;
+  scripts: ScriptTree[];  // 子脚本/子文件夹，递归
+};
+```
+
+## 读写
+
+以下接口都来自 ST 前端自身导出的模块，用标准动态 import 按路径加载即可（路径即文件在 `public/` 下的位置）。
+
+### 读取
+
+```js
+// 当前在用参数（就是 preset 本体，改它即改预设）
+const { oai_settings } = await import('/scripts/openai.js');
+console.log(oai_settings.temperature);
+console.log(oai_settings.prompts);            // 全部提示词
+
+// 具名预设管理器（按 API 取，如 'openai' / 'claude'）
+const { getPresetManager } = await import('/scripts/preset-manager.js');
+const pm = getPresetManager('openai');
+
+pm.getAllPresets();                           // ['in_use', ...] 全部预设名
+pm.getPresetList();                           // { presets, preset_names, settings }
+pm.getPresetSettings('MyPreset');             // 指定预设的完整对象
+pm.getSelectedPresetName();                   // 当前选中的预设名
+
+// 读预设扩展字段（含 tavern_helper），path 支持 'a.b.c'
+pm.readPresetExtensionField({ name: 'MyPreset', path: 'tavern_helper' });
+```
+
+### 写入
+
+```js
+// 改"在用"参数：直接改 oai_settings 字段，再触发保存
+const { saveSettingsDebounced } = await import('/script.js');
+oai_settings.temperature = 0.9;
+oai_settings.extensions.tavern_helper.variables.myVar = 1;
+saveSettingsDebounced();                      // 防抖保存到服务端
+
+// 写具名预设的扩展字段（自动合并旧值并保存）
+await pm.writePresetExtensionField({
+  name: 'MyPreset',
+  path: 'tavern_helper',
+  value: { scripts: [], variables: { a: 1 } },
+});
+
+// 整份替换具名预设（settings 为完整 Preset 对象）
+await pm.savePreset('MyPreset', newPresetObject, { skipUpdate: true });
+
+// 删除预设
+await pm.deletePreset('MyPreset');
+```
+
+### 刷新
+
+```js
+// 改 prompts / prompt_order 后重渲染提示词面板
+const { promptManager } = await import('/scripts/openai.js');
+promptManager.renderDebounced();              // 或 promptManager.render()
+
+// 可选：订阅预设切换事件（ST 装载预设后会派发）
+const { getContext } = await import('/scripts/extensions.js');
+const { eventSource, event_types } = getContext();
+eventSource.on(event_types.OAI_PRESET_CHANGED_AFTER, () => { /* 预设已切换 */ });
+```
+
+> 提示：`oai_settings` 是活的引用——改完并 `saveSettingsDebounced()` 就是最直接的刷新；具名预设改动后用 `savePreset` 落盘，下次 `loadPreset`/切换时生效。

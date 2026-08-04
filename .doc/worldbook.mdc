@@ -1,0 +1,123 @@
+---
+name: "worldbook"
+description: "SillyTavern 世界书(Worldbook/Lorebook)的原始数据结构与前端 import 读写接口"
+alwaysApply: false
+---
+
+# worldbook
+
+## 数据结构
+
+世界书以 `<名字>.json` 落盘，**按文件名引用**（文件里没有内嵌 uid/name）。结构是 uid → 条目 的字典。
+
+```ts
+type Worldbook = {
+  entries: Record<number, WorldbookEntry>;   // uid → 条目（新建空书就是 { entries: {} }）
+  // 可选：name / extensions / originalData（一般不存在）
+};
+
+type WorldbookEntry = {
+  uid: number;                 // entries 的键，数字
+  key: string[];               // 触发词
+  keysecondary: string[];
+  comment: string;
+  content: string;             // 命中后注入的正文
+  constant: boolean;           // 常驻注入
+  vectorized: boolean;
+  selective: boolean;
+  selectiveLogic: 0 | 1 | 2 | 3;   // AND_ANY / NOT_ALL / NOT_ANY / AND_ALL
+  addMemo: boolean;
+  order: number;               // 排序值
+  position: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+                               // before / after / ANTop / ANBottom / atDepth / EMTop / EMBottom / outlet
+  disable: boolean;
+  ignoreBudget: boolean;
+  excludeRecursion: boolean;
+  preventRecursion: boolean;
+  matchPersonaDescription: boolean;   // 以下为选择性命中条件
+  matchCharacterDescription: boolean;
+  matchCharacterPersonality: boolean;
+  matchCharacterDepthPrompt: boolean;
+  matchScenario: boolean;
+  matchCreatorNotes: boolean;
+  delayUntilRecursion: number;
+  probability: number;         // 0-100
+  useProbability: boolean;
+  depth: number;               // atDepth 时的深度
+  outletName: string;
+  group: string;
+  groupOverride: boolean;
+  groupWeight: number;
+  scanDepth: number | null;
+  caseSensitive: boolean | null;
+  matchWholeWords: boolean | null;
+  useGroupScoring: boolean | null;
+  automationId: string;
+  role: 0 | 1 | 2;             // system / user / assistant
+  sticky: number | null;
+  cooldown: number | null;
+  delay: number | null;
+  displayIndex?: number;       // 渲染排序用，缺省 = uid
+  extensions?: Record<string, any>;   // 不少字段实际序列化在 extensions.* 下（读取时前端会回填）
+  extra?: Record<string, any>;        // 任意扩展数据透传
+};
+```
+
+> 注意：Tavern Helper **不**向世界书/条目注入 `tavern_helper` 字段（只有 preset 和 character 有）。世界书扩展数据的槽位是 entry 的 `extra`（原样透传）。
+
+## 读写
+
+以下接口都来自 ST 前端自身导出的模块，用标准动态 import 按路径加载即可（路径即文件在 `public/` 下的位置）。
+
+### 读取
+
+```js
+const { world_names, loadWorldInfo, getWorldInfoSettings } = await import('/scripts/world-info.js');
+
+console.log(world_names);                     // 所有世界书名
+
+// 读取一本（带缓存；返回 { entries }）
+const book = await loadWorldInfo('MyWorld');
+for (const entry of Object.values(book.entries)) {
+  console.log(entry.uid, entry.key, entry.content);
+}
+
+// 全局世界书设置（启用列表、扫描深度、预算等）
+getWorldInfoSettings();
+```
+
+### 写入
+
+```js
+const { saveWorldInfo, createNewWorldInfo, createWorldInfoEntry, deleteWorldInfo } = await import('/scripts/world-info.js');
+
+// 改条目后保存（同步更新缓存 + 防抖 POST 落盘）
+book.entries[uid].content = '...';
+book.entries[uid].extensions = { myExt: 1 };  // 扩展数据
+await saveWorldInfo('MyWorld', book);
+
+// 新增条目（自动分配空闲 uid，模板默认值齐全）
+const entry = createWorldInfoEntry('MyWorld', book);
+book.entries[entry.uid] = entry;
+await saveWorldInfo('MyWorld', book);
+
+// 新建空书
+await createNewWorldInfo('NewWorld', { interactive: false });
+
+// 删除整本
+await deleteWorldInfo('MyWorld');
+```
+
+### 刷新
+
+```js
+// saveWorldInfo 已同步更新缓存，之后 loadWorldInfo 拿到的就是最新值
+const fresh = await loadWorldInfo('MyWorld');
+
+// 可选：订阅世界书保存事件
+const { getContext } = await import('/scripts/extensions.js');
+const { eventSource, event_types } = getContext();
+eventSource.on(event_types.WORLDINFO_UPDATED, () => { /* 某本书已保存 */ });
+```
+
+> 提示：读写都走 `loadWorldInfo` / `saveWorldInfo` 即可保证缓存一致；不要绕过它们直接改文件。`createWorldInfoEntry` 会填好 `newWorldInfoEntryDefinition` 的全部默认字段，比手写条目安全。

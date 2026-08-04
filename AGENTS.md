@@ -14,6 +14,9 @@
 | `.doc/国际化.mdc` | false | 自研 useI18n（无 vue-i18n）与文案 key 命名规范。加新 locale key、加新语言、改文案、排查漏翻译兜底、用 LocaleKey 做 typecheck 校验时读。 |
 | `.doc/性能与调参.mdc` | false | 热路径性能教训与可调参数清单。被反馈'卡/掉帧/行号错位/打字延迟'类症状时读——根因和可调参数都在这。改行号测量/按行 diff patch/连续触发控件绑定时先读，避免重蹈已修过的弯路。 |
 | `.doc/TODO状态.mdc` | false | 未实现的大方向、过渡状态、有意为之的限制清单。判断某功能是否已实现、是否刻意留口子、或排查'预览不自动同步/正则预览不准/共享测试文本'等已知行为时读。 |
+| `.doc/character.mdc` | false | SillyTavern 角色卡(Character)的原始数据结构与前端 import 读写接口 |
+| `.doc/preset.mdc` | false | SillyTavern 预设(Preset)的原始数据结构与前端 import 读写接口 |
+| `.doc/worldbook.mdc` | false | SillyTavern 世界书(Worldbook/Lorebook)的原始数据结构与前端 import 读写接口 |
 
 `alwaysApply: true` 的文件是"每次会话都必须知道"的核心知识，AGENTS.md 里也保留了对应的骨架提示（见下方各段）。`alwaysApply: false` 的文件按需读取——每个文件 front matter 的 `description` 写的是"什么场景下该读这个"。
 

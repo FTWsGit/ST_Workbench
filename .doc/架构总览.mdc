@@ -26,11 +26,11 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 
 ## 多 domain 路由：标签页决定编辑区和设置区显示什么，不是硬编码分支
 
-核心概念是 `OpenTab = {domain, key, label, workspace}`。用户点侧边栏某一项 → `tabsStore.open({domain, key, label, workspace})` → 标签栏出现/聚焦对应标签 → `EditorShell.vue`（`<component :is>` + `EDITOR_COMPONENTS: Record<domain, Component>` 路由表）/`SettingsDock.vue`（`FORMS: Record<domain, Component>` 表）各自拿 `tabsStore.activeTab.domain` 挂载对应组件。**这两个容器组件完全不知道每个 domain 具体有什么字段**，新增一个 domain 不需要改它们的逻辑，只需要加一行路由（`EDITOR_COMPONENTS`/`FORMS` 各加一行）。
+核心概念是 `OpenTab = {domain, key, label, workspace}`，其中 `domain`/`workspace` 是 `types.ts` 里定义的 string literal union（`Domain`/`Workspace`）。用户点侧边栏某一项 → `tabsStore.open({domain, key, label, workspace})` → 标签栏出现/聚焦对应标签 → `EditorShell.vue`（`<component :is>` + `EDITOR_COMPONENTS: Record<domain, Component>` 路由表）/`SettingsDock.vue`（`FORMS: Record<domain, Component>` 表）各自拿 `tabsStore.activeTab.domain` 挂载对应组件。**这两个容器组件完全不知道每个 domain 具体有什么字段**——host-dependent domain（regex/tavern）的数据切片由 host store 在 setup 时调 `tabsStore.registerDomainAdapter(domain, workspace, adapter)` 暴露，容器通过 `tabsStore.getDomainAdapter(domain, workspace)` 拿，不再直接 import `presetStore`/`characterStore`。新增一个 domain 不需要改容器的逻辑，只需要加一行路由（`EDITOR_COMPONENTS`/`FORMS` 各加一行）；如果是 host-dependent domain，host store 再调一次 `registerDomainAdapter` 注册自己。
 
 `domain` 和 `workspace` 是两个不同维度，别混着用：`domain` 决定"用哪个组件编辑这个标签"（`preset`/`regex`/`worldbook`/`character`），`workspace` 决定"这个标签归哪份文档所有"（`preset`/`worldbook`/`character`）。二者在大多数情况下能对上号，但 `regex` 这个 domain 是例外——正则脚本可以挂在预设上也可以挂在角色卡上，同一个 `domain: 'regex'` 的标签，`workspace` 可能是 `'preset'` 也可能是 `'character'`。`EditorShell.vue`/`SettingsDock.vue` 遇到 `domain === 'regex'` 时，数据源（`scripts`/CRUD 回调）按 `activeTab.workspace` 再分派一次，不能只看 domain。
 
-目前接进这套路由的有四个 domain，**全部完全原生接入标签系统，没有任何桥接层**：
+目前接进这套路由的有五个 domain，**全部完全原生接入标签系统，没有任何桥接层**：
 
 - **`preset`**：`EditorShell.vue` 挂载 `PresetContentEditor.vue`，`store.currentBlock` 直接从 `tabsStore.activeTab.key`（block identifier）解析，完全不依赖任何数组下标。**侧边栏的展开折叠组/高亮/滚动现在完全由 `tabsStore.activeTab` 驱动，统一收在 `presetStore.ts` 一个 `watch(() => tabsStore.activeTab, ...)` 里**（搜索结果点击、变量导航点击、TabBar 点击、侧边栏点击全部走 `tabsStore.open()`/`focus()` 到这，没有人再各自手动展开/高亮）——具体机制见「状态与持久化 > presetStore.ts 里的关键设计」。设置表单 `PresetSettingsForm.vue`（name/role，单个 block 级别）正常接入 `SettingsDock` 的 FORMS 表；模型参数等整份文档级字段走 `PresetMetaForm.vue`（悬浮窗，见「MetaPanel」），不进 SettingsDock。
 - **`regex`**：完全原生接入标签系统，是**完全参数化**的三件套（`components/regex/regexProps.ts` 定义 `scripts`/`workspace`/`t`/CRUD 回调，组件自己不 `usePresetStore()`）——数据源是调用方喂的 `store.regexScripts`（一个 live computed，`preset` 工作区指向 `presetStore.rawData.extensions.regex_scripts`，`character` 工作区指向 `characterStore` 自己那份，两边字段结构一样但不是同一份数据，改动跟宿主文档自己的 `dirty` 追踪走同一条路，不需要单独持久化）。
