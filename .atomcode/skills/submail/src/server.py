@@ -221,6 +221,12 @@ class Mailbox:
                 "total_dropped": self.total_dropped,
             }
 
+    def peek(self):
+        # 纯旁观：浅拷贝当前积压队列，不动队列/历史/序号/等待者。
+        # 给 WebUI 看积压未读的消息体用——snapshot 只给 depth 数字，看不到 body。
+        with self._lock:
+            return list(self._queue)
+
 
 class MailServer:
     """所有信箱 + 全局序号 + 日志。"""
@@ -435,6 +441,14 @@ class MailServer:
             boxes = {name: b.snapshot() for name, b in self._boxes.items()}
         return True, {"boxes": boxes, "uptime": time.time() - self._started_at}, None
 
+    def peek(self, to):
+        # 纯旁观：返回某信箱当前积压队列的浅拷贝。不写日志（不参与审计流，
+        # SEND/POLL/DRAIN 这些改状态的才留档），不唤醒任何 poll 等待者。
+        box = self._box(to, create_if_missing=False)
+        if box is None:
+            return True, [], None
+        return True, box.peek(), None
+
     def history(self, to, limit=DEFAULT_HISTORY_LIMIT):
         """某信箱最近已读的消息（新的在前）。"""
         if not to:
@@ -637,6 +651,37 @@ class Handler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/":
             self._send_json(HTTP_OK, {"ok": True, "service": "submail", "uptime": time.time() - self.mail._started_at})
+            return
+        if parsed.path == "/peek":
+            # 纯旁观：浅拷贝某信箱当前积压队列，不动队列/历史/序号/等待者。
+            # 给 WebUI 看积压未读的消息体用；snapshot 只给 depth 数字看不到 body。
+            qs = parse_qs(parsed.query)
+            to = qs.get("to", [""])[0]
+            if not to:
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": "missing 'to'"})
+                return
+            ok, items, e = self.mail.peek(to)
+            if ok:
+                self._send_json(HTTP_OK, {"ok": True, "items": items})
+            else:
+                self._send_json(HTTP_BAD_REQUEST, {"ok": False, "err": e})
+            return
+        if parsed.path == "/webui":
+            # 同源吐 WebUI 单文件，避免 file:// → http:// 的 CORS 绕弯。
+            # webui/index.html 与 src/ 同级（skill 根下）。
+            webui_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "webui", "index.html")
+            try:
+                with open(webui_path, "r", encoding="utf-8") as f:
+                    html = f.read()
+                body = html.encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                self.wfile.flush()
+            except FileNotFoundError:
+                self._send_json(HTTP_NOT_FOUND, {"ok": False, "err": "webui/index.html not found"})
             return
         self._send_json(HTTP_NOT_FOUND, {"ok": False, "err": "not found"})
 

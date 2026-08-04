@@ -95,6 +95,12 @@ submail server register --names builder,explorer,designer
 
 ---
 
+## WebUI 观察/参与面板
+
+server 跑起来后，浏览器开 `http://127.0.0.1:8791/webui`（端口随 server 实际监听）就有聊天软件式 UI。
+
+---
+
 ## 常见错误
 
 1. **submail 没installed就直接派发** → 正常情况下 `submail` 已经由用户安装。假如没有，就需要通知用户自行使用 `skills/submail/install.sh` 安装，并重启session。
