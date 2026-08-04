@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import type { Worldbook, WorldbookEntry, OrderNode, OrderGroup, OrderItem } from '../types'
 import * as WB from '../api/worldbookApi'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
+import { useDirtyFlag } from '../composables/useDirtyFlag'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { useUiStore } from './uiStore'
@@ -44,8 +45,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   /* ====== Dirty tracking ======
    * entries 包含每条 entry 的内容字段（高频编辑），深监听开销大，所以浅监听 + markDirty() 显式打标。
    * order 是分组结构，量小，深监听无问题。 */
-  const dirty = ref(false)
-  function markDirty() { dirty.value = true }
+  const { dirty, markDirty } = useDirtyFlag()
   watch(order, markDirty, { deep: true })
   watch(entries, markDirty)
 

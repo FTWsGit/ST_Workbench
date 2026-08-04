@@ -11,6 +11,7 @@ import { useRegexScripts } from '../composables/useRegexScripts'
 import { useScriptTree } from '../composables/useScriptTree'
 import { usePreviewEngine } from '../composables/usePreviewEngine'
 import { useVarNav } from '../composables/useVarNav'
+import { useDirtyFlag } from '../composables/useDirtyFlag'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { DEFAULT_PRESET } from '../types'
@@ -64,6 +65,11 @@ export const usePresetStore = defineStore('main', () => {
     selectedGi.value = new Set([gi])
     anchorGi.value = gi
   }, { immediate: true, flush: 'sync' })
+
+  /* ====== Dirty flag ====== useDirtyFlag() 在 setup 最早期调用——regex/tavern 段的 useRegexScripts/useScriptTree
+   *  要把 markDirty 传进 options，必须在它们声明前解构出 markDirty。watch 列表（哪些 ref 触发脏、deep 还是
+   *  shallow）仍由各域自己写在下面，因为每域的浅/深 watch 选择背后是性能权衡注释（如 prompts 浅 watch 防打字卡顿）。 */
+  const { dirty, markDirty } = useDirtyFlag()
 
   /* ====== Bound Regex Scripts ====== */
   const regexScripts = computed<RegexScript[]>(() => {
@@ -442,8 +448,6 @@ export const usePresetStore = defineStore('main', () => {
    *   PresetSidebar.vue 的 inline rename commit。
    * 加载新预设时对 prompts/order 的赋值看起来像"变更"会触发 watch 标脏——applyLoadedPreset()
    *   在 nextTick 里清回 false（Vue 在该 nextTick 回调前 flush 掉这次赋值排入的 watcher）。 */
-  const dirty = ref(false)
-  function markDirty() { dirty.value = true }
   watch([order, regexScripts], markDirty, { deep: true })
   watch(prompts, markDirty)
   watch(regexOrder, markDirty, { deep: true })

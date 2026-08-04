@@ -7,6 +7,7 @@ import { useConfirmStore } from './confirmStore'
 import { useUiStore } from './uiStore'
 import { useRegexScripts } from '../composables/useRegexScripts'
 import { useScriptTree } from '../composables/useScriptTree'
+import { useDirtyFlag } from '../composables/useDirtyFlag'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 function genLocalId(prefix: string): string {
   return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
@@ -57,8 +58,7 @@ export const useCharacterStore = defineStore('character', () => {
    *  doSaveCharacter() 保存成功后清空。 */
   const pendingAvatarFile = ref<File | Blob | null>(null)
 
-  const dirty = ref(false)
-  function markDirty() { dirty.value = true }
+  const { dirty, markDirty } = useDirtyFlag()
 
   const hasData = computed(() => character.value !== null)
 
