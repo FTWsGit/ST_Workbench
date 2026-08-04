@@ -1,5 +1,6 @@
 ---
 name: "项目概览"
+kind: "overview"
 description: "ST_Workbench 是什么、管哪四类数据、目录结构怎么组织。新接手项目、不确定整体定位、查找某文件做什么时读。"
 alwaysApply: true
 ---

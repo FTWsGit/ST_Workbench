@@ -1,6 +1,7 @@
 ---
 name: "character"
 description: "SillyTavern 角色卡(Character)的原始数据结构与前端 import 读写接口"
+kind: "spec"
 alwaysApply: false
 ---
 

@@ -1,0 +1,14 @@
+---
+name: "正则本地模拟"
+kind: "feature"
+description: "regexEngine.ts：正则脚本测试栏的本地模拟（有意的简化，不是 bug）。改 regexEngine/RegexContentEditor 测试栏、或排查'正则预览不准/trim 不生效/正则无效'类症状时读。跟 Precise Preview 是两套不相关的机制，见同目录「精确预览」。"
+alwaysApply: false
+---
+
+# regexEngine.ts：正则预览的本地模拟（有意的简化，不是 bug）
+
+`applyRegexScript()` 只做查找/替换/修剪的本地模拟，**不解析 `substituteRegex`**（匹配前的宏替换需要真实 ST context，本地模拟迟早会跟真实的对不上）、**不体现 `placement`/`minDepth`/`maxDepth`**（这几个是"这条消息在聊天记录里第几层/属于哪类消息"的上下文概念，单独一段贴进来的测试文本没有这个信息）。UI 上要明确提示这个限制（RegexContentEditor 测试栏下方那行小字），不能让用户误以为预览等于真实效果。
+
+`trimStrings` 要同时应用到**完整匹配和每个数字捕获组**。
+
+`parseFindRegex()` 解析 ST 的 `/pattern/flags` 字符串格式（裸 pattern 也兼容），强制带上 `g`（预览要找全部匹配）；解析失败返回 `null` 而不是抛错，UI 显示"正则无效"。

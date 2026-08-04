@@ -1,6 +1,7 @@
 ---
 name: "编辑器内核"
 description: "HighlightedEditor.vue 四个域共用的宏语法 textarea 内核与 useHighlight.ts 高亮算法。改编辑器、useHighlight/highlightLines/highlightContent、打字调度、行号测量、光标追踪、refreshFont 接口时读。行号测量与按行 diff patch 的性能教训见'性能与调参'。"
+kind: "subsystem"
 alwaysApply: false
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: "性能与调参"
 description: "热路径性能教训与可调参数清单。被反馈'卡/掉帧/行号错位/打字延迟'类症状时读——根因和可调参数都在这。改行号测量/按行 diff patch/连续触发控件绑定时先读，避免重蹈已修过的弯路。"
+kind: "subsystem"
 alwaysApply: false
 ---
 

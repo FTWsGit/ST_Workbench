@@ -2,21 +2,23 @@
 
 ## Project Doc
 
-| 文件 | alwaysApply | description |
-|------|------------|-------|
-| `.doc/项目概览.mdc` | true | ST_Workbench 是什么、管哪四类数据、目录结构怎么组织。新接手项目、不确定整体定位、查找某文件做什么时读。 |
-| `.doc/架构总览.mdc` | true | Pinia store 职责边界与多 domain 路由：标签页决定编辑区/设置区显示什么，顶栏两行正交轴控制工作区与子集合。改 store 间分工、加新 domain、改顶栏路由、加整份文档级元信息字段、抄'新增功能套路表'时读。各 store 内部数据结构与 dirty/settings 持久化见'状态与持久化'。 |
-| `.doc/部署环境.mdc` | false | 宿主环境怪癖：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，所有全局对象量到的都是 iframe 自己。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定的代码、或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。 |
-| `.doc/移动端布局.mdc` | false | 响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。 |
-| `.doc/状态与持久化.mdc` | false | 各 domain store 的内部数据结构、与 ST API 的数据契约、dirty/settings 持久化机制。改 presetStore/worldbookStore/characterStore 内部字段（prompts/order/selectedGi/flatNodes/虚拟字段路由）、改 api/presetApi/characterApi/worldbookApi、碰 PresetManager/prompt_order/marker/selectPresetByName、改 settings 持久化或 dirty 追踪时读。 |
-| `.doc/编辑器内核.mdc` | false | HighlightedEditor.vue 四个域共用的宏语法 textarea 内核与 useHighlight.ts 高亮算法。改编辑器、useHighlight/highlightLines/highlightContent、打字调度、行号测量、光标追踪、refreshFont 接口时读。行号测量与按行 diff patch 的性能教训见'性能与调参'。 |
-| `.doc/预览与正则模拟.mdc` | false | Precise Preview 真实渲染 ST 管线（非本地模拟）与 regexEngine.ts 正则本地模拟（有意的简化）。改 PreviewPanel/regexEngine/macroAwareDiff/wordDiff/正则预览、或排查'预览不准/trim 不生效/正则无效'类症状时读。selectPresetByName 契约见'状态与持久化'。 |
-| `.doc/国际化.mdc` | false | 自研 useI18n（无 vue-i18n）与文案 key 命名规范。加新 locale key、加新语言、改文案、排查漏翻译兜底、用 LocaleKey 做 typecheck 校验时读。 |
-| `.doc/性能与调参.mdc` | false | 热路径性能教训与可调参数清单。被反馈'卡/掉帧/行号错位/打字延迟'类症状时读——根因和可调参数都在这。改行号测量/按行 diff patch/连续触发控件绑定时先读，避免重蹈已修过的弯路。 |
-| `.doc/TODO状态.mdc` | false | 未实现的大方向、过渡状态、有意为之的限制清单。判断某功能是否已实现、是否刻意留口子、或排查'预览不自动同步/正则预览不准/共享测试文本'等已知行为时读。 |
-| `.doc/character.mdc` | false | SillyTavern 角色卡(Character)的原始数据结构与前端 import 读写接口 |
-| `.doc/preset.mdc` | false | SillyTavern 预设(Preset)的原始数据结构与前端 import 读写接口 |
-| `.doc/worldbook.mdc` | false | SillyTavern 世界书(Worldbook/Lorebook)的原始数据结构与前端 import 读写接口 |
+| 文件 | 分类 | alwaysApply | description |
+|------|------|------------|-------|
+| `.doc/项目概览.mdc` | overview | true | ST_Workbench 是什么、管哪四类数据、目录结构怎么组织。新接手项目、不确定整体定位、查找某文件做什么时读。 |
+| `.doc/architecture/架构总览.mdc` | architecture | true | Pinia store 职责边界与多 domain 路由：标签页决定编辑区/设置区显示什么，顶栏两行正交轴控制工作区与子集合。改 store 间分工、加新 domain、改顶栏路由、加整份文档级元信息字段时读。常见功能该抄哪个模式的速查表已拆到同目录「新增功能套路表」。各 store 内部数据结构与 dirty/settings 持久化见'状态与持久化'。 |
+| `.doc/architecture/新增功能套路表.mdc` | architecture | false | 查表型文档：常见'加一个 XXX 功能'该抄哪个现成模式，一行任务对一行答案。从「架构总览」拆出——那边是叙述性的 store/路由设计说明，这里是纯速查表，两种阅读节奏不一样，不混在一篇里。新加一类功能前先来这查有没有现成模式可抄。 |
+| `.doc/architecture/状态与持久化.mdc` | architecture | false | 各 domain store 的内部数据结构、与 ST API 的数据契约、dirty/settings 持久化机制。改 presetStore/worldbookStore/characterStore 内部字段（prompts/order/selectedGi/flatNodes/虚拟字段路由）、改 api/presetApi/characterApi/worldbookApi、碰 PresetManager/prompt_order/marker/selectPresetByName、改 settings 持久化或 dirty 追踪时读。 |
+| `.doc/features/正则本地模拟.mdc` | feature | false | regexEngine.ts：正则脚本测试栏的本地模拟（有意的简化，不是 bug）。改 regexEngine/RegexContentEditor 测试栏、或排查'正则预览不准/trim 不生效/正则无效'类症状时读。跟 Precise Preview 是两套不相关的机制，见同目录「精确预览」。 |
+| `.doc/features/精确预览.mdc` | feature | false | Precise Preview：真实调用 SillyTavern 自身渲染管线生成预览，不是本地模拟宏替换。改 PreviewPanel、macroAwareDiff/wordDiff 高亮算法、或排查'预览不准/预览不自动同步'类症状时读。跟正则脚本的本地模拟预览是两套不相关的机制，见同目录「正则本地模拟」。 |
+| `.doc/meta/TODO状态.mdc` | meta | false | 未实现的大方向、过渡状态、有意为之的限制清单。判断某功能是否已实现、是否刻意留口子、或排查'预览不自动同步/正则预览不准/共享测试文本'等已知行为时读。 |
+| `.doc/spec/character.mdc` | spec | false | SillyTavern 角色卡(Character)的原始数据结构与前端 import 读写接口 |
+| `.doc/spec/preset.mdc` | spec | false | SillyTavern 预设(Preset)的原始数据结构与前端 import 读写接口 |
+| `.doc/spec/worldbook.mdc` | spec | false | SillyTavern 世界书(Worldbook/Lorebook)的原始数据结构与前端 import 读写接口 |
+| `.doc/subsystems/国际化.mdc` | subsystem | false | 自研 useI18n（无 vue-i18n）与文案 key 命名规范。加新 locale key、加新语言、改文案、排查漏翻译兜底、用 LocaleKey 做 typecheck 校验时读。 |
+| `.doc/subsystems/性能与调参.mdc` | subsystem | false | 热路径性能教训与可调参数清单。被反馈'卡/掉帧/行号错位/打字延迟'类症状时读——根因和可调参数都在这。改行号测量/按行 diff patch/连续触发控件绑定时先读，避免重蹈已修过的弯路。 |
+| `.doc/subsystems/移动端布局.mdc` | subsystem | false | 响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。 |
+| `.doc/subsystems/编辑器内核.mdc` | subsystem | false | HighlightedEditor.vue 四个域共用的宏语法 textarea 内核与 useHighlight.ts 高亮算法。改编辑器、useHighlight/highlightLines/highlightContent、打字调度、行号测量、光标追踪、refreshFont 接口时读。行号测量与按行 diff patch 的性能教训见'性能与调参'。 |
+| `.doc/subsystems/部署环境.mdc` | subsystem | false | 宿主环境怪癖：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，所有全局对象量到的都是 iframe 自己。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定的代码、或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。 |
 
 `alwaysApply: true` 的文件是"每次会话都必须知道"的核心知识，AGENTS.md 里也保留了对应的骨架提示（见下方各段）。`alwaysApply: false` 的文件按需读取——每个文件 front matter 的 `description` 写的是"什么场景下该读这个"。
 

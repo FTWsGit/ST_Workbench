@@ -1,6 +1,7 @@
 ---
 name: "worldbook"
 description: "SillyTavern 世界书(Worldbook/Lorebook)的原始数据结构与前端 import 读写接口"
+kind: "spec"
 alwaysApply: false
 ---
 

@@ -49,15 +49,32 @@ export function parseFile(filePath) {
   return fm
 }
 
-/** 枚举 dir 下所有 .mdc 文件，解析 front matter，alwaysApply:true 优先、然后按文件名排序。 */
-export function listDocs(dir = '.doc') {
-  let names
+/** 递归枚举 dir 下所有 .mdc 文件相对路径（正斜杠，跨平台一致），子目录深度不限。 */
+function walkMdc(dir, base = dir) {
+  let entries
   try {
-    names = fs.readdirSync(dir).filter(n => n.endsWith('.mdc'))
+    entries = fs.readdirSync(dir, { withFileTypes: true })
   } catch (e) {
     process.stderr.write(`error: cannot readdir ${dir}: ${e.message}\n`)
     process.exit(1)
   }
+  let out = []
+  for (const ent of entries) {
+    const full = path.join(dir, ent.name)
+    if (ent.isDirectory()) {
+      out = out.concat(walkMdc(full, base))
+    } else if (ent.isFile() && ent.name.endsWith('.mdc')) {
+      out.push(path.relative(base, full).split(path.sep).join('/'))
+    }
+  }
+  return out
+}
+
+/** 枚举 dir 下所有 .mdc 文件（递归子目录，如 spec/architecture/subsystems/features/meta 这类按 kind 分的子文件夹），
+ *  解析 front matter，alwaysApply:true 优先、然后按相对路径排序。
+ *  `file` 字段是相对 dir 的路径（含子目录，如 `spec/preset.mdc`），调用方拼 `path.join(dir, d.file)` 照常能读到文件。 */
+export function listDocs(dir = '.doc') {
+  const names = walkMdc(dir)
   const parsed = names.map(n => {
     const fm = parseFile(path.join(dir, n))
     return fm ? { file: n, ...fm } : null

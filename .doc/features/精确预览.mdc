@@ -1,6 +1,7 @@
 ---
-name: "预览与正则模拟"
-description: "Precise Preview 真实渲染 ST 管线（非本地模拟）与 regexEngine.ts 正则本地模拟（有意的简化）。改 PreviewPanel/regexEngine/macroAwareDiff/wordDiff/正则预览、或排查'预览不准/trim 不生效/正则无效'类症状时读。selectPresetByName 契约见'状态与持久化'。"
+name: "精确预览"
+kind: "feature"
+description: "Precise Preview：真实调用 SillyTavern 自身渲染管线生成预览，不是本地模拟宏替换。改 PreviewPanel、macroAwareDiff/wordDiff 高亮算法、或排查'预览不准/预览不自动同步'类症状时读。跟正则脚本的本地模拟预览是两套不相关的机制，见同目录「正则本地模拟」。"
 alwaysApply: false
 ---
 
@@ -14,11 +15,3 @@ alwaysApply: false
 ## 高亮算法：`macroAwareDiff()`
 
 拿块的原始 `content` 和渲染后文本比较，标出"相对原文新增/被替换"的部分。核心思路：原文按宏边界切成字面量片段，按顺序用只会前进的游标去渲染文本里找每段的原样子串——局部顺序查找，不依赖全局唯一性，天然不会串位。`wordDiff()` 系列没有被删除，是"块里完全没有宏"或"某个片段找不到原样子串"时的兜底。**改这两个函数之前，先看 `utils.ts` 里的多行注释**，改动前脱离 Vue 用 `npx tsx` 单独跑一遍确认没有回归。
-
-## regexEngine.ts：正则预览的本地模拟（有意的简化，不是 bug）
-
-`applyRegexScript()` 只做查找/替换/修剪的本地模拟，**不解析 `substituteRegex`**（匹配前的宏替换需要真实 ST context，本地模拟迟早会跟真实的对不上）、**不体现 `placement`/`minDepth`/`maxDepth`**（这几个是"这条消息在聊天记录里第几层/属于哪类消息"的上下文概念，单独一段贴进来的测试文本没有这个信息）。UI 上要明确提示这个限制（RegexContentEditor 测试栏下方那行小字），不能让用户误以为预览等于真实效果。
-
-`trimStrings` 要同时应用到**完整匹配和每个数字捕获组**。
-
-`parseFindRegex()` 解析 ST 的 `/pattern/flags` 字符串格式（裸 pattern 也兼容），强制带上 `g`（预览要找全部匹配）；解析失败返回 `null` 而不是抛错，UI 显示"正则无效"。

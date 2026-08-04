@@ -1,6 +1,7 @@
 ---
 name: "部署环境"
 description: "宿主环境怪癖：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，所有全局对象量到的都是 iframe 自己。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定的代码、或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。"
+kind: "subsystem"
 alwaysApply: false
 ---
 

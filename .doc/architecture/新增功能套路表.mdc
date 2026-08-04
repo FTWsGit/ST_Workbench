@@ -1,0 +1,30 @@
+---
+name: "新增功能套路表"
+kind: "architecture"
+description: "查表型文档：常见'加一个 XXX 功能'该抄哪个现成模式，一行任务对一行答案。从「架构总览」拆出——那边是叙述性的 store/路由设计说明，这里是纯速查表，两种阅读节奏不一样，不混在一篇里。新加一类功能前先来这查有没有现成模式可抄。"
+alwaysApply: false
+---
+
+# 新增功能时的套路
+
+| 要做什么 | 抄哪个模式 |
+| --- | --- |
+| 加一个新的设置项 | 只改 `types.ts`（`Settings` + `DEFAULT_SETTINGS`） |
+| 加一个确认弹窗 | `confirmStore.ask({title, message, onConfirm, ...})`——**不要**用原生 `confirm()` |
+| 加一个要用户输入一行文本的弹窗 | `confirmStore.askInput(...)`（空值自动挡住）——**不要**用原生 `prompt()` |
+| 加一个 domain 专属的信息类弹窗 | 在对应 `components/<domain>/` 下开 `.vue`（如 `PresetHiddenBlocksModal.vue`），App.vue 按 `activeWorkspace` 挂载 + 内部 `v-if`；通用 confirm/prompt/multi 仍走 `Modals.vue` |
+| 加一个复杂度较高、自成一体的悬浮工具（像 CopyPanel） | 单独开一个 `.vue` 文件，App.vue 常驻挂载 + 内部 `v-if`，是否借用 presetStore 数据看「架构总览 > 六个 Pinia store」 |
+| 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `VarPanel`/`PreviewPanel`/`SettingsDock` 的 `.wb-right-panel`/`.float` 对称写法（移动端断点会自动接管成底部 sheet，不用额外处理）。工具箱面板 `ToolBoxPanel.vue` 也走这套，悬浮态借用 `FloatingPanelShell` |
+| 加一个跨 workspace 通用的工具（按 scene 派工具） | 抄 `components/toolbox/` 套路：`registry.ts` 的 `registerTool(workspace, collection, def)` 命表 + `getToolsForScene` 查表 + `register.ts` 启动期 side-effect import 填表 + `ToolBoxPanel.vue` 按 `(activeWorkspace, sidebarCollection)` 派发到具体 Tool `.vue`。新增工具只在自己的 `register.ts` 调一次 `registerTool`，不用改容器 |
+| 加一个新的可编辑 domain | 看「架构总览 > 新增一个 domain 的套路」的 7 步 |
+| 加一个"列表 + 点击选中"交互 | `utils.ts` 的 `applyMultiSelect()` |
+| 加一个"列表 + 拖拽排序"交互（支持触屏） | `composables/useDragReorder.ts`（Pointer Events），自己只写 `onDrop` 回调里的排序逻辑，把手元素记得加 `touch-action: none` |
+| 加一个"按 role/type 出徽标 class 名"的地方 | `utils.ts` 的 `roleClass()`/`varOpBadge()` |
+| 加一个新的 locale key | 在 `i18n/locales/zh-CN.ts` 和 `i18n/locales/en.ts` 同时加；如果 key 属于 `types.ts` 选项表，把 `label` 改成 `labelKey: LocaleKey` 并在 locale 文件里补文案 |
+| 加一个设置弹窗里"拖动时连续触发"的控件（滑块/色盘） | 抄 `Modals.vue` 的 draft 模式：拖动中只改组件本地 draft，松手（`@change`）才 commit 进 store + localStorage。直接绑 store 会每 tick 触发 cssVars 全量 style 重算 + 同步写 localStorage，肉眼可见地卡（FAB 长按拖拽也是这个模式，只是提交时机是 `pointerup` 而不是 `@change`） |
+| 加一个"按住左右拖改数值"的输入框 | `components/shared/NumberInput.vue` + `composables/useNumberDragScrub.ts`，原数 number input + 拖拽手柄共存，见「移动端布局 > 数字拖拽微调」 |
+| 加一个对三个 domain store 的"新建/删除/切换/重载/保存"统一入口 | 走 `stores/workspaceRegistry.ts` 的 `DocumentWorkspaceAdapter` 表，App.vue 顶栏/Save/Reload/关面板/移动端工具抽屉都查这张表写通用逻辑，不要各自 `if (workspace === 'preset')` 硬编码 |
+| 加一份正则脚本的 add/delete/reorder CRUD | 走 `composables/useRegexScripts.ts`，presetStore 和 characterStore 都从这拿同一份实现，调用方只喂"怎么拿当前 scripts 数组 getter"和三个 domain 无关的依赖 |
+| 要往 SillyTavern 读/存数据 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现成的函数（domain 各自的读写层）；传给 ST 自己 API 的对象**必须**先深拷贝，见「状态与持久化 > 与 ST API 的数据契约」 |
+| 改动 `utils.ts`/`regexEngine.ts` 里的纯函数算法 | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
+| 判断当前是不是移动端布局 | `composables/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |

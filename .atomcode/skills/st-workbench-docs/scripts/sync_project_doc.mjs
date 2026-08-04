@@ -21,12 +21,13 @@ const docByName = new Map(docs.map(d => [d.file, d]))
 
 function rowFor(d) {
   const fileRef = '`' + dir + '/' + d.file + '`'
+  const kind = d.kind || ''
   const flag = d.alwaysApply ? 'true' : 'false'
   const when = d.description || ''
-  return `| ${fileRef} | ${flag} | ${when} |`
+  return `| ${fileRef} | ${kind} | ${flag} | ${when} |`
 }
 
-const header = '| 文件 | alwaysApply | description |\n|------|------------|-------|'
+const header = '| 文件 | 分类 | alwaysApply | description |\n|------|------|------------|-------|'
 
 let src
 try { src = fs.readFileSync(agents, 'utf8') }

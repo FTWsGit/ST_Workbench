@@ -1,6 +1,7 @@
 ---
 name: "移动端布局"
 description: "响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。"
+kind: "subsystem"
 alwaysApply: false
 ---
 

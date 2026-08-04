@@ -7,16 +7,29 @@ description: ST_Workbench 项目的文档纪律流程。三阶段：开干前用
 
 本 skill 解决一个具体问题：`.doc/` 下的 `.mdc` 文档不会被 AtomCode 自动注入上下文，光靠 `AGENTS.md` 的骨架提示不够。漏读会导致：(1) 重复踩文档已记录的坑（host iframe 怪癖、CSS 优先级、`position:fixed` containing block）；(2) 改完代码不同步 `.doc`，下次 session 又失去这份知识。
 
-**文档清单是 front matter 的真相源**——不要在本 skill 里硬编码"哪几个文件是 alwaysApply:true"，文档会增删改。封装 script 从 `.doc/*.mdc` 的 YAML front matter 直接读：
+**`.doc/` 按知识性质分子目录，不是扁平堆放**——同一个 `kind` 的文档放同一个子目录，子目录本身就是分类边界：
+
+| 子目录 | kind | 装什么 | 权威来源 / 更新触发条件 |
+|---|---|---|---|
+| `.doc/spec/` | `spec` | SillyTavern 自己的数据结构/API 契约（preset/character/worldbook） | ST 上游协议变了才该动；本项目重构不该触发这类文档的改动——如果发现自己在因为"重构"而改 `spec/` 下的文档，先怀疑是不是内容从一开始就放错了目录 |
+| `.doc/architecture/` | `architecture` | 本项目自己的结构性设计决策（store 边界、路由机制、新增功能套路表） | 本项目重构 |
+| `.doc/subsystems/` | `subsystem` | 相对独立的技术子系统机制（i18n、移动端布局、编辑器内核、性能、部署环境） | 对应子系统的代码变了 |
+| `.doc/features/` | `feature` | 面向具体用户功能的机制说明（一个 feature 一个 `.mdc`，不同功能不共用一篇，哪怕标题看着像同一类） | 对应功能的实现变了 |
+| `.doc/meta/` | `meta` | 关于项目状态本身的清单（TODO/限制/过渡状态） | 状态变化时 |
+| `.doc/`（根） | `overview` | 项目概览，唯一的入口级文档，不装具体领域知识 | 目录结构/顶层定位变了 |
+
+新建文档先问自己"这是哪个 kind"，放对子目录、front matter 补 `kind` 字段（`docs:create` 的 `--kind` 参数），不要图省事丢进 `.doc/` 根目录——根目录只留 `项目概览.mdc` 一篇。**一篇文档只讲一个 kind 的一件事**——两个概念只是标题关键词撞车（比如都带"预览"二字）不代表该合并，判断标准是"权威来源/更新触发条件是否相同"，不是字面相似。
+
+**文档清单是 front matter 的真相源**——不要在本 skill 里硬编码"哪几个文件是 alwaysApply:true"或"哪个文件在哪个子目录"，文档会增删改、也会挪目录。封装 script 从 `.doc/**/*.mdc`（递归子目录）的 YAML front matter 直接读：
 
 | Script | 干什么 | 用法 |
 |---|---|---|
-| `docs:list` | 枚举 `.doc` 全部 front matter，输出 JSON（`file` / `name` / `description` / `alwaysApply`） | `npm run docs:list -- [--dir <path>]` |
+| `docs:list` | 枚举 `.doc` 全部 front matter（递归子目录），输出 JSON（`file` / `name` / `kind` / `description` / `alwaysApply`） | `npm run docs:list -- [--dir <path>]` |
 | `docs:get_always` | 堆读 `alwaysApply:true` 文档完整内容，stdout 纯文本 | `npm run docs:get_always -- [--dir <path>]` |
 | `docs:sync_agent` | 按当前 front matter 生成 Project Doc 表，替换 AGENTS.md 对应段落 | `npm run docs:sync_agent -- [--dir <path>] [--agents <agent_file>]` |
-| `docs:create` | 创建新的 .mdc 文档，自动添加规范front matter（<name>不加后缀） | `npm run docs:create -- <name> "<description>" [--always] [--dir <path>] [--force]` |
+| `docs:create` | 创建新的 .mdc 文档，自动添加规范front matter（<name>不加后缀） | `npm run docs:create -- <name> "<description>" --kind <kind> [--always] [--dir <path>] [--force]` |
 
-其中，--dir默认".doc"; --agents是需要同步的agent文件，默认"AGENTS.md"; --always将alwaysApply调整为true，不填默认false; --force是强制覆盖同名文件，慎用。
+其中，--dir默认".doc"（`docs:create`建议传对应 kind 的子目录，如`--dir .doc/subsystems`，而不是让新文档落进`.doc`根目录）; --kind是`docs:create`专属，写`spec`/`architecture`/`subsystem`/`feature`/`meta`之一（不给会warn但不会拦，front matter里`kind`字段留空）; --agents是需要同步的agent文件，默认"AGENTS.md"; --always将alwaysApply调整为true，不填默认false; --force是强制覆盖同名文件，慎用。
 
 ## Phase 1 — 开干前读核心文档
 
@@ -46,7 +59,8 @@ npm run docs:list
 |---|---|
 | `src/stores/*.ts` 内部字段、`src/api/*.ts`、dirty 追踪、settings 持久化 | 跟 store / API / 持久化相关的 `.mdc` |
 | `src/components/shared/HighlightedEditor.vue`、`src/composables/useHighlight.ts`、行号测量、打字调度 | 跟编辑器内核相关的 `.mdc` |
-| `src/components/preset/PreviewPanel.vue`、`src/regexEngine.ts`、正则预览 | 跟预览/正则模拟相关的 `.mdc` |
+| `src/components/preset/PreviewPanel.vue`、macroAwareDiff/wordDiff | 跟精确预览相关的 `.mdc` |
+| `src/regexEngine.ts`、正则测试栏预览 | 跟正则本地模拟相关的 `.mdc` |
 | 加 locale key、加新语言、排查漏翻译 | 跟 i18n 相关的 `.mdc` |
 | 被反馈"卡/掉帧/行号错位/打字延迟" | 跟性能相关的 `.mdc` |
 | 判断某功能是否已实现、是否刻意留口子、排查已知行为 | 跟 TODO 状态相关的 `.mdc` |
@@ -84,6 +98,8 @@ npm run docs:sync_agent
 - `.doc/*` 只写"项目是什么"，不写用户的要求、展望、不写对 AI 的喊话、不写踩坑史
 - `description` 只写"是什么、何时读"，不写法理论
 - 每个`.mdc`之间不能互相直接引用，如`...见国际化.mdc`。假如有必要引用其他领域的文档，只用自然语言描述那个领域，比如: `...详情见i18n相关的文档`
+- **新内容先定 kind 再定放哪篇**：一段新知识要落进 `.doc`，先问"这是 spec/architecture/subsystem/feature/meta 里的哪一个"，kind 不同就不能塞进同一篇——哪怕两者标题关键词看着像（例子：ST 渲染管线的精确预览 vs 正则本地模拟，都带"预览"字样但权威来源、更新触发条件完全不同，必须分开成 `features/` 下两篇）
+- **文档体量变大是拆分信号，不是"内容详实"的褒奖**：一篇 `.mdc` 里如果出现"叙述性设计说明"和"纯查表型速查内容"两种阅读节奏（前者要通读理解为什么，后者是 Ctrl+F 查一行答案），拆成两篇，各自 `description` 只覆盖自己那部分场景
 
 ## 不做的事
 
