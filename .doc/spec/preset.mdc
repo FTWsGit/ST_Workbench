@@ -42,6 +42,8 @@ type Preset = {
 
   // —— 扩展字段 ——
   extensions: {
+    // 正则脚本数组（跟预设同存同取，不需单独 IO）
+    regex_scripts: RegexScript[];   // 12 字段 + [k: string]: any，见 character.mdc 同名类型
     // Tavern Helper 注入：绑定到该预设的脚本与面板变量
     tavern_helper: {
       scripts: ScriptTree[];          // 展开见下方「ScriptTree」
@@ -87,6 +89,16 @@ type Script = {
   button: { enabled: boolean; buttons: ScriptButton[] };
   data: Record<string, any>;  // 扩展自定义数据
   export_with: { data: boolean; button: boolean };   // 是否随预设导出（数据/按钮分别控制）
+  // 分组字段 _gid/_gname/_gcollapsed/_genabled/_gidx 经 [k: string]: any 塞进来，
+  // 跟 RegexScript 同模式；顶层 folder 不带分组字段
+  [k: string]: any;
+};
+
+// 单个按钮：字段名跟上游 Js-Slash-Runner 的 zod schema 一致
+type ScriptButton = {
+  name: string;       // 按钮显示文字，兼作事件 id 的 hash 种子
+  visible: boolean;   // false 时仍留在 buttons[] 里，只是不渲染到工具栏
+  [k: string]: any;
 };
 
 type ScriptFolder = {

@@ -60,7 +60,7 @@ type Character = {
       depth_prompt: { depth: number; prompt: string; role: 'system' | 'user' | 'assistant' };
                                       // 注：ST_Workbench 工作层 Character.depthPrompt.role 用数字
                                       // 0/1/2 表示 system/user/assistant，转换在 api/characterApi.ts
-      regex_scripts: RegexScript[];   // 正则脚本
+      regex_scripts: RegexScript[];   // 正则脚本：12 字段 + [k: string]: any，见下方「RegexScript」
       // Tavern Helper 注入：绑定到该角色卡的脚本与面板变量
       tavern_helper: {
         scripts: ScriptTree[];        // 展开见下方「ScriptTree」
@@ -88,6 +88,16 @@ type Script = {
   button: { enabled: boolean; buttons: ScriptButton[] };
   data: Record<string, any>;  // 扩展自定义数据
   export_with: { data: boolean; button: boolean };   // 是否随角色卡导出（数据/按钮分别控制）
+  // 分组字段 _gid/_gname/_gcollapsed/_genabled/_gidx 经 [k: string]: any 塞进来，
+  // 跟 RegexScript 同模式；顶层 folder 不带分组字段
+  [k: string]: any;
+};
+
+// 单个按钮：字段名跟上游 Js-Slash-Runner 的 zod schema 一致
+type ScriptButton = {
+  name: string;       // 按钮显示文字，兼作事件 id 的 hash 种子
+  visible: boolean;   // false 时仍留在 buttons[] 里，只是不渲染到工具栏
+  [k: string]: any;
 };
 
 type ScriptFolder = {
@@ -121,6 +131,28 @@ type CharacterBook = {
     selective?: boolean;
     extensions?: Record<string, any>;
   }[];
+};
+```
+
+### RegexScript
+
+```ts
+// 正则脚本：预设/角色卡共用，随宿主一起存取（不需单独 IO）
+type RegexScript = {
+  id: string;
+  scriptName: string;
+  findRegex: string;
+  replaceString: string;
+  trimStrings: string[];
+  placement: number[];          // 生效位置（0=用户输入前/1=AI输出前/2=AI输出后等）
+  disabled: boolean;
+  markdownOnly: boolean;        // 仅影响显示
+  promptOnly: boolean;          // 仅影响后端提示词
+  runOnEdit: boolean;
+  substituteRegex: 0 | 1 | 2;   // 0 不替换 / 1 替换(原始) / 2 替换(转义)
+  minDepth: number | null;
+  maxDepth: number | null;
+  [k: string]: any;             // 分组字段 _gid/_gname/_gcollapsed/_genabled/_gidx 塞进来
 };
 ```
 
