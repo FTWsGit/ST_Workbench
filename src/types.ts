@@ -190,10 +190,12 @@ export interface RegexScript {
 /** tavern_helper 脚本树的单条脚本。button.enabled 控制是否随脚本一起导出按钮区，
  *  buttons 是脚本内嵌的快捷按钮列表。data 留给脚本自定义键值数据，export_with 控制导出范围。
  *  分组字段 _gid/_gname/_gcollapsed/_genabled/_gidx 通过 `[k: string]: any` 塞进 script 里
- *  （跟 RegexScript 的分组字段同模式），顶层 folder 不需要分组字段。 */
+ *  （跟 RegexScript 的分组字段同模式），顶层 folder 不需要分组字段。
+ *  ScriptButton 的字段名跟上游 Js-Slash-Runner 的 zod schema 一致：name 是按钮显示文字，
+ *  visible 控制是否在工具栏渲染（false 时仍留在 buttons[] 里只是不渲染）。 */
 export interface ScriptButton {
-  text: string
-  slug?: string
+  name: string
+  visible: boolean
   [k: string]: any
 }
 

@@ -764,6 +764,11 @@
 .wb-advanced-toggle{align-self:flex-start;margin-top:var(--wb-sp-4);background:transparent;border-color:transparent;padding-left:0}
 .wb-regex-advanced{display:flex;flex-direction:column;gap:var(--wb-sp-2);padding:var(--wb-sp-3);margin-top:var(--wb-sp-2);border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg)}
 .wb-form-num{width:90px !important}
+/* TavernSettingsForm.vue：酒馆设置表单的分区/按钮列表/JSON 预览 */
+.wb-form-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--wb-border)}
+.wb-form-buttons-list{display:flex;flex-direction:column;gap:8px}
+.wb-form-button-item{display:flex;gap:8px;align-items:center}
+.wb-form-data-json{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;tab-size:2}
 
 /* label 和控件同一行布局，标签固定宽度左对齐，控件紧跟标签后，不再两端对齐 */
 .wb-field-row{display:flex;align-items:center;gap:var(--wb-sp-3);margin-top:var(--wb-sp-3)}

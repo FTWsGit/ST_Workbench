@@ -348,8 +348,13 @@ export default {
   'tavern.settings.infoLabel': '说明',
   'tavern.settings.infoPlaceholder': '脚本说明...',
   'tavern.settings.buttonEnabledLabel': '导出按钮区',
-  'tavern.settings.buttonsLabel': '按钮数',
-  'tavern.settings.exportDataLabel': '导出 data',
+  'tavern.settings.buttonsLabel': '按钮列表',
+  'tavern.settings.buttonTextPlaceholder': '按钮文字',
+  'tavern.settings.addButton': '+ 添加按钮',
+  'tavern.settings.dataLabel': '变量数据',
+  'tavern.settings.dataJsonPlaceholder': '在此粘贴或编辑 JSON 变量对象…',
+  'tavern.settings.dataJsonInvalid': 'JSON 解析失败：{msg}',
+  'tavern.settings.exportDataLabel': '导出变量',
   'tavern.settings.exportButtonLabel': '导出按钮',
 
   // ========================================

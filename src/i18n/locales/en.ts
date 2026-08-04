@@ -345,8 +345,13 @@ export default {
   'tavern.settings.infoLabel': 'Info',
   'tavern.settings.infoPlaceholder': 'Script description...',
   'tavern.settings.buttonEnabledLabel': 'Export buttons',
-  'tavern.settings.buttonsLabel': 'Button count',
-  'tavern.settings.exportDataLabel': 'Export data',
+  'tavern.settings.buttonsLabel': 'Buttons',
+  'tavern.settings.buttonTextPlaceholder': 'Button text',
+  'tavern.settings.addButton': '+ Add button',
+  'tavern.settings.dataLabel': 'Variables',
+  'tavern.settings.dataJsonPlaceholder': 'Paste or edit the JSON variable object here…',
+  'tavern.settings.dataJsonInvalid': 'JSON parse failed: {msg}',
+  'tavern.settings.exportDataLabel': 'Export variables',
   'tavern.settings.exportButtonLabel': 'Export buttons',
 
   // ========================================
