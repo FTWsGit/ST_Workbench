@@ -33,6 +33,17 @@ async function postMultipart(path: string, fd: FormData): Promise<Response> {
   return res
 }
 
+/** ST 的 depth_prompt.role 是字符串枚举（'system' | 'user' | 'assistant'，char-data.js），工作层
+ *  Character 用数字 0/1/2（与 WORLDBOOK_ROLE_OPTIONS 同序）——转换边界在这里映射，兼容历史数字值。 */
+const DEPTH_PROMPT_ROLE_NUM: Record<string, 0 | 1 | 2> = { system: 0, user: 1, assistant: 2 }
+function depthPromptRoleToNum(role: unknown): 0 | 1 | 2 {
+  if (role === 1 || role === 2) return role
+  return DEPTH_PROMPT_ROLE_NUM[String(role)] ?? 0
+}
+function depthPromptRoleToStr(role: 0 | 1 | 2): string {
+  return (['system', 'user', 'assistant'][role] as string) ?? 'system'
+}
+
 /* ====== v1CharData/v2CharData ⇄ 工作层 Character 双向转换 ======
  * 字段名差异（读侧，`raw` 是 characters 数组里的一个 v1CharData 元素，`raw.data` 是 v2CharData）：
  *   - description/personality/scenario/mes_example/tags/creator：v1/v2 两层都有同名字段，v2
@@ -67,7 +78,7 @@ function fromRaw(raw: any): Character {
     depthPrompt: {
       prompt: dp.prompt ?? '',
       depth: typeof dp.depth === 'number' ? dp.depth : 4,
-      role: (dp.role === 1 || dp.role === 2) ? dp.role : 0,
+      role: depthPromptRoleToNum(dp.role),
     },
     greetings: [v2.first_mes ?? raw?.first_mes ?? '', ...alternates],
     creator: v2.creator ?? raw?.creator ?? '',
@@ -88,6 +99,13 @@ function buildFormData(data: Character, oldRaw: any, avatarFile?: File | Blob): 
   const fd = new FormData()
   fd.append('ch_name', data.name || oldData.name || oldRaw?.name || '')
   if (oldRaw) fd.append('avatar_url', data.avatar || oldRaw.avatar || '')
+  // chat/create_date 不建模进工作层 Character，但 ST edit 端点会直接取 request.body 里的值——
+  // 编辑时不回传这两个字段会被服务端当成 undefined 丢弃（JSON.stringify 删键），导致保存后
+  // 当前对话引用与创建时间被重置。新建时（oldRaw=null）不传，ST create 端点自己会生成。
+  if (oldRaw) {
+    if (oldRaw.chat) fd.append('chat', oldRaw.chat)
+    if (oldRaw.create_date) fd.append('create_date', oldRaw.create_date)
+  }
   fd.append('description', data.description)
   fd.append('personality', data.personality)
   fd.append('scenario', data.scenario)
@@ -114,7 +132,7 @@ function buildFormData(data: Character, oldRaw: any, avatarFile?: File | Blob): 
     fav: data.fav,
     world: data.worldbook ?? undefined,
     regex_scripts: data.extensions?.regex_scripts ?? [],
-    depth_prompt: { prompt: data.depthPrompt.prompt, depth: data.depthPrompt.depth, role: data.depthPrompt.role },
+    depth_prompt: { prompt: data.depthPrompt.prompt, depth: data.depthPrompt.depth, role: depthPromptRoleToStr(data.depthPrompt.role) },
   })
   fd.append('extensions', JSON.stringify(extensions))
 

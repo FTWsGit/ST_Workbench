@@ -1,14 +1,9 @@
 import type { RegexScript } from '../types'
+import { useScriptList } from './useScriptList'
 
 /**
- * 通用的正则脚本管理 composable，供 presetStore 和 characterStore 复用。
- *
- * @param getScripts - 获取 regex scripts 数组的 getter（返回可变数组的引用）
- * @param options.markDirty - 标记脏数据的函数（可选）
- * @param options.showToast - 显示 toast 的函数
- * @param options.t - i18n 翻译函数
- * @param options.loadFirstMessageKey - "请先加载"的翻译 key（默认 'preset.toast.loadFirst'）
- * @param options.defaultPlacement - 新脚本的默认 placement（默认 [2]）
+ * 正则脚本 CRUD 的薄包装，委托给泛型 useScriptList。
+ * 保留旧接口（addRegexScript / deleteRegexScript / reorderRegexScript）以兼容现有调用方。
  */
 export function useRegexScripts(
   getScripts: () => RegexScript[] | null | undefined,
@@ -20,20 +15,12 @@ export function useRegexScripts(
     defaultPlacement?: number[]
   }
 ) {
-  const { markDirty, showToast, t } = options
-  const loadFirstKey = options.loadFirstMessageKey || 'preset.toast.loadFirst'
   const defaultPlacement = options.defaultPlacement || [2]
 
-  function genRegexId(): string {
-    return 'regex_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
-  }
-
-  function addRegexScript(): string | null {
-    const scripts = getScripts()
-    if (!scripts) { showToast(t(loadFirstKey)); return null }
-
-    const script: RegexScript = {
-      id: genRegexId(),
+  const list = useScriptList<RegexScript>(getScripts, {
+    idPrefix: 'regex_',
+    createScript: (id) => ({
+      id,
       scriptName: 'New Regex',
       findRegex: '',
       replaceString: '',
@@ -46,35 +33,16 @@ export function useRegexScripts(
       substituteRegex: 0,
       minDepth: null,
       maxDepth: null,
-    }
-    scripts.push(script)
-    markDirty?.()
-    return script.id
-  }
-
-  function deleteRegexScript(id: string) {
-    const scripts = getScripts()
-    if (!scripts) return
-    const i = scripts.findIndex(r => r.id === id)
-    if (i >= 0) {
-      scripts.splice(i, 1)
-      markDirty?.()
-    }
-  }
-
-  function reorderRegexScript(fromIdx: number, toIdx: number, after: boolean) {
-    const scripts = getScripts()
-    if (!scripts) return
-    if (fromIdx < 0 || toIdx < 0 || fromIdx >= scripts.length || toIdx >= scripts.length) return
-    const item = scripts.splice(fromIdx, 1)[0]
-    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : (after ? toIdx + 1 : toIdx)
-    scripts.splice(ni, 0, item)
-    markDirty?.()
-  }
+    }),
+    markDirty: options.markDirty,
+    showToast: options.showToast,
+    t: options.t,
+    loadFirstMessageKey: options.loadFirstMessageKey,
+  })
 
   return {
-    addRegexScript,
-    deleteRegexScript,
-    reorderRegexScript,
+    addRegexScript: list.add,
+    deleteRegexScript: list.remove,
+    reorderRegexScript: list.reorder,
   }
 }

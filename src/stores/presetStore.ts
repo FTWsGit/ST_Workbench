@@ -9,6 +9,8 @@ import { useUiStore } from './uiStore'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 import { useRegexScripts } from '../composables/useRegexScripts'
 import { useScriptTree } from '../composables/useScriptTree'
+import { usePreviewEngine } from '../composables/usePreviewEngine'
+import { useVarNav } from '../composables/useVarNav'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
 import { DEFAULT_PRESET } from '../types'
@@ -78,7 +80,7 @@ export const usePresetStore = defineStore('main', () => {
     return rawData.value.extensions.regex_scripts
   }
 
-  const { addRegexScript, deleteRegexScript, reorderRegexScript } = useRegexScripts(getRegexScripts, {
+  const { addRegexScript: addRegexScriptRaw, deleteRegexScript: deleteRegexScriptRaw, reorderRegexScript } = useRegexScripts(getRegexScripts, {
     markDirty,
     showToast,
     t,
@@ -88,7 +90,9 @@ export const usePresetStore = defineStore('main', () => {
 
   /* ====== Regex 分组树（独立于 preset 域的 order，同 useGroupedList 模式）======
    * regexScripts 是裸数组（后端数据），regexOrder 是分组树视图。identifier 填 regex script id。
-   * add/delete 直接改 regexScripts 裸数组（useRegexScripts），watch 变化后 rebuildRegexOrder 重建树；
+   * add/delete 直接改 regexScripts 裸数组（useRegexScripts），随后显式 rebuildRegexOrder 重建树——
+   *   不能靠 watch([regexScripts], rebuild)：computed getter 返回同一数组引用，push/splice 不让 computed
+   *   recompute（依赖只到 .extensions.regex_scripts 引用），watch 永不触发 → 树空 → sidebar 不显示。
    * reorder/bind/unbind 改 regexOrder 树，随后 syncRegexScriptsFromOrder 把树展平写回裸数组
    * （更新顺序与 _gid/_gname/_gcollapsed/_genabled/_gidx 字段）。双向模式同 preset 域的 order⇄prompts。 */
   const regexOrder = ref<OrderNode[]>([])
@@ -100,6 +104,19 @@ export const usePresetStore = defineStore('main', () => {
     reorderBlock: regexReorderBlockRaw, insertAfterActive: regexInsertAfterActive,
     removeNode: regexRemoveNode, bindSelected: regexBindSelectedRaw, unbindGroup: regexUnbindGroupRaw,
   } = useGroupedList(regexOrder, { groupName: (n) => t('regex.sidebar.defaultGroupName', { count: n }) })
+
+  /** add/delete 后显式 rebuild 树：useRegexScripts 改裸数组，watch([regexScripts], rebuild) 浅 watch 永不触发
+   *  原地变异（computed getter 返回同一数组引用）——sidebar 渲染源 regexFlatNodes 读的是 regexOrder，
+   *  不 rebuild 则 sidebar 不显示新建项/删后变"(未命名)"stale 节点。 */
+  function addRegexScript(): string | null {
+    const id = addRegexScriptRaw()
+    if (id) rebuildRegexOrder()
+    return id
+  }
+  function deleteRegexScript(id: string) {
+    deleteRegexScriptRaw(id)
+    rebuildRegexOrder()
+  }
 
   /** regex 单条开关包装：toggle 改树后 sync 回 regexScripts 的 script.disabled（修双状态镜像 seam——
    *  裸 toggle 只翻树 enabled 不写回真数据，保存时会把改动丢掉）。 */
@@ -201,7 +218,9 @@ export const usePresetStore = defineStore('main', () => {
     showToast(t('preset.toast.unbound'))
   }
 
-  watch([regexScripts], () => rebuildRegexOrder(), { immediate: true })
+  /** deep watch 监听数组元素字段变异（settings 表单改 script.disabled 后 sidebar 联动）——
+   *  浅 watch([regexScripts], ...) 只追踪 computed 重新求值，push/splice/改字段都不触发（computed getter 返回同一数组引用）。 */
+  watch(regexScripts, () => rebuildRegexOrder(), { deep: true, immediate: true })
 
   /* ====== Bound Tavern Helper（tavern_helper 段，照 regex 段模式）======
    * preset 域注意：PresetData.extensions.tavern_helper 的内部变量字段名是 `variales`（拼写差异，
@@ -237,7 +256,7 @@ export const usePresetStore = defineStore('main', () => {
     return th.scripts as ScriptTree[]
   }
 
-  const { addScriptTree, deleteScriptTree, reorderScriptTree } = useScriptTree(getScriptTrees, {
+  const { addScriptTree: addScriptTreeRaw, deleteScriptTree: deleteScriptTreeRaw, reorderScriptTree } = useScriptTree(getScriptTrees, {
     markDirty,
     showToast,
     t,
@@ -250,8 +269,9 @@ export const usePresetStore = defineStore('main', () => {
    * scriptTreeOrder 是分组树视图。identifier 填 script/folder 的 id。
    * Script 带 _gid 的归组（分组字段塞进 Script 的 [k:string]:any）；ScriptFolder 直接挂顶层
    * 不 coerce（它本身就是 folder，不参与 _gid 分组）。
-   * add/delete 直接改 scripts 裸数组（useScriptTree），CRUD 后 store 显式调 rebuildScriptTreeOrder
-   * （浅 watch seam：watch([tavernHelper.value.scripts]) 是浅 watch 永不触发原地变异，照 regex 段修法）。
+   * add/delete 直接改 scripts 裸数组（useScriptTree），随后显式 rebuildScriptTreeOrder 重建树——
+   *   不能靠 watch([tavernHelper.value.scripts], rebuild)：浅 watch 永不触发原地变异
+   *   （tavernHelper.value.scripts 数组引用没变，只是内部 push/splice）→ 树空 → sidebar 不显示。
    * reorder/bind/unbind/toggle 改 scriptTreeOrder 树，随后 syncScriptsFromOrder 把树展平写回裸数组
    * （更新顺序与 _gid/_gname/_gcollapsed/_genabled/_gidx 字段）。 */
   const scriptTreeOrder = ref<OrderNode[]>([])
@@ -263,6 +283,17 @@ export const usePresetStore = defineStore('main', () => {
     reorderBlock: scriptTreeReorderBlockRaw, insertAfterActive: scriptTreeInsertAfterActive,
     removeNode: scriptTreeRemoveNode, bindSelected: scriptTreeBindSelectedRaw, unbindGroup: scriptTreeUnbindGroupRaw,
   } = useGroupedList(scriptTreeOrder, { groupName: (n) => t('tavern.sidebar.defaultGroupName', { count: n }) })
+
+  /** add/delete 后显式 rebuild 树：同 regex 段修法，watch 浅追踪不触发原地变异。 */
+  function addScriptTree(): string | null {
+    const id = addScriptTreeRaw()
+    if (id) rebuildScriptTreeOrder()
+    return id
+  }
+  function deleteScriptTree(id: string) {
+    deleteScriptTreeRaw(id)
+    rebuildScriptTreeOrder()
+  }
 
   /** tavern 单条开关包装：toggle 改树后 sync 回 scripts 的 script.enabled（修双状态镜像 seam——
    *  裸 toggle 只翻树 enabled 不写回真数据，保存时会把改动丢掉）。 */
@@ -382,7 +413,9 @@ export const usePresetStore = defineStore('main', () => {
     showToast(t('preset.toast.unbound'))
   }
 
-  watch([tavernHelper.value.scripts], () => rebuildScriptTreeOrder(), { immediate: true })
+  /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）——
+   *  浅 watch([tavernHelper.value.scripts], ...) 永不触发原地变异（数组引用没变，只是内部 push/splice/改字段）。 */
+  watch(() => tavernHelper.value.scripts, () => rebuildScriptTreeOrder(), { deep: true, immediate: true })
 
   /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import presetStore ======
    *  regex/tavern 是 host-dependent domain，数据切片由 host store 暴露。
@@ -415,24 +448,6 @@ export const usePresetStore = defineStore('main', () => {
   watch(prompts, markDirty)
   watch(regexOrder, markDirty, { deep: true })
   watch(scriptTreeOrder, markDirty, { deep: true })
-
-  /* ====== Var Nav ====== 开关同样搬去了 tabsStore。 */
-  const varFilterQ = ref('')
-  const allVarOps = ref<VarOp[]>([])
-  const filteredVarOps = ref<VarOp[]>([])
-  const varIdx = ref(-1)
-
-  /* ====== Preview ======
-   * 两种模式，都走真实 SillyTavern 渲染（dry-run generate），非客户端宏模拟：
-   *   'blocks': per-prompt-block 卡片，经 openai.js promptManager singleton (方案B)。
-   *   'raw':    顶到底拼接的整条 prompt，经 GENERATE_AFTER_DATA 事件。
-   * 开关同样搬去了 tabsStore，见上面 Search 的说明。 */
-  const previewMode = ref<'blocks' | 'raw'>('blocks')
-  const previewLoading = ref(false)
-  const previewError = ref('')
-  const previewCollapsed = ref<Record<string, boolean>>({})
-  const previewBlockGroups = ref<PreviewBlockGroup[]>([])
-  const previewRawText = ref('')
 
   /* ====== Modals ====== */
   const hiddenOpen = ref(false)
@@ -759,192 +774,32 @@ export const usePresetStore = defineStore('main', () => {
     if (fieldKey === 'content' && line >= 0) requestEditorJump(line, col, len, false)
   }
 
-  /* ====== Var Nav ====== */
-  function rebuildVarIndex() {
-    allVarOps.value = []
-    varIdx.value = -1
-    // findVarOps 是嵌套感知的（能正确处理 setvar/addvar 值内嵌套的 var op）。
-    prompts.value.forEach((p) => {
-      const c = p.content || ''
-      findVarOps(c).forEach((v) => {
-        allVarOps.value.push({
-          blockId: p.identifier, blockName: p.name || p.identifier,
-          type: v.type, varName: v.varName, varValue: v.varValue,
-          line: v.line, col: v.col, pos: v.pos, ordIdx: 0,
-        })
-      })
-    })
-    allVarOps.value.sort((a, b) =>
-      a.varName.localeCompare(b.varName) ||
-      // 同变量内：写在前读在后 SET → ADD → GET
-      ({ setvar: 0, addvar: 1, get: 2 }[a.type] - { setvar: 0, addvar: 1, get: 2 }[b.type])
-    )
-    filterVarNav()
-  }
-  function filterVarNav() {
-    const ft = varFilterQ.value.trim().toLowerCase()
-    filteredVarOps.value = ft
-      ? allVarOps.value.filter(v => v.varName.toLowerCase().includes(ft))
-      : [...allVarOps.value]
-    varIdx.value = -1
-  }
-  function jumpToVarOp(i: number) {
-    if (i < 0 || i >= filteredVarOps.value.length) return
-    varIdx.value = i
-    const v = filteredVarOps.value[i]
-    // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理
-    const block = prompts.value.find(p => p.identifier === v.blockId)
-    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
-    requestEditorJump(v.line, v.col, v.varName.length)
-  }
-  function navVar(dir: number) {
-    if (!filteredVarOps.value.length) return
-    varIdx.value = (varIdx.value + dir + filteredVarOps.value.length) % filteredVarOps.value.length
-    jumpToVarOp(varIdx.value)
-  }
-  watch(varFilterQ, filterVarNav)
+  /* ====== Var Nav + Var Popup ====== 抽到 composables/useVarNav.ts。 */
+  const {
+    varFilterQ, allVarOps, filteredVarOps, varIdx,
+    rebuildVarIndex, filterVarNav, jumpToVarOp, navVar,
+    varPopupOpen, varPopupVarName, varPopupOps, varPopupIdx, varPopupPos,
+    showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
+  } = useVarNav(() => order.value, () => prompts.value, {
+    onJump: (v) => {
+      const block = prompts.value.find(p => p.identifier === v.blockId)
+      tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
+      requestEditorJump(v.line, v.col, v.varName.length)
+    },
+  })
 
-  /* ====== Var Click Popup（点击 {{...var...}} 弹出的浮动小面板，区别于右侧固定 Var Nav 面板）====== */
-  const varPopupOpen = ref(false)
-  const varPopupVarName = ref('')
-  const varPopupOps = ref<VarOp[]>([])
-  const varPopupIdx = ref(-1)
-  const varPopupPos = ref({ top: 0, left: 0 })
-
-  function showVarPopup(varName: string, clickBlockId: string | null, clickPos: number, pos: { top: number; left: number }) {
-    const ops: VarOp[] = []
-    let currentIdx = -1
-    // findVarOps (utils.ts) 嵌套感知：能正确找到嵌套在另一个 setvar/addvar value 里的 op，
-    // 不会误闭合在嵌套宏自己的 `}}` 上。这里扫描 preset 内所有 var op 再 filter 到 varName，
-    // 因为 findVarOps 没有"只此变量"的概念。
-    // 点击始终源自编辑器中当前打开的 block（enableVarClick 只在那里接线），故直接收到 block identifier。
-    // 组：扫 order.value.flatMap 而非 flatNodes——flatNodes 故意丢掉折叠组的 children，
-    // 折叠组不能让其 blocks 的变量对此 popup 不可见。
-    const allItems = order.value.flatMap(node => isGroup(node) ? node.children : [node])
-    allItems.forEach((o) => {
-      const p = prompts.value.find(pp => pp.identifier === o.identifier)
-      if (!p) return
-      const c = p.content || ''
-      findVarOps(c).filter(v => v.varName === varName).forEach((v) => {
-        ops.push({
-          blockId: p.identifier, blockName: p.name || p.identifier,
-          type: v.type, varName, varValue: v.varValue,
-          line: v.line, col: v.col, pos: v.pos, ordIdx: 0, // 不再是真实索引；其它地方未用，保留以兼容 VarOp 形状
-        })
-        // clickPos 落在此宏源 span 内任意处——setvar/addvar 的 span 可跨多行且含嵌套宏，
-        // 故用 findVarOps 的嵌套感知 `end`，而非假设单行非嵌套匹配。
-        if (p.identifier === clickBlockId && v.pos <= clickPos && clickPos <= v.end) currentIdx = ops.length - 1
-      })
-    })
-    varPopupVarName.value = varName
-    varPopupOps.value = ops
-    varPopupIdx.value = currentIdx
-    varPopupPos.value = pos
-    varPopupOpen.value = true
-  }
-  function hideVarPopup() {
-    varPopupOpen.value = false
-    varPopupOps.value = []
-    varPopupIdx.value = -1
-  }
-  function jumpToPopupVar(i: number) {
-    if (i < 0 || i >= varPopupOps.value.length) return
-    varPopupIdx.value = i
-    const v = varPopupOps.value[i]
-    // 展开折叠组、侧边栏高亮由 tabsStore.open() 触发的 activeTab watcher 统一处理
-    const block = prompts.value.find(p => p.identifier === v.blockId)
-    tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
-    requestEditorJump(v.line, v.col, v.varName.length)
-  }
-  function navPopupVar(dir: number) {
-    if (!varPopupOps.value.length) return
-    varPopupIdx.value = (varPopupIdx.value + dir + varPopupOps.value.length) % varPopupOps.value.length
-    jumpToPopupVar(varPopupIdx.value)
-  }
-
-  /* ====== Preview ====== */
-
-  function diffAgainstRaw(raw: string, rendered: string) {
-    // 无 raw 内容可对比（marker blocks 等）——无需高亮
-    if (!raw.trim()) return [{ text: rendered, added: false }]
-    // macroAwareDiff 以 {{macros}} 之间的字面文本为锚点，而非全局 token 级 diff
-    return macroAwareDiff(raw, rendered)
-  }
+  /* ====== Preview ====== 抽到 composables/usePreviewEngine.ts。 */
+  const {
+    previewMode, previewLoading, previewError, previewCollapsed,
+    previewBlockGroups, previewRawText,
+    generatePreviewBlocks, generatePreviewRaw,
+    togglePreviewBlock, toggleAllPreviewBlocks,
+  } = usePreviewEngine(() => order.value, () => prompts.value, { showToast, t })
 
   /** 调用 ST 的主菜单选择预设（不是加载到编辑器），仅在 ST 当前选中不同时执行。 */
   function selectPresetByName(name: string) {
     if (!name || ST.getSelectedPresetName() === name) return
     if (!ST.selectPresetByName(name)) showToast(t('preset.toast.selectPresetFailed'))
-  }
-
-  /** Per-block 精确预览 (方案B)：每张卡片显示该 block 经 macros/regex/其它扩展全部跑完后的真实渲染文本，
-   *  数据来自 openai.js promptManager singleton，非客户端宏模拟。替换/插入的文本（相对于该 block 自己的
-   *  raw content）通过 word diff 高亮。marker blocks（chatHistory、world info 等）和展开为多条子消息的
-   *  block 没有单一"raw content"可对比，按原文平铺显示。 */
-  async function generatePreviewBlocks() {
-    previewError.value = ''
-    previewLoading.value = true
-    try {
-      const results = await ST.getPromptManagerMessages()
-      const groups: PreviewBlockGroup[] = []
-      const allItems = order.value.flatMap(node => isGroup(node) ? node.children : [node])
-      for (const o of allItems) {
-        const msgs = results[o.identifier]
-        if (!msgs || !msgs.length) continue
-        const p = prompts.value.find(pp => pp.identifier === o.identifier)
-        const isMarker = !!p?.marker
-        const rawContent = p?.content || ''
-        const diffable = !isMarker && msgs.length === 1
-        groups.push({
-          id: o.identifier,
-          name: p?.name || o.identifier,
-          isMarker,
-          messages: msgs.map(m => ({
-            role: m.role,
-            tokens: m.tokens,
-            identifier: m.identifier,
-            segments: diffable ? diffAgainstRaw(rawContent, m.content) : [{ text: m.content, added: false }],
-          })),
-        })
-      }
-      previewBlockGroups.value = groups
-      previewMode.value = 'blocks'
-      showToast(t('preset.toast.renderedBlocks', { count: groups.length }))
-    } catch (e: any) {
-      previewError.value = e?.message || String(e)
-      showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
-    } finally {
-      previewLoading.value = false
-    }
-  }
-
-  /** 整条 prompt 的精确预览：ST 真正要发给 API 的 `messages` 数组，从 CHAT_COMPLETION_SETTINGS_READY
-   *  事件在真实 generation 期间捕获（捕获后立即 stopGeneration() 取消；见 getFinalRequestMessages()：
-   *  dry-run 不够——它跳过 plugin/API-level request processing，而该事件在这些处理之后才触发）。
-   *  无 block 边界、无高亮——刻意呈现"API 实际看到的内容"，作为另一模式下逐 block 检查后的最终 sanity check。 */
-  async function generatePreviewRaw() {
-    previewError.value = ''
-    previewLoading.value = true
-    try {
-      const msgs = await ST.getFinalRequestMessages()
-      previewRawText.value = msgs.map(m => `[${(m.role || '?').toUpperCase()}]\n${m.content}`).join('\n\n')
-      previewMode.value = 'raw'
-      showToast(t('preset.toast.renderedFullPrompt'))
-    } catch (e: any) {
-      previewError.value = e?.message || String(e)
-      showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
-    } finally {
-      previewLoading.value = false
-    }
-  }
-
-  function togglePreviewBlock(id: string) {
-    previewCollapsed.value[id] = !previewCollapsed.value[id]
-  }
-  function toggleAllPreviewBlocks() {
-    if (!previewBlockGroups.value.length) return
-    const shouldCollapse = previewBlockGroups.value.some(b => !previewCollapsed.value[b.id])
-    previewBlockGroups.value.forEach(b => { previewCollapsed.value[b.id] = shouldCollapse })
   }
 
   return {

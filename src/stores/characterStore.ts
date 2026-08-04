@@ -141,7 +141,7 @@ export const useCharacterStore = defineStore('character', () => {
     return character.value.extensions.regex_scripts
   }
 
-  const { addRegexScript, deleteRegexScript, reorderRegexScript } = useRegexScripts(getRegexScripts, {
+  const { addRegexScript: addRegexScriptRaw, deleteRegexScript: deleteRegexScriptRaw, reorderRegexScript } = useRegexScripts(getRegexScripts, {
     markDirty,
     showToast,
     t,
@@ -159,6 +159,18 @@ export const useCharacterStore = defineStore('character', () => {
     reorderBlock: regexReorderBlockRaw, insertAfterActive: regexInsertAfterActive,
     removeNode: regexRemoveNode, bindSelected: regexBindSelectedRaw, unbindGroup: regexUnbindGroupRaw,
   } = useGroupedList(regexOrder, { groupName: (n) => t('regex.sidebar.defaultGroupName', { count: n }) })
+
+  /** add/delete 后显式 rebuild 树：watch([regexScripts], rebuild) 浅 watch 不触发原地变异
+   *  （computed getter 返回同一数组引用）——不 rebuild 则 sidebar 不显示新建项/删后 stale。 */
+  function addRegexScript(): string | null {
+    const id = addRegexScriptRaw()
+    if (id) rebuildRegexOrder()
+    return id
+  }
+  function deleteRegexScript(id: string) {
+    deleteRegexScriptRaw(id)
+    rebuildRegexOrder()
+  }
 
   /** regex 单条开关包装：toggle 改树后 sync 回 regexScripts 的 script.disabled（修双状态镜像 seam——
    *  裸 toggle 只翻树 enabled 不写回真数据，保存时会把改动丢掉）。 */
@@ -255,7 +267,9 @@ export const useCharacterStore = defineStore('character', () => {
     showToast(t('preset.toast.unbound'))
   }
 
-  watch([regexScripts], () => rebuildRegexOrder(), { immediate: true })
+  /** deep watch 监听数组元素字段变异（settings 表单改 script.disabled 后 sidebar 联动）——
+   *  浅 watch([regexScripts], ...) 只追踪 computed 重新求值，push/splice/改字段都不触发。 */
+  watch(regexScripts, () => rebuildRegexOrder(), { deep: true, immediate: true })
   watch(regexOrder, markDirty, { deep: true })
 
   /* ====== Bound Tavern Helper（tavern_helper 段，照 regex 段模式，宿主换成 character）======
@@ -292,7 +306,7 @@ export const useCharacterStore = defineStore('character', () => {
     return th.scripts as ScriptTree[]
   }
 
-  const { addScriptTree, deleteScriptTree, reorderScriptTree } = useScriptTree(getScriptTrees, {
+  const { addScriptTree: addScriptTreeRaw, deleteScriptTree: deleteScriptTreeRaw, reorderScriptTree } = useScriptTree(getScriptTrees, {
     markDirty,
     showToast,
     t,
@@ -310,6 +324,18 @@ export const useCharacterStore = defineStore('character', () => {
     reorderBlock: scriptTreeReorderBlockRaw, insertAfterActive: scriptTreeInsertAfterActive,
     removeNode: scriptTreeRemoveNode, bindSelected: scriptTreeBindSelectedRaw, unbindGroup: scriptTreeUnbindGroupRaw,
   } = useGroupedList(scriptTreeOrder, { groupName: (n) => t('tavern.sidebar.defaultGroupName', { count: n }) })
+
+  /** add/delete 后显式 rebuild 树：watch([tavernHelper.value.scripts], rebuild) 浅 watch 不触发原地变异——
+   *  不 rebuild 则 sidebar 不显示新建项/删后 stale。 */
+  function addScriptTree(): string | null {
+    const id = addScriptTreeRaw()
+    if (id) rebuildScriptTreeOrder()
+    return id
+  }
+  function deleteScriptTree(id: string) {
+    deleteScriptTreeRaw(id)
+    rebuildScriptTreeOrder()
+  }
 
   /** tavern 单条开关包装：toggle 改树后 sync 回 scripts 的 script.enabled（修双状态镜像 seam）。 */
   function scriptTreeToggleBlock(gi: number) {
@@ -421,7 +447,9 @@ export const useCharacterStore = defineStore('character', () => {
     showToast(t('preset.toast.unbound'))
   }
 
-  watch([tavernHelper.value.scripts], () => rebuildScriptTreeOrder(), { immediate: true })
+  /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）——
+   *  浅 watch([tavernHelper.value.scripts], ...) 永不触发原地变异（数组引用没变，只是内部 push/splice/改字段）。 */
+  watch(() => tavernHelper.value.scripts, () => rebuildScriptTreeOrder(), { deep: true, immediate: true })
   watch(scriptTreeOrder, markDirty, { deep: true })
 
   /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import characterStore ======

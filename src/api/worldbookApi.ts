@@ -137,6 +137,10 @@ function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number
   // （0~7，见 types.ts WORLDBOOK_POSITION_OPTIONS）时优先用它。
   const specPosition = raw.position === 'after_char' ? 1 : 0
   return {
+    // 未建模进 WorldbookEntry 的字段（addMemo/ignoreBudget/outletName/match*/useGroupScoring/
+    // automationId/triggers/characterFilter 等）原样透传，已知字段在下面覆盖——跟 fromSTEntry 的
+    // "{...raw} 打底再覆盖"是同一个纪律，不然导入角色卡内嵌书会悄悄丢这些数据。
+    ...raw,
     uid: typeof raw.id === 'number' ? raw.id : fallbackUid,
     comment: raw.comment ?? '',
     content: raw.content ?? '',
