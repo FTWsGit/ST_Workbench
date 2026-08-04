@@ -1,23 +1,49 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import type { Domain, Workspace } from '../types'
 
 /** 一个 tab 对应"某个 domain 里的某一条具体数据"。domain 和 key 的组合构成 tabId（判重）。
  *  跨 domain 允许重复 key；domain+key 组合唯一。 */
 export interface OpenTab {
-  domain: string
+  domain: Domain
   key: string
   label: string
-  /** 归属的工作区标识（'preset' | 'character' | 'worldbook'）。跟 domain 分开、由调用方显式指定。
+  /** 归属的工作区标识。跟 domain 分开、由调用方显式指定：
    *  同一 domain（如 'regex'）可能出现在不同 workspace 下，不能从 domain 反推。 */
-  workspace: string
+  workspace: Workspace
 }
 
 function tabId(t: Pick<OpenTab, 'domain' | 'key'>): string {
   return t.domain + ':' + t.key
 }
 
+/** host-dependent domain（regex/tavern）的数据适配器：每个 host store 在初始化时
+ *  调 registerDomainAdapter 把自己的 scripts 数组 + workspace + t 暴露出来。
+ *  EditorShell/SettingsDock 通过 getDomainAdapter(domain, workspace) 拿到，
+ *  不再直接 import presetStore/characterStore —— 路由容器回归"完全不持有 domain 知识"。
+ *
+ *  scripts 用 getter 函数而不是直接塞数组：响应式追踪在 getter 调用时建立，
+ *  消费方（editorProps/formProps computed）每次读都拿到最新的、已 unwrap 的数组。
+ *  如果直接塞 ComputedRef 进注册表，Vue 不会自动 unwrap ref 里的 ref，组件拿到的就是 ref 对象。 */
+export interface DomainAdapter {
+  scripts: () => any[]
+  workspace: Workspace
+  t: (key: any, params?: Record<string, string | number>) => string
+}
+
 export const useTabsStore = defineStore('tabs', () => {
   const tabs = ref<OpenTab[]>([])
+
+  /** host-dependent domain（regex/tavern）的适配器注册表：
+   *  每个 host store 在 setup 时调 registerDomainAdapter 把自己暴露给路由容器。
+   *  key = `${domain}:${workspace}`（如 'regex:preset' / 'tavern:character'）。 */
+  const domainAdapters = ref<Record<string, DomainAdapter>>({})
+  function registerDomainAdapter(domain: string, workspace: string, adapter: DomainAdapter) {
+    domainAdapters.value[`${domain}:${workspace}`] = adapter
+  }
+  function getDomainAdapter(domain: string, workspace: string): DomainAdapter | undefined {
+    return domainAdapters.value[`${domain}:${workspace}`]
+  }
 
   /** 每个工作区各自记着自己的"当前激活标签 id"。分开存是为了关掉某个工作区的最后一个标签时只在自己
    *  工作区内找相邻项接棒焦点，不会切到别的工作区的标签；切换工作区也不会丢"上次编辑到哪个标签"。 */
@@ -32,8 +58,8 @@ export const useTabsStore = defineStore('tabs', () => {
   )
 
   /** 当前显示的顶层工作区（'preset' | 'worldbook' | 'character'）。 */
-  const activeWorkspace = ref('preset')
-  function setActiveWorkspace(ws: string) { activeWorkspace.value = ws }
+  const activeWorkspace = ref<Workspace>('preset')
+  function setActiveWorkspace(ws: Workspace) { activeWorkspace.value = ws }
 
   /** TabBar 只渲染当前工作区的标签子集。其他工作区的标签原样留在 tabs 数组里，不清空不销毁。 */
   const tabsInActiveWorkspace = computed(() => tabs.value.filter(t => t.workspace === activeWorkspace.value))
@@ -148,5 +174,6 @@ export const useTabsStore = defineStore('tabs', () => {
     activeWorkspace, setActiveWorkspace, tabsInActiveWorkspace,
     varNavOpen, previewOpen, setVarNavOpen, setPreviewOpen,
     toolBoxOpen, setToolBoxOpen,
+    domainAdapters, registerDomainAdapter, getDomainAdapter,
   }
 })

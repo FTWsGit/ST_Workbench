@@ -424,6 +424,20 @@ export const useCharacterStore = defineStore('character', () => {
   watch([tavernHelper.value.scripts], () => rebuildScriptTreeOrder(), { immediate: true })
   watch(scriptTreeOrder, markDirty, { deep: true })
 
+  /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import characterStore ======
+   *  regex/tavern 是 host-dependent domain，character 域把自己的数据切片暴露给 tabsStore。
+   *  scripts 用 getter 函数：响应式追踪在 getter 调用时建立，消费方每次读都拿到最新的、已 unwrap 的数组。 */
+  tabsStore.registerDomainAdapter('regex', 'character', {
+    scripts: () => regexScripts.value,
+    workspace: 'character',
+    t: (key, params) => uiStore.t(key as any, params),
+  })
+  tabsStore.registerDomainAdapter('tavern', 'character', {
+    scripts: () => tavernHelper.value.scripts,
+    workspace: 'character',
+    t: (key, params) => uiStore.t(key as any, params),
+  })
+
   /* ====== Greetings：增删拖拽 ====== */
   function addGreeting() {
     if (!character.value) { showToast(t('character.toast.loadFirst')); return }

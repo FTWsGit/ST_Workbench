@@ -384,6 +384,21 @@ export const usePresetStore = defineStore('main', () => {
 
   watch([tavernHelper.value.scripts], () => rebuildScriptTreeOrder(), { immediate: true })
 
+  /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import presetStore ======
+   *  regex/tavern 是 host-dependent domain，数据切片由 host store 暴露。
+   *  registerDomainAdapter 在 setup 时同步执行，tabsStore 拿到引用即可。
+   *  scripts 用 getter 函数：响应式追踪在 getter 调用时建立，消费方每次读都拿到最新的、已 unwrap 的数组。 */
+  tabsStore.registerDomainAdapter('regex', 'preset', {
+    scripts: () => regexScripts.value,
+    workspace: 'preset',
+    t: (key, params) => uiStore.t(key as any, params),
+  })
+  tabsStore.registerDomainAdapter('tavern', 'preset', {
+    scripts: () => tavernHelper.value.scripts,
+    workspace: 'preset',
+    t: (key, params) => uiStore.t(key as any, params),
+  })
+
   /* ====== 脏标记（驱动 header Save 按钮上的 `*`） ======
    * `order`/`regexScripts` 深度 watch：两者数组都很小，全量 traverse 成本可忽略。
    * `prompts` 浅 watch：holds 每个 block 的完整内容字符串，深 watch 会在每次嵌套字段

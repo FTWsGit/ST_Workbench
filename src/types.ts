@@ -1,3 +1,9 @@
+/** Tab 路由的"用哪个组件编辑"维度。 */
+export type Domain = 'preset' | 'regex' | 'worldbook' | 'character' | 'tavern'
+
+/** Tab 路由的"归哪份文档所有"维度。 */
+export type Workspace = 'preset' | 'worldbook' | 'character'
+
 export interface PresetBlock {
   identifier: string
   name: string

@@ -16,8 +16,6 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { usePresetStore } from '../../stores/presetStore'
-import { useCharacterStore } from '../../stores/characterStore'
 import { useUiStore } from '../../stores/uiStore'
 import { useTabsStore } from '../../stores/tabsStore'
 import { usePanelResize } from '../../composables/usePanelResize'
@@ -26,8 +24,6 @@ import PresetSettingsForm from '../preset/PresetSettingsForm.vue'
 import WorldbookSettingsForm from '../worldbook/WorldbookSettingsForm.vue'
 import TavernSettingsForm from '../tavern/TavernSettingsForm.vue'
 
-const presetStore = usePresetStore()
-const characterStore = useCharacterStore()
 const uiStore = useUiStore()
 const tabsStore = useTabsStore()
 
@@ -35,17 +31,16 @@ const tabsStore = useTabsStore()
 const FORMS: Record<string, any> = { regex: RegexSettingsForm, preset: PresetSettingsForm, worldbook: WorldbookSettingsForm, tavern: TavernSettingsForm }
 const formComponent = computed(() => tabsStore.activeTab ? FORMS[tabsStore.activeTab.domain] : null)
 
-/** 根据当前 domain 组装动态表单的 props：regex 按 activeTab.workspace 分派数据源（preset/character）；其余表单目前自管 store，传空对象即可。 */
+/** host-dependent domain（regex/tavern）通过 tabsStore 的适配器注册表拿数据，
+ *  不再直接 import presetStore/characterStore；其余表单目前自管 store，传空对象即可。
+ *  adapter.scripts 是 getter 函数——调用时建立响应式追踪，拿到最新的、已 unwrap 的数组。 */
 const formProps = computed<Record<string, any>>(() => {
-  if (tabsStore.activeTab?.domain === 'regex') {
-    const workspace = tabsStore.activeTab.workspace
-    const scripts = workspace === 'character' ? characterStore.regexScripts : presetStore.regexScripts
-    return { scripts, workspace, t: uiStore.t }
-  }
-  if (tabsStore.activeTab?.domain === 'tavern') {
-    const workspace = tabsStore.activeTab.workspace
-    const scripts = workspace === 'character' ? characterStore.tavernHelper.scripts : presetStore.tavernHelper.scripts
-    return { scripts, workspace, t: uiStore.t }
+  const tab = tabsStore.activeTab
+  if (!tab) return {}
+  if (tab.domain === 'regex' || tab.domain === 'tavern') {
+    const adapter = tabsStore.getDomainAdapter(tab.domain, tab.workspace)
+    if (!adapter) return {}
+    return { scripts: adapter.scripts(), workspace: adapter.workspace, t: adapter.t }
   }
   return {}
 })

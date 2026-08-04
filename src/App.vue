@@ -203,6 +203,7 @@ import { useTabsStore } from './stores/tabsStore'
 import { useConfirmStore } from './stores/confirmStore'
 import { esc } from './utils'
 import type { LocaleKey } from './i18n'
+import type { Workspace } from './types'
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useIsMobile, getHostWindow } from './composables/hostEnv'
 import { useFabDrag } from './composables/useFabDrag'
@@ -219,7 +220,7 @@ const characterStore = useCharacterStore()
 const workspaceRegistry = createWorkspaceRegistry()
 
 /** 顶栏第一行工作区切换（preset/worldbook/character）。第二行"条目/正则"切换独立于 activeWorkspace，不经此函数。 */
-function switchWorkspace(workspace: string) {
+function switchWorkspace(workspace: Workspace) {
   tabsStore.setActiveWorkspace(workspace)
 }
 

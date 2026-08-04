@@ -42,26 +42,19 @@ const EDITOR_COMPONENTS: Record<string, any> = {
 }
 const editorComponent = computed(() => tabsStore.activeTab ? EDITOR_COMPONENTS[tabsStore.activeTab.domain] : null)
 
-/** 各编辑组件的 props：regex 按 activeTab.workspace 分派数据源（preset/character）；其余组件自管 store，传空对象即可。 */
+/** 各编辑组件的 props：host-dependent domain（regex/tavern）通过 tabsStore 的适配器注册表拿数据，
+ *  不再直接 import presetStore/characterStore；其余组件自管 store，传空对象即可。
+ *  adapter.scripts 是 getter 函数——调用时建立响应式追踪，拿到最新的、已 unwrap 的数组。 */
 const editorProps = computed<Record<string, any>>(() => {
-  if (tabsStore.activeTab?.domain === 'regex') {
-    const workspace = tabsStore.activeTab.workspace
-    const scripts = workspace === 'character' ? characterStore.regexScripts : presetStore.regexScripts
+  const tab = tabsStore.activeTab
+  if (!tab) return {}
+  if (tab.domain === 'regex' || tab.domain === 'tavern') {
+    const adapter = tabsStore.getDomainAdapter(tab.domain, tab.workspace)
+    if (!adapter) return {}
     return {
-      scripts,
-      workspace,
-      t: uiStore.t,
-      'editor-font-size': uiStore.settings.editorFontSize,
-      'editor-font-family': uiStore.settings.editorFontFamily,
-    }
-  }
-  if (tabsStore.activeTab?.domain === 'tavern') {
-    const workspace = tabsStore.activeTab.workspace
-    const scripts = workspace === 'character' ? characterStore.tavernHelper.scripts : presetStore.tavernHelper.scripts
-    return {
-      scripts,
-      workspace,
-      t: uiStore.t,
+      scripts: adapter.scripts(),
+      workspace: adapter.workspace,
+      t: adapter.t,
       'editor-font-size': uiStore.settings.editorFontSize,
       'editor-font-family': uiStore.settings.editorFontFamily,
     }
