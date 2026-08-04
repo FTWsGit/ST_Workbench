@@ -214,11 +214,20 @@ class Mailbox:
 
     def snapshot(self):
         with self._lock:
+            # 按发信人拆积压数：WebUI 花名册 badge 要按当前发信人视角显示
+            # "我发给这人、这人还没读的条数"，只给 depth 数字不够用
+            pending_by_from = {}
+            for m in self._queue:
+                f = m.get("from")
+                if f is None:
+                    continue
+                pending_by_from[f] = pending_by_from.get(f, 0) + 1
             return {
                 "depth": len(self._queue),
                 "last_from": self.last_from,
                 "total_received": self.total_received,
                 "total_dropped": self.total_dropped,
+                "pending_by_from": pending_by_from,
             }
 
     def peek(self):

@@ -447,9 +447,12 @@ function renderRoster() {
       selfTag.className = "self"; selfTag.textContent = " (我)";
       name.appendChild(selfTag);
     }
-    if (snap.depth > 0) {
+    // 发信人视角：badge 显示"我(self)发给 n、n 还没读的条数"
+    // 切发信人后数字跟着变；n==self 时不显示（不会自己给自己发）
+    const myPending = (n === state.self) ? 0 : (snap.pending_by_from?.[state.self] || 0);
+    if (myPending > 0) {
       const badge = document.createElement("span");
-      badge.className = "badge unread"; badge.textContent = snap.depth;
+      badge.className = "badge unread"; badge.textContent = myPending;
       item.appendChild(av); item.appendChild(name); item.appendChild(badge);
     } else {
       item.appendChild(av); item.appendChild(name);
