@@ -14,6 +14,7 @@ alwaysApply: false
 3. **可视层的刷新代价，取决于"改了多少就重绘多少"，不取决于"算得快不快"**：`useHighlight.ts` 的 `scan()` 本身是纯字符串扫描，算全文一般不贵；真正卡的是把结果灌进 DOM 这一步——`hlRef.value.innerHTML = ...` 整篇替换是 O(全文长度) 的强制重排/重绘，跟内容算得多快无关。参考 CodeMirror 5 的做法：可视层按逻辑行拆成一个个持久 DOM 节点，一次刷新只 diff 并重写真正变化的那几行，没变的行 DOM 引用原样复用。机制详见「编辑器内核」。
 4. **高亮/行号/光标这些衍生视觉更新不需要 idle 调度，只要是按行 diff patch 的就可以同步做**：`onInput` 直接同步调用它们（不再有 `requestIdleCallback`/`scheduleRenderUpdate` 这层）。能这样做的前提正是上一条——刷新代价已经被压到 O(改动行数) 而不是 O(全文长度)。详见「编辑器内核 > 打字调度」。
 5. **`user-select:none` 要设置得"早"**：`pointerdown` 就关，`pointerup` 兜底恢复，CSS 里也静态加一层作为基础防线。
+6. **computed ref 的浅 watch seam——computed getter 返回同一数组引用（`return rawData.value.extensions.regex_scripts`）时，`push`/`splice`/改字段不让 computed recompute，shallow watch 依赖的 rebuild 链路断**：regex/tavern sidebar 不显示新建项、删后变'(未命名)'、settings 表单改 `enabled`/`disabled` 字段不联动。修法两层：(1) store 层 `add`/`delete`/`load` 后显式调 `rebuildRegexOrder`/`rebuildScriptTreeOrder` 重建树——shallow watch 永不触发原地变异，显式 rebuild 是重建树的主通道；(2) watch 改 `{ deep: true }` 监听数组元素字段变异（`presetStore` L229/L424、`characterStore` L272/L452 共 4 处）。注意：deep watch 会递归遍历数组每个元素收集依赖，追踪开销比浅 watch 大，且它只兜字段变异——不能只靠 watch，`add`/`delete`/`load` 后的显式 rebuild 不能省。
 
 ## 已知的可调参数
 
@@ -35,7 +36,7 @@ const RESIZE_DEBOUNCE_MS = 20     // 编辑器尺寸变化后行号重算的防�
 
 - `watch(() => tabsStore.activeTab, ...)` 这类"标签驱动选中态"的 watcher 必须抄 `presetStore` 的幂等守卫——`if (anchorGi === gi && selectedGi.size === 1 && selectedGi.has(gi)) return`，gi 没变就不换新 Set 引用。缺这个守卫每次切 tab 都换新 Set → 整个 sidebar v-for 全量重渲染 → 每节点调 `getScript/getFolder/isFolder` 对全数组做 O(n) 线性 find/some → **O(n²) 响应式属性访问** → 大脚本树下秒级卡死。
 - 模板里按 id 查找节点的辅助函数（`getScript/getFolder/isFolder`）必须用 `Map<id, ScriptTree>` 预索引 computed 摊成 O(1) 查表，不要每次渲染都 `scripts.find(...)`/`scripts.some(...)` 线性扫全数组。`scriptsById` computed 依赖 `tavernHelper.scripts`，数组变（add/delete/reorder/sync）时自动重建 Map。
-- 这两个 seam 叠加才出秒级卡顿：单缺守卫（小树不卡）或单缺预索引（不切 tab 不重渲染就不卡）都不显，大树 × 每次切 tab 全量重渲染 × 每节点 O(n) 查找三者叠加才出问题。后续加新 sidebar 抄 `PresetSidebar`/`ScriptTreeSidebar` 模式时，守卫 + 预索引都是标配不能漏。
+- 这两个 seam 叠加才出秒级卡顿：单缺守卫（小树不卡）或单缺预索引（不切 tab 不重渲染就不卡）都不显，大树 × 每次切 tab 全量重渲染 × 每节点 O(n) 查找三者叠加才出问题。后续加新 sidebar 抄 `PresetSidebar`/`ScriptTreeSidebar` 模式时，守卫 + 预索引都是标配不能漏。若数据源是 computed 返回同一数组引用（regex/tavern 的数据就是），重建树不能只靠 shallow watch，必须显式 rebuild + deep watch（详见条目6）。
 
 `utils.ts`（`wordDiff`/`macroAwareDiff` 相关）：
 

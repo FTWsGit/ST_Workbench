@@ -7,10 +7,9 @@
 | `.doc/项目概览.mdc` | overview | true | ST_Workbench 是什么、管哪四类数据、目录结构怎么组织。新接手项目、不确定整体定位、查找某文件做什么时读。 |
 | `.doc/architecture/架构总览.mdc` | architecture | true | Pinia store 职责边界与多 domain 路由：标签页决定编辑区/设置区显示什么，顶栏两行正交轴控制工作区与子集合。改 store 间分工、加新 domain、改顶栏路由、加整份文档级元信息字段时读。常见功能该抄哪个模式的速查表已拆到同目录「新增功能套路表」。各 store 内部数据结构与 dirty/settings 持久化见'状态与持久化'。 |
 | `.doc/architecture/新增功能套路表.mdc` | architecture | false | 查表型文档：常见'加一个 XXX 功能'该抄哪个现成模式，一行任务对一行答案。从「架构总览」拆出——那边是叙述性的 store/路由设计说明，这里是纯速查表，两种阅读节奏不一样，不混在一篇里。新加一类功能前先来这查有没有现成模式可抄。 |
-| `.doc/architecture/状态与持久化.mdc` | architecture | false | 各 domain store 的内部数据结构、与 ST API 的数据契约、dirty/settings 持久化机制。改 presetStore/worldbookStore/characterStore 内部字段（prompts/order/selectedGi/flatNodes/虚拟字段路由）、改 api/presetApi/characterApi/worldbookApi、碰 PresetManager/prompt_order/marker/selectPresetByName、改 settings 持久化或 dirty 追踪时读。 |
+| `.doc/architecture/状态与持久化.mdc` | architecture | false | 各 domain store 的内部数据结构、与 ST API 的数据契约、dirty/settings 持久化机制。改 presetStore/worldbookStore/characterStore 内部字段（prompts/order/selectedGi/flatNodes/虚拟字段路由）、改 api/presetApi/characterApi/worldbookApi、碰 PresetManager/prompt_order/marker/selectPresetByName、改 settings 持久化或 dirty 追踪、改 composables/useDirtyFlag/usePreviewEngine/useVarNav/useScriptList 时读。 |
 | `.doc/features/正则本地模拟.mdc` | feature | false | regexEngine.ts：正则脚本测试栏的本地模拟（有意的简化，不是 bug）。改 regexEngine/RegexContentEditor 测试栏、或排查'正则预览不准/trim 不生效/正则无效'类症状时读。跟 Precise Preview 是两套不相关的机制，见同目录「精确预览」。 |
 | `.doc/features/精确预览.mdc` | feature | false | Precise Preview：真实调用 SillyTavern 自身渲染管线生成预览，不是本地模拟宏替换。改 PreviewPanel、macroAwareDiff/wordDiff 高亮算法、或排查'预览不准/预览不自动同步'类症状时读。跟正则脚本的本地模拟预览是两套不相关的机制，见同目录「正则本地模拟」。 |
-| `.doc/meta/TODO状态.mdc` | meta | false | 未实现的大方向、过渡状态、有意为之的限制清单。判断某功能是否已实现、是否刻意留口子、或排查'预览不自动同步/正则预览不准/共享测试文本'等已知行为时读。 |
 | `.doc/spec/character.mdc` | spec | false | SillyTavern 角色卡(Character)的原始数据结构与前端 import 读写接口 |
 | `.doc/spec/preset.mdc` | spec | false | SillyTavern 预设(Preset)的原始数据结构与前端 import 读写接口 |
 | `.doc/spec/worldbook.mdc` | spec | false | SillyTavern 世界书(Worldbook/Lorebook)的原始数据结构与前端 import 读写接口 |

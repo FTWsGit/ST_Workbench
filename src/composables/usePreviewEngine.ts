@@ -9,7 +9,7 @@ import * as ST from '../api/presetApi'
  *
  * 两种模式都走真实 SillyTavern 渲染（dry-run generate），非客户端宏模拟：
  *   'blocks': per-prompt-block 卡片，经 openai.js promptManager singleton (方案B)。
- *   'raw':    顶到底拼接的整条 prompt，经 GENERATE_AFTER_DATA 事件。
+ *   'raw':    顶到底拼接的整条 prompt，经 CHAT_COMPLETION_SETTINGS_READY 事件。
  *
  * @param getOrder - 获取当前 order 树的 getter（previewBlocks 模式按它展平遍历）
  * @param getPrompts - 获取 prompts 数组的 getter（取 block name / raw content / marker 标记）
