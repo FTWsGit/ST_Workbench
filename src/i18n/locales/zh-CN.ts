@@ -646,4 +646,5 @@ export default {
   'agent.approval.wbSave': '保存世界书「{name}」到服务端',
   'agent.approval.charSetField': '修改角色卡字段 {key}：{preview}',
   'agent.approval.charSave': '保存角色卡「{name}」到服务端',
+  'agent.approval.presetPreviewRaw': '触发一次真实生成请求预览完整 messages（会占用 API 调用）',
 } satisfies LocaleTable

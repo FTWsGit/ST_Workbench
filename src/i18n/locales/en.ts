@@ -643,4 +643,5 @@ export default {
   'agent.approval.wbSave': 'Save worldbook "{name}" to server',
   'agent.approval.charSetField': 'Modify character field {key}: {preview}',
   'agent.approval.charSave': 'Save character "{name}" to server',
+  'agent.approval.presetPreviewRaw': 'Trigger a real generation request to preview full messages (consumes an API call)',
 } satisfies Record<keyof typeof zhCN, string>
