@@ -631,4 +631,19 @@ export default {
   'agent.error.version.stored': '存储版本：{stored}',
   'agent.error.version.expected': '期望版本：{expected}',
   'agent.toast.versionReset': 'Agent 数据已重置',
+
+  // ---- 审批门文案 ----
+  'agent.approval.title': 'Agent 请求执行操作',
+  'agent.approval.presetEdit': '修改预设块 {id}：{summary}',
+  'agent.approval.presetCreate': '新建预设块「{name}」（角色 {role}）',
+  'agent.approval.presetReorder': '移动预设块 {id}（{direction}）',
+  'agent.approval.presetBind': '把当前选中的多个块绑成一个组',
+  'agent.approval.presetUnbind': '拆开当前选中的组',
+  'agent.approval.presetSave': '保存预设「{name}」到服务端',
+  'agent.approval.wbCreate': '新建世界书条目「{comment}」',
+  'agent.approval.wbReorder': '移动世界书条目 uid={uid}（{direction}）',
+  'agent.approval.wbDelete': '删除世界书条目 uid={uid}（{comment}）',
+  'agent.approval.wbSave': '保存世界书「{name}」到服务端',
+  'agent.approval.charSetField': '修改角色卡字段 {key}：{preview}',
+  'agent.approval.charSave': '保存角色卡「{name}」到服务端',
 } satisfies LocaleTable

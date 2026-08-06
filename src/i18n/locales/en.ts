@@ -628,4 +628,19 @@ export default {
   'agent.error.version.stored': 'Stored version: {stored}',
   'agent.error.version.expected': 'Expected version: {expected}',
   'agent.toast.versionReset': 'Agent data has been reset',
+
+  // ---- approval gate messages ----
+  'agent.approval.title': 'Agent requests to perform an action',
+  'agent.approval.presetEdit': 'Modify preset block {id}: {summary}',
+  'agent.approval.presetCreate': 'Create preset block "{name}" (role {role})',
+  'agent.approval.presetReorder': 'Move preset block {id} ({direction})',
+  'agent.approval.presetBind': 'Bind currently selected blocks into a group',
+  'agent.approval.presetUnbind': 'Unbind the currently selected group',
+  'agent.approval.presetSave': 'Save preset "{name}" to server',
+  'agent.approval.wbCreate': 'Create worldbook entry "{comment}"',
+  'agent.approval.wbReorder': 'Move worldbook entry uid={uid} ({direction})',
+  'agent.approval.wbDelete': 'Delete worldbook entry uid={uid} ({comment})',
+  'agent.approval.wbSave': 'Save worldbook "{name}" to server',
+  'agent.approval.charSetField': 'Modify character field {key}: {preview}',
+  'agent.approval.charSave': 'Save character "{name}" to server',
 } satisfies Record<keyof typeof zhCN, string>
