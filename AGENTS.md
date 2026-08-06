@@ -18,6 +18,7 @@
 | `.doc/subsystems/移动端布局.mdc` | subsystem | false | 响应式布局与触屏交互层：off-canvas drawer/bottom sheet 模式、Pointer Events 拖拽机制、FAB 长按拖拽、悬浮窗 Shell。改移动端断点/抽屉状态机/触屏拖拽把手/FAB/任何 useFloatingPanel/usePanelResize/useDragReorder 相关代码时读。 |
 | `.doc/subsystems/编辑器内核.mdc` | subsystem | false | HighlightedEditor.vue 四个域共用的宏语法 textarea 内核与 useHighlight.ts 高亮算法。改编辑器、useHighlight/highlightLines/highlightContent、打字调度、行号测量、光标追踪、refreshFont 接口时读。行号测量与按行 diff patch 的性能教训见'性能与调参'。 |
 | `.doc/subsystems/部署环境.mdc` | subsystem | false | 宿主环境怪癖：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，所有全局对象量到的都是 iframe 自己。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定的代码、或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。 |
+| `.doc/subsystems/agent.mdc` | subsystem | false | Agent 子系统：跨 preset/worldbook/character 三个 store 的运维助手。agentStore 持有会话状态机、唯一调用 LLM 的入口；工具注册表包装现有 store 方法；走 extensionSettings 持久化、原生 generateRawData + CHAT_COMPLETION_SETTINGS_READY 注入 tools。改 agent/、agentApi.ts、AgentPanel.vue、agent 工具注册时读。 |
 
 `alwaysApply: true` 的文件是"每次会话都必须知道"的核心知识，AGENTS.md 里也保留了对应的骨架提示（见下方各段）。`alwaysApply: false` 的文件按需读取——每个文件 front matter 的 `description` 写的是"什么场景下该读这个"。
 

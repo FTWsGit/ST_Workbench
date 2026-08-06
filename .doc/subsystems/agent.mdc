@@ -1,0 +1,135 @@
+---
+name: "agent"
+kind: "subsystem"
+description: "Agent 子系统：跨 preset/worldbook/character 三个 store 的运维助手。agentStore 持有会话状态机、唯一调用 LLM 的入口；工具注册表包装现有 store 方法；走 extensionSettings 持久化、原生 generateRawData + CHAT_COMPLETION_SETTINGS_READY 注入 tools。改 agent/、agentApi.ts、AgentPanel.vue、agent 工具注册时读。"
+alwaysApply: false
+---
+
+# agent
+
+Agent 子系统是横跨 preset/worldbook/character 三个 store 的运维层，不是 `tabsStore` 的第五个 domain。它不编辑"一份文档"，是一个持续对话的助手视图，UI 上按 `MetaPanel.vue`/`ToolBoxPanel.vue` 的模式做一个独立浮窗（`AgentPanel.vue` + `agentStore.ts`），不进标签页路由。开关状态放 `uiStore.agentPanelOpen`，跟 `activeWorkspace` 无关。
+
+## 架构分层
+
+```
+驱动层  AgentPanel.vue          ← 用户输入、消息渲染、状态反馈
+   ▼
+运行时层  agentStore.ts         ← 唯一 owner：会话状态机、持久化、LLM 调用入口
+   ▼
+核心循环层  runAgentTurn        ← 工具调用循环（3.2/3.3），与业务零耦合
+   ▼
+能力层  tools/ + toolRegistry  ← 工具注册表、只读/写类/测试创作工具集
+```
+
+依赖方向**单向向下**，禁止反向引用。
+
+## 关键文件
+
+| 文件 | 职责 |
+|---|---|
+| `src/agent/agentStore.ts` | Pinia store（id `'agent'`），持有 `AgentPersisted` live 状态 + 运行时状态机；唯一调用 LLM 生成与工具执行循环的入口；不直接操作 `presetStore`/`worldbookStore`/`characterStore` 的内部字段——所有跨 store 操作必须经过工具注册表 |
+| `src/api/agentApi.ts` | agent 持久化读写层，走 `extensionSettings`（服务端 `settings.json` 同级），跟 `characterApi.ts`/`presetApi.ts` 同一套 `ensureTopImporter()` 顶层动态 import 模式 |
+| `src/agent/callModel.ts` | LLM 调用层（方案 A）：监听 `CHAT_COMPLETION_SETTINGS_READY` 事件，在请求体组装完成、即将发 API 之前把 `tools` 塞进去；`generateRawData` 返回原始 response object，`toolCallCompat` 解析 `tool_calls` |
+| `src/agent/toolCallCompat.ts` | 极简 tool-call 提取层（非流式，OpenAI/Claude/Cohere 三族） |
+| `src/agent/toolRegistry.ts` | agent 专用工具注册表（JSON Schema + risk 分级 + availableIn 越界校验 + execute 函数） |
+| `src/agent/tools/readonly.ts` | 只读工具集（`risk:'safe'`）：`preset_list_blocks`/`preset_get_block`/`preset_search`/`worldbook_list_entries`/`worldbook_get_entry`/`worldbook_search`/`character_get_fields`/`character_get_field` |
+| `src/agent/tools/write.ts` | 写类工具集（`risk:'risky'`）：`preset_edit_block`/`preset_create_block`/`preset_reorder_block`/`preset_bind_group`/`preset_unbind_group`/`preset_save`/`worldbook_create_entry`/`worldbook_reorder_entry`/`worldbook_delete_entry`/`worldbook_save`/`character_set_field`/`character_save` |
+| `src/agent/tools/preview.ts` | 测试/创作工具集：`preset_preview_blocks`（纯本地 dry-run，safe）/`preset_preview_raw`（走真实 ctx.generate，risky）/`agent_draft_text`（子调用纯文本生成，safe） |
+| `src/agent/contextManager.ts` | 上下文管理：神圣前缀（system persona + 第一条真实 user 消息，压缩永不触碰）+ 入库截断（入口闸门，8 KiB）+ 整段摘要压缩（触发阈值 12K token / 256K bytes，带 60s 硬超时回退） |
+| `src/agent/constants.ts` | agent 子系统的可调常数集中表（禁止散落到各文件当魔法数字） |
+| `src/agent/types.ts` | agent 类型定义（`Message`/`ToolCall`/`AgentPersisted`/`AgentConfig`/`AgentSessionMeta`/`AgentRuntimeState`） |
+| `src/components/shared/AgentPanel.vue` | Agent 助手悬浮窗，走 `FloatingPanelShell` |
+
+## 持久化机制
+
+走 SillyTavern 官方给扩展预留的 `extensionSettings` 通道（服务端 `settings.json` 同级），不依赖 localStorage。命名空间键唯一不通用（`ST_Workbench_Agent`）。读写纪律跟预设/角色卡一致：写入前 `deepClonePlain()`，读出来也过一次 `deepClonePlain()`，绝不把 Pinia 响应式对象塞进 `extension_settings`。
+
+版本迁移：`AgentPersisted.version` 不匹配已知版本时，**显式报错并给用户一个"重置 agent 数据"的按钮**，禁止静默按新结构误读旧数据、也禁止 silently 清空。
+
+## LLM 调用机制（方案 A）
+
+纯 ST 原生 API（`/script.js` + `/scripts/extensions.js`），不依赖 Tavern Helper。对策是自己在 ST 原生的更底层原语上重建一层"只拿结构化 `tool_calls`、不自动执行、不写 chat"的调用层：
+
+1. 不调用 `ToolManager.registerFunctionTool`——那个 API 的职责是"注册 + 自动执行 + 自动存 chat"三件套，我们一件都不需要。
+2. 监听 `CHAT_COMPLETION_SETTINGS_READY` 事件：在 `generateRawData()` 触发这个事件的那一刻把 `tools` 塞进去。源码已证实引用同一性（`openai.js:3052` emit 后 `3055` 直接 `JSON.stringify` 进 fetch，无克隆）。
+3. 调用 `generateRawData({ prompt: renderMessages(store.messages) })`，拿到原始 response object。
+4. 自己写极简版 tool-call 提取函数（`toolCallCompat.ts`），从 response 里挖 `tool_calls`。
+
+`tool` 角色编码：3.1 里我们自己组装的是发给 provider 的原始请求消息数组（OpenAI wire format），`role: 'tool'`（配 `tool_call_id`）是这个格式原生支持的字段。`renderMessages()` 序列化时按 4 角色原样映射即可，不需要 3→4 的编码层。
+
+## 工具调用循环（3.2/3.3）
+
+```ts
+async function runAgentTurn(store, userText) {
+  store.messages.push(userMessage(userText))
+  maybeAutoCompact(store)          // 模块 6：每轮调用前触发摘要压缩
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const result = await callModel(store)   // 3.1：generateRawData + 手动注入 tools
+
+    if (!result.toolCalls || result.toolCalls.length === 0) {
+      store.messages.push(assistantMessage(result.content))
+      return finalize(store, 'complete')
+    }
+
+    store.messages.push(assistantMessage(result.content, result.toolCalls))
+    for (const call of result.toolCalls) {
+      const outcome = await executeTool(store, call)   // 含审批门（模块 7）+ 入库截断（模块 6.2）
+      store.messages.push(toolResultMessage(call.id, outcome))
+    }
+  }
+  return finalize(store, 'max_rounds_exceeded')   // 熔断
+}
+```
+
+- 只读工具可并行（`readonly: true`），写类工具串行；
+- `MAX_TOOL_ROUNDS`（建议 8）熔断：防止模型陷入调用循环；
+- 入库截断：所有 tool_result 写入 `messages` 前过字节上限（8 KiB），跟 `agent-system-design.md` 3.3 的"入口闸门"是同一个纪律；
+- 摘要压缩：`estimateTokens(messages) >= 12K` 或 `estimateBytes >= 256K` 时触发，把 `[sacredFloor, drainTo)` 区间整体替换成一条 LLM 生成的摘要（合成 user 消息，带 framing），带 60s 硬超时回退。
+
+## 安全与审批边界
+
+### 风险分级 + 审批门（7.1）
+
+直接复用项目**已有的** `confirmStore.ask()`：`risk: 'risky'` 的工具在 `execute()` 真正执行前，先弹 `confirmStore.ask()`，用户确认后才继续；拒绝则工具结果记为 `isError: true` 的 `tool` 消息（内容类似"用户拒绝了这次操作"），让模型知道并调整后续行为。
+
+MVP 只做"仅一次"（每次 risky 操作都问）。如果实测用户抱怨"每次都要点确认很烦"，再加"本次会话内不再询问同名工具"这一档。
+
+### 越界防护（7.3）
+
+工具的 `availableIn` 字段必须校验——一个在 `worldbook` 会话里被调用的 `preset_edit_block` 必须被拒绝（不是模型幻觉调用了就直接执行）。校验放在 `executeTool()` 统一做一次，不要指望每个工具自己检查。
+
+### 提示注入防护（7.4）
+
+原样保留 `agent-system-design.md` 8.2 的三条防线，在本产品里格外重要——**工具返回的 preset/worldbook/角色卡内容是用户自己写的创作文本，完全可能包含"忽略之前的指令"这种文字**（用户写小说梗概时太正常了）。摘要 framing、tool 结果 framing（`frame()` 函数）都不能省。
+
+## 生命周期状态机（简化版）
+
+```text
+idle ──submit──► thinking ──tool_call──► tool_loop ──…──► turn_complete ──► idle
+                  │                         │
+                  └──cancel──► idle         └──error──► idle（错误消息追加进 messages，不清空会话）
+```
+
+每个状态要有明确的 UI 反馈（`AgentPanel.vue` 显示 spinner/当前在调用哪个工具）。
+
+## 常数预算表
+
+见 `src/agent/constants.ts`。全部可调，集中管理，禁止散落在各处当魔法数字。
+
+| 常数 | 默认 | 说明 |
+|---|---|---|
+| `TOOL_RESULT_TRUNCATE_BYTES` | 8 KiB | 6.1，比原文档 64 KiB 小得多，匹配本产品 tool 输出体量 |
+| `LIST_TOOLS_MAX_ITEMS` | 50 | 列表类工具单次最多返回条目数 |
+| `COMPACT_THRESHOLD_TOKENS` | 12K | 6.2，按常见 chat completion 模型的实际可用窗口打个提前量 |
+| `SUMMARY_FIDELITY_RATIO` | 0.3 | 摘要保真窗口：最近 30% token 的原文保留进摘要提示 |
+| `SUMMARY_TIMEOUT_MS` | 60s | 摘要调用硬超时，比原文档 180s 短——本产品摘要输入本来就小 |
+| `MAX_TOOL_ROUNDS` | 8 | 单次用户提交内的工具调用轮数熔断 |
+| `READONLY_TOOL_CONCURRENCY` | 3 | 单轮内并行只读工具并发数 |
+| `MAX_RETAINED_SESSIONS` | 20 | 1.3，持久化保留的最大会话索引条数 |
+| `ACTIVE_SESSION_SOFT_LIMIT_BYTES` | 256 KiB | 单会话 activeSessionMessages 总大小软上限，触发强制摘要压缩 |
+| `SACRED_PREFIX_MESSAGES` | 2 | 神圣前缀保留的消息条数：system persona + 第一条真实 user 消息 |
+| `TOKEN_BYTES_ESTIMATE` | 4 | 单 token 预估字节数，用于 estimateTokens 的粗略估算 |
+| `AGENT_PERSISTED_VERSION` | 1 | 持久化数据结构版本号，不匹配时显式报错给用户重置按钮 |
+| `AGENT_NS` | `'ST_Workbench_Agent'` | extensionSettings 命名空间键，唯一不通用 |
+

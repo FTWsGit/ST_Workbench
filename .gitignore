@@ -27,3 +27,4 @@ dist-ssr
 .atomcode/*
 !.atomcode/skills
 .atomcode/skills/submail/log
+.temp
