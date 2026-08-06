@@ -7,7 +7,7 @@ alwaysApply: false
 
 # agent
 
-Agent 子系统是横跨 preset/worldbook/character 三个 store 的运维层，不是 `tabsStore` 的第五个 domain。它不编辑"一份文档"，是一个持续对话的助手视图，UI 上按 `MetaPanel.vue`/`ToolBoxPanel.vue` 的模式做一个独立浮窗（`AgentPanel.vue` + `agentStore.ts`），不进标签页路由。开关状态放 `uiStore.agentPanelOpen`，跟 `activeWorkspace` 无关。
+Agent 子系统是横跨 preset/worldbook/character 三个 store 的运维层，不是 `tabsStore` 的第五个 domain。它不编辑"一份文档"，是一个持续对话的助手视图，UI 上是一个右侧栏（`AgentPanel.vue` + `agentStore.ts`），跟 `PreviewPanel`/`ToolBoxPanel` 一样支持三种形态切换（docked 右侧挤开 / overlay 右侧悬浮 / float 完全悬浮，形态存 `settings.agentMode`，切换 UI 是共享的 `PanelModeSwitch.vue`），不进标签页路由。开关状态放 `uiStore.agentPanelOpen`，跟 `activeWorkspace` 无关。
 
 ## 架构分层
 
@@ -38,7 +38,7 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的运维层，
 | `src/agent/contextManager.ts` | 上下文管理：神圣前缀（system persona + 第一条真实 user 消息，压缩永不触碰）+ 入库截断（入口闸门，8 KiB）+ 整段摘要压缩（触发阈值 12K token / 256K bytes，带 60s 硬超时回退） |
 | `src/agent/constants.ts` | agent 子系统的可调常数集中表（禁止散落到各文件当魔法数字） |
 | `src/agent/types.ts` | agent 类型定义（`Message`/`ToolCall`/`AgentPersisted`/`AgentConfig`/`AgentSessionMeta`/`AgentRuntimeState`） |
-| `src/components/shared/AgentPanel.vue` | Agent 助手悬浮窗，走 `FloatingPanelShell` |
+| `src/components/shared/AgentPanel.vue` | Agent 助手右侧栏，三种形态（docked/overlay/float，`settings.agentMode`）；面板内有可展开的设置区（⚙ 按钮）：生成预设 `config.presetName`、system prompt、temperature、maxTokens，变更走 `agentStore.updateConfig()` 持久化 |
 
 ## 持久化机制
 
@@ -56,6 +56,8 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的运维层，
 4. 自己写极简版 tool-call 提取函数（`toolCallCompat.ts`），从 response 里挖 `tool_calls`。
 
 `tool` 角色编码：3.1 里我们自己组装的是发给 provider 的原始请求消息数组（OpenAI wire format），`role: 'tool'`（配 `tool_call_id`）是这个格式原生支持的字段。`renderMessages()` 序列化时按 4 角色原样映射即可，不需要 3→4 的编码层。
+
+生成预设：`AgentConfig.presetName` 非空时，`runAgentTurn` 每轮调用前 `presetApi.selectPresetByName()` 把 ST 主菜单预设切过去（不切换会沿用旧的选中预设生成）；空字符串=跟随 ST 当前选中。设置面板（AgentPanel 的 ⚙ 区）改配置走 `agentStore.updateConfig()`，跟 temperature/maxTokens/systemPrompt 一起持久化到 extensionSettings。
 
 ## 工具调用循环（3.2/3.3）
 

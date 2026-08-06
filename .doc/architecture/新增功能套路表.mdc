@@ -13,8 +13,8 @@ alwaysApply: false
 | 加一个确认弹窗 | `confirmStore.ask({title, message, onConfirm, ...})`——**不要**用原生 `confirm()` |
 | 加一个要用户输入一行文本的弹窗 | `confirmStore.askInput(...)`（空值自动挡住）——**不要**用原生 `prompt()` |
 | 加一个 domain 专属的信息类弹窗 | 在对应 `components/<domain>/` 下开 `.vue`（如 `PresetHiddenBlocksModal.vue`），App.vue 按 `activeWorkspace` 挂载 + 内部 `v-if`；通用 confirm/prompt/multi 仍走 `Modals.vue` |
-| 加一个复杂度较高、自成一体的悬浮工具（像 CopyPanel） | 单独开一个 `.vue` 文件，App.vue 常驻挂载 + 内部 `v-if`，是否借用 presetStore 数据看「架构总览 > 六个 Pinia store」 |
-| 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `VarPanel`/`PreviewPanel`/`SettingsDock` 的 `.wb-right-panel`/`.float` 对称写法（移动端断点会自动接管成底部 sheet，不用额外处理）。工具箱面板 `ToolBoxPanel.vue` 也走这套，悬浮态借用 `FloatingPanelShell` |
+| 加一个复杂度较高、自成一体的工具（像 CopyPanel 这种双栏数据工具） | 收进工具箱：在 `components/toolbox/register.ts` 注册到适用 scene，组件只渲染内容体（不自己包 FloatingPanelShell/弹窗），需要长期状态时用 `onActivated`（ToolBoxPanel 的 KeepAlive 会保实例）。是否借用 presetStore 数据看「架构总览 > 六个 Pinia store」 |
+| 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `PreviewPanel`/`ToolBoxPanel`/`AgentPanel` 的三态写法：`settings.xxxMode: PanelMode`（docked/overlay/float，旧布尔 `xxxFloat` 已在 loadSettings 迁移）+ 共享 `PanelModeSwitch.vue` 切换 UI；docked/overlay 用 `.wb-right-panel`/`.float` 对称写法（移动端断点会自动接管成底部 sheet，不用额外处理），float 形态借 `FloatingPanelShell` |
 | 加一个跨 workspace 通用的工具（按 scene 派工具） | 抄 `components/toolbox/` 套路：`registry.ts` 的 `registerTool(workspace, collection, def)` 命表 + `getToolsForScene` 查表 + `register.ts` 启动期 side-effect import 填表 + `ToolBoxPanel.vue` 按 `(activeWorkspace, sidebarCollection)` 派发到具体 Tool `.vue`。新增工具只在自己的 `register.ts` 调一次 `registerTool`，不用改容器 |
 | 加一个新的可编辑 domain | 看「架构总览 > 新增一个 domain 的套路」的 7 步 |
 | 加一个"列表 + 点击选中"交互 | `utils.ts` 的 `applyMultiSelect()` |
