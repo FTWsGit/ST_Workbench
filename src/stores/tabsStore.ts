@@ -83,6 +83,17 @@ export const useTabsStore = defineStore('tabs', () => {
   /** 工具箱面板开关，同样按 workspace 分桶。工具箱是跨 workspace 通用的（preset/worldbook/character 都能开）。 */
   const toolBoxOpenByWorkspace = ref<Record<string, boolean>>({})
   const toolBoxOpen = computed(() => toolBoxOpenByWorkspace.value[activeWorkspace.value] ?? false)
+
+  /* ====== Editor jump requests（跨域共享：preset/character/worldbook ContentEditor 都接 :jump=tabsStore.editorJump）======
+   * token 递增：line/col 重复时也强制 watcher 触发。
+   * `keepFocus: true`：只把匹配滚入视图，不移动 focus/selection 进编辑器——用于在搜索框内打字时
+   * 预览当前匹配，而不偷走你正在打字的按键。 */
+  const editorJump = ref<{ line: number; col: number; len: number; token: number; keepFocus: boolean } | null>(null)
+  let jumpCounter = 0
+  function requestEditorJump(line: number, col: number, len: number, keepFocus = false) {
+    jumpCounter++
+    editorJump.value = { line, col, len, token: jumpCounter, keepFocus }
+  }
   function setToolBoxOpen(workspace: string, open: boolean) { toolBoxOpenByWorkspace.value[workspace] = open }
 
   /** 按 domain 的"请滚动到当前选中项"信号。每个 domain 的侧边栏只监听自己的计数器。
@@ -174,6 +185,7 @@ export const useTabsStore = defineStore('tabs', () => {
     activeWorkspace, setActiveWorkspace, tabsInActiveWorkspace,
     varNavOpen, previewOpen, setVarNavOpen, setPreviewOpen,
     toolBoxOpen, setToolBoxOpen,
+    editorJump, requestEditorJump,
     domainAdapters, registerDomainAdapter, getDomainAdapter,
   }
 })

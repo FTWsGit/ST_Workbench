@@ -39,16 +39,45 @@ function pushMacroTokens(out: Token[], inner: string): void {
   if (inner.startsWith('//')) {
     out.push({ text: inner, cls: 'hl-cm' })
   } else {
-    const sa = inner.match(/^(setvar|addvar)::([\s\S]+?)::([\s\S]*)$/)
-    const ga = !sa && inner.match(/^getvar::([\s\S]+)$/)
-    if (sa) {
-      out.push({ text: sa[1], cls: 'hl-k' }, { text: '::', cls: 'hl-s' },
-                { text: sa[2], cls: 'hl-v' }, { text: '::', cls: 'hl-s' })
-      out.push(...scan(sa[3], 0, 1, null, 'hl-val').tokens)
-    } else if (ga) {
-      out.push({ text: 'getvar', cls: 'hl-k' }, { text: '::', cls: 'hl-s' })
-      out.push(...scan(ga[1], 0, 1, null, 'hl-v').tokens)
-    } else {
+    // 13 种变量宏：name 用 hl-v，宏名用 hl-k，:: 用 hl-s，值（仅 set/add）走 hl-val 递归高亮。
+    // 排序让多字符前缀先匹配——setglobalvar 先于 setvar，避免 setvar::foo 被误吞 setglobalvar::foo。
+    const VAR_HL: { prefix: string; hasValue: boolean }[] = [
+      { prefix: 'setglobalvar::',    hasValue: true  },
+      { prefix: 'getglobalvar::',    hasValue: false },
+      { prefix: 'addglobalvar::',    hasValue: true  },
+      { prefix: 'incglobalvar::',    hasValue: false },
+      { prefix: 'decglobalvar::',    hasValue: false },
+      { prefix: 'setvar::',          hasValue: true  },
+      { prefix: 'getvar::',          hasValue: false },
+      { prefix: 'addvar::',          hasValue: true  },
+      { prefix: 'incvar::',          hasValue: false },
+      { prefix: 'decvar::',          hasValue: false },
+      { prefix: 'hasvar::',          hasValue: false },
+      { prefix: 'hasglobalvar::',    hasValue: false },
+      { prefix: 'deletevar::',       hasValue: false },
+    ]
+    let matched = false
+    for (const def of VAR_HL) {
+      if (!inner.startsWith(def.prefix)) continue
+      const macroName = def.prefix.slice(0, -2) // 去 '::'
+      const after = def.prefix.length
+      if (def.hasValue) {
+        const sep = inner.indexOf('::', after)
+        if (sep === -1) break
+        const varName = inner.slice(after, sep)
+        const valuePart = inner.slice(sep + 2)
+        out.push({ text: macroName, cls: 'hl-k' }, { text: '::', cls: 'hl-s' },
+                  { text: varName, cls: 'hl-v' }, { text: '::', cls: 'hl-s' })
+        out.push(...scan(valuePart, 0, 1, null, 'hl-val').tokens)
+      } else {
+        const varName = inner.slice(after)
+        out.push({ text: macroName, cls: 'hl-k' }, { text: '::', cls: 'hl-s' })
+        out.push(...scan(varName, 0, 1, null, 'hl-v').tokens)
+      }
+      matched = true
+      break
+    }
+    if (!matched) {
       out.push(...scan(inner, 0, 1, null, 'hl-m').tokens)
     }
   }

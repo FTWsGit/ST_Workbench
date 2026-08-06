@@ -1,110 +1,236 @@
 import { ref, watch } from 'vue'
-import type { PresetBlock, VarOp, OrderNode } from '../types'
-import { findVarOps } from '../utils'
+import type {
+  Character, OrderNode, OrderItem, PresetBlock,
+  VarOp, VarDomain, VarAssemblyLayer,
+  WorldbookEntry,
+} from '../types'
+import { scanVariableMacros, type VarOpMatch, type VarMacroKind, type VarScope } from '../utils'
 import { isGroupNode } from './useGroupedList'
 
 /**
- * 变量导航 + 变量点击弹窗的统一 composable。
+ * 变量追踪：跨 preset/character/worldbook 三域扫描所有变量宏（13 种），
+ * 按 ST 装配管线顺序（worldbook → character → preset）摆放，local/global 分开。
  *
- * 两份逻辑原本散在 presetStore 里各自手写扫描，现在合并：
- *   - Var Nav：全量扫 prompts 建 allVarOps 索引，按 varName 过滤，键盘上下导航
- *   - Var Popup：点击编辑器里的 {{...var...}} 弹出浮动面板，扫所有 block 找同名 var op
+ * 扫描器载体无关——`scanVarSource` 拿一段字符串 + 载体元信息吐 VarOp[]。
+ * 各域 store 调用 `rebuildVarIndex()` 触发重扫，输入来自三域 store 的当前数据。
  *
- * 共享的扫描逻辑抽到 scanVarOps：遍历 order 树（不丢折叠组 children），
- * 对每个 block 跑 findVarOps（嵌套感知），收集成 VarOp 数组。
+ * Var Popup：点编辑器里的 `{{...var...}}` 弹浮动小面板，按 varName + scope 过滤到同名引用。
  *
- * @param getOrder - 获取当前 order 树的 getter
- * @param getPrompts - 获取 prompts 数组的 getter
- * @param options.onJump - 跳转到某个 var op 的回调（tabsStore.open + requestEditorJump）
+ * @param sources 三域扫描所需的数据 getter。任一域没打开（character/worldbook）时返回 null 即跳过。
+ * @param options.onJump 跳转到某 VarOp 的回调（tabsStore.open + requestEditorJump）。
  */
 export function useVarNav(
-  getOrder: () => OrderNode[],
-  getPrompts: () => PresetBlock[],
+  sources: {
+    preset: {
+      order: () => OrderNode[]
+      prompts: () => PresetBlock[]
+      presetName: () => string
+    } | null
+    character: {
+      character: () => Character | null
+      greetingIds: () => string[]
+      /** 虚拟字段 tab key 合成器（characterStore 已有此模式）。 */
+      greetingKey: (id: string) => string
+      /** 字段固定序（CHARACTER_FIELDS），intraOrder 按此序。 */
+      fieldOrder: readonly { field: keyof Character | 'greeting'; labelKey: string }[]
+    } | null
+    worldbook: {
+      order: () => OrderNode[]
+      entries: () => WorldbookEntry[]
+      worldbookName: () => string
+    } | null
+  },
   options: {
     onJump: (op: VarOp) => void
   }
 ) {
   const { onJump } = options
 
-  /* ====== Var Nav ====== */
+  /* ====== 扫描：载体无关的 VarOp 构造器 ====== */
+  function buildVarOp(
+    hit: VarOpMatch,
+    domain: VarDomain,
+    fileId: string,
+    blockId: string,
+    blockLabel: string,
+    fieldName: string | undefined,
+    layer: VarAssemblyLayer,
+    intraOrder: number,
+    certain: boolean,
+  ): VarOp {
+    return {
+      kind: hit.kind, scope: hit.scope, varName: hit.varName, varValue: hit.varValue,
+      source: { domain, fileId, blockId, fieldName, blockLabel, line: hit.line, col: hit.col, pos: hit.pos },
+      assemblyOrder: { layer, intraOrder },
+      certain,
+    }
+  }
+
+  /* 扫 preset：按 order 树遍历（展开折叠组的 children，不丢内容），
+   * 用 marker+order 合成 intraOrder——order 里下标小=装配更靠前。
+   * 某 block 在 order 里 enabled=false 或处折叠组收起态，certain=false。 */
+  function scanPreset(): VarOp[] {
+    const p = sources.preset
+    if (!p) return []
+    const out: VarOp[] = []
+    const prompts = p.prompts()
+    const presetName = p.presetName()
+    const byId = new Map(prompts.map(b => [b.identifier, b]))
+    let intra = 0
+    function walk(node: OrderNode) {
+      if (isGroupNode(node)) {
+        if (!node.collapsed) node.children.forEach(walk)
+        return
+      }
+      const block = byId.get(node.identifier)
+      if (block) {
+        const certain = node.enabled !== false
+        const hits = scanVariableMacros(block.content || '')
+        hits.forEach(h => out.push(buildVarOp(
+          h, 'preset', presetName, block.identifier, block.name || block.identifier,
+          undefined, 'preset', intra, certain,
+        )))
+      }
+      intra++
+    }
+    p.order().forEach(walk)
+    return out
+  }
+
+  /* 扫 character：七固定字段 + greetings，按 fieldOrder 固定序。
+   * character 域无 enabled 概念，所有字段恒注入 → certain=true。 */
+  function scanCharacter(): VarOp[] {
+    const c = sources.character
+    if (!c) return []
+    const char = c.character()
+    if (!char) return []
+    const out: VarOp[] = []
+    const fileId = char.name || char.avatar || ''
+    let intra = 0
+    for (const f of c.fieldOrder) {
+      const isGreeting = f.field === 'greeting'
+      const fieldLabel = f.labelKey
+      let pushHits: (hits: VarOpMatch[], blockId: string, blockLabel: string) => void
+      pushHits = (hits, blockId, blockLabel) => {
+        hits.forEach(h => out.push(buildVarOp(
+          h, 'character', fileId, blockId, blockLabel,
+          isGreeting ? 'greeting' : (f.field as string), 'character', intra, true,
+        )))
+      }
+      if (isGreeting) {
+        const ids = c.greetingIds()
+        char.greetings.forEach((val, idx) => {
+          const id = ids[idx]
+          if (!id) return
+          pushHits(scanVariableMacros(val), c.greetingKey(id), fieldLabel)
+        })
+      } else {
+        const v = (char as any)[f.field]
+        const text = typeof v === 'string' ? v
+          : (v && typeof v === 'object' && 'prompt' in v) ? (v as { prompt: string }).prompt
+          : ''
+        pushHits(scanVariableMacros(text), `field:${String(f.field)}`, fieldLabel)
+      }
+      intra++
+    }
+    return out
+  }
+
+  /* 扫 worldbook：遍历 entries，intraOrder 按 entry.order（insertion_order）降序——
+   * order 大的先注入、出现在 prompt 更靠前位置（ST 用 sortFn = (a,b)=>b.order-a.order）。
+   * 激活语义决定 certain：constant=true 必触发；关键词/概率/向量化皆非必定 → certain=false。 */
+  function scanWorldbook(): VarOp[] {
+    const w = sources.worldbook
+    if (!w) return []
+    const out: VarOp[] = []
+    const entries = [...w.entries()]
+    // 降序：order 大的 intraOrder 小（更靠前装配）
+    entries.sort((a, b) => b.order - a.order)
+    entries.forEach((entry, idx) => {
+      if (entry.disabled) return // 全局禁用，跳过
+      const certain = !!entry.constant
+      const hits = scanVariableMacros(entry.content || '')
+      hits.forEach(h => out.push(buildVarOp(
+        h, 'worldbook', w.worldbookName(), String(entry.uid),
+        entry.comment || String(entry.uid), undefined, 'worldbook', idx, certain,
+      )))
+    })
+    return out
+  }
+
+  /* ====== Var Nav：全量索引 ====== */
   const varFilterQ = ref('')
-  const allVarOps = ref<VarOp[]>([])
-  const filteredVarOps = ref<VarOp[]>([])
+  /** local 域全量引用，按装配顺序（layer, intraOrder）升序。 */
+  const localRefs = ref<VarOp[]>([])
+  /** global 域全量引用，按装配顺序升序。 */
+  const globalRefs = ref<VarOp[]>([])
+  const localFiltered = ref<VarOp[]>([])
+  const globalFiltered = ref<VarOp[]>([])
   const varIdx = ref(-1)
 
-  function rebuildVarIndex() {
-    allVarOps.value = []
-    varIdx.value = -1
-    // findVarOps 是嵌套感知的（能正确处理 setvar/addvar 值内嵌套的 var op）。
-    getPrompts().forEach((p) => {
-      const c = p.content || ''
-      findVarOps(c).forEach((v) => {
-        allVarOps.value.push({
-          blockId: p.identifier, blockName: p.name || p.identifier,
-          type: v.type, varName: v.varName, varValue: v.varValue,
-          line: v.line, col: v.col, pos: v.pos, ordIdx: 0,
-        })
-      })
-    })
-    allVarOps.value.sort((a, b) =>
-      a.varName.localeCompare(b.varName) ||
-      // 同变量内：写在前读在后 SET → ADD → GET
-      ({ setvar: 0, addvar: 1, get: 2 }[a.type] - { setvar: 0, addvar: 1, get: 2 }[b.type])
+  function sortByAssembly(ops: VarOp[]): VarOp[] {
+    const layerRank: Record<VarAssemblyLayer, number> = { worldbook: 0, character: 1, preset: 2 }
+    return [...ops].sort((a, b) =>
+      layerRank[a.assemblyOrder.layer] - layerRank[b.assemblyOrder.layer] ||
+      a.assemblyOrder.intraOrder - b.assemblyOrder.intraOrder ||
+      a.varName.localeCompare(b.varName),
     )
+  }
+
+  function rebuildVarIndex() {
+    const all = [...scanWorldbook(), ...scanCharacter(), ...scanPreset()]
+    const sorted = sortByAssembly(all)
+    localRefs.value = sorted.filter(o => o.scope === 'local')
+    globalRefs.value = sorted.filter(o => o.scope === 'global')
+    varIdx.value = -1
     filterVarNav()
   }
   function filterVarNav() {
     const ft = varFilterQ.value.trim().toLowerCase()
-    filteredVarOps.value = ft
-      ? allVarOps.value.filter(v => v.varName.toLowerCase().includes(ft))
-      : [...allVarOps.value]
+    const match = (o: VarOp) => o.varName.toLowerCase().includes(ft)
+    localFiltered.value = ft ? localRefs.value.filter(match) : [...localRefs.value]
+    globalFiltered.value = ft ? globalRefs.value.filter(match) : [...globalRefs.value]
     varIdx.value = -1
   }
-  function jumpToVarOp(i: number) {
-    if (i < 0 || i >= filteredVarOps.value.length) return
-    varIdx.value = i
-    onJump(filteredVarOps.value[i])
+  function jumpToVarOp(o: VarOp) {
+    onJump(o)
   }
-  function navVar(dir: number) {
-    if (!filteredVarOps.value.length) return
-    varIdx.value = (varIdx.value + dir + filteredVarOps.value.length) % filteredVarOps.value.length
-    jumpToVarOp(varIdx.value)
+  function navVar(dir: number, inList: 'local' | 'global') {
+    const list = inList === 'local' ? localFiltered.value : globalFiltered.value
+    if (!list.length) return
+    varIdx.value = (varIdx.value + dir + list.length) % list.length
+    jumpToVarOp(list[varIdx.value])
   }
   watch(varFilterQ, filterVarNav)
 
-  /* ====== Var Click Popup（点击 {{...var...}} 弹出的浮动小面板，区别于右侧固定 Var Nav 面板）====== */
+  /* ====== Var Click Popup ====== */
   const varPopupOpen = ref(false)
   const varPopupVarName = ref('')
+  const varPopupScope = ref<VarScope>('local')
   const varPopupOps = ref<VarOp[]>([])
   const varPopupIdx = ref(-1)
   const varPopupPos = ref({ top: 0, left: 0 })
 
-  function showVarPopup(varName: string, clickBlockId: string | null, clickPos: number, pos: { top: number; left: number }) {
-    const ops: VarOp[] = []
+  function showVarPopup(
+    varName: string, scope: VarScope,
+    clickDomain: VarDomain, clickBlockId: string | null, clickPos: number,
+    pos: { top: number; left: number },
+  ) {
+    // 当前 varNav 全量索引即覆盖三域，直接从中按 varName+scope 过滤即可，
+    // 不再像老版那样现场重扫——重扫在 flatNodes 折叠组下会漏，且性能更差。
+    // 用最近一次 rebuildVarIndex 的结果（localRefs/globalRefs）。
+    const pool = scope === 'local' ? localRefs.value : globalRefs.value
+    const ops = pool.filter(o => o.varName === varName)
+    // 当前点击命中：定位到 clickDomain+clickBlockId 且 pos 落在宏 span 内的那个。
     let currentIdx = -1
-    // findVarOps (utils.ts) 嵌套感知：能正确找到嵌套在另一个 setvar/addvar value 里的 op，
-    // 不会误闭合在嵌套宏自己的 `}}` 上。这里扫描 preset 内所有 var op 再 filter 到 varName，
-    // 因为 findVarOps 没有"只此变量"的概念。
-    // 点击始终源自编辑器中当前打开的 block（enableVarClick 只在那里接线），故直接收到 block identifier。
-    // 组：扫 order.value.flatMap 而非 flatNodes——flatNodes 故意丢掉折叠组的 children，
-    // 折叠组不能让其 blocks 的变量对此 popup 不可见。
-    const allItems = getOrder().flatMap(node => isGroupNode(node) ? node.children : [node])
-    allItems.forEach((o) => {
-      const p = getPrompts().find(pp => pp.identifier === o.identifier)
-      if (!p) return
-      const c = p.content || ''
-      findVarOps(c).filter(v => v.varName === varName).forEach((v) => {
-        ops.push({
-          blockId: p.identifier, blockName: p.name || p.identifier,
-          type: v.type, varName, varValue: v.varValue,
-          line: v.line, col: v.col, pos: v.pos, ordIdx: 0, // 不再是真实索引；其它地方未用，保留以兼容 VarOp 形状
-        })
-        // clickPos 落在此宏源 span 内任意处——setvar/addvar 的 span 可跨多行且含嵌套宏，
-        // 故用 findVarOps 的嵌套感知 `end`，而非假设单行非嵌套匹配。
-        if (p.identifier === clickBlockId && v.pos <= clickPos && clickPos <= v.end) currentIdx = ops.length - 1
-      })
+    ops.forEach((o, i) => {
+      if (o.source.domain !== clickDomain || o.source.blockId !== clickBlockId) return
+      // pos 是宏起始 `{{` 的绝对 index；VarOpMatch 的 end 已合并进 source.pos 不再单独保留，
+      // 但跳转只需定位到宏本身，弹窗高亮"当前点击的是这处"用 pos 即可（不要求跨多行的 end 范围）。
+      if (o.source.pos <= clickPos) currentIdx = i
     })
     varPopupVarName.value = varName
+    varPopupScope.value = scope
     varPopupOps.value = ops
     varPopupIdx.value = currentIdx
     varPopupPos.value = pos
@@ -128,10 +254,10 @@ export function useVarNav(
 
   return {
     // Var Nav
-    varFilterQ, allVarOps, filteredVarOps, varIdx,
+    varFilterQ, localRefs, globalRefs, localFiltered, globalFiltered, varIdx,
     rebuildVarIndex, filterVarNav, jumpToVarOp, navVar,
     // Var Popup
-    varPopupOpen, varPopupVarName, varPopupOps, varPopupIdx, varPopupPos,
+    varPopupOpen, varPopupVarName, varPopupScope, varPopupOps, varPopupIdx, varPopupPos,
     showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
   }
 }

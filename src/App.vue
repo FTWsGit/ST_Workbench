@@ -35,9 +35,9 @@
               <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
             </template>
             <div class="wb-spacer"></div>
+            <button class="wb-btn" :class="{ active: tabsStore.varNavOpen }" @click="toggleVarNav">{{ uiStore.t('preset.header.varNav') }}</button>
+            <button class="wb-btn" :class="{ active: tabsStore.previewOpen }" @click="togglePreview">{{ uiStore.t('preset.header.preview') }}</button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
-              <button class="wb-btn" :class="{ active: tabsStore.varNavOpen }" @click="toggleVarNav">{{ uiStore.t('preset.header.varNav') }}</button>
-              <button class="wb-btn" :class="{ active: tabsStore.previewOpen }" @click="togglePreview">{{ uiStore.t('preset.header.preview') }}</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.new')" :aria-label="uiStore.t('preset.header.new')" @click="onNewWorkspace(workspaceRegistry.preset)">+</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.delete')" :aria-label="uiStore.t('preset.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.preset)" :disabled="!presetStore.presetName">🗑</button>
               <WorkspaceSelect />
@@ -147,9 +147,9 @@
             <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
           </template>
           <button class="wb-mobile-tools-item" @click="drawer.runTool(() => { uiStore.settingsOpen = true })">{{ uiStore.t('shared.header.settings') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.varNavOpen }" @click="drawer.runTool(toggleVarNav)">{{ uiStore.t('preset.header.varNav') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.previewOpen }" @click="drawer.runTool(togglePreview)">{{ uiStore.t('preset.header.preview') }}</button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.varNavOpen }" @click="drawer.runTool(toggleVarNav)">{{ uiStore.t('preset.header.varNav') }}</button>
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.previewOpen }" @click="drawer.runTool(togglePreview)">{{ uiStore.t('preset.header.preview') }}</button>
             <button class="wb-mobile-tools-item" @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.preset))">{{ uiStore.t('preset.header.new') }}</button>
             <button class="wb-mobile-tools-item" :disabled="!presetStore.presetName" @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.preset))">{{ uiStore.t('preset.header.delete') }}</button>
           </template>
@@ -227,6 +227,7 @@ const workspaceRegistry = createWorkspaceRegistry()
 /** 顶栏第一行工作区切换（preset/worldbook/character）。第二行"条目/正则"切换独立于 activeWorkspace，不经此函数。 */
 function switchWorkspace(workspace: Workspace) {
   tabsStore.setActiveWorkspace(workspace)
+  if (workspace === 'character' && !characterStore.character) characterStore.loadSelectedOrFirst()
 }
 
 /** 切换 Agent 面板开关，首次打开时懒加载持久化数据。 */
@@ -254,7 +255,7 @@ const drawer = useMobileWorkspaceDrawer({
   /** 切换 workspace / "条目↔正则"集合后，自动露出侧边栏。 */
   revealSidebarOn: [() => tabsStore.activeWorkspace, () => tabsStore.sidebarCollection],
   /** 选中新标签或触发 editorJump（搜索/变量跳转）时，自动关闭当前浮层。 */
-  closeOn: [() => tabsStore.activeId, () => presetStore.editorJump],
+  closeOn: [() => tabsStore.activeId, () => tabsStore.editorJump],
 })
 
 /** FAB 长按拖动（useFabDrag.ts），持久化到 uiStore.settings.fabPos；点击则打开面板。 */
@@ -350,10 +351,10 @@ function onClosePanel() {
 
 /** Search/VarNav/Preview 目前仅 preset 工作区使用，workspace 硬编码为 'preset'。 */
 function toggleVarNav() {
-  tabsStore.setVarNavOpen('preset', !tabsStore.varNavOpen)
+  tabsStore.setVarNavOpen(tabsStore.activeWorkspace, !tabsStore.varNavOpen)
 }
 function togglePreview() {
-  tabsStore.setPreviewOpen('preset', !tabsStore.previewOpen)
+  tabsStore.setPreviewOpen(tabsStore.activeWorkspace, !tabsStore.previewOpen)
 }
 /** 工具箱是跨 workspace 通用的（preset/worldbook/character 都能开），按当前 activeWorkspace 分桶开关。 */
 function toggleToolBox() {

@@ -1,3 +1,5 @@
+import type { VarMacroKind, VarScope } from './utils'
+
 /** Tab 路由的"用哪个组件编辑"维度。 */
 export type Domain = 'preset' | 'regex' | 'worldbook' | 'character' | 'tavern'
 
@@ -89,16 +91,47 @@ export interface PreviewBlockGroup {
   messages: PreviewMessage[]
 }
 
+/** 变量宏来源载体类型，决定跳转路由到哪个编辑器。 */
+export type VarDomain = 'preset' | 'character' | 'worldbook'
+
+/** 装配管线三层硬编码顺序：WI 先于角色卡字段执行 substituteParams，再装配预设。 */
+export type VarAssemblyLayer = 'worldbook' | 'character' | 'preset'
+
 export interface VarOp {
-  blockId: string
-  blockName: string
-  type: 'setvar' | 'addvar' | 'get'
+  kind: VarMacroKind
+  scope: VarScope
   varName: string
+  /** 载体定位——跳转用。 */
+  source: {
+    domain: VarDomain
+    /** preset 名 / 世界书名 / 角色卡名（仅展示，跳转不强依赖）。 */
+    fileId: string
+    /** preset prompt identifier / worldbook entry uid（String）。character 域用虚拟字段 tab key。 */
+    blockId: string
+    /** character 域专用：'description'/'scenario'/...；其他域为空。 */
+    fieldName?: string
+    /** 展示用：preset block name / worldbook entry comment / character 字段名。 */
+    blockLabel: string
+    line: number
+    col: number
+    pos: number
+  }
+  /** 装配顺序——按 (layer, intraOrder) 升序摆放变量引用。 */
+  assemblyOrder: {
+    layer: VarAssemblyLayer
+    /** 同 layer 内的顺序：preset=marker+order 合成；character=字段固定序；worldbook=insertion_order 降序。 */
+    intraOrder: number
+  }
+  /**
+   * 此引用所在 block 是否必定进入装配。
+   * - preset block：order 树里 enabled && 非折叠组收起。
+   * - character 字段：恒 true（角色卡字段始终注入）。
+   * - worldbook entry：constant=true 必定触发；关键词/概率/向量化激活皆非必定，为 false。
+   * UI 用此字段决定灰度——非必定的引用视觉变暗，但不另加标签。
+   */
+  certain: boolean
+  /** 仅 set/add 携带；其他宏恒为 ''。前端变量追踪暂不显示值，保留以兼容现有 VarOp 形状与未来恢复显示。 */
   varValue: string
-  line: number
-  col: number
-  pos: number
-  ordIdx: number
 }
 
 export interface SyntaxColors {

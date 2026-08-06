@@ -11,6 +11,9 @@ import { useRegexScripts } from '../composables/useRegexScripts'
 import { useScriptTree } from '../composables/useScriptTree'
 import { usePreviewEngine } from '../composables/usePreviewEngine'
 import { useVarNav } from '../composables/useVarNav'
+import { useCharacterStore } from './characterStore'
+import { useWorldbookStore } from './worldbookStore'
+import { CHARACTER_FIELDS } from '../types'
 import { useDirtyFlag } from '../composables/useDirtyFlag'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
@@ -457,15 +460,13 @@ export const usePresetStore = defineStore('main', () => {
   const hiddenOpen = ref(false)
   const copyPanelOpen = ref(false) // CopyPanel.vue 的 open flag，该组件自包含
 
-  /* ====== Jump requests (Editor listens & scrolls/selects; Sidebar listens & scrolls into view) ====== */
-  // token 递增：line/col 重复时也强制 watcher 触发
-  // `keepFocus: true`：只把匹配滚入视图，不移动 focus/selection 进编辑器——用于在搜索框内打字时
-  // 预览当前匹配，而不偷走你正在打字的按键。
-  const editorJump = ref<{ line: number; col: number; len: number; token: number; keepFocus: boolean } | null>(null)
-  let jumpCounter = 0
+  /* ====== Jump requests（跨域共享：抽到 tabsStore，preset/character/worldbook ContentEditor 都接 :jump=tabsStore.editorJump）======
+   * token 递增：line/col 重复时也强制 watcher 触发。
+   * `keepFocus: true`：只把匹配滚入视图，不移动 focus/selection 进编辑器——用于在搜索框内打字时
+   * 预览当前匹配，而不偷走你正在打字的按键。 */
+  const editorJump = computed(() => tabsStore.editorJump)
   function requestEditorJump(line: number, col: number, len: number, keepFocus = false) {
-    jumpCounter++
-    editorJump.value = { line, col, len, token: jumpCounter, keepFocus }
+    tabsStore.requestEditorJump(line, col, len, keepFocus)
   }
 
   /* ====== Computed ====== */
@@ -778,19 +779,54 @@ export const usePresetStore = defineStore('main', () => {
     if (fieldKey === 'content' && line >= 0) requestEditorJump(line, col, len, false)
   }
 
-  /* ====== Var Nav + Var Popup ====== 抽到 composables/useVarNav.ts。 */
+  /* ====== Var Nav + Var Popup ====== 抽到 composables/useVarNav.ts。
+   * varNav 跨三域扫描：preset 自扫 + 引用 character/worldbook 两 store 的当前数据一并扫。
+   * 跳转按 source.domain 分派——preset 走本 store jumpToFieldHit；character/worldbook 各自 jumpToFieldHit。 */
+  const characterStore = useCharacterStore()
+  const worldbookStore = useWorldbookStore()
+  function jumpAcrossDomain(v: VarOp) {
+    if (v.source.domain === 'preset') {
+      const block = prompts.value.find(p => p.identifier === v.source.blockId)
+      tabsStore.setActiveWorkspace('preset')
+      tabsStore.open({ domain: 'preset', key: v.source.blockId, label: block?.name || v.source.blockLabel, workspace: 'preset' })
+      requestEditorJump(v.source.line, v.source.col, v.varName.length)
+      return
+    }
+    if (v.source.domain === 'character') {
+      tabsStore.setActiveWorkspace('character')
+      characterStore.jumpToFieldHit(v.source.blockId, v.source.fieldName || '', v.source.line, v.source.col, v.varName.length)
+      requestEditorJump(v.source.line, v.source.col, v.varName.length)
+      return
+    }
+    tabsStore.setActiveWorkspace('worldbook')
+    worldbookStore.jumpToFieldHit(v.source.blockId, 'content', v.source.line, v.source.col, v.varName.length)
+    requestEditorJump(v.source.line, v.source.col, v.varName.length)
+  }
   const {
-    varFilterQ, allVarOps, filteredVarOps, varIdx,
+    varFilterQ, localRefs, globalRefs, localFiltered, globalFiltered, varIdx,
     rebuildVarIndex, filterVarNav, jumpToVarOp, navVar,
-    varPopupOpen, varPopupVarName, varPopupOps, varPopupIdx, varPopupPos,
+    varPopupOpen, varPopupVarName, varPopupScope, varPopupOps, varPopupIdx, varPopupPos,
     showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
-  } = useVarNav(() => order.value, () => prompts.value, {
-    onJump: (v) => {
-      const block = prompts.value.find(p => p.identifier === v.blockId)
-      tabsStore.open({ domain: 'preset', key: v.blockId, label: block?.name || v.blockName, workspace: 'preset' })
-      requestEditorJump(v.line, v.col, v.varName.length)
+  } = useVarNav(
+    {
+      preset: { order: () => order.value, prompts: () => prompts.value, presetName: () => presetName.value },
+      character: {
+        character: () => characterStore.character,
+        greetingIds: () => characterStore.greetingIds,
+        greetingKey: (id) => 'field:greeting:' + id,
+        fieldOrder: CHARACTER_FIELDS.map(f => ({ field: f.key, labelKey: f.labelKey })),
+      },
+      worldbook: { order: () => worldbookStore.order, entries: () => worldbookStore.entries, worldbookName: () => worldbookStore.worldbookName },
     },
-  })
+    { onJump: jumpAcrossDomain },
+  )
+  /* variables 自动重扫：order 深 watch 覅获 block 增删/启用切换/重排序（粗粒度，content 编辑不触发避打字卡顿）。
+   *   prompts 是浅 watch 兜底——content 改字不自动重扫，用户点🔄或切预设时跑。
+   *   character/worldbook 域的 watch 挂在各自 store（走 useVarNav 跨域扫描器读的是三域当前数据，那边触发也会让本面板更新）。 */
+  watch(order, () => rebuildVarIndex(), { deep: true })
+  watch(prompts, () => rebuildVarIndex())
+  watch(() => characterStore.character, () => rebuildVarIndex(), { deep: true })
+  watch(() => worldbookStore.entries, () => rebuildVarIndex(), { deep: true })
 
   /* ====== Preview ====== 抽到 composables/usePreviewEngine.ts。 */
   const {
@@ -809,8 +845,8 @@ export const usePresetStore = defineStore('main', () => {
   return {
     rawData, prompts, order, presetName, presetList,
     flatNodes, selectedGi, anchorGi, identifierToGi, revealAndFindGi,
-    varFilterQ, allVarOps, filteredVarOps, varIdx,
-    varPopupOpen, varPopupVarName, varPopupOps, varPopupIdx, varPopupPos,
+    varFilterQ, localRefs, globalRefs, localFiltered, globalFiltered, varIdx,
+    varPopupOpen, varPopupVarName, varPopupScope, varPopupOps, varPopupIdx, varPopupPos,
     showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
     previewMode, previewLoading, previewError,
     previewCollapsed, previewBlockGroups, previewRawText,

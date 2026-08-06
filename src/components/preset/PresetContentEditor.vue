@@ -43,8 +43,8 @@ const content = computed<string>({
 /** 切换激活 block 时关闭可能残留的 var-popup（避免指向旧 block 的变量上下文错误）。 */
 watch(() => tabsStore.activeTab?.key, () => { store.hideVarPopup() }, { immediate: true })
 
-function onVarClick(payload: { varName: string; cursorPos: number; pos: { top: number; left: number } }) {
-  store.showVarPopup(payload.varName, store.currentBlock?.identifier ?? null, payload.cursorPos, payload.pos)
+function onVarClick(payload: { varName: string; scope: 'local' | 'global'; cursorPos: number; pos: { top: number; left: number } }) {
+  store.showVarPopup(payload.varName, payload.scope, 'preset', store.currentBlock?.identifier ?? null, payload.cursorPos, payload.pos)
 }
 
 /** 字号/字体变化不改 textarea 尺寸，ResizeObserver 捕捉不到，主动 refresh。 */

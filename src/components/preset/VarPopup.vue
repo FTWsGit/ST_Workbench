@@ -2,6 +2,7 @@
   <div v-if="store.varPopupOpen" class="wb-preset-var-popup" :style="{ top: store.varPopupPos.top + 'px', left: store.varPopupPos.left + 'px' }">
     <div class="wb-preset-vp-header">
       <span class="wb-preset-vp-varname">{{ store.varPopupVarName }}</span>
+      <span class="wb-preset-vp-scope">{{ uiStore.t(store.varPopupScope === 'local' ? 'preset.varPopup.local' : 'preset.varPopup.global') }}</span>
       <span class="wb-preset-vp-count">{{ uiStore.t(store.varPopupOps.length !== 1 ? 'preset.varPopup.hit' : 'preset.varPopup.hitSingle', { count: store.varPopupOps.length }) }}</span>
       <span class="wb-preset-vp-spacer"></span>
       <button class="wb-preset-vp-btn" aria-label="上一个匹配" @click="store.navPopupVar(-1)">◀</button>
@@ -10,11 +11,10 @@
     </div>
     <div class="wb-preset-vp-list">
       <div v-for="(v, i) in store.varPopupOps" :key="i"
-           class="wb-preset-vp-item" :class="{ current: i === store.varPopupIdx }"
+           class="wb-preset-vp-item" :class="{ current: i === store.varPopupIdx, dim: !v.certain }"
            @click="store.jumpToPopupVar(i)">
-        <span class="wb-preset-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
-        <span v-if="v.varValue" class="wb-preset-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
-        <span class="wb-preset-vr-block">[{{ v.blockName }}]</span>
+        <span class="wb-preset-vr-type" :class="varOpBadge(v.kind).cls">{{ varOpBadge(v.kind).label }}</span>
+        <span class="wb-preset-vp-block">[{{ v.source.blockLabel }}]</span>
       </div>
     </div>
   </div>

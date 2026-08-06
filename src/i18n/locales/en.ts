@@ -190,6 +190,8 @@ export default {
   'preset.varPanel.filter': 'Filter…',
   'preset.varPanel.prev': '◀ Prev',
   'preset.varPanel.next': 'Next ▶',
+  'preset.varPanel.local': 'LOCAL',
+  'preset.varPanel.global': 'GLOBAL',
 
   // ---- 预览面板 ----
   'preset.preview.title': '👁 Prompt Preview',
@@ -208,6 +210,8 @@ export default {
   // ---- 变量弹窗 ----
   'preset.varPopup.hit': '{count} matches',
   'preset.varPopup.hitSingle': '{count} match',
+  'preset.varPopup.local': 'LOCAL',
+  'preset.varPopup.global': 'GLOBAL',
 
   // ---- 跨预设复制面板 ----
   'preset.copyPanel.title': '⇆ Copy Prompt Blocks Between Presets',

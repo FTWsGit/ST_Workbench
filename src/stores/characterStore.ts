@@ -540,6 +540,17 @@ export const useCharacterStore = defineStore('character', () => {
     loadCharacterByAvatar(character.value.avatar, { silent: true })
   }
 
+  /** 切到 character workspace 时自动加载一个角色，让 varNav/Preview 拿得到数据：
+   *  优先 ST 当前选中（this_chid 对应 avatar），兜底角色列表第一项。都没有就放弃——store 保持 null，
+   *  WorkspaceSelect 顶上只显示"未选中"，用户手动选或新建。已加载且 avatar 一致时跳过，避免无谓网络请求。 */
+  async function loadSelectedOrFirst() {
+    if (character.value?.avatar) return
+    if (characterList.value.length === 0) await refreshCharacterList()
+    let avatar = await CH.getSelectedCharacterAvatar().catch(() => null)
+    if (!avatar && characterList.value.length > 0) avatar = characterList.value[0].avatar
+    if (avatar) await loadCharacterByAvatar(avatar, { silent: true })
+  }
+
   async function createNewCharacter(name: string) {
     if (characterList.value.some(c => c.name === name)) { showToast(t('character.toast.duplicateName')); return }
     try {
@@ -608,7 +619,7 @@ export const useCharacterStore = defineStore('character', () => {
     scriptTreeSelectBlock, scriptTreeToggleBlock, scriptTreeToggleGroupCollapse,
     reorderScriptTreeBlock, scriptTreeBindSelected, scriptTreeUnbindGroup, scriptTreeRemoveNode,
     rebuildScriptTreeOrder, syncScriptsFromOrder,
-    refreshCharacterList, loadCharacterByAvatar, switchCharacter, reloadCharacter,
+    refreshCharacterList, loadCharacterByAvatar, switchCharacter, reloadCharacter, loadSelectedOrFirst,
     createNewCharacter, removeCurrentCharacter, doSaveCharacter,
   }
 })

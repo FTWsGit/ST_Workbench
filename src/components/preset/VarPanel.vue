@@ -5,7 +5,7 @@
       <span>{{ uiStore.t('preset.varPanel.title') }}</span>
       <div class="wb-row-tight">
         <button class="wb-btn icon-btn" :class="{ active: uiStore.settings.varPanelFloat }" :title="uiStore.t('shared.floatingPanel.toggleFloat')" :aria-label="uiStore.t('shared.floatingPanel.toggleFloat')" @click="toggleFloat">📌</button>
-        <button class="wb-btn close-btn compact" :aria-label="uiStore.t('common.close')" @click="tabsStore.setVarNavOpen('preset', false)">✕</button>
+        <button class="wb-btn close-btn compact" :aria-label="uiStore.t('common.close')" @click="tabsStore.setVarNavOpen(tabsStore.activeWorkspace, false)">✕</button>
       </div>
     </div>
     <div class="wb-rp-tools">
@@ -13,18 +13,29 @@
       <button class="wb-btn sm" @click="store.rebuildVarIndex()">🔄</button>
     </div>
     <div class="wb-rp-nav">
-      <button class="wb-btn" @click="store.navVar(-1)">{{ uiStore.t('preset.varPanel.prev') }}</button>
-      <button class="wb-btn" @click="store.navVar(1)">{{ uiStore.t('preset.varPanel.next') }}</button>
-      <span class="wb-preset-search-count">{{ store.filteredVarOps.length }}/{{ store.allVarOps.length }}</span>
+      <button class="wb-btn" @click="store.navVar(-1, 'local')">{{ uiStore.t('preset.varPanel.prev') }}</button>
+      <button class="wb-btn" @click="store.navVar(1, 'local')">{{ uiStore.t('preset.varPanel.next') }}</button>
+      <span class="wb-preset-search-count">{{ store.localFiltered.length }}/{{ store.localRefs.length }} · G{{ store.globalFiltered.length }}/{{ store.globalRefs.length }}</span>
     </div>
-    <div class="wb-rp-list">
-      <template v-for="(v, i) in store.filteredVarOps" :key="i">
-        <div v-if="i === 0 || v.varName !== store.filteredVarOps[i - 1].varName" class="wb-preset-vr-group">{{ v.varName }}</div>
-        <div class="wb-preset-vr-item" :class="{ active: i === store.varIdx }" @click="store.jumpToVarOp(i)">
-          <span class="wb-preset-vr-type" :class="varOpBadge(v.type).cls">{{ varOpBadge(v.type).label }}</span>
+    <div class="wb-rp-list wb-preset-vr-list">
+      <!-- LOCAL 分区 -->
+      <div class="wb-preset-vr-section">{{ uiStore.t('preset.varPanel.local') }}</div>
+      <template v-for="(v, i) in store.localFiltered" :key="'l' + i">
+        <div v-if="i === 0 || v.varName !== store.localFiltered[i - 1].varName" class="wb-preset-vr-group">{{ v.varName }}</div>
+        <div class="wb-preset-vr-item" :class="{ active: i === store.varIdx, dim: !v.certain }" @click="store.jumpToVarOp(v)">
+          <span class="wb-preset-vr-type" :class="varOpBadge(v.kind).cls">{{ varOpBadge(v.kind).label }}</span>
           <span class="wb-var-name-em">{{ v.varName }}</span>
-          <span v-if="v.varValue" class="wb-preset-vr-val">{{ v.varValue.length > 35 ? v.varValue.substring(0, 35) + '…' : v.varValue }}</span>
-          <span class="wb-preset-vr-block">[{{ v.blockName }}]</span>
+          <span class="wb-preset-vr-block">[{{ v.source.blockLabel }}]</span>
+        </div>
+      </template>
+      <!-- GLOBAL 分区 -->
+      <div class="wb-preset-vr-section">{{ uiStore.t('preset.varPanel.global') }}</div>
+      <template v-for="(v, i) in store.globalFiltered" :key="'g' + i">
+        <div v-if="i === 0 || v.varName !== store.globalFiltered[i - 1].varName" class="wb-preset-vr-group">{{ v.varName }}</div>
+        <div class="wb-preset-vr-item" :class="{ active: 'g' + i === String(store.varIdx), dim: !v.certain }" @click="store.jumpToVarOp(v)">
+          <span class="wb-preset-vr-type" :class="varOpBadge(v.kind).cls">{{ varOpBadge(v.kind).label }}</span>
+          <span class="wb-var-name-em">{{ v.varName }}</span>
+          <span class="wb-preset-vr-block">[{{ v.source.blockLabel }}]</span>
         </div>
       </template>
     </div>

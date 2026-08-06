@@ -154,6 +154,18 @@ export async function listCharacters(): Promise<CharacterListEntry[]> {
   return (mod.characters as any[]).map(c => ({ avatar: c.avatar, name: c.data?.name || c.name || '' }))
 }
 
+/** 拿 ST 当前选中角色的 avatar 文件名（`this_chid` 索引 `characters` 那项的 `.avatar`）。
+ * 没选中（this_chid 是 undefined/越界）或模块结构异常时返回 null，让调用方兜底列表第一项。 */
+export async function getSelectedCharacterAvatar(): Promise<string | null> {
+  const mod = await getScriptModule()
+  const chid = mod.this_chid
+  if (typeof chid !== 'number' || chid < 0) return null
+  const arr = mod.characters as any[]
+  if (!Array.isArray(arr) || chid >= arr.length) return null
+  const av = arr[chid]?.avatar
+  return typeof av === 'string' && av ? av : null
+}
+
 /** 按头像文件名读取一张角色卡的完整数据。调用 `getOneCharacter(avatar)` 发起网络请求从服务端
  *  重新拉取，同时更新 ST 前端状态。返回权威最新数据。 */
 export async function getCharacterByAvatar(avatar: string): Promise<{ character: Character; raw: any } | null> {

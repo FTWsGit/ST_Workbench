@@ -34,7 +34,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { highlightLines, type HighlightLanguage } from '../../composables/useHighlight'
 import { getHostWindow, getHostDocument } from '../../composables/hostEnv'
-import { findMacroEnd, esc } from '../../utils'
+import { findMacroEnd, esc, scanVariableMacros, type VarOpMatch } from '../../utils'
 
 interface JumpRequest { line: number; col: number; len: number; token: number; keepFocus: boolean }
 
@@ -75,7 +75,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [string]
-  'var-click': [payload: { varName: string; cursorPos: number; pos: { top: number; left: number } }]
+  'var-click': [payload: { varName: string; scope: 'local' | 'global'; cursorPos: number; pos: { top: number; left: number } }]
   'var-click-miss': []
 }>()
 
@@ -320,39 +320,20 @@ function moveCursorTo(line: number, col: number, len: number, keepFocus = false)
  * 如 {{addvar::a::...{{getvar::b}}...}} 点击到 b 时返回 b。
  * 用 findMacroEnd（基于 {{/}} 深度计数）找宏真正结尾，正确处理嵌套。
  */
-function getVarNameAtPos(text: string, pos: number): { varName: string; type: string; pos: number } | null {
-  function scan(from: number, to: number): { varName: string; type: string; pos: number } | null {
-    let i = from
-    while (i < to) {
-      if (i + 1 < text.length && text[i] === '{' && text[i + 1] === '{') {
-        const end = findMacroEnd(text, i)
-        if (end === -1 || end > to) { i++; continue }
-        if (pos >= i && pos <= end) {
-          const innerStart = i + 2, innerEnd = end - 2
-          const inner = text.slice(innerStart, innerEnd)
-          const sm = inner.match(/^(setvar|addvar)::([\s\S]+?)::/)
-          if (sm) {
-            const vs = innerStart + sm[1].length + 2
-            const varName = sm[2]
-            if (pos >= vs && pos < vs + varName.length) return { varName, type: sm[1], pos: i }
-            return scan(vs + varName.length + 2, innerEnd)
-          }
-          const gm = inner.match(/^getvar::([\s\S]+)$/)
-          if (gm) {
-            const vs = innerStart + 'getvar::'.length
-            if (pos >= vs && pos < vs + gm[1].length) return { varName: gm[1], type: 'get', pos: i }
-            return null
-          }
-          return scan(innerStart, innerEnd)
-        }
-        i = end
-        continue
-      }
-      i++
-    }
-    return null
+function getVarNameAtPos(text: string, pos: number): { varName: string; scope: 'local' | 'global'; pos: number } | null {
+  // 复用 utils.scanVariableMacros：13 种变量宏全覆盖（含 inc/dec/has/global），嵌套感知。
+  // 命名宏起始 `{{` 的 pos 已含在 VarOpMatch；命中条件 = 点击落在 [pos, end) 内。
+  const hits = scanVariableMacros(text)
+  // 命中判定：点击位置落入某宏的 [pos, end) span。嵌套时取最内层（hits 已按 scan 递归顺序推，
+  // 同位置多命中时取最后一个，即最深的）。
+  let match: VarOpMatch | null = null
+  for (const h of hits) {
+    if (pos >= h.pos && pos < h.end) match = h
   }
-  return scan(0, text.length)
+  if (!match) return null
+  // 点击需落在变量名片段内（非值片段）——值内嵌套的同名宏已被 scan 递归吐为独立 hit，
+  // 它们的 varName 各自正确，此处无需额外区分。
+  return { varName: match.varName, scope: match.scope, pos: match.pos }
 }
 
 /**
@@ -377,11 +358,11 @@ function getCaretCoords(pos: number): { top: number; left: number } | null {
 function checkVarClick() {
   if (!taRef.value) return
   const info = getVarNameAtPos(taRef.value.value, taRef.value.selectionStart)
-  if (info) openVarPopupAt(info.varName.trim(), taRef.value.selectionStart)
+  if (info) openVarPopupAt(info.varName.trim(), info.scope, taRef.value.selectionStart)
   else emit('var-click-miss')
 }
 
-function openVarPopupAt(varName: string, cursorPos: number) {
+function openVarPopupAt(varName: string, scope: 'local' | 'global', cursorPos: number) {
   const ta = taRef.value
   if (!ta) return
   const hostWin = getHostWindow()
@@ -395,7 +376,7 @@ function openVarPopupAt(varName: string, cursorPos: number) {
   left = Math.max(8, Math.min(left, hostWin.innerWidth - 380))
   if (top + 260 > hostWin.innerHeight) top = Math.max(8, coords.top - ta.scrollTop - 250)
 
-  emit('var-click', { varName, cursorPos, pos: { top, left } })
+  emit('var-click', { varName, scope, cursorPos, pos: { top, left } })
 }
 
 /** 括号/引号配对，1:1 对齐 MiMo 行为——纯文本编辑行为，与领域模型无关。 */

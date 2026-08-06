@@ -193,6 +193,8 @@ export default {
   'preset.varPanel.filter': '筛选…',
   'preset.varPanel.prev': '◀ 上',
   'preset.varPanel.next': '下 ▶',
+  'preset.varPanel.local': 'LOCAL',
+  'preset.varPanel.global': 'GLOBAL',
 
   // ---- 预览面板 ----
   'preset.preview.title': '👁 提示词预览',
@@ -211,6 +213,8 @@ export default {
   // ---- 变量弹窗 ----
   'preset.varPopup.hit': '{count} 处匹配',
   'preset.varPopup.hitSingle': '{count} 处匹配',
+  'preset.varPopup.local': 'LOCAL',
+  'preset.varPopup.global': 'GLOBAL',
 
   // ---- 跨预设复制面板 ----
   'preset.copyPanel.title': '⇆ 跨预设复制提示词块',
