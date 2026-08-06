@@ -7,6 +7,9 @@ import {
   MAX_TOOL_ROUNDS,
   AGENT_NS,
 } from './constants'
+import { listAgentTools, listAgentToolsForWorkspace, getAgentTool, type AgentToolContext, type AgentToolDef, type AgentWorkspace } from './toolRegistry'
+// side-effect import：触发只读工具注册到 AGENT_TOOL_REGISTRY。
+import './register'
 import type {
   AgentPersisted,
   AgentConfig,
@@ -18,6 +21,10 @@ import type {
 } from './types'
 import { useUiStore } from '../stores/uiStore'
 import { useTabsStore } from '../stores/tabsStore'
+import { usePresetStore } from '../stores/presetStore'
+import { useWorldbookStore } from '../stores/worldbookStore'
+import { useCharacterStore } from '../stores/characterStore'
+import { useConfirmStore } from '../stores/confirmStore'
 
 /** 当前回合状态机的运行时态（纯内存，不持久化）。 */
 const initialRuntime: AgentRuntimeState = {
@@ -37,6 +44,12 @@ function genSessionId(): string {
 function genToolCallId(): string {
   return 'call_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }
+
+/** 延迟拿 store 实例的工具函数（避免在模块顶层直接 useXxxStore 触发 Pinia 未初始化报错）。 */
+function usePresetStoreSafe() { return usePresetStore() }
+function useWorldbookStoreSafe() { return useWorldbookStore() }
+function useCharacterStoreSafe() { return useCharacterStore() }
+function useConfirmStoreSafe() { return useConfirmStore() }
 
 /**
  * Agent store：跨 preset/worldbook/character 三个 store 的运维层。
@@ -285,52 +298,115 @@ export const useAgentStore = defineStore('agent', () => {
       await updateSessionTitle(text.slice(0, 40) || uiStore.t('agent.session.untitled'))
     }
 
-    // P0：单轮无工具对话
-    await runSingleTurn()
+    // P1：工具调用循环（3.2/3.3）
+    await runAgentTurn()
   }
 
-  /** P0 单轮对话：调 callModelRaw 一次，不接工具。 */
-  async function runSingleTurn(): Promise<void> {
-    runtime.value = {
-      ...initialRuntime,
-      turnState: 'thinking',
+  /** P1 核心循环：工具调用循环（3.2/3.3）。 */
+  async function runAgentTurn(): Promise<void> {
+    runtime.value = { ...initialRuntime, turnState: 'thinking' }
+
+    try {
+      // 当前会话 workspace，用于工具越界校验
+      const ws = tabsStore.activeWorkspace
+      const workspace: AgentWorkspace = ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character'
+
+      // 按当前 workspace 过滤可用工具
+      const tools = listAgentToolsForWorkspace(workspace)
+
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        runtime.value = {
+          ...runtime.value,
+          turnState: 'thinking',
+          currentTool: null,
+          toolRounds: round,
+        }
+
+        const messages = renderMessages(activeSessionMessages.value)
+        const result = await callModelRaw(messages, tools, {
+          temperature: config.value.temperature,
+          maxTokens: config.value.maxTokens,
+        })
+
+        // 没有工具调用 → 追加 assistant 消息，回合完成
+        if (!result.toolCalls || result.toolCalls.length === 0) {
+          pushAssistantMessage(result.content)
+          await finalizeTurn('complete')
+          return
+        }
+
+        // 有工具调用 → 追加 assistant 消息（含 tool_calls），进入 tool_loop
+        pushAssistantMessage(result.content, result.toolCalls)
+        runtime.value = { ...runtime.value, turnState: 'tool_loop' }
+
+        // 串行执行工具（3.2：只读工具可并行，写类串行；P1 全是只读，简化为串行）
+        for (const call of result.toolCalls) {
+          runtime.value = { ...runtime.value, currentTool: call.name }
+          const outcome = await executeTool(call, workspace)
+          pushToolResultMessage(call.id, outcome.text, outcome.isError)
+        }
+
+        // 持久化（每轮工具调用后存一次）
+        await persist()
+      }
+
+      // 熔断：MAX_TOOL_ROUNDS 轮还没结束
+      pushToolResultMessage('max_rounds', `[max rounds exceeded: ${MAX_TOOL_ROUNDS}]`, true)
+      await finalizeTurn('error')
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e)
+      pushToolResultMessage('error', `[ERROR] ${errMsg}`, true)
+      runtime.value = { ...initialRuntime, turnState: 'error', error: errMsg }
+      await persist()
+    }
+  }
+
+  /** 执行单个工具调用（含 availableIn 越界校验 + 审批门 P2 接）。 */
+  async function executeTool(call: ToolCall, workspace: AgentWorkspace): Promise<{ text: string; isError?: boolean }> {
+    const def = getAgentTool(call.name)
+    if (!def) {
+      return { text: `unknown tool: ${call.name}`, isError: true }
+    }
+    // 越界校验（7.3）
+    if (!def.availableIn.includes(workspace)) {
+      return { text: `tool "${call.name}" not available in workspace "${workspace}"`, isError: true }
+    }
+
+    // 解析参数（弱模型容错：arguments 可能不是合法 JSON）
+    let args: any = {}
+    try {
+      args = call.arguments ? JSON.parse(call.arguments) : {}
+    } catch {
+      return { text: `invalid JSON arguments: ${call.arguments}`, isError: true }
+    }
+
+    // 构造工具执行上下文
+    const ctx: AgentToolContext = {
+      presetStore: usePresetStoreSafe(),
+      worldbookStore: useWorldbookStoreSafe(),
+      characterStore: useCharacterStoreSafe(),
+      confirmStore: useConfirmStoreSafe(),
+      uiStore,
+      workspace,
     }
 
     try {
-      const messages = renderMessages(activeSessionMessages.value)
-      const result = await callModelRaw(messages, [], {
-        temperature: config.value.temperature,
-        maxTokens: config.value.maxTokens,
-      })
-
-      // 追加 assistant 消息
-      pushAssistantMessage(result.content, result.toolCalls ?? undefined)
-
-      runtime.value = {
-        ...initialRuntime,
-        turnState: 'complete',
-      }
-
-      // 持久化
-      await persist()
-
-      // 短暂展示 complete 后回到 idle
-      setTimeout(() => {
-        if (runtime.value.turnState === 'complete') {
-          runtime.value = { ...initialRuntime }
-        }
-      }, 500)
+      return await def.execute(args, ctx)
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e)
-      // 把错误也记进消息，让用户看到
-      pushToolResultMessage('error', `[ERROR] ${errMsg}`, true)
-      runtime.value = {
-        ...initialRuntime,
-        turnState: 'error',
-        error: errMsg,
-      }
-      await persist()
+      return { text: `tool execution error: ${errMsg}`, isError: true }
     }
+  }
+
+  /** finalizeTurn：回合结束，持久化，短暂展示后回 idle。 */
+  async function finalizeTurn(state: 'complete' | 'error'): Promise<void> {
+    runtime.value = { ...initialRuntime, turnState: state }
+    await persist()
+    setTimeout(() => {
+      if (runtime.value.turnState === state) {
+        runtime.value = { ...initialRuntime }
+      }
+    }, 500)
   }
 
   /** 取消当前回合。 */
