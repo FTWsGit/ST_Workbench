@@ -21,6 +21,7 @@
               <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'character' }" @click="switchWorkspace('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
             </div>
             <div class="wb-sep"></div>
+            <button class="wb-btn" :class="{ active: uiStore.agentPanelOpen }" @click="toggleAgent">{{ uiStore.t('agent.header.open') }}</button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <button class="wb-btn" @click="presetStore.copyPanelOpen = true">{{ uiStore.t('preset.header.copyBlocks') }}</button>
               <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
@@ -166,6 +167,7 @@
 
         <CopyPanel />
         <MetaPanel />
+        <AgentPanel />
         <PresetHiddenBlocksModal v-if="tabsStore.activeWorkspace === 'preset'" />
         <Modals />
       </div>
@@ -188,6 +190,8 @@ import VarPopup from './components/preset/VarPopup.vue'
 import CopyPanel from './components/preset/CopyPanel.vue'
 import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue'
 import MetaPanel from './components/shared/MetaPanel.vue'
+import AgentPanel from './components/shared/AgentPanel.vue'
+import { useAgentStore } from './agent/agentStore'
 import RegexSidebar from './components/regex/RegexSidebar.vue'
 import ScriptTreeSidebar from './components/tavern/ScriptTreeSidebar.vue'
 import WorldbookSidebar from './components/worldbook/WorldbookSidebar.vue'
@@ -216,12 +220,21 @@ const presetStore = usePresetStore()
 const uiStore = useUiStore()
 const worldbookStore = useWorldbookStore()
 const characterStore = useCharacterStore()
+const agentStore = useAgentStore()
 /** 三个 domain store 的新建/删除/切换/重载/保存接口统一查表，下面 onSave/onReload/… 都基于此表写通用逻辑。 */
 const workspaceRegistry = createWorkspaceRegistry()
 
 /** 顶栏第一行工作区切换（preset/worldbook/character）。第二行"条目/正则"切换独立于 activeWorkspace，不经此函数。 */
 function switchWorkspace(workspace: Workspace) {
   tabsStore.setActiveWorkspace(workspace)
+}
+
+/** 切换 Agent 面板开关，首次打开时懒加载持久化数据。 */
+function toggleAgent() {
+  if (!uiStore.agentPanelOpen) {
+    agentStore.loadAgentData()
+  }
+  uiStore.agentPanelOpen = !uiStore.agentPanelOpen
 }
 
 /**

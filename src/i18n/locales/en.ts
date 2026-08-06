@@ -603,4 +603,29 @@ export default {
   'toolbox.batch.deleteConfirm.title': 'Delete selected items?',
   'toolbox.batch.deleteConfirm.message': 'This will permanently remove the {count} selected items. This cannot be undone.',
   'toolbox.batch.noBatchTools': 'No batch tools available for this scene',
+
+  // ========================================
+  // agent: cross-store ops assistant
+  // ========================================
+  'agent.header.open': '🤖 Agent',
+  'agent.panel.title': 'Agent Assistant',
+  'agent.session.untitled': 'New session',
+  'agent.session.new': 'New session',
+  'agent.input.placeholder': 'Type an instruction, Enter to submit…',
+  'agent.input.send': 'Send',
+  'agent.input.stop': 'Stop',
+  'agent.state.idle': 'Ready',
+  'agent.state.thinking': 'Thinking…',
+  'agent.state.tool_loop': 'Running tools…',
+  'agent.state.pending_approval': 'Awaiting approval…',
+  'agent.state.error': 'Error',
+  'agent.state.complete': 'Done',
+  'agent.empty.title': 'Ask the Agent',
+  'agent.empty.hint': 'e.g. set the temperature parameter in the main prompt block to 0.8',
+  'agent.error.version.title': 'Agent data version mismatch',
+  'agent.error.version.body': 'The stored Agent data version does not match what the current code expects. Click "Reset" to clear Agent data and restore defaults.',
+  'agent.error.version.reset': 'Reset Agent data',
+  'agent.error.version.stored': 'Stored version: {stored}',
+  'agent.error.version.expected': 'Expected version: {expected}',
+  'agent.toast.versionReset': 'Agent data has been reset',
 } satisfies Record<keyof typeof zhCN, string>

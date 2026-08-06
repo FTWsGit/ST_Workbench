@@ -606,4 +606,29 @@ export default {
   'toolbox.batch.deleteConfirm.title': '删除选中项？',
   'toolbox.batch.deleteConfirm.message': '这将永久移除选中的 {count} 项，无法撤销。',
   'toolbox.batch.noBatchTools': '此场景暂无批量工具',
+
+  // ========================================
+  // agent：跨 store 运维助手
+  // ========================================
+  'agent.header.open': '🤖 Agent',
+  'agent.panel.title': 'Agent 助手',
+  'agent.session.untitled': '新会话',
+  'agent.session.new': '新建会话',
+  'agent.input.placeholder': '输入指令，回车提交…',
+  'agent.input.send': '发送',
+  'agent.input.stop': '停止',
+  'agent.state.idle': '就绪',
+  'agent.state.thinking': '思考中…',
+  'agent.state.tool_loop': '执行工具中…',
+  'agent.state.pending_approval': '等待审批…',
+  'agent.state.error': '出错',
+  'agent.state.complete': '完成',
+  'agent.empty.title': '向 Agent 提问',
+  'agent.empty.hint': '例如：把 main 提示词块里的温度参数改成 0.8',
+  'agent.error.version.title': 'Agent 数据版本不匹配',
+  'agent.error.version.body': '存储的 Agent 数据版本与当前代码期望的不一致。点击"重置"会把 Agent 数据清空恢复默认。',
+  'agent.error.version.reset': '重置 Agent 数据',
+  'agent.error.version.stored': '存储版本：{stored}',
+  'agent.error.version.expected': '期望版本：{expected}',
+  'agent.toast.versionReset': 'Agent 数据已重置',
 } satisfies LocaleTable
