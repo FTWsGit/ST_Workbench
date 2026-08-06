@@ -1,6 +1,6 @@
 ---
 name: st-workbench-docs
-description: ST_Workbench 项目的文档纪律流程。三阶段：开干前用 scripts 堆读 alwaysApply:true 核心文档建立 mental model；改具体代码前按文件→文档映射按需读 alwaysApply:false 领域文档；改完回头扫一遍 .doc 是否需要同步更新，并跑 sync 脚本刷新 AGENTS.md 的 Project Doc 表。任何在这个项目里加功能、修 bug、重构、改代码、改样式、改类型、改 i18n key、改 store、改组件、改 composable、改 api、改纯函数的任务都必须用这个 skill——即使用户没提到"文档"二字，即使改动看起来很小。判断触发看任务的实质工作而非表面措辞：即使用户用询问/讨论/排查口吻表达（"这个字段是不是放错地方了""这个逻辑怎么解析的""这个行为是不是 bug"），只要实质要做的是上述编码工作（迁移字段、改内部逻辑、排查代码行为），都应触发。本 skill 不用于非 ST_Workbench 项目，也不用于单纯阅读文档/解释概念/查 markdown 语法的非编码任务。
+description: ST_Workbench 项目的文档纪律流程。三阶段：开干前用 scripts 堆读 alwaysApply:true 核心文档建立 mental model；改具体代码前按文件→文档映射按需读 alwaysApply:false 领域文档；改完回头扫一遍 .doc 是否需要同步更新，并跑 sync 脚本刷新 AGENTS.md 的 Project Doc 表。任何在这个项目里加功能、修 bug、重构、改代码、改样式、改类型、改 i18n key、改 store、改组件、改 composable、改 api、改纯函数的任务都必须用这个 skill——即使用户没提到"文档"二字，即使改动看起来很小。判断触发看任务的实质工作而非表面措辞：即使用户用询问/讨论/排查口吻表达（"这个字段是不是放错地方了""这个逻辑怎么解析的""这个行为是不是 bug"），只要实质要做的是上述编码工作（迁移字段、改内部逻辑、排查代码行为）或者需要理解项目的工作，都应触发
 ---
 
 # ST_Workbench 文档纪律
