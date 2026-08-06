@@ -45,6 +45,14 @@ export const useUiStore = defineStore('ui', () => {
       const s = localStorage.getItem('st-wb-settings')
       if (s) {
         const p = JSON.parse(s)
+        // 迁移旧布尔形态字段（v1 previewFloat/toolBoxFloat）→ PanelMode 枚举：
+        // previewFloat:true=overlay,false=docked；toolBoxFloat:true=float,false=docked。
+        if (p.previewMode === undefined && typeof p.previewFloat === 'boolean') {
+          p.previewMode = p.previewFloat ? 'overlay' : 'docked'
+        }
+        if (p.toolBoxMode === undefined && typeof p.toolBoxFloat === 'boolean') {
+          p.toolBoxMode = p.toolBoxFloat ? 'float' : 'docked'
+        }
         return {
           ...DEFAULT_SETTINGS, ...p,
           syntaxColors: { ...DEFAULT_SETTINGS.syntaxColors, ...(p.syntaxColors || {}) },

@@ -76,6 +76,13 @@ export default {
   // ---- 通用组件 ----
   'shared.settingsDock.title': '⚙ 设置',
   'shared.floatingPanel.toggleFloat': '切换悬浮模式',
+  // 面板三态切换：右侧挤开 / 右侧悬浮 / 完全悬浮
+  'shared.panelMode.docked': '挤开',
+  'shared.panelMode.overlay': '悬浮',
+  'shared.panelMode.float': '完全',
+  'shared.panelMode.tooltip.docked': '右侧挤开：嵌入布局，挤开编辑区',
+  'shared.panelMode.tooltip.overlay': '右侧悬浮：盖在右侧边缘，不挤开编辑区',
+  'shared.panelMode.tooltip.float': '完全悬浮：可拖拽、可缩放，移动端变底部弹层',
   'shared.highlightedEditor.cursor': '行 {line}，列 {col}',
 
   // ---- 语法高亮标签 ----
@@ -95,7 +102,6 @@ export default {
   // preset：预设域
   // ========================================
   // ---- 头部工具栏 ----
-  'preset.header.copyBlocks': '⇆ 复制块',
   'preset.header.collectionItems': '提示词',
   'preset.header.varNav': '📊 变量导航',
   'preset.header.preview': '👁 预览',
@@ -584,6 +590,7 @@ export default {
   // ---- 工具切换标签 ----
   'toolbox.tool.search': '搜索',
   'toolbox.tool.batch': '批量',
+  'toolbox.tool.copy': '复制',
 
   // ---- Search 工具 ----
   'toolbox.search.field': '搜索字段',
@@ -616,6 +623,13 @@ export default {
   // ========================================
   'agent.header.open': '🤖 Agent',
   'agent.panel.title': 'Agent 助手',
+  'agent.settings.title': 'Agent 设置',
+  'agent.settings.preset': '生成预设',
+  'agent.settings.presetFollow': '跟随当前预设',
+  'agent.settings.systemPrompt': '系统提示词',
+  'agent.settings.systemPromptHint': '留空使用默认 persona',
+  'agent.settings.temperature': '温度',
+  'agent.settings.maxTokens': '最大 Token',
   'agent.session.untitled': '新会话',
   'agent.session.new': '新建会话',
   'agent.input.placeholder': '输入指令，回车提交…',

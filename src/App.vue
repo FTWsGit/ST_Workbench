@@ -22,18 +22,9 @@
             </div>
             <div class="wb-sep"></div>
             <button class="wb-btn" :class="{ active: uiStore.agentPanelOpen }" @click="toggleAgent">{{ uiStore.t('agent.header.open') }}</button>
-            <template v-if="tabsStore.activeWorkspace === 'preset'">
-              <button class="wb-btn" @click="presetStore.copyPanelOpen = true">{{ uiStore.t('preset.header.copyBlocks') }}</button>
-              <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
-              <button class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
-            </template>
-            <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-              <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
-            </template>
-            <template v-else-if="tabsStore.activeWorkspace === 'character'">
-              <button class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
-              <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
-            </template>
+            <!-- 工具顺序跨 workspace 统一：先 toolbox 再 meta（worldbook 无 meta 表单）。 -->
+            <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
+            <button v-if="tabsStore.activeWorkspace !== 'worldbook'" class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
             <div class="wb-spacer"></div>
             <button class="wb-btn" :class="{ active: tabsStore.varNavOpen }" @click="toggleVarNav">{{ uiStore.t('preset.header.varNav') }}</button>
             <button class="wb-btn" :class="{ active: tabsStore.previewOpen }" @click="togglePreview">{{ uiStore.t('preset.header.preview') }}</button>
@@ -112,6 +103,7 @@
           <VarPanel v-if="tabsStore.varNavOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'varNav' }" />
           <PreviewPanel v-if="tabsStore.previewOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'preview' }" />
           <ToolBoxPanel v-if="tabsStore.toolBoxOpen" />
+          <AgentPanel v-if="uiStore.agentPanelOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'agent' }" />
         </div>
 
         <!-- 移动端遮罩：任一抽屉/操作表打开时覆盖编辑区，点击关闭；桌面端不渲染。 -->
@@ -137,15 +129,10 @@
               {{ uiStore.t('shared.header.mode.tavern') }}
             </button>
           </template>
-          <template v-if="tabsStore.activeWorkspace === 'preset'">
-            <button class="wb-mobile-tools-item" @click="drawer.runTool(() => { presetStore.copyPanelOpen = true })">{{ uiStore.t('preset.header.copyBlocks') }}</button>
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
-            <button class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="drawer.runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
-          </template>
-          <template v-else-if="tabsStore.activeWorkspace === 'character'">
-            <button class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="drawer.runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
-          </template>
+          <!-- 工具顺序跨 workspace 统一：先 toolbox 再 meta（worldbook 无 meta 表单）。 -->
+          <button class="wb-mobile-tools-item" :class="{ active: uiStore.agentPanelOpen }" @click="drawer.runTool(toggleAgent)">{{ uiStore.t('agent.header.open') }}</button>
+          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
+          <button v-if="tabsStore.activeWorkspace !== 'worldbook'" class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="drawer.runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
           <button class="wb-mobile-tools-item" @click="drawer.runTool(() => { uiStore.settingsOpen = true })">{{ uiStore.t('shared.header.settings') }}</button>
           <button class="wb-mobile-tools-item" :class="{ active: tabsStore.varNavOpen }" @click="drawer.runTool(toggleVarNav)">{{ uiStore.t('preset.header.varNav') }}</button>
           <button class="wb-mobile-tools-item" :class="{ active: tabsStore.previewOpen }" @click="drawer.runTool(togglePreview)">{{ uiStore.t('preset.header.preview') }}</button>
@@ -165,9 +152,7 @@
           </template>
         </div>
 
-        <CopyPanel />
         <MetaPanel />
-        <AgentPanel />
         <PresetHiddenBlocksModal v-if="tabsStore.activeWorkspace === 'preset'" />
         <Modals />
       </div>
@@ -187,7 +172,6 @@ import ToolBoxPanel from './components/toolbox/ToolBoxPanel.vue'
 // ToolBoxPanel 只查表不填表，不接这一行 TOOL_REGISTRY 永远空、工具箱显示"无可用工具"。
 import './components/toolbox/register'
 import VarPopup from './components/preset/VarPopup.vue'
-import CopyPanel from './components/preset/CopyPanel.vue'
 import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue'
 import MetaPanel from './components/shared/MetaPanel.vue'
 import AgentPanel from './components/shared/AgentPanel.vue'
@@ -251,6 +235,7 @@ const drawer = useMobileWorkspaceDrawer({
     { key: 'varNav', isOpen: () => tabsStore.varNavOpen, setOpen: (open) => tabsStore.setVarNavOpen('preset', open) },
     { key: 'preview', isOpen: () => tabsStore.previewOpen, setOpen: (open) => tabsStore.setPreviewOpen('preset', open) },
     { key: 'settingsDock', isOpen: () => uiStore.settingsDockOpen, setOpen: (open) => { if (uiStore.settingsDockOpen !== open) uiStore.toggleSettingsDock() } },
+    { key: 'agent', isOpen: () => uiStore.agentPanelOpen, setOpen: (open) => { if (uiStore.agentPanelOpen !== open) { if (open) agentStore.loadAgentData(); uiStore.agentPanelOpen = open } } },
   ],
   /** 切换 workspace / "条目↔正则"集合后，自动露出侧边栏。 */
   revealSidebarOn: [() => tabsStore.activeWorkspace, () => tabsStore.sidebarCollection],

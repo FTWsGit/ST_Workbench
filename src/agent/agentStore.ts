@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { loadAgentStore, saveAgentStore, resetAgentStore, AgentVersionMismatchError } from '../api/agentApi'
+import { selectPresetByName as applyPresetByName } from '../api/presetApi'
 import { DEFAULT_AGENT_PERSISTED } from './defaultPersisted'
 import { callModelRaw, renderMessages, type ModelTurnResult } from './callModel'
 import {
@@ -119,7 +120,7 @@ export const useAgentStore = defineStore('agent', () => {
     try {
       const data = await loadAgentStore()
       version.value = data.version
-      config.value = { ...data.config }
+      config.value = { ...DEFAULT_AGENT_PERSISTED.config, ...data.config }
       sessions.value = data.sessions
       activeSessionId.value = data.activeSessionId
       activeSessionMessages.value = data.activeSessionMessages
@@ -330,6 +331,11 @@ export const useAgentStore = defineStore('agent', () => {
           turnState: 'thinking',
           currentTool: null,
           toolRounds: round,
+        }
+
+        // 配置了生成预设时，每轮调用前把 ST 主菜单预设切过去（不切换会沿用旧的选中预设生成）
+        if (config.value.presetName) {
+          applyPresetByName(config.value.presetName)
         }
 
         // P3：每轮调用前触发摘要压缩（模块 6.2）

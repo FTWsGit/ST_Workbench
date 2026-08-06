@@ -515,6 +515,12 @@
    to a floating overlay drawer instead. Toggled via the 📌 button in the panel header. */
 .wb-preset-preview-panel{background:var(--wb-bg-e);border-left:1px solid var(--wb-amber-a3);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
 .wb-preset-preview-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:60;box-shadow:-8px 0 40px var(--wb-shadow-a3)}
+/* 三态共用的内容体：float 形态在 FloatingPanelShell 的 .wb-float-body 里，嵌入/悬浮态在 panel 里，都靠它撑满。 */
+.st-wb .wb-preset-preview-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+/* Floating shell title slot（三态切换按钮旁挂标题）——self-contained，只影响 preview。 */
+.st-wb .wb-preset-preview-float-title{display:flex;align-items:center;gap:var(--wb-sp-1);flex:1;min-width:0}
+.st-wb .wb-preset-preview-float-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-wb .wb-preset-preview-float-title .icon-btn{flex-shrink:0}
 .st-wb .wb-preset-pp-tools{padding:var(--wb-sp-3) 16px;border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .st-wb .wb-preset-pp-output-wrap{flex:1;overflow:auto;padding:8px}
 .st-wb .wb-preset-pb-body .wb-preset-phl,.st-wb .wb-preset-pp-raw .wb-preset-phl{background:var(--wb-amber-a2);color:var(--wb-ac-h);border-radius:2px;padding:0 2px}
@@ -558,6 +564,8 @@
    .wb-right-resize-handle; floating mode is delegated to FloatingPanelShell (see above).
    Tool-switch tabs reuse the preview mode-tabs look. */
 .wb-toolbox-panel{background:var(--wb-bg-e);border-left:1px solid var(--wb-amber-a3);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;position:relative}
+/* Overlay mode: floats over the right edge without squeezing the editor, same as Preview's .float. */
+.wb-toolbox-panel.float{position:absolute;right:0;top:0;bottom:0;z-index:60;box-shadow:-8px 0 40px var(--wb-shadow-a3)}
 .st-wb .wb-toolbox-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:var(--wb-sp-2);padding:var(--wb-sp-3) 12px;overflow:auto}
 .st-wb .wb-toolbox-tabs{display:flex;gap:var(--wb-sp-1);background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);padding:3px;flex-shrink:0}
 .st-wb .wb-toolbox-tab{flex:1;padding:var(--wb-sp-2) 10px;border-radius:var(--wb-radius-0);font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--wb-tx2);transition:all var(--wb-tr)}
@@ -571,7 +579,8 @@
 /* Mobile: same bottom-sheet treatment as the other right-side panels, but always visible when
    open — the toolbox is not wired into App.vue's drawer state machine. */
 @media (max-width: 720px) {
-  .wb-toolbox-panel{
+  .wb-toolbox-panel,
+  .wb-toolbox-panel.float{
     position:absolute;left:0;right:0;top:auto;bottom:0;
     z-index:150;
     width:100% !important;
@@ -588,6 +597,44 @@
   .wb-toolbox-panel .wb-rp-header{padding-top:20px}
   .wb-toolbox-panel .wb-right-resize-handle{display:none}
 }
+
+/* ====== Agent Panel (right sidebar, cross-store ops assistant) ======
+   docked/overlay 复用 .wb-right-panel 的右侧栏外观；float 形态由 FloatingPanelShell 接管。
+   消息列表/输入行/设置区共用同一套 .wb-agent-* 视觉，三种形态一致。 */
+.wb-agent-panel{background:var(--wb-bg-e);display:flex;flex-direction:column;overflow:hidden}
+.wb-agent-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.wb-agent-float-title{display:flex;align-items:center;gap:var(--wb-sp-1);flex:1;min-width:0}
+.wb-agent-float-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wb-agent-settings-toggle{align-self:flex-start;margin:8px 12px 0;flex-shrink:0}
+.wb-agent-settings{padding:10px 12px;border-bottom:1px solid var(--wb-border);background:var(--wb-bg);flex-shrink:0;overflow-y:auto}
+.wb-agent-settings-prompt{width:100%;min-width:0;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:1.5;resize:vertical}
+.wb-agent-version-error{padding:12px;margin:10px 12px 0;border:1px solid var(--wb-amber-a3);border-radius:var(--wb-rs);background:var(--wb-bg);flex-shrink:0}
+.wb-agent-version-title{font-weight:700;margin-bottom:6px;color:var(--wb-tx)}
+.wb-agent-version-body{font-size:12.5px;color:var(--wb-tx2);margin-bottom:8px;line-height:1.5}
+.wb-agent-version-meta{font-size:12px;color:var(--wb-tx3);margin-bottom:8px}
+.wb-agent-session-bar{display:flex;align-items:center;gap:var(--wb-sp-2);padding:8px 12px 4px;flex-shrink:0}
+.wb-agent-session-title{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--wb-tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wb-agent-messages{flex:1;min-height:0;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.wb-agent-empty{margin:auto;text-align:center;color:var(--wb-tx3);padding:20px}
+.wb-agent-empty-title{font-size:14px;font-weight:700;margin-bottom:6px;color:var(--wb-tx2)}
+.wb-agent-empty-hint{font-size:12.5px;line-height:1.5}
+.wb-agent-msg{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:var(--wb-rs);background:var(--wb-bg);border:1px solid var(--wb-border)}
+.wb-agent-msg.role-user{background:var(--wb-bg-s)}
+.wb-agent-msg.role-tool{border-style:dashed}
+.wb-agent-msg.error{border-color:var(--wb-amber-a3)}
+.wb-agent-msg.synthetic{opacity:.65}
+.wb-agent-msg-role{font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--wb-tx3);text-transform:uppercase}
+.wb-agent-msg-text{font-size:13px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;color:var(--wb-tx)}
+.wb-agent-msg-tools{display:flex;flex-direction:column;gap:3px}
+.wb-agent-msg-tool{font-size:11.5px;color:var(--wb-tx2);background:var(--wb-bg-input);border-radius:var(--wb-radius-0);padding:2px 6px;align-self:flex-start}
+.wb-agent-status{display:flex;align-items:center;gap:6px;padding:4px 12px;flex-shrink:0;border-top:1px solid var(--wb-border)}
+.wb-agent-status-dot{width:8px;height:8px;border-radius:50%;background:var(--wb-tx3);flex-shrink:0}
+.wb-agent-status-dot.thinking,.wb-agent-status-dot.tool_loop,.wb-agent-status-dot.pending_approval{background:var(--wb-ac)}
+.wb-agent-status-dot.error{background:var(--wb-amber-a3)}
+.wb-agent-status-dot.complete{background:#68b868}
+.wb-agent-status-text{font-size:12px;color:var(--wb-tx3)}
+.wb-agent-input-row{display:flex;gap:var(--wb-sp-2);padding:8px 12px;border-top:1px solid var(--wb-border);flex-shrink:0}
+.wb-agent-input{flex:1;min-width:0;resize:none;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:1.5;padding:6px 8px}
 
 
 /* Modals */
@@ -650,6 +697,12 @@
 .wb-float-mobile-backdrop{position:absolute;inset:0;z-index:100009;background:var(--wb-shadow-a2)}
 
 /* Cross-Preset Copy Panel */
+/* 收进工具箱后作为 tool 的宿主：窄容器（docked 工具箱默认 420px）时 body 竖排，
+   布局与移动端 @media 同款，但基于容器宽度而非视口。 */
+.wb-preset-cp-wrap{container-type:inline-size;display:flex;flex:1;min-height:0}
+@container (max-width: 760px){
+  .wb-preset-cp-body{flex-direction:column}
+}
 .wb-preset-cp-body{display:flex;gap:var(--wb-sp-3);flex:1;overflow:hidden}
 .wb-preset-cp-col{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--wb-bg);border:1px solid var(--wb-border);border-radius:var(--wb-r);overflow:hidden}
 .wb-preset-cp-col-head{display:flex;gap:var(--wb-sp-2);padding:var(--wb-sp-3);border-bottom:1px solid var(--wb-border);flex-shrink:0}

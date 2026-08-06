@@ -73,6 +73,13 @@ export default {
   // ---- 通用组件 ----
   'shared.settingsDock.title': '⚙ Settings',
   'shared.floatingPanel.toggleFloat': 'Toggle floating mode',
+  // Panel three-mode switch: docked / overlay / fully floating
+  'shared.panelMode.docked': 'Dock',
+  'shared.panelMode.overlay': 'Float',
+  'shared.panelMode.float': 'Free',
+  'shared.panelMode.tooltip.docked': 'Dock right: embedded in layout, squeezes the editor',
+  'shared.panelMode.tooltip.overlay': 'Float right: overlays the right edge without squeezing',
+  'shared.panelMode.tooltip.float': 'Fully floating: draggable/resizable, bottom sheet on mobile',
   'shared.highlightedEditor.cursor': 'Line {line}, Col {col}',
 
   // ---- 语法高亮标签 ----
@@ -92,7 +99,6 @@ export default {
   // preset：预设域
   // ========================================
   // ---- 头部工具栏 ----
-  'preset.header.copyBlocks': '⇆ Copy Blocks',
   'preset.header.collectionItems': 'Prompts',
   'preset.header.varNav': '📊 Variable Navigator',
   'preset.header.preview': '👁 Preview',
@@ -581,6 +587,7 @@ export default {
   // ---- Tool switch tabs ----
   'toolbox.tool.search': 'Search',
   'toolbox.tool.batch': 'Batch',
+  'toolbox.tool.copy': 'Copy',
 
   // ---- Search tool ----
   'toolbox.search.field': 'Field',
@@ -613,6 +620,13 @@ export default {
   // ========================================
   'agent.header.open': '🤖 Agent',
   'agent.panel.title': 'Agent Assistant',
+  'agent.settings.title': 'Agent Settings',
+  'agent.settings.preset': 'Generation preset',
+  'agent.settings.presetFollow': 'Follow current preset',
+  'agent.settings.systemPrompt': 'System prompt',
+  'agent.settings.systemPromptHint': 'Leave empty for default persona',
+  'agent.settings.temperature': 'Temperature',
+  'agent.settings.maxTokens': 'Max tokens',
   'agent.session.untitled': 'New session',
   'agent.session.new': 'New session',
   'agent.input.placeholder': 'Type an instruction, Enter to submit…',

@@ -140,6 +140,12 @@ export interface SyntaxColors {
   'hl-sq': string; 'hl-dq': string; 'hl-ab': string; 'hl-sb': string
 }
 
+/** 右侧面板/工具箱的三种形态：
+ *  'docked'  右侧挤开：嵌入布局流，挤开编辑区
+ *  'overlay' 右侧悬浮：absolute 盖在右侧边缘，不挤开布局
+ *  'float'   完全悬浮：FloatingPanelShell 可拖拽窗口 */
+export type PanelMode = 'docked' | 'overlay' | 'float'
+
 export interface Settings {
   editorFontSize: number
   editorFontFamily: string
@@ -148,9 +154,11 @@ export interface Settings {
   varPanelWidth: number
   previewWidth: number
   varPanelFloat: boolean
-  previewFloat: boolean
+  previewMode: PanelMode
   toolBoxWidth: number
-  toolBoxFloat: boolean
+  toolBoxMode: PanelMode
+  agentMode: PanelMode
+  agentWidth: number
   settingsDockWidth: number
   settingsDockFloat: boolean
   language: 'zh-CN' | 'en'
@@ -174,9 +182,11 @@ export const DEFAULT_SETTINGS: Settings = {
   varPanelWidth: 360,
   previewWidth: 640,
   varPanelFloat: true,
-  previewFloat: true, 
+  previewMode: 'overlay',
   toolBoxWidth: 420,
-  toolBoxFloat: false,
+  toolBoxMode: 'docked',
+  agentMode: 'docked',
+  agentWidth: 380,
   settingsDockWidth: 320,
   settingsDockFloat: true,
   language: 'zh-CN',

@@ -1,14 +1,5 @@
 <template>
-  <FloatingPanelShell
-    v-if="store.copyPanelOpen"
-    :title="uiStore.t('preset.copyPanel.title')"
-    :close-title="uiStore.t('common.close')"
-    :width="1040"
-    :height="620"
-    :min-width="560"
-    :min-height="360"
-    @close="close"
-  >
+  <div class="wb-preset-cp-wrap">
     <div class="wb-preset-cp-body">
       <div class="wb-preset-cp-col">
         <div class="wb-preset-cp-col-head">
@@ -73,16 +64,15 @@
         <p v-else class="wb-preset-cp-empty">{{ uiStore.t('preset.copyPanel.pickPreset') }}</p>
       </div>
     </div>
-  </FloatingPanelShell>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, onActivated } from 'vue'
 import { usePresetStore } from '../../stores/presetStore'
 import { useUiStore } from '../../stores/uiStore'
 import { useConfirmStore } from '../../stores/confirmStore'
 import { useIsMobile } from '../../composables/hostEnv'
-import FloatingPanelShell from '../shared/FloatingPanelShell.vue'
 import * as ST from '../../api/presetApi'
 import type { PresetListEntry } from '../../api/presetApi'
 import type { PresetData, PresetBlock, OrderItem } from '../../types'
@@ -114,9 +104,9 @@ const other = (side: Side): Side => (side === 'left' ? 'right' : 'left')
 const leftOrdered = computed(() => sides.left.data ? orderedPromptsWithHidden(sides.left.data) : [])
 const rightOrdered = computed(() => sides.right.data ? orderedPromptsWithHidden(sides.right.data) : [])
 
-/** 面板每次打开都重新列出可用预设，不依赖主编辑器的 store.presetList（可能过期或未加载）。 */
-watch(() => store.copyPanelOpen, (open) => {
-  if (!open) return
+/** 作为工具箱 tool 每次被激活（KeepAlive 缓存实例，切回时重新激活）都刷新可用预设列表，
+ *  不依赖主编辑器的 store.presetList（可能过期或未加载）。 */
+onActivated(() => {
   try { presetOptions.value = ST.listPresets() }
   catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.listFailedCopyPanel', { msg: e?.message || e })) }
 })
@@ -248,17 +238,5 @@ async function saveSide(side: Side) {
     uiStore.showToast(uiStore.t('preset.toast.saved', { name: s.name }))
     if (s.name === store.presetName) uiStore.showToast(uiStore.t('preset.toast.reloadNote'))
   } catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.saveFailed', { msg: e?.message || e })) }
-}
-
-/** 关闭面板：两侧都干净才直接关；否则弹确认。 */
-function close() {
-  if (!sides.left.dirty && !sides.right.dirty) { store.copyPanelOpen = false; return }
-  confirmStore.ask({
-    title: uiStore.t('preset.confirm.closeUnsaved.title'),
-    message: uiStore.t('preset.confirm.closeUnsaved.message'),
-    confirmText: uiStore.t('common.close'),
-    cancelText: uiStore.t('common.cancel'),
-    onConfirm: () => { store.copyPanelOpen = false },
-  })
 }
 </script>

@@ -72,7 +72,7 @@ export const useTabsStore = defineStore('tabs', () => {
 
   /** Search/VarNav/Preview 三个面板的"开关状态"，按 workspace 分桶存。
    *  各自业务逻辑（doSearch()/rebuildVarIndex()/generatePreviewBlocks() 等）留在对应 store 里。
-   *  copyPanelOpen 留在 presetStore —— CopyPanel 永远只属于 preset 工作区。 */
+   *  CopyPanel 已收进工具箱，作为 preset 场景的 tool，开关由 toolBoxOpen 统一控制。 */
   const varNavOpenByWorkspace = ref<Record<string, boolean>>({})
   const previewOpenByWorkspace = ref<Record<string, boolean>>({})
   const varNavOpen = computed(() => varNavOpenByWorkspace.value[activeWorkspace.value] ?? false)

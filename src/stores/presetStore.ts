@@ -458,7 +458,6 @@ export const usePresetStore = defineStore('main', () => {
 
   /* ====== Modals ====== */
   const hiddenOpen = ref(false)
-  const copyPanelOpen = ref(false) // CopyPanel.vue 的 open flag，该组件自包含
 
   /* ====== Jump requests（跨域共享：抽到 tabsStore，preset/character/worldbook ContentEditor 都接 :jump=tabsStore.editorJump）======
    * token 递增：line/col 重复时也强制 watcher 触发。
@@ -862,7 +861,7 @@ export const usePresetStore = defineStore('main', () => {
     scriptTreeSelectBlock, scriptTreeToggleBlock, scriptTreeToggleGroupCollapse,
     reorderScriptTreeBlock, scriptTreeBindSelected, scriptTreeUnbindGroup, scriptTreeRemoveNode,
     rebuildScriptTreeOrder, syncScriptsFromOrder,
-    hiddenOpen, copyPanelOpen, dirty, markDirty,
+    hiddenOpen, dirty, markDirty,
     currentBlock, hasData, hiddenBlocks,
     editorJump, requestEditorJump,
     loadFromContext, doSavePreset, refreshPresetList, switchPreset, createPreset, removeCurrentPreset, reloadPreset,

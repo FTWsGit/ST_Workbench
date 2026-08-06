@@ -41,6 +41,8 @@ export interface AgentConfig {
   temperature: number
   /** 最大生成 token 数。 */
   maxTokens: number
+  /** agent 生成时使用的 ST 生成预设名。空字符串=跟随 ST 当前选中。 */
+  presetName: string
 }
 
 /** 持久化到 extensionSettings 的完整数据结构。 */
@@ -80,4 +82,5 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   systemPrompt: '',
   temperature: 1.0,
   maxTokens: 4096,
+  presetName: '',
 }
