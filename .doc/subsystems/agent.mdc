@@ -27,18 +27,18 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的运维层，
 
 | 文件 | 职责 |
 |---|---|
-| `src/agent/agentStore.ts` | Pinia store（id `'agent'`），持有 `AgentPersisted` live 状态 + 运行时状态机；唯一调用 LLM 生成与工具执行循环的入口；不直接操作 `presetStore`/`worldbookStore`/`characterStore` 的内部字段——所有跨 store 操作必须经过工具注册表 |
+| `src/agent/agentStore.ts` | Pinia store（id `'agent'`），持有 `AgentPersisted` live 状态 + 运行时状态机；唯一调用 LLM 生成与工具执行循环的入口；内嵌审批门（`pendingApproval` + `requestApproval`/`resolveApproval` + 本会话自动放行集合 `autoApprovedTools`，新会话清空）；组装分块 system 消息（`buildSystemMessages` + `refreshRuntimePrompt`）；不直接操作 `presetStore`/`worldbookStore`/`characterStore` 的内部字段——所有跨 store 操作必须经过工具注册表 |
 | `src/api/agentApi.ts` | agent 持久化读写层，走 `extensionSettings`（服务端 `settings.json` 同级），跟 `characterApi.ts`/`presetApi.ts` 同一套 `ensureTopImporter()` 顶层动态 import 模式 |
 | `src/agent/callModel.ts` | LLM 调用层（方案 A）：监听 `CHAT_COMPLETION_SETTINGS_READY` 事件，在请求体组装完成、即将发 API 之前把 `tools` 塞进去；`generateRawData` 返回原始 response object，`toolCallCompat` 解析 `tool_calls` |
 | `src/agent/toolCallCompat.ts` | 极简 tool-call 提取层（非流式，OpenAI/Claude/Cohere 三族） |
 | `src/agent/toolRegistry.ts` | agent 专用工具注册表（JSON Schema + risk 分级 + availableIn 越界校验 + execute 函数） |
-| `src/agent/tools/readonly.ts` | 只读工具集（`risk:'safe'`）：`preset_list_blocks`/`preset_get_block`/`preset_search`/`worldbook_list_entries`/`worldbook_get_entry`/`worldbook_search`/`character_get_fields`/`character_get_field` |
-| `src/agent/tools/write.ts` | 写类工具集（`risk:'risky'`）：`preset_edit_block`/`preset_create_block`/`preset_reorder_block`/`preset_bind_group`/`preset_unbind_group`/`preset_save`/`worldbook_create_entry`/`worldbook_reorder_entry`/`worldbook_delete_entry`/`worldbook_save`/`character_set_field`/`character_save` |
-| `src/agent/tools/preview.ts` | 测试/创作工具集：`preset_preview_blocks`（纯本地 dry-run，safe）/`preset_preview_raw`（走真实 ctx.generate，risky）/`agent_draft_text`（子调用纯文本生成，safe） |
-| `src/agent/contextManager.ts` | 上下文管理：神圣前缀（system persona + 第一条真实 user 消息，压缩永不触碰）+ 入库截断（入口闸门，8 KiB）+ 整段摘要压缩（触发阈值 12K token / 256K bytes，带 60s 硬超时回退） |
+| `src/agent/tools/readonly.ts` | 只读工具集（`risk:'safe'`）：`preset_list_blocks`/`preset_get_block`/`preset_search`/`worldbook_list_entries`/`worldbook_get_entry`/`worldbook_search`/`character_get_fields`/`character_get_field`。三个 get 工具支持 `offset`/`limit` 分页（1-based 行号），`sliceLines` 切片后附"showing lines X-Y of N, call again with offset Z"翻页报告，避免长内容被 truncate 锁死读不到 |
+| `src/agent/tools/write.ts` | 写类工具集（`risk:'risky'`）：`preset_edit_block`/`preset_create_block`/`preset_reorder_block`/`preset_bind_group`/`preset_unbind_group`/`preset_save`/`worldbook_create_entry`/`worldbook_reorder_entry`/`worldbook_delete_entry`/`worldbook_save`/`character_set_field`/`character_save`。审批拒绝时 `stopTurn:true` 直接停本轮 |
+| `src/agent/tools/preview.ts` | 测试/创作工具集：`preset_preview_blocks`（纯本地 dry-run，safe）/`preset_preview_raw`（走真实 ctx.generate 但自动 stop，不请求 API，safe） |
+| `src/agent/contextManager.ts` | 上下文管理：神圣前缀（system persona + 第一条真实 user 消息，压缩永不触碰）+ 入库截断（入口闸门，8 KiB）+ 整段摘要压缩（`countTokensAsync` 走 ST tokenizer 精确计数，拿不到 ctx 回退字节估算）。触发只有两个：①`usedContext/maxContextTokens > compactThresholdRatio`（用户配的百分比，无固定阈值 fallback）②overflow 兜底。compact 分两路：user/assistant 喂 LLM summary（重试 3 次、超时 60s、`<previous_summary>` tag 包裹、已有摘要叠加而非蒸馏），tool_result 按体积折叠或原样保留不进 summary。`overflowFallback` 也走 `compactMessages` 而非占位替换 |
 | `src/agent/constants.ts` | agent 子系统的可调常数集中表（禁止散落到各文件当魔法数字） |
 | `src/agent/types.ts` | agent 类型定义（`Message`/`ToolCall`/`AgentPersisted`/`AgentConfig`/`AgentSessionMeta`/`AgentRuntimeState`） |
-| `src/components/shared/AgentPanel.vue` | Agent 助手右侧栏，三种形态（docked/overlay/float，`settings.agentMode`）；面板内有可展开的设置区（⚙ 按钮）：生成预设 `config.presetName`、system prompt、temperature、maxTokens，变更走 `agentStore.updateConfig()` 持久化 |
+| `src/components/shared/AgentPanel.vue` | Agent 助手右侧栏，三种形态（docked/overlay/float，`settings.agentMode`）；面板内有可展开的设置区（⚙ 按钮）：system prompt（绑 `config.prompts.system`）+ temperature/maxTokens/topP/topK/presencePenalty/frequencyPenalty/thinking/maxContextTokens/compactThresholdRatio 全部可配字段，变更走 `agentStore.updateConfig()` 持久化；并渲染内嵌审批卡片（`pendingApproval` + "本会话自动同意"） |
 
 ## 持久化机制
 
@@ -57,7 +57,7 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的运维层，
 
 `tool` 角色编码：3.1 里我们自己组装的是发给 provider 的原始请求消息数组（OpenAI wire format），`role: 'tool'`（配 `tool_call_id`）是这个格式原生支持的字段。`renderMessages()` 序列化时按 4 角色原样映射即可，不需要 3→4 的编码层。
 
-生成预设：`AgentConfig.presetName` 非空时，`runAgentTurn` 每轮调用前 `presetApi.selectPresetByName()` 把 ST 主菜单预设切过去（不切换会沿用旧的选中预设生成）；空字符串=跟随 ST 当前选中。设置面板（AgentPanel 的 ⚙ 区）改配置走 `agentStore.updateConfig()`，跟 temperature/maxTokens/systemPrompt 一起持久化到 extensionSettings。
+System 消息组装：`AgentConfig.prompts` 分块（system/project/workflow/knowledge/runtime）在每轮调用前由 `buildSystemMessages()` 各生成一条独立的 `{role:'system'}` 消息（364d12f "one system message per persona block"，空块跳过），前置到会话消息之前；knowledge 只注入 `enabled:true` 的块；runtime 块由 `refreshRuntimePrompt()` 在每次调用前按 tabsStore/presetStore/worldbookStore/characterStore 当前状态刷新（当前 workspace 打开了什么文档）。采样配置（temperature/maxTokens/topP/topK/presencePenalty/frequencyPenalty/thinking，null 不注入）经 `callModelRaw` 的 `CallModelConfig` 注入 `generateData`。`AgentConfig` 已重构：删掉 `systemPrompt` 单字段改为 `prompts: PromptBlocks` 分块结构，默认文案在 `constants.ts` 的 `DEFAULT_AGENT_PROMPTS`（system/project/workflow 有默认文案，knowledge/runtime 默认空）；旧"`config.presetName` 切 ST 主菜单预设"的逻辑已移除（`applyPresetByName` 只保留 import，不再被调用）。
 
 ## 工具调用循环（3.2/3.3）
 
@@ -87,15 +87,15 @@ async function runAgentTurn(store, userText) {
 - 只读工具可并行（`readonly: true`），写类工具串行；
 - `MAX_TOOL_ROUNDS`（建议 8）熔断：防止模型陷入调用循环；
 - 入库截断：所有 tool_result 写入 `messages` 前过字节上限（8 KiB），跟 `agent-system-design.md` 3.3 的"入口闸门"是同一个纪律；
-- 摘要压缩：`estimateTokens(messages) >= 12K` 或 `estimateBytes >= 256K` 时触发，把 `[sacredFloor, drainTo)` 区间整体替换成一条 LLM 生成的摘要（合成 user 消息，带 framing），带 60s 硬超时回退。
+- 摘要压缩：触发只有两个——①`usedContext/maxContextTokens > compactThresholdRatio`（用户配的百分比，无固定阈值 fallback，ratio 不合法时跳过等 overflow）②`estimateBytes >= 256K`。把 `[sacredFloor, drainTo)` 区间分两路：user/assistant 喂 LLM summary（重试 `COMPACT_MAX_RETRIES`=3 次、超时 60s、`<previous_summary>` tag 包裹、已有摘要叠加而非蒸馏），tool_result 按体积折叠或原样保留不进 summary。合成 `system` 消息 role。overflow 兜底也走 `compactMessages` 而非占位替换。
 
 ## 安全与审批边界
 
 ### 风险分级 + 审批门（7.1）
 
-直接复用项目**已有的** `confirmStore.ask()`：`risk: 'risky'` 的工具在 `execute()` 真正执行前，先弹 `confirmStore.ask()`，用户确认后才继续；拒绝则工具结果记为 `isError: true` 的 `tool` 消息（内容类似"用户拒绝了这次操作"），让模型知道并调整后续行为。
+写类工具（`risk:'risky'`）在 `execute()` 真正执行前走 `agentStore.requestApproval()`：AgentPanel 渲染内嵌审批卡片（`pendingApproval`），不弹全局模态、不挡其他操作；用户点同意/拒绝触发 `resolveApproval()`。拒绝则工具结果记为 `isError: true` 的 `tool` 消息并置 `stopTurn: true`——`runAgentTurn` 看到 `stopTurn` 直接 break 工具循环、finalize 成 `'canceled'`，不再让模型续跑工具或续答。
 
-MVP 只做"仅一次"（每次 risky 操作都问）。如果实测用户抱怨"每次都要点确认很烦"，再加"本次会话内不再询问同名工具"这一档。
+审批卡片带"本会话自动同意"开关：勾选后把该工具名加入 `autoApprovedTools` 集合，本会话内同名工具直接放行不再询问；新建会话时清空该集合，不跨会话残留。
 
 ### 越界防护（7.3）
 
@@ -123,15 +123,22 @@ idle ──submit──► thinking ──tool_call──► tool_loop ──…
 |---|---|---|
 | `TOOL_RESULT_TRUNCATE_BYTES` | 8 KiB | 6.1，比原文档 64 KiB 小得多，匹配本产品 tool 输出体量 |
 | `LIST_TOOLS_MAX_ITEMS` | 50 | 列表类工具单次最多返回条目数 |
-| `COMPACT_THRESHOLD_TOKENS` | 12K | 6.2，按常见 chat completion 模型的实际可用窗口打个提前量 |
 | `SUMMARY_FIDELITY_RATIO` | 0.3 | 摘要保真窗口：最近 30% token 的原文保留进摘要提示 |
-| `SUMMARY_TIMEOUT_MS` | 60s | 摘要调用硬超时，比原文档 180s 短——本产品摘要输入本来就小 |
+| `SUMMARY_TIMEOUT_MS` | 60s | 摘要调用硬超时，比原文档 180s 热——本产品摘要输入本来就小 |
+| `COMPACT_MAX_RETRIES` | 3 | compact 失败重试次数，全失败才回退占位文本，不干掉 history |
+| `SUMMARY_TOO_BIG_PREFIX` | 2 KiB | tool_result 折叠阈值，compact 时超此长度的 tool 消息折叠保留开头，不进 LLM summary |
 | `MAX_TOOL_ROUNDS` | 8 | 单次用户提交内的工具调用轮数熔断 |
 | `READONLY_TOOL_CONCURRENCY` | 3 | 单轮内并行只读工具并发数 |
 | `MAX_RETAINED_SESSIONS` | 20 | 1.3，持久化保留的最大会话索引条数 |
 | `ACTIVE_SESSION_SOFT_LIMIT_BYTES` | 256 KiB | 单会话 activeSessionMessages 总大小软上限，触发强制摘要压缩 |
 | `SACRED_PREFIX_MESSAGES` | 2 | 神圣前缀保留的消息条数：system persona + 第一条真实 user 消息 |
-| `TOKEN_BYTES_ESTIMATE` | 4 | 单 token 预估字节数，用于 estimateTokens 的粗略估算 |
+| `TOKEN_BYTES_ESTIMATE` | 4 | 单 token 预估字节数，countTokensAsync 拿不到 ST tokenizer 时的字节估算回退 |
+| `DEFAULT_AGENT_PROMPTS` | system/project/workflow 有文案 | 出厂默认提示词分块模板（constants.ts）：knowledge/runtime 默认空；用户可在 AgentPanel 设置区逐块覆盖 |
 | `AGENT_PERSISTED_VERSION` | 1 | 持久化数据结构版本号，不匹配时显式报错给用户重置按钮 |
 | `AGENT_NS` | `'ST_Workbench_Agent'` | extensionSettings 命名空间键，唯一不通用 |
 
+compact 触发无固定 token 阈值——只看 `usedContext/maxContextTokens > compactThresholdRatio`（用户配的百分比，default `maxContextTokens=256000` / `compactThresholdRatio=0.7`）+ overflow 兜底。
+
+## 工具 description 管理
+
+三个 tools 文件（`readonly.ts`/`write.ts`/`preview.ts`）顶部各有一个 `const TOOL_DESC = { ... } as const` 集中管理所有工具描述文案，英文 atomcode 风格（做什么/不做什么/边界/何时用/参数语义/返回形态/错误边界/反例陷阱，150-250 字符），`registerAgentTool` 里 `description` 字段引用 `TOOL_DESC.xxx`。改描述改 const 即可，便于 diff 评审。

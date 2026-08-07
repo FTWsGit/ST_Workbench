@@ -16,7 +16,7 @@ alwaysApply: true
 - **世界书**：条目的增删改查、排序、启用/禁用、分组、批量工具（启用/禁用/改激活方式）。
 - **角色卡**：七个"大文本框"创作字段（description/scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt）+ 可拖拽排序的开场白（greetings）+ 创作者信息/tags/talkativeness/世界书绑定换绑的整份文档级编辑，以及**绑定在角色卡上的正则脚本**（跟预设域是同一个 `extensions.regex_scripts` 概念，复用同一套参数化正则组件，只是宿主换成了角色卡）。
 
-四者全部原生接入标签系统、支持中/英文界面切换。agent 辅助创作是规划中但还没开始的方向（见文末 TODO）——整个 UI 骨架（标签页、侧边栏模式切换、设置面板、悬浮窗）是按"以后会有不止一种可编辑的东西"设计的，不是只为预设+正则量身定制。
+四者全部原生接入标签系统、支持中/英文界面切换。agent 是跨三个 store 的持续对话式运维助手（`src/agent/` 子系统 + `AgentPanel.vue` 右侧栏，跟 Preview/ToolBox 一样支持 docked/overlay/float 三种形态，不进标签页路由），不是第五类可编辑数据。整个 UI 骨架（标签页、侧边栏模式切换、设置面板、悬浮窗）本来就是按"以后会有不止一种可编辑的东西"设计的，不是只为预设+正则量身定制。
 
 其中，TauriTavern 是 Rust 重构后端的 SillyTavern，前端 API 保持了一致，使用 WebView2。
 
@@ -40,11 +40,20 @@ ST_Workbench/
     ├── utils.ts            # 纯函数工具层：esc/span/escRe/debounce + orderedPromptsWithHidden + macroAwareDiff/wordDiff（精确预览高亮）+ applyMultiSelect（多选算法）+ roleClass/varOpBadge（小型UI映射）
     ├── regexEngine.ts      # 正则脚本的纯函数逻辑：查找/替换/修剪的本地模拟，供预览复用，preset/character 两个宿主共用同一套逻辑
     ├── env.d.ts
+    ├── agent/               # agent 运维助手子系统：跨 preset/worldbook/character 三 store 的持续对话侧边栏（不进标签页路由，跟 Preview/ToolBox 一样支持 docked/overlay/float 三态）
+    │   ├── agentStore.ts      # Pinia store（id 'agent'）：会话状态机 + 运行时状态机 + 唯一 LLM 调用入口，持久化走 extensionSettings（api/agentApi.ts）
+    │   ├── callModel.ts       # LLM 调用层：监听 CHAT_COMPLETION_SETTINGS_READY，在请求体组装完、即将发 API 前把 tools 塞进去；generateRawData 返回原始 response，toolCallCompat 解析 tool_calls
+    │   ├── contextManager.ts  # 上下文管理：神圣前缀（压缩永不触碰）+ 入库截断（tool_result 8 KiB）+ 整段摘要压缩（countTokensAsync 走 ST tokenizer 精确计数，触发阈值 maxContextTokens × compactThresholdRatio，未配置回落 12K，60s 硬超时）
+    │   ├── toolRegistry.ts    # 工具注册表：JSON Schema + risk 分级（safe/risky）+ availableIn 越界校验 + execute 函数
+    │   ├── tools/             # 工具实现：readonly.ts / write.ts / preview.ts；risky 写类工具执行前走内嵌审批卡片（agentStore.requestApproval，可本会话自动放行）
+    │   ├── constants.ts       # 可调常数集中表（压缩阈值/熔断轮数/持久化版本等），禁止散落魔法数字
+    │   └── types.ts           # Message/ToolCall/AgentConfig/PromptBlocks/AgentSessionMeta/AgentRuntimeState 等类型
     ├── api/                 # 跟 SillyTavern 本体交互的读写层（原来是单个 sillytavern.ts，已按 domain 拆分）
     │   ├── hostContext.ts     # 无 domain 知识：getCtx()/getTopWindow()/ensureTopImporter() 这类"怎么拿到 ST 环境"的机制，presetApi/characterApi/worldbookApi 都从这里取
     │   ├── apiUtils.ts        # 跨 domain 共享的纪律性工具：只有 deepClonePlain()（传给 ST 前必须深拷贝成纯数据，不能是 Vue Proxy）这一类真正 domain-agnostic 的东西，故意不抽 BaseApi<T>（见「架构总览」）
     │   ├── presetApi.ts       # PresetManager 增删查存、方案B单例读取、真实 generate 捕获最终请求体、selectPresetByName（仅 Preset Preview 用，见"状态与持久化 > 与 ST API 的数据契约"）
     │   ├── worldbookApi.ts    # `/scripts/world-info.js` 模块函数封装：list/get/create/edit/delete，`entries: Record<uid,entry>` ⇄ 工作层数组互转
+    │   ├── agentApi.ts        # agent 持久化读写层：走 extensionSettings（服务端 settings.json 同级），跟 presetApi/characterApi 同一套 ensureTopImporter() 顶层动态 import 模式
     │   └── characterApi.ts    # `/script.js` 模块 `characters` 数组 + multipart 表单读写：getCharacterByAvatar（每次都用 `getOneCharacter()` 真发网络请求重新拉取，见文件内 doc comment——`unshallowCharacter()`是纯本地操作且几乎总是空操作，别被名字骗了）、create/editCharacter（字段级 oldRaw 回退合并）、deleteCharacter
     ├── stores/
     │   ├── uiStore.ts          # Pinia id 'ui'，导出 useUiStore()——全局 UI 单例：settings（字体/颜色/面板宽度/语言/FAB 位置）+ cssVars + panelOpen（主面板开关）+ settingsOpen（设置弹窗开关）+ metaPanelOpen（元信息悬浮窗开关，横跨 preset/character，见「MetaPanel」）+ toast 通知 + i18n t()/currentLocale。所有组件直接 useUiStore()，不经过任何 domain store 转发
@@ -83,6 +92,8 @@ ST_Workbench/
         │   ├── EditorShell.vue        # 内容编辑区的路由容器：按 activeTab.domain 查 `EDITOR_COMPONENTS` 路由表用 `<component :is>` 挂载对应编辑组件，`domain === 'regex'` 时数据源再按 `activeTab.workspace` 分派到 presetStore 还是 characterStore，纯路由，不持有任何桥接状态
         │   ├── SettingsDock.vue       # 右侧设置面板的路由容器：按 activeTab.domain 查 FORMS 表挂载设置表单（故意没有 character 条目，character tab 激活时整个面板自动隐藏，见「多 domain 路由」的 character 部分），regex 表单的数据源同 EditorShell 按 workspace 分派
         │   ├── FloatingPanelShell.vue # 悬浮窗容器：可拖拽定位/可 resize/多开自动置顶/移动端变 bottom sheet，机制在 `useFloatingPanel.ts`，自己只管 header/body/resize 手柄的渲染。MetaPanel 是常驻调用方，ToolBoxPanel/PreviewPanel/AgentPanel 的 float 形态也借它，见「悬浮窗 Shell」
+        │   ├── PanelModeSwitch.vue    # 右侧面板三态切换开关（docked 挤开 / overlay 悬浮 / float 完全悬浮），ToolBoxPanel/PreviewPanel/AgentPanel 共用，形态各自存 uiStore.settings.previewMode/toolBoxMode/agentMode
+        │   ├── AgentPanel.vue         # Agent 助手右侧栏：会话消息渲染/输入/状态反馈 + 内嵌设置区（⚙：prompts.system 及全部采样/压缩配置字段，走 agentStore.updateConfig() 持久化到 extensionSettings）+ 内嵌审批卡片（pendingApproval + 本会话自动同意）；三态同 PanelModeSwitch，开关在 uiStore.agentPanelOpen
         │   ├── MetaPanel.vue          # "整份文档"级别的元信息悬浮窗：按 `activeWorkspace` 查 `META_FORMS` 表（`preset → PresetMetaForm`/`character → CharacterMetaForm`，worldbook 没有条目）挂载对应表单，见「MetaPanel」
         │   ├── TabBar.vue             # 标签栏，纯展示 tabsStore.tabs
         │   ├── ListToolbar.vue        # 侧边栏列表顶部"新建按钮 slot + 计数"工具条，多个侧边栏共用
@@ -102,6 +113,11 @@ ST_Workbench/
         │   ├── VarPopup.vue           # 点击变量名弹出的小悬浮窗
         │   ├── PreviewPanel.vue       # 预览面板，基于真实 ST 渲染；生成前会调用 `store.selectPresetByName()` 把 ST 主菜单选中的预设切到当前工具正在编辑的这份
         │   └── CopyPanel.vue          # 跨预设复制提示词块的 tool（收进工具箱，preset/items 场景注册）：独立加载/编辑/保存，和 presetStore 的编辑会话完全隔离；容器窄于 760px 时竖排（container query），移动端把左右两栏中间的复制按钮换成上下箭头
+        ├── toolbox/                  # 工具箱：按 (workspace, collection) 场景注册的工具面板，顶栏 toolbox 按钮开关（tabsStore.toolBoxOpen，按 workspace 各自记忆），三态同 PanelModeSwitch
+        │   ├── registry.ts           # TOOL_REGISTRY 注册表 + registerTool(workspace, collection, def) + getToolsForScene 查询；启动期由各工具模块顶层调用填表
+        │   ├── ToolBoxPanel.vue      # 工具容器：按当前场景列出已注册 tool 的 tab，KeepAlive 保留各 tool 组件实例，挂载时统一传 scene/workspace/collection 三个 props
+        │   ├── register.ts           # 具体工具注册：search/batch 进 preset/worldbook/character 各场景，copy（CopyPanel）只进 preset/items
+        │   └── tools/                # 通用工具实现：SearchTool.vue / BatchTool.vue
         ├── worldbook/                # worldbook 域（世界书条目）专属组件
         │   ├── WorldbookSidebar.vue     # 侧边栏：列表 + 分组 + 拖拽排序 + 滚动同步 + 双击改名，同 PresetSidebar 的模式
         │   ├── WorldbookContentEditor.vue # 内容编辑区薄壳：v-model 桥接 store.currentEntry.content，套 HighlightedEditor

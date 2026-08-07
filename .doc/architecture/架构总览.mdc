@@ -89,7 +89,7 @@ presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`r
 
 ## 工具箱（ToolBox）：跨 workspace 的工具面板，按 scene 派工具
 
-**为什么独立成节**：之前的顶栏工具（Search/VarNav/Preview）都是 preset 专属、硬绑在顶栏按钮上，互不通约。工具箱是第一个**按 (workspace, sidebarCollection) scene 派工具**的容器——同一个面板壳，preset/items 下挂搜索+批量、character/regex 下挂另一套，scene 切了工具清单自动换。这套设计是为将来 LLM Agent 的 tool calling 铺路：每个 scene 一份工具清单 = tool definition 的 availableWhen 谓词，工具的输入输出形状镜像 LLM 调用形状。
+**为什么独立成节**：之前的顶栏工具（Search/VarNav/Preview）都是 preset 专属、硬绑在顶栏按钮上，互不通约。工具箱是第一个**按 (workspace, sidebarCollection) scene 派工具**的容器——同一个面板壳，preset/items 下挂搜索+批量+Copy（跨预设复制）、character/regex 下挂另一套，scene 切了工具清单自动换。这套设计是为将来 LLM Agent 的 tool calling 铺路：每个 scene 一份工具清单 = tool definition 的 availableWhen 谓词，工具的输入输出形状镜像 LLM 调用形状。
 
 ### 关键文件
 

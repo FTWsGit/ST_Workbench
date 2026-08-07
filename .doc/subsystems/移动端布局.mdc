@@ -9,19 +9,19 @@ alwaysApply: false
 
 `composables/hostEnv.ts` 的 `useIsMobile()` 提供一个响应式 `isMobile` ref，断点是同文件导出的 `MOBILE_BREAKPOINT = 720`（px，宿主窗口宽度）。**优先用 `matchMedia` 监听断点跨越**，不支持时退化成 `resize` 监听——跟侧边栏 resize 一样，监听的是 `getHostWindow()`，不是裸 `window`（原因见「部署环境」：脚本自己的 JS 执行上下文是 iframe，裸全局对象量出来的永远是 iframe 自己的尺寸）。CSS 里 `@media (max-width: 720px)` 手写了同一个数字——**两处改一处必须跟着改，CSS 读不到 TS 里的常量**。
 
-桌面端是四栏并排（侧边栏 / 编辑区 / 变量面板 / 预览面板），移动端屏幕放不下，所以整体换了一套 **off-canvas drawer / bottom sheet** 模式，而不是把面板硬塞进一列纵向堆叠：
+桌面端是侧边栏 / 编辑区 / 右侧面板并排（变量面板、预览面板、工具箱、Agent 面板都支持 docked 挤开 / overlay 右侧悬浮 / float 完全悬浮三态），移动端屏幕放不下，所以整体换了一套 **off-canvas drawer / bottom sheet** 模式，而不是把面板硬塞进一列纵向堆叠：
 
 - **`.wb-sidebar`**：左侧滑入式抽屉，头部 ☰ 按钮触发（`App.vue` 的 `toggleMobileSidebar`）。
-- **`.wb-right-panel`（变量面板 + 设置面板共用这个 class）和 `.pr-preview-panel`**：底部弹出式 sheet，从头部 ⋯ 打开的工具抽屉里选中对应项才会出现（见下）。
+- **`.wb-right-panel`（变量面板 + 设置面板 + AgentPanel 的 docked/overlay 形态共用这个 class）和 `.wb-preset-preview-panel`**：底部弹出式 sheet，从头部 ⋯ 打开的工具抽屉里选中对应项才会出现（见下）。工具箱 `ToolBoxPanel` 也是同款底部 sheet，但不进抽屉状态机——打开即常驻。
 - **`.wb-editor-col`**（真正的提示词/正则编辑区）：唯一一直留在正常文档流里、始终占满宽度的东西——手机上应该"随时都在"的只有这一块。
 - 一个共享的 `.wb-mobile-backdrop` 半透明遮罩，盖住编辑区，点它关闭当前打开的那一个抽屉/sheet。
 
 面板移出文档流（`position:absolute`，锚定到 `main.ts` 里那个全屏 `position:fixed` 的挂载点，见「部署环境」），用 transform 滑入滑出，跟编辑区自己的滚动容器完全没有交集——避免"父容器可滚 + 子面板自己也可滚"的滚动嵌套错乱、以及 `.float` 悬浮模式的面板被布局流强制拉直的问题。
 
-移动端头部按钮也换了一套：桌面端 8+ 个按钮一行放不下手机 ~360px 宽的头部，所以移动端头部只留 `☰ / 保存 / 预设名 / ⋯ / ✕` 五个，其余（切换 preset/regex 模式、复制块、搜索、设置、变量导航、预览、新建/删除预设）挪进 ⋯ 按钮打开的 `.wb-mobile-tools-sheet` 里，列表形式一次性列出。这套状态机抽成了 `composables/useMobileWorkspaceDrawer.ts`——App.vue 喂一张 `panels: MobileDrawerPanel[]` 表（每条声明 `key`/`isOpen`/`setOpen`），composable 只管"现在哪一个抽屉是打开的"这一件事，不认任何 domain：
+移动端头部按钮也换了一套：桌面端 8+ 个按钮一行放不下手机 ~360px 宽的头部，所以移动端头部只留 `☰ / 保存 / 预设名 / ⋯ / ✕` 五个，其余（切换 workspace 与条目/正则集合、agent、工具箱、元信息、设置、变量导航、预览、新建/删除/导入）挪进 ⋯ 按钮打开的 `.wb-mobile-tools-sheet` 里，列表形式一次性列出。工具类按钮顺序跨 workspace 统一——先工具箱后元信息（worldbook 没有元信息表单，该项不渲染）。复制块不再是独立入口：它已收进工具箱，作为 preset/items 场景的 `copy` tool 从工具箱进入；CopyPanel 不再自己包 FloatingPanelShell，窄容器竖排靠容器查询（`container-type:inline-size` + `@container (max-width: 760px)`，跟 720px 视口断点无关），复制按钮按 `isMobile` 显示为上下箭头（▼/▲）。这套状态机抽成了 `composables/useMobileWorkspaceDrawer.ts`——App.vue 喂一张 `panels: MobileDrawerPanel[]` 表（每条声明 `key`/`isOpen`/`setOpen`），composable 只管"现在哪一个抽屉是打开的"这一件事，不认任何 domain：
 
 - 状态是返回的 `drawer.visible`（`'none' | 'sidebar' | <panel.key> | 'tools'`），App.vue 模板里用它派生 class。`'sidebar'`/`'tools'` 是内置特殊值（每个工作区都有一个侧边栏和一个工具抽屉，不需要放进 panels 表），其它取值对应 panels 里某条的 `key`。
-- 它不是"面板开没关"的第二份真相——`varNavOpen`/`previewOpen`/`settingsDockOpen` 这几个 store flag 在桌面/移动端语义完全一样，`drawer.visible` 只是"当前滑进视野的是哪一个"，由 composable 内部对每个 `panel.isOpen` 挂的 `watch` 保持同步（flag 开 → 抽屉滑入；flag 关或抽屉被背景遮罩点掉 → flag 也跟着关，不是只关视觉）。
+- 它不是"面板开没关"的第二份真相——`varNavOpen`/`previewOpen`/`settingsDockOpen`/`agentPanelOpen` 这几个 store flag 在桌面/移动端语义完全一样，`drawer.visible` 只是"当前滑进视野的是哪一个"，由 composable 内部对每个 `panel.isOpen` 挂的 `watch` 保持同步（flag 开 → 抽屉滑入；flag 关或抽屉被背景遮罩点掉 → flag 也跟着关，不是只关视觉）。panels 表现在有 varNav / preview / settingsDock / agent 四条；`toolBoxOpen` 故意不在表里——工具箱不参与抽屉/遮罩状态机，移动端打开即常驻。
 - App.vue 喂给 composable 的 `revealSidebarOn: [() => tabsStore.activeWorkspace, () => tabsStore.sidebarCollection]`——切换 workspace 或"条目↔正则"集合后，composable 自动把 `visible` 设成 `'sidebar'`，刚切换用户大概率想看侧边栏。
 - `closeOn: [() => tabsStore.activeId, () => presetStore.editorJump]`——选中新标签或触发 `editorJump`（搜索/变量跳转）时自动收起。`editorJump` 这个 token 在跳转目标已经是当前打开的标签时不会改变 `activeId`（标签没变，只是编辑器内部跳到了不同的行/列），如果只靠 `activeId` 监听就会出现"点了跳转但视觉上抽屉纹丝不动"的假死感，所以单独再加一条。
 - 工具抽屉里的每一项（`drawer.runTool(fn)`）：先执行动作再收起抽屉；若动作本身打开了某个受追踪的面板，composable 那几个 watch 会在同步处理后把 `visible` 重新指向那个面板，不需要 runTool 自己兜。
