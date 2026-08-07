@@ -7,6 +7,7 @@ import { callModelRaw, renderMessages, type ModelTurnResult } from './callModel'
 import {
   MAX_TOOL_ROUNDS,
   AGENT_NS,
+  COMPACT_THRESHOLD_TOKENS,
 } from './constants'
 import { listAgentTools, listAgentToolsForWorkspace, getAgentTool, type AgentToolContext, type AgentToolDef, type AgentWorkspace } from './toolRegistry'
 import {
@@ -95,6 +96,19 @@ export const useAgentStore = defineStore('agent', () => {
   const loading = ref(false)
   /** 是否已成功加载过一次（避免重复 load）。 */
   const loaded = ref(false)
+
+  /* ====== 审批门（内嵌卡片，不弹全局模态）====== */
+  /** 当前等待审批的工具调用信息，null 表示无待审批。 */
+  const pendingApproval = ref<{
+    toolName: string
+    title: string
+    message: string
+    danger: boolean
+  } | null>(null)
+  /** 审批 Promise 的 resolve 函数（resolveApproval 调用）。 */
+  let approvalResolve: ((approved: boolean) => void) | null = null
+  /** 本会话自动放行的工具名集合（单 session 一键同意）。 */
+  const autoApprovedTools = ref<Set<string>>(new Set())
 
   /* ====== 工具注册表（P1 填充）====== */
   // 占位：P1 阶段在此注册只读工具，P2 注册写类工具
@@ -190,6 +204,8 @@ export const useAgentStore = defineStore('agent', () => {
     activeSessionMessages.value = []
     activeSessionId.value = id
     sessions.value = [...sessions.value, meta]
+    // 新会话清空自动放行集合（"本会话同意"不跨会话残留）
+    autoApprovedTools.value = new Set()
 
     // 触发容量纪律：sessions 超过 MAX_RETAINED_SESSIONS 时丢弃最旧的已归档会话
     trimSessions()
@@ -333,11 +349,6 @@ export const useAgentStore = defineStore('agent', () => {
           toolRounds: round,
         }
 
-        // 配置了生成预设时，每轮调用前把 ST 主菜单预设切过去（不切换会沿用旧的选中预设生成）
-        if (config.value.presetName) {
-          applyPresetByName(config.value.presetName)
-        }
-
         // P3：每轮调用前触发摘要压缩（模块 6.2）
         await maybeAutoCompact()
 
@@ -347,6 +358,7 @@ export const useAgentStore = defineStore('agent', () => {
           result = await callModelRaw(messages, tools, {
             temperature: config.value.temperature,
             maxTokens: config.value.maxTokens,
+            systemPrompt: config.value.systemPrompt
           })
         } catch (e) {
           // 溢出兜底（模块 6.2）：模型/API 直接拒绝请求（上下文超窗）
@@ -450,9 +462,13 @@ export const useAgentStore = defineStore('agent', () => {
    */
   async function maybeAutoCompact(): Promise<void> {
     const messages = activeSessionMessages.value
-    if (!shouldCompact(messages)) return
+    // compact 阈值：配置了 maxContextTokens 就按百分比算，否则回落常数
+    const maxCtx = (config.value.maxContextTokens ?? 0)
+    const ratio = (config.value.compactThresholdRatio ?? 0)
+    const threshold = (maxCtx > 0 && ratio > 0) ? Math.floor(maxCtx * ratio) : COMPACT_THRESHOLD_TOKENS
+    if (!(await shouldCompact(messages, threshold))) return
 
-    const { sacredFloor, drainTo } = computeCompactRange(messages)
+    const { sacredFloor, drainTo } = await computeCompactRange(messages)
     if (drainTo <= sacredFloor) return
 
     // 抽取要摘要的消息
@@ -507,7 +523,8 @@ export const useAgentStore = defineStore('agent', () => {
 
     const result = await callModelRaw(summaryPrompt, [], {
       temperature: 0.3, // 摘要用低温度保持事实性
-      maxTokens: 1024,
+      maxTokens: 2048,
+      systemPrompt: ''
     })
     return result.content || '[摘要生成失败]'
   }
@@ -548,11 +565,56 @@ export const useAgentStore = defineStore('agent', () => {
     await persist()
   }
 
+  /* ====== 审批门 actions ====== */
+
+  /**
+   * 工具审批请求（内嵌卡片，不弹全局 confirmStore.ask 模态）。
+   *
+   * 流程：
+   *  1. 先查 autoApprovedTools（本会话一键同意过的工具名），命中直接放行；
+   *  2. 否则设置 pendingApproval，AgentPanel 渲染审批卡片，用户点同意/拒绝触发 resolveApproval；
+   *  3. resolveApproval(true) 时可选把 toolName 加入 autoApprovedTools（"本会话自动同意"）。
+   */
+  function requestApproval(opts: {
+    toolName: string
+    title: string
+    message: string
+    danger?: boolean
+  }): Promise<boolean> {
+    // 本会话已自动放行
+    if (autoApprovedTools.value.has(opts.toolName)) {
+      return Promise.resolve(true)
+    }
+    pendingApproval.value = {
+      toolName: opts.toolName,
+      title: opts.title,
+      message: opts.message,
+      danger: opts.danger ?? true,
+    }
+    return new Promise<boolean>(resolve => {
+      approvalResolve = resolve
+    })
+  }
+
+  /** 用户在审批卡片上点同意/拒绝。 */
+  function resolveApproval(approved: boolean, autoApproveThisSession = false): void {
+    const info = pendingApproval.value
+    if (approved && autoApproveThisSession && info) {
+      autoApprovedTools.value = new Set(autoApprovedTools.value).add(info.toolName)
+    }
+    pendingApproval.value = null
+    const fn = approvalResolve
+    approvalResolve = null
+    fn?.(approved)
+  }
+
   return {
     // persisted state
     version, config, sessions, activeSessionId, activeSessionMessages,
     // runtime state
     runtime, versionMismatch, loading, loaded, availableTools,
+    // approval gate
+    pendingApproval, autoApprovedTools, requestApproval, resolveApproval,
     // computed
     turnState, currentTool, isBusy, hasActiveSession, messageCount,
     // actions

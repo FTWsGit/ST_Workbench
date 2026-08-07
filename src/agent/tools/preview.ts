@@ -164,6 +164,7 @@ registerAgentTool({
 
     try {
       const result = await callModelRaw(draftMessages, [], {
+        systemPrompt: '',
         temperature: 0.8, // 创作用高温度增加多样性
         maxTokens,
       })

@@ -83,6 +83,7 @@ export default {
   'shared.panelMode.tooltip.docked': '右侧挤开：嵌入布局，挤开编辑区',
   'shared.panelMode.tooltip.overlay': '右侧悬浮：盖在右侧边缘，不挤开编辑区',
   'shared.panelMode.tooltip.float': '完全悬浮：可拖拽、可缩放，移动端变底部弹层',
+  'shared.panelMode.ariaLabel': '面板形态切换',
   'shared.highlightedEditor.cursor': '行 {line}，列 {col}',
 
   // ---- 语法高亮标签 ----
@@ -624,10 +625,8 @@ export default {
   'agent.header.open': '🤖 Agent',
   'agent.panel.title': 'Agent 助手',
   'agent.settings.title': 'Agent 设置',
-  'agent.settings.preset': '生成预设',
-  'agent.settings.presetFollow': '跟随当前预设',
   'agent.settings.systemPrompt': '系统提示词',
-  'agent.settings.systemPromptHint': '留空使用默认 persona',
+  'agent.settings.systemPromptHint': '填入系统提示词',
   'agent.settings.temperature': '温度',
   'agent.settings.maxTokens': '最大 Token',
   'agent.session.untitled': '新会话',
@@ -642,7 +641,7 @@ export default {
   'agent.state.error': '出错',
   'agent.state.complete': '完成',
   'agent.empty.title': '向 Agent 提问',
-  'agent.empty.hint': '例如：把 main 提示词块里的温度参数改成 0.8',
+  'agent.empty.hint': '例如：把 main 提示词块关掉',
   'agent.error.version.title': 'Agent 数据版本不匹配',
   'agent.error.version.body': '存储的 Agent 数据版本与当前代码期望的不一致。点击"重置"会把 Agent 数据清空恢复默认。',
   'agent.error.version.reset': '重置 Agent 数据',
@@ -665,4 +664,5 @@ export default {
   'agent.approval.charSetField': '修改角色卡字段 {key}：{preview}',
   'agent.approval.charSave': '保存角色卡「{name}」到服务端',
   'agent.approval.presetPreviewRaw': '触发一次真实生成请求预览完整 messages（会占用 API 调用）',
+  'agent.approval.autoThisSession': '本会话自动同意该工具',
 } satisfies LocaleTable

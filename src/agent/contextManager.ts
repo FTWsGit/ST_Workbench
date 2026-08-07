@@ -15,36 +15,85 @@ import {
   TOKEN_BYTES_ESTIMATE,
   ACTIVE_SESSION_SOFT_LIMIT_BYTES,
 } from './constants'
+import { getCtx } from '../api/hostContext'
 import type { Message } from './types'
 
-/* ====== Token 估算 ====== */
+/* ====== Token 计数 ======
+ * 用 SillyTavern 自己的 tokenizer（getContext().getTokenCountAsync）精确计数，
+ * 比字节估算准得多。拿不到 ctx / 调用失败时回退字节估算，保证不阻塞主流程。
+ */
 
-/** 粗略估算 messages 的 token 数（1 token ≈ 4 字节）。 */
-export function estimateTokens(messages: Message[]): number {
-  let bytes = 0
+/** 把 messages 拼成一段文本用于 tokenizer 计数。 */
+function messagesToText(messages: Message[]): string {
+  let s = ''
   for (const m of messages) {
-    bytes += m.text.length
+    s += m.text
     if (m.toolCalls) {
       for (const tc of m.toolCalls) {
-        bytes += tc.arguments.length + tc.name.length
+        s += tc.arguments + tc.name
       }
     }
   }
-  return Math.ceil(bytes / TOKEN_BYTES_ESTIMATE)
+  return s
 }
 
-/** 估算 messages 总字节数。 */
-export function estimateBytes(messages: Message[]): number {
-  let bytes = 0
-  for (const m of messages) {
-    bytes += m.text.length
-    if (m.toolCalls) {
-      for (const tc of m.toolCalls) {
-        bytes += tc.arguments.length + tc.name.length
-      }
-    }
+/** 字节估算回退（1 token ≈ 4 字节）。 */
+export function estimateTokens(messages: Message[]): number {
+  const text = messagesToText(messages)
+  return Math.ceil(text.length / TOKEN_BYTES_ESTIMATE)
+}
+
+/** 单条消息字节估算（computeCompactRange 内部按消息粒度数 token 用）。 */
+function estimateMessageTokens(m: Message): number {
+  let len = m.text.length
+  if (m.toolCalls) {
+    for (const tc of m.toolCalls) len += tc.arguments.length + tc.name.length
   }
-  return bytes
+  return Math.ceil(len / TOKEN_BYTES_ESTIMATE)
+}
+
+/** messages 总字节数。 */
+export function estimateBytes(messages: Message[]): number {
+  return messagesToText(messages).length
+}
+
+let cachedGetTokenCountAsync: ((str: string, padding?: number) => Promise<number>) | null = null
+let tokenFnProbed = false
+
+/** 取 ST tokenizer 函数（缓存）。拿不到返回 null。 */
+function getStTokenFn(): ((str: string, padding?: number) => Promise<number>) | null {
+  if (tokenFnProbed) return cachedGetTokenCountAsync
+  tokenFnProbed = true
+  try {
+    const ctx = getCtx()
+    const fn = ctx?.getTokenCountAsync
+    if (typeof fn === 'function') cachedGetTokenCountAsync = fn.bind(ctx)
+  } catch { /* 回退字节估算 */ }
+  return cachedGetTokenCountAsync
+}
+
+/**
+ * 精确计 messages 的 token 数（异步，走 ST tokenizer）。
+ * 失败/拿不到 ctx 时回退 estimateTokens，绝不抛错阻塞主流程。
+ */
+export async function countTokensAsync(messages: Message[]): Promise<number> {
+  const fn = getStTokenFn()
+  if (!fn) return estimateTokens(messages)
+  try {
+    const text = messagesToText(messages)
+    const n = await fn(text)
+    return typeof n === 'number' && n > 0 ? n : estimateTokens(messages)
+  } catch {
+    return estimateTokens(messages)
+  }
+}
+
+/**
+ * 单条消息精确 token（异步）。
+ * computeCompactRange 需要按消息粒度数 token，这里给一个 per-message 版本。
+ */
+async function countMessageTokensAsync(m: Message): Promise<number> {
+  return countTokensAsync([m])
 }
 
 /* ====== 入库截断 ====== */
@@ -77,41 +126,49 @@ export function sacredFloorLength(messages: Message[]): number {
 /* ====== 整段摘要压缩 ====== */
 
 /**
- * 检查是否需要触发摘要压缩。
+ * 检查是否需要触发摘要压缩（async，走 ST tokenizer 精确计数）。
  *
  * 触发条件（任一）：
- *  1. estimateTokens(messages) >= COMPACT_THRESHOLD_TOKENS；
+ *  1. countTokensAsync(messages) >= compactThreshold；
  *  2. estimateBytes(messages) >= ACTIVE_SESSION_SOFT_LIMIT_BYTES。
+ *
+ * compactThreshold 由调用方传入（config.maxContextTokens * config.compactThresholdRatio），
+ * 传 0 / 未配置时回落到常数 COMPACT_THRESHOLD_TOKENS。
  */
-export function shouldCompact(messages: Message[]): boolean {
+export async function shouldCompact(
+  messages: Message[],
+  compactThreshold: number = COMPACT_THRESHOLD_TOKENS,
+): Promise<boolean> {
   if (messages.length <= SACRED_PREFIX_MESSAGES + 2) return false
-  const tokens = estimateTokens(messages)
-  if (tokens >= COMPACT_THRESHOLD_TOKENS) return true
+  const tokens = await countTokensAsync(messages)
+  if (tokens >= compactThreshold) return true
   const bytes = estimateBytes(messages)
   if (bytes >= ACTIVE_SESSION_SOFT_LIMIT_BYTES) return true
   return false
 }
 
 /**
- * 计算摘要压缩的抽干区间 [sacredFloor, drainTo)。
+ * 计算摘要压缩的抽干区间 [sacredFloor, drainTo)（async，按精确 token 数算保真窗口）。
  *
  * 保真窗口：保留最近 N% token 的原文，其余抽干成摘要。
  */
-export function computeCompactRange(messages: Message[]): { sacredFloor: number; drainTo: number } {
+export async function computeCompactRange(
+  messages: Message[],
+): Promise<{ sacredFloor: number; drainTo: number }> {
   const sacredFloor = sacredFloorLength(messages)
   if (sacredFloor >= messages.length) {
     return { sacredFloor, drainTo: messages.length }
   }
 
   // 保真窗口：最近 N% 的消息（按 token 数算）
-  const totalTokens = estimateTokens(messages)
+  const totalTokens = await countTokensAsync(messages)
   const fidelityTokens = Math.floor(totalTokens * SUMMARY_FIDELITY_RATIO)
 
   // 从末尾往前数，累计 token 到 fidelityTokens 为止
   let accumulated = 0
   let drainTo = messages.length
   for (let i = messages.length - 1; i >= sacredFloor; i--) {
-    const msgTokens = estimateTokens([messages[i]])
+    const msgTokens = await countTokensAsync([messages[i]])
     if (accumulated + msgTokens > fidelityTokens && i < messages.length - 1) {
       drainTo = i + 1
       break
@@ -140,9 +197,9 @@ export async function compactMessages(
   messages: Message[],
   generateSummary: (toSummarize: Message[]) => Promise<string>,
 ): Promise<Message[]> {
-  if (!shouldCompact(messages)) return messages
+  if (!(await shouldCompact(messages))) return messages
 
-  const { sacredFloor, drainTo } = computeCompactRange(messages)
+  const { sacredFloor, drainTo } = await computeCompactRange(messages)
   if (drainTo <= sacredFloor) return messages
 
   // 抽取要摘要的消息

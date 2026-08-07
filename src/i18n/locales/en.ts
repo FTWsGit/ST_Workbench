@@ -80,6 +80,7 @@ export default {
   'shared.panelMode.tooltip.docked': 'Dock right: embedded in layout, squeezes the editor',
   'shared.panelMode.tooltip.overlay': 'Float right: overlays the right edge without squeezing',
   'shared.panelMode.tooltip.float': 'Fully floating: draggable/resizable, bottom sheet on mobile',
+  'shared.panelMode.ariaLabel': 'Panel mode switch',
   'shared.highlightedEditor.cursor': 'Line {line}, Col {col}',
 
   // ---- 语法高亮标签 ----
@@ -621,10 +622,8 @@ export default {
   'agent.header.open': '🤖 Agent',
   'agent.panel.title': 'Agent Assistant',
   'agent.settings.title': 'Agent Settings',
-  'agent.settings.preset': 'Generation preset',
-  'agent.settings.presetFollow': 'Follow current preset',
   'agent.settings.systemPrompt': 'System prompt',
-  'agent.settings.systemPromptHint': 'Leave empty for default persona',
+  'agent.settings.systemPromptHint': 'Input system prompt',
   'agent.settings.temperature': 'Temperature',
   'agent.settings.maxTokens': 'Max tokens',
   'agent.session.untitled': 'New session',
@@ -639,7 +638,7 @@ export default {
   'agent.state.error': 'Error',
   'agent.state.complete': 'Done',
   'agent.empty.title': 'Ask the Agent',
-  'agent.empty.hint': 'e.g. set the temperature parameter in the main prompt block to 0.8',
+  'agent.empty.hint': 'e.g. disable the main prompt block',
   'agent.error.version.title': 'Agent data version mismatch',
   'agent.error.version.body': 'The stored Agent data version does not match what the current code expects. Click "Reset" to clear Agent data and restore defaults.',
   'agent.error.version.reset': 'Reset Agent data',
@@ -662,4 +661,5 @@ export default {
   'agent.approval.charSetField': 'Modify character field {key}: {preview}',
   'agent.approval.charSave': 'Save character "{name}" to server',
   'agent.approval.presetPreviewRaw': 'Trigger a real generation request to preview full messages (consumes an API call)',
+  'agent.approval.autoThisSession': 'Auto-approve this tool this session',
 } satisfies Record<keyof typeof zhCN, string>

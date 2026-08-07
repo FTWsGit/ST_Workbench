@@ -18,6 +18,7 @@ import { useUiStore } from '../../stores/uiStore'
 import { usePresetStore } from '../../stores/presetStore'
 import { useWorldbookStore } from '../../stores/worldbookStore'
 import { useCharacterStore } from '../../stores/characterStore'
+import { useAgentStore } from '../agentStore'
 import { CHARACTER_FIELDS } from '../../types'
 import {
   TOOL_RESULT_TRUNCATE_BYTES,
@@ -33,25 +34,17 @@ function frame(text: string): string {
 }
 
 /* ====== 审批门包装 ======
- * risk:'risky' 工具在 execute() 真正执行前，先弹 confirmStore.ask()。
+ * risk:'risky' 工具在 execute() 真正执行前，先请求审批。
+ * 走 agentStore.requestApproval —— AgentPanel 内嵌审批卡片，不弹全局模态、不挡其他操作。
  * 用户拒绝则工具结果记为 isError:true 的 tool 消息，让模型知道并调整后续行为。 */
 function askApproval(
   ctx: AgentToolContext,
+  toolName: string,
   title: string,
   message: string,
   danger = true,
 ): Promise<boolean> {
-  return new Promise(resolve => {
-    ctx.confirmStore.ask({
-      title,
-      message,
-      confirmText: ctx.uiStore.t('common.confirm'),
-      cancelText: ctx.uiStore.t('common.cancel'),
-      danger,
-      onConfirm: () => resolve(true),
-      onCancel: () => resolve(false),
-    })
-  })
+  return useAgentStore().requestApproval({ toolName, title, message, danger })
 }
 
 /* ====== preset 写类工具 ====== */
@@ -88,6 +81,7 @@ registerAgentTool({
     const summary = Object.entries(fields).map(([k, v]) => `${k}=${truncate(String(v))}`).join(', ')
     const approved = await askApproval(
       ctx,
+      'preset_edit_block',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.presetEdit', { id, summary }),
     )
@@ -130,6 +124,7 @@ registerAgentTool({
 
     const approved = await askApproval(
       ctx,
+      'preset_create_block',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.presetCreate', { name, role }),
     )
@@ -179,6 +174,7 @@ registerAgentTool({
 
     const approved = await askApproval(
       ctx,
+      'preset_reorder_block',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.presetReorder', { id, direction }),
     )
@@ -205,6 +201,7 @@ registerAgentTool({
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
     const approved = await askApproval(
       ctx,
+      'preset_bind_group',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.presetBind'),
     )
@@ -228,6 +225,7 @@ registerAgentTool({
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
     const approved = await askApproval(
       ctx,
+      'preset_unbind_group',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.presetUnbind'),
     )
@@ -250,6 +248,7 @@ registerAgentTool({
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
     const approved = await askApproval(
       ctx,
+      'preset_save',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.presetSave', { name: store.presetName }),
       false,
@@ -290,6 +289,7 @@ registerAgentTool({
 
     const approved = await askApproval(
       ctx,
+      'worldbook_create_entry',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.wbCreate', { comment }),
     )
@@ -339,6 +339,7 @@ registerAgentTool({
 
     const approved = await askApproval(
       ctx,
+      'worldbook_reorder_entry',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.wbReorder', { uid, direction }),
     )
@@ -377,6 +378,7 @@ registerAgentTool({
 
     const approved = await askApproval(
       ctx,
+      'worldbook_delete_entry',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.wbDelete', { uid, comment: entry.comment || '' }),
     )
@@ -416,6 +418,7 @@ registerAgentTool({
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true }
     const approved = await askApproval(
       ctx,
+      'worldbook_save',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.wbSave', { name: store.worldbookName }),
       false,
@@ -465,6 +468,7 @@ registerAgentTool({
 
     const approved = await askApproval(
       ctx,
+      'character_set_field',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.charSetField', { key, preview: truncate(value.slice(0, 60)) }),
     )
@@ -500,6 +504,7 @@ registerAgentTool({
     if (!store.character) return { text: frame('当前没有加载任何角色卡。'), isError: true }
     const approved = await askApproval(
       ctx,
+      'character_save',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.charSave', { name: store.character.name || store.character.avatar }),
       false,

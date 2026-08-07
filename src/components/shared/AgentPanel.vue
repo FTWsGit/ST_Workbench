@@ -15,16 +15,9 @@
       </span>
     </template>
     <div class="wb-agent-body">
-      <button class="wb-btn sm wb-agent-settings-toggle" :class="{ active: settingsOpen }" @click="settingsOpen = !settingsOpen">⚙ {{ uiStore.t('agent.settings.title') }}</button>
+      <button class="wb-btn icon-btn" :class="{ active: settingsOpen }" :title="uiStore.t('agent.settings.title')" :aria-label="uiStore.t('agent.settings.title')" @click="settingsOpen = !settingsOpen">⚙</button>
       <div v-if="settingsOpen" class="wb-agent-settings">
         <div class="wb-form-section">
-          <div class="wb-form-field">
-            <label class="wb-form-label">{{ uiStore.t('agent.settings.preset') }}</label>
-            <select :value="agentStore.config.presetName" @change="onPresetChange">
-              <option value="">{{ uiStore.t('agent.settings.presetFollow') }}</option>
-              <option v-for="p in presetOptions" :key="p.name" :value="p.name">{{ p.name }}</option>
-            </select>
-          </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.systemPrompt') }}</label>
             <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.systemPrompt" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
@@ -81,6 +74,23 @@
             </div>
           </div>
         </template>
+      </div>
+
+      <!-- 审批卡片（内嵌，不弹全局模态、不挡其他操作） -->
+      <div v-if="agentStore.pendingApproval" class="wb-agent-approval" :class="{ danger: agentStore.pendingApproval.danger }">
+        <div class="wb-agent-approval-tool">🔧 {{ agentStore.pendingApproval.toolName }}</div>
+        <div class="wb-agent-approval-title">{{ agentStore.pendingApproval.title }}</div>
+        <div class="wb-agent-approval-msg">{{ agentStore.pendingApproval.message }}</div>
+        <div class="wb-agent-approval-actions">
+          <label class="wb-agent-approval-auto">
+            <input type="checkbox" v-model="autoApproveThisSession" />
+            <span>{{ uiStore.t('agent.approval.autoThisSession') }}</span>
+          </label>
+          <div class="wb-row-tight">
+            <button class="wb-btn" @click="onApproval(false)">{{ uiStore.t('common.cancel') }}</button>
+            <button class="wb-btn accent" :class="{ danger: agentStore.pendingApproval.danger }" @click="onApproval(true)">{{ uiStore.t('common.confirm') }}</button>
+          </div>
+        </div>
       </div>
 
       <!-- 状态条 -->
@@ -127,13 +137,6 @@
       <div v-if="settingsOpen" class="wb-agent-settings">
         <div class="wb-form-section">
           <div class="wb-form-field">
-            <label class="wb-form-label">{{ uiStore.t('agent.settings.preset') }}</label>
-            <select :value="agentStore.config.presetName" @change="onPresetChange">
-              <option value="">{{ uiStore.t('agent.settings.presetFollow') }}</option>
-              <option v-for="p in presetOptions" :key="p.name" :value="p.name">{{ p.name }}</option>
-            </select>
-          </div>
-          <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.systemPrompt') }}</label>
             <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.systemPrompt" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
           </div>
@@ -191,6 +194,23 @@
         </template>
       </div>
 
+      <!-- 审批卡片（内嵌，不弹全局模态、不挡其他操作） -->
+      <div v-if="agentStore.pendingApproval" class="wb-agent-approval" :class="{ danger: agentStore.pendingApproval.danger }">
+        <div class="wb-agent-approval-tool">🔧 {{ agentStore.pendingApproval.toolName }}</div>
+        <div class="wb-agent-approval-title">{{ agentStore.pendingApproval.title }}</div>
+        <div class="wb-agent-approval-msg">{{ agentStore.pendingApproval.message }}</div>
+        <div class="wb-agent-approval-actions">
+          <label class="wb-agent-approval-auto">
+            <input type="checkbox" v-model="autoApproveThisSession" />
+            <span>{{ uiStore.t('agent.approval.autoThisSession') }}</span>
+          </label>
+          <div class="wb-row-tight">
+            <button class="wb-btn" @click="onApproval(false)">{{ uiStore.t('common.cancel') }}</button>
+            <button class="wb-btn accent" :class="{ danger: agentStore.pendingApproval.danger }" @click="onApproval(true)">{{ uiStore.t('common.confirm') }}</button>
+          </div>
+        </div>
+      </div>
+
       <!-- 状态条 -->
       <div class="wb-agent-status">
         <span class="wb-agent-status-dot" :class="agentStore.turnState"></span>
@@ -225,18 +245,16 @@
 /** Agent 助手右侧栏：跨 preset/worldbook/character 三个 store 的运维层。
  *
  * 三种形态与其他右侧面板一致（docked 挤开 / overlay 右侧悬浮 / float 完全悬浮），
- * 设置区可配置生成预设、system prompt、temperature、maxTokens（写入 agentStore.config 并持久化）。
+ * 设置区可配置 system prompt、temperature、maxTokens（写入 agentStore.config 并持久化）。
  * 不进 tabsStore 的 domain 路由——agent 不编辑"一份文档"，开关状态放 uiStore.agentPanelOpen。
  */
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useUiStore } from '../../stores/uiStore'
 import { useAgentStore } from '../../agent/agentStore'
 import { usePanelResize } from '../../composables/usePanelResize'
 import FloatingPanelShell from './FloatingPanelShell.vue'
 import PanelModeSwitch from './PanelModeSwitch.vue'
 import NumberInput from './NumberInput.vue'
-import * as ST from '../../api/presetApi'
-import type { PresetListEntry } from '../../api/presetApi'
 import type { PanelMode } from '../../types'
 
 const uiStore = useUiStore()
@@ -252,16 +270,11 @@ function setMode(m: PanelMode) {
 /** 设置区展开/收起（局部 UI 状态，不持久化）。 */
 const settingsOpen = ref(false)
 
-/** 可用生成预设列表（设置区下拉用）。 */
-const presetOptions = ref<PresetListEntry[]>([])
-onMounted(() => {
-  try { presetOptions.value = ST.listPresets() }
-  catch { /* 预设列表拿不到不影响聊天 */ }
-})
-
 const inputText = ref('')
 const inputEl = ref<HTMLTextAreaElement | null>(null)
 const messagesContainer = ref<HTMLDivElement | null>(null)
+/** 审批卡片上的"本会话自动同意"复选状态。 */
+const autoApproveThisSession = ref(false)
 
 const activeSessionTitle = computed(() => {
   const id = agentStore.activeSessionId
@@ -319,6 +332,13 @@ async function onSend() {
   scrollToBottom()
 }
 
+/** 审批卡片同意/拒绝。autoApproveThisSession 勾选时把该工具加入本会话自动放行集合。 */
+function onApproval(approved: boolean) {
+  const auto = approved && autoApproveThisSession.value
+  agentStore.resolveApproval(approved, auto)
+  autoApproveThisSession.value = false
+}
+
 async function onNewSession() {
   await agentStore.newSession()
   inputText.value = ''
@@ -337,9 +357,6 @@ function scrollToBottom() {
 }
 
 /** 设置区变更统一走 agentStore.updateConfig（含持久化）。 */
-function onPresetChange(e: Event) {
-  agentStore.updateConfig({ presetName: (e.target as HTMLSelectElement).value })
-}
 function onPromptChange(e: Event) {
   agentStore.updateConfig({ systemPrompt: (e.target as HTMLTextAreaElement).value })
 }

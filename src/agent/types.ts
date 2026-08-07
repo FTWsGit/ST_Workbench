@@ -35,14 +35,26 @@ export interface AgentSessionMeta {
 
 /** agent 用户可调配置。 */
 export interface AgentConfig {
-  /** 系统提示词 persona。空字符串走默认 persona。 */
+  /** 系统提示词  */
   systemPrompt: string
   /** 生成温度。 */
   temperature: number
   /** 最大生成 token 数。 */
   maxTokens: number
-  /** agent 生成时使用的 ST 生成预设名。空字符串=跟随 ST 当前选中。 */
-  presetName: string
+  /** nucleus sampling：top_p（0-1）。null 表示不注入。 */
+  topP: number | null
+  /** top-k 采样（部分模型支持，Claude/OpenRouter 等）。null 表示不注入。 */
+  topK: number | null
+  /** presence_penalty（-2 到 2）。null 表示不注入。 */
+  presencePenalty: number | null
+  /** frequency_penalty（-2 到 2）。null 表示不注入。 */
+  frequencyPenalty: number | null
+  /** 思考模式开关。null 表示不注入；'enabled' 让模型输出思考过程。 */
+  thinking: { type: 'enabled' } | null
+  /** 模型最大上下文 token 数（用户配置）。0 表示未配置，compact 回落常数阈值。 */
+  maxContextTokens: number
+  /** compact 触发比例（0-1）：上下文占 maxContextTokens 的多少就压缩。0 表示未配置。 */
+  compactThresholdRatio: number
 }
 
 /** 持久化到 extensionSettings 的完整数据结构。 */
@@ -81,6 +93,12 @@ export interface AgentRuntimeState {
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   systemPrompt: '',
   temperature: 1.0,
-  maxTokens: 4096,
-  presetName: '',
+  maxTokens: 8192,
+  topP: null,
+  topK: null,
+  presencePenalty: null,
+  frequencyPenalty: null,
+  thinking: null,
+  maxContextTokens: 0,
+  compactThresholdRatio: 0,
 }

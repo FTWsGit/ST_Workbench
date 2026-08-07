@@ -65,17 +65,33 @@ function buildToolsWire(tools: any[]): any[] {
   }))
 }
 
+/** callModelRaw 接受的 agent 配置（注入到 generate_data）。 */
+export interface CallModelConfig {
+  systemPrompt: string
+  temperature: number
+  maxTokens: number
+  topP?: number | null
+  topK?: number | null
+  presencePenalty?: number | null
+  frequencyPenalty?: number | null
+  thinking?: { type: 'enabled' } | null
+}
+
 /**
- * 调用模型一次。方案 A：监听 CHAT_COMPLETION_SETTINGS_READY 注入 tools。
+ * 调用模型一次。方案 A：监听 CHAT_COMPLETION_SETTINGS_READY 注入 tools + 采样参数。
+ *
+ * 字段名对照 ST openai.js createGenerationParameters（L2742-2767）：
+ * temperature / top_p / presence_penalty / frequency_penalty / max_tokens / thinking。
+ * top_k 仅部分源支持（Claude/OpenRouter/Makersuite 等），无条件注入由后端按源过滤。
  *
  * @param messages 当前会话消息序列（已过 renderMessages 序列化）
  * @param tools 可用工具清单（empty 表示纯文本生成，不注入 tools）
- * @param config agent 配置（temperature/maxTokens 等）
+ * @param config agent 配置
  */
 export async function callModelRaw(
   messages: any[],
   tools: any[],
-  config: { temperature: number; maxTokens: number },
+  config: CallModelConfig,
 ): Promise<ModelTurnResult> {
   const ctx = getCtx()
   if (!ctx) throw new Error('SillyTavern context 不可用（getContext 缺失）')
@@ -104,6 +120,11 @@ export async function callModelRaw(
     }
     if (config.temperature != null) generateData.temperature = config.temperature
     if (config.maxTokens != null) generateData.max_tokens = config.maxTokens
+    if (config.topP != null) generateData.top_p = config.topP
+    if (config.topK != null) generateData.top_k = config.topK
+    if (config.presencePenalty != null) generateData.presence_penalty = config.presencePenalty
+    if (config.frequencyPenalty != null) generateData.frequency_penalty = config.frequencyPenalty
+    if (config.thinking) generateData.thinking = config.thinking
   }
 
   // 注册 once 监听器（在请求发出前一刻触发）
@@ -118,10 +139,10 @@ export async function callModelRaw(
   try {
     // generateRawData 返回原始 response object（含 choices/message/tool_calls）
     if (typeof ctx.generateRawData === 'function') {
-      response = await ctx.generateRawData({ prompt })
+      response = await ctx.generateRawData({ prompt: prompt, systemPrompt: config.systemPrompt })
     } else if (typeof ctx.generateRaw === 'function') {
       // 兜底：generateRaw 只返回抽取后的字符串，会丢 tool_calls
-      const text = await ctx.generateRaw({ prompt })
+      const text = await ctx.generateRaw({ prompt: prompt, systemPrompt: config.systemPrompt })
       response = { choices: [{ message: { content: text } }] }
     } else {
       throw new Error('SillyTavern context 不可用（generateRawData/generateRaw 缺失）')
