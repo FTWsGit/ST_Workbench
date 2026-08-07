@@ -6,9 +6,6 @@ export const TOOL_RESULT_TRUNCATE_BYTES = 8 * 1024
 /** 列表类工具单次最多返回条目数。超过则要求模型加筛选条件重新调用。 */
 export const LIST_TOOLS_MAX_ITEMS = 50
 
-/** 摘要压缩触发阈值（预估 token 数）。按常见 chat completion 模型的实际可用窗口打个提前量。 */
-export const COMPACT_THRESHOLD_TOKENS = 12_000
-
 /** 摘要保真窗口：最近 N% token 的原文保留进摘要提示。 */
 export const SUMMARY_FIDELITY_RATIO = 0.3
 

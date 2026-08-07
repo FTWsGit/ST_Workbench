@@ -3,14 +3,13 @@
  * 三层：
  *  1. 神圣前缀：system persona + 第一条真实 user 消息，压缩永不触碰；
  *  2. 入库截断（入口闸门）：所有 tool_result 写入前过字节上限；
- *  3. 整段摘要压缩：estimateTokens(messages) >= COMPACT_THRESHOLD_TOKENS 时触发。
+ *  3. 整段摘要压缩：usedContext/maxContext > compactThresholdRatio 时触发。
  *
  * overflow 兜底也走 compact（而非把 history 干没）；compact 失败重试 3 次；
  * summary 只针对 user/assistant 原文，tool_result 按体积折叠或原样保留。
  */
 import {
   TOOL_RESULT_TRUNCATE_BYTES,
-  COMPACT_THRESHOLD_TOKENS,
   SUMMARY_FIDELITY_RATIO,
   SACRED_PREFIX_MESSAGES,
   TOKEN_BYTES_ESTIMATE,
@@ -168,19 +167,21 @@ function splitForCompact(range: Message[]): { toSummarize: Message[]; folded: Me
  * 检查是否需要触发摘要压缩（async，走 ST tokenizer 精确计数）。
  *
  * 触发条件（任一）：
- *  1. countTokensAsync(messages) >= compactThreshold；
- *  2. estimateBytes(messages) >= ACTIVE_SESSION_SOFT_LIMIT_BYTES。
+ *  1. usedContext/maxContextTokens > compactThresholdRatio（百分比阈值，用户配）；
+ *  2. estimateBytes(messages) >= ACTIVE_SESSION_SOFT_LIMIT_BYTES（字节硬上限防失控）。
  *
- * compactThreshold 由调用方传入（config.maxContextTokens * config.compactThresholdRatio），
- * 传 0 / 未配置时回落到常数 COMPACT_THRESHOLD_TOKENS。
+ * maxContextTokens / compactThresholdRatio 都由调用方传入（来自 AgentConfig）。
+ * compactThresholdRatio 不合法（≤0 或 ≥1）时返回 false——用户没配就不 compact，等 overflow 兜底。
  */
 export async function shouldCompact(
   messages: Message[],
-  compactThreshold: number = COMPACT_THRESHOLD_TOKENS,
+  maxContextTokens: number,
+  compactThresholdRatio: number,
 ): Promise<boolean> {
   if (messages.length <= SACRED_PREFIX_MESSAGES + 2) return false
+  if (!(maxContextTokens > 0 && compactThresholdRatio > 0 && compactThresholdRatio < 1)) return false
   const tokens = await countTokensAsync(messages)
-  if (tokens >= compactThreshold) return true
+  if (tokens / maxContextTokens > compactThresholdRatio) return true
   const bytes = estimateBytes(messages)
   if (bytes >= ACTIVE_SESSION_SOFT_LIMIT_BYTES) return true
   return false
@@ -236,8 +237,10 @@ export async function computeCompactRange(
 export async function compactMessages(
   messages: Message[],
   generateSummary: (toSummarize: Message[], prevSummary: string | null) => Promise<string>,
+  maxContextTokens: number,
+  compactThresholdRatio: number,
 ): Promise<Message[]> {
-  if (!(await shouldCompact(messages))) return messages
+  if (!(await shouldCompact(messages, maxContextTokens, compactThresholdRatio))) return messages
 
   const { sacredFloor, drainTo } = await computeCompactRange(messages)
   if (drainTo <= sacredFloor) return messages
@@ -325,6 +328,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export async function overflowFallback(
   messages: Message[],
   generateSummary: (toSummarize: Message[], prevSummary: string | null) => Promise<string>,
+  maxContextTokens: number,
+  compactThresholdRatio: number,
 ): Promise<Message[]> {
-  return compactMessages(messages, generateSummary)
+  return compactMessages(messages, generateSummary, maxContextTokens, compactThresholdRatio)
 }

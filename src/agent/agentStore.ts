@@ -7,7 +7,6 @@ import { callModelRaw, renderMessages, type ModelTurnResult } from './callModel'
 import {
   MAX_TOOL_ROUNDS,
   AGENT_NS,
-  COMPACT_THRESHOLD_TOKENS,
 } from './constants'
 import { listAgentTools, listAgentToolsForWorkspace, getAgentTool, type AgentToolContext, type AgentToolDef, type AgentWorkspace } from './toolRegistry'
 import {
@@ -416,7 +415,12 @@ export const useAgentStore = defineStore('agent', () => {
           // 溢出兜底（模块 6.2）：模型/API 直接拒绝请求（上下文超窗）→ 走 compact 而非干掉 history
           const msg = e instanceof Error ? e.message : String(e)
           if (/context|too long|exceed|window|token/i.test(msg)) {
-            activeSessionMessages.value = await overflowFallback(activeSessionMessages.value, generateSummary)
+            activeSessionMessages.value = await overflowFallback(
+              activeSessionMessages.value,
+              generateSummary,
+              config.value.maxContextTokens,
+              config.value.compactThresholdRatio,
+            )
             await persist()
             throw e
           }
@@ -529,12 +533,18 @@ export const useAgentStore = defineStore('agent', () => {
   async function maybeAutoCompact(): Promise<void> {
     const messages = activeSessionMessages.value
     // compact 阈值：配置了 maxContextTokens 就按百分比算，否则回落常数
-    const maxCtx = (config.value.maxContextTokens ?? 0)
-    const ratio = (config.value.compactThresholdRatio ?? 0)
-    const threshold = (maxCtx > 0 && ratio > 0) ? Math.floor(maxCtx * ratio) : COMPACT_THRESHOLD_TOKENS
-    if (!(await shouldCompact(messages, threshold))) return
+    if (!(await shouldCompact(
+      messages,
+      config.value.maxContextTokens,
+      config.value.compactThresholdRatio,
+    ))) return
 
-    const compacted = await compactMessages(messages, generateSummary)
+    const compacted = await compactMessages(
+      messages,
+      generateSummary,
+      config.value.maxContextTokens,
+      config.value.compactThresholdRatio,
+    )
     if (compacted !== messages) {
       activeSessionMessages.value = compacted
       await persist()

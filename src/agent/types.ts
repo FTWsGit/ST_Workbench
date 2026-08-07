@@ -77,9 +77,9 @@ export interface AgentConfig {
   frequencyPenalty: number | null
   /** 思考模式开关。'enabled' 让模型输出思考过程。 */
   thinking: { type: 'enabled' } | null
-  /** 模型最大上下文 token 数（用户配置）。0 表示未配置，compact 回落常数阈值。 */
+  /** 模型最大上下文 token 数（用户配置）。compact 触发按 usedContext/maxContext > compactThresholdRatio 算。 */
   maxContextTokens: number
-  /** compact 触发比例（0-1）：上下文占 maxContextTokens 的多少就压缩。0 表示未配置。 */
+  /** compact 触发比例（0-1，exclusive）：usedContext/maxContext 超过此比例就压缩。 */
   compactThresholdRatio: number
 }
 
