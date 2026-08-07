@@ -20,7 +20,7 @@
         <div class="wb-form-section">
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.systemPrompt') }}</label>
-            <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.systemPrompt" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
+            <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.prompts.system" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.temperature') }}</label>
@@ -169,7 +169,7 @@
         <div class="wb-form-section">
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.systemPrompt') }}</label>
-            <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.systemPrompt" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
+            <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.prompts.system" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.temperature') }}</label>
@@ -420,7 +420,9 @@ function scrollToBottom() {
 
 /** 设置区变更统一走 agentStore.updateConfig（含持久化）。 */
 function onPromptChange(e: Event) {
-  agentStore.updateConfig({ systemPrompt: (e.target as HTMLTextAreaElement).value })
+  const prompts = agentStore.config.prompts
+  prompts.system = (e.target as HTMLTextAreaElement).value
+  agentStore.updateConfig({ prompts: { ...prompts } })
 }
 function onTemperatureChange(v: number | null) {
   if (v != null) agentStore.updateConfig({ temperature: v })

@@ -65,16 +65,15 @@ function buildToolsWire(tools: any[]): any[] {
   }))
 }
 
-/** callModelRaw 接受的 agent 配置（注入到 generate_data）。 */
+/** callModelRaw 接受的 agent 配置（注入到 generate_data）。system persona 走 messages 数组前置多条 system 消息，不走 generateRawData 的 systemPrompt 参数。 */
 export interface CallModelConfig {
-  systemPrompt: string
   temperature: number
   maxTokens: number
-  topP?: number | null
-  topK?: number | null
-  presencePenalty?: number | null
-  frequencyPenalty?: number | null
-  thinking?: { type: 'enabled' } | null
+  topP: number | null
+  topK: number | null
+  presencePenalty: number | null
+  frequencyPenalty: number | null
+  thinking: { type: 'enabled' } | null
 }
 
 /**
@@ -139,10 +138,10 @@ export async function callModelRaw(
   try {
     // generateRawData 返回原始 response object（含 choices/message/tool_calls）
     if (typeof ctx.generateRawData === 'function') {
-      response = await ctx.generateRawData({ prompt: prompt, systemPrompt: config.systemPrompt })
+      response = await ctx.generateRawData({ prompt: prompt })
     } else if (typeof ctx.generateRaw === 'function') {
       // 兜底：generateRaw 只返回抽取后的字符串，会丢 tool_calls
-      const text = await ctx.generateRaw({ prompt: prompt, systemPrompt: config.systemPrompt })
+      const text = await ctx.generateRaw({ prompt: prompt })
       response = { choices: [{ message: { content: text } }] }
     } else {
       throw new Error('SillyTavern context 不可用（generateRawData/generateRaw 缺失）')

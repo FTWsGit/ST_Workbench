@@ -262,6 +262,50 @@ export const useAgentStore = defineStore('agent', () => {
 
   /* ====== 消息追加 ====== */
 
+  /* ====== 分块提示词组装（注入 system 消息）====== */
+
+  /**
+   * 把 config.prompts 分块组拼成多条 system 角色消息。
+   *
+   * 顺序：system → project → workflow → knowledge（仅 enabled 块）→ runtime。
+   * 每块独立成一条 {role:'system',content}——便于模型区分 persona 边界、
+   * 也便于压缩时分块取舍。空块跳过，不注入标题分隔。
+   * runtime 块在每次调用前由 refreshRuntimePrompt 刷新（当前 workspace 打开了什么文档）。
+   */
+  function buildSystemMessages(): { role: 'system'; content: string }[] {
+    const p = config.value.prompts
+    const out: { role: 'system'; content: string }[] = []
+    if (p.system.trim()) out.push({ role: 'system', content: p.system.trim() })
+    if (p.project.trim()) out.push({ role: 'system', content: p.project.trim() })
+    if (p.workflow.trim()) out.push({ role: 'system', content: p.workflow.trim() })
+    for (const kb of p.knowledge) {
+      if (kb.enabled && kb.content.trim()) out.push({ role: 'system', content: kb.content.trim() })
+    }
+    if (p.runtime.trim()) out.push({ role: 'system', content: p.runtime.trim() })
+    return out
+  }
+
+  /** 根据 tabsStore/presetStore/worldbookStore/characterStore 当前状态刷新 runtime 块。 */
+  function refreshRuntimePrompt(): void {
+    const p = config.value.prompts
+    const lines: string[] = []
+    const ws = tabsStore.activeWorkspace
+    if (ws === 'preset') {
+      const name = usePresetStoreSafe().presetName
+      lines.push(`Current workspace: preset`)
+      if (name) lines.push(`Loaded preset: ${name}`)
+    } else if (ws === 'worldbook') {
+      const name = useWorldbookStoreSafe().worldbookName
+      lines.push(`Current workspace: worldbook`)
+      if (name) lines.push(`Loaded worldbook: ${name}`)
+    } else if (ws === 'character') {
+      const name = useCharacterStoreSafe().character?.name
+      lines.push(`Current workspace: character`)
+      if (name) lines.push(`Loaded character: ${name}`)
+    }
+    p.runtime = lines.join('\n')
+  }
+
   function pushUserMessage(text: string): void {
     activeSessionMessages.value.push({
       role: 'user',
@@ -352,13 +396,23 @@ export const useAgentStore = defineStore('agent', () => {
         // P3：每轮调用前触发摘要压缩（模块 6.2）
         await maybeAutoCompact()
 
+        // 刷新 runtime 块（当前 workspace 打开了什么文档），前置分块 system 消息
+        refreshRuntimePrompt()
+        const systemMessages = buildSystemMessages()
         let messages = renderMessages(activeSessionMessages.value)
+        if (systemMessages.length) {
+          messages = [...systemMessages, ...messages]
+        }
         let result: ModelTurnResult
         try {
           result = await callModelRaw(messages, tools, {
             temperature: config.value.temperature,
             maxTokens: config.value.maxTokens,
-            systemPrompt: config.value.systemPrompt
+            topP: config.value.topP,
+            topK: config.value.topK,
+            presencePenalty: config.value.presencePenalty,
+            frequencyPenalty: config.value.frequencyPenalty,
+            thinking: config.value.thinking
           })
         } catch (e) {
           // 溢出兜底（模块 6.2）：模型/API 直接拒绝请求（上下文超窗）
@@ -523,8 +577,12 @@ export const useAgentStore = defineStore('agent', () => {
 
     const result = await callModelRaw(summaryPrompt, [], {
       temperature: 0.3, // 摘要用低温度保持事实性
-      maxTokens: 2048,
-      systemPrompt: ''
+      maxTokens: 4096,
+      topP: null,
+      topK: null,
+      presencePenalty: null,
+      frequencyPenalty: null,
+      thinking: { type: 'enabled' }
     })
     return result.content || '[摘要生成失败]'
   }
