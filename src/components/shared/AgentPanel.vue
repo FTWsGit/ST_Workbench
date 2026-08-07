@@ -30,6 +30,37 @@
             <label class="wb-form-label">{{ uiStore.t('agent.settings.maxTokens') }}</label>
             <NumberInput :model-value="agentStore.config.maxTokens" :min="256" :max="16384" :step="256" :nullable="false" @update:model-value="onMaxTokensChange" />
           </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.topP') }}</label>
+            <NumberInput :model-value="agentStore.config.topP" :min="0" :max="1" :step="0.05" :placeholder="uiStore.t('agent.settings.topPHint')" @update:model-value="(v) => onNullableChange('topP', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.topK') }}</label>
+            <NumberInput :model-value="agentStore.config.topK" :min="0" :max="1000" :step="1" :placeholder="uiStore.t('agent.settings.topKHint')" @update:model-value="(v) => onNullableChange('topK', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.presencePenalty') }}</label>
+            <NumberInput :model-value="agentStore.config.presencePenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('presencePenalty', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.frequencyPenalty') }}</label>
+            <NumberInput :model-value="agentStore.config.frequencyPenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('frequencyPenalty', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.thinking') }}</label>
+            <label class="wb-agent-toggle">
+              <input type="checkbox" :checked="!!agentStore.config.thinking" @change="onThinkingChange" />
+              <span>{{ uiStore.t('agent.settings.thinkingHint') }}</span>
+            </label>
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.maxContextTokens') }}</label>
+            <NumberInput :model-value="agentStore.config.maxContextTokens" :min="0" :max="2000000" :step="1000" :nullable="false" :placeholder="uiStore.t('agent.settings.maxContextTokensHint')" @update:model-value="onMaxContextTokensChange" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.compactThresholdRatio') }}</label>
+            <NumberInput :model-value="agentStore.config.compactThresholdRatio" :min="0" :max="1" :step="0.05" :nullable="false" :placeholder="uiStore.t('agent.settings.compactThresholdRatioHint')" @update:model-value="onCompactRatioChange" />
+          </div>
         </div>
       </div>
 
@@ -147,6 +178,37 @@
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.maxTokens') }}</label>
             <NumberInput :model-value="agentStore.config.maxTokens" :min="256" :max="16384" :step="256" :nullable="false" @update:model-value="onMaxTokensChange" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.topP') }}</label>
+            <NumberInput :model-value="agentStore.config.topP" :min="0" :max="1" :step="0.05" :placeholder="uiStore.t('agent.settings.topPHint')" @update:model-value="(v) => onNullableChange('topP', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.topK') }}</label>
+            <NumberInput :model-value="agentStore.config.topK" :min="0" :max="1000" :step="1" :placeholder="uiStore.t('agent.settings.topKHint')" @update:model-value="(v) => onNullableChange('topK', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.presencePenalty') }}</label>
+            <NumberInput :model-value="agentStore.config.presencePenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('presencePenalty', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.frequencyPenalty') }}</label>
+            <NumberInput :model-value="agentStore.config.frequencyPenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('frequencyPenalty', v)" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.thinking') }}</label>
+            <label class="wb-agent-toggle">
+              <input type="checkbox" :checked="!!agentStore.config.thinking" @change="onThinkingChange" />
+              <span>{{ uiStore.t('agent.settings.thinkingHint') }}</span>
+            </label>
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.maxContextTokens') }}</label>
+            <NumberInput :model-value="agentStore.config.maxContextTokens" :min="0" :max="2000000" :step="1000" :nullable="false" :placeholder="uiStore.t('agent.settings.maxContextTokensHint')" @update:model-value="onMaxContextTokensChange" />
+          </div>
+          <div class="wb-form-field">
+            <label class="wb-form-label">{{ uiStore.t('agent.settings.compactThresholdRatio') }}</label>
+            <NumberInput :model-value="agentStore.config.compactThresholdRatio" :min="0" :max="1" :step="0.05" :nullable="false" :placeholder="uiStore.t('agent.settings.compactThresholdRatioHint')" @update:model-value="onCompactRatioChange" />
           </div>
         </div>
       </div>
@@ -365,6 +427,20 @@ function onTemperatureChange(v: number | null) {
 }
 function onMaxTokensChange(v: number | null) {
   if (v != null) agentStore.updateConfig({ maxTokens: v })
+}
+/** 可空数值字段统一入口：null 表示"不注入该采样参数"。 */
+function onNullableChange(key: 'topP' | 'topK' | 'presencePenalty' | 'frequencyPenalty', v: number | null) {
+  agentStore.updateConfig({ [key]: v } as any)
+}
+function onThinkingChange(e: Event) {
+  const checked = (e.target as HTMLInputElement).checked
+  agentStore.updateConfig({ thinking: checked ? { type: 'enabled' } : null })
+}
+function onMaxContextTokensChange(v: number | null) {
+  agentStore.updateConfig({ maxContextTokens: v ?? 0 })
+}
+function onCompactRatioChange(v: number | null) {
+  agentStore.updateConfig({ compactThresholdRatio: v ?? 0 })
 }
 
 function close() {
