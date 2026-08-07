@@ -88,4 +88,4 @@ const out = newLines.join('\n') + '\n'
 
 fs.writeFileSync(agents, out)
 process.stdout.write(`synced ${agents} Project Doc segment (${docs.length} entries, ${appended.length} appended)\n`)
-process.stdout.write(newSeg + '\n')
+

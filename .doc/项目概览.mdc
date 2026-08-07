@@ -109,8 +109,8 @@ ST_Workbench/
         │   ├── PresetContentEditor.vue # 内容编辑区薄壳：v-model 桥接 store.currentBlock.content（currentBlock 直接从 tabsStore.activeTab.key 解析，不依赖任何数组下标）、搜索行高亮、变量点击弹窗、name/role meta 条、marker 块传 `disabled` 给 HighlightedEditor 禁止编辑内容
         │   ├── PresetSettingsForm.vue  # 设置表单（name/role，单个 block 级别），挂进 SettingsDock 的 FORMS 表
         │   ├── PresetMetaForm.vue      # 整份预设级别的模型参数表单（context/max_tokens/回复数/流式/压缩系统消息/采样参数），挂进 MetaPanel 的 META_FORMS 表，见「MetaPanel」
-        │   ├── VarPanel.vue           # 右侧变量导航面板，可切换悬浮/嵌入模式
-        │   ├── VarPopup.vue           # 点击变量名弹出的小悬浮窗
+        │   ├── VarPanel.vue           # 右侧变量导航面板，可切换悬浮/嵌入模式（变量追踪，见「变量追踪」）
+        │   ├── VarPopup.vue           # 点击变量名弹出的小悬浮窗（变量追踪，见「变量追踪」）
         │   ├── PreviewPanel.vue       # 预览面板，基于真实 ST 渲染；生成前会调用 `store.selectPresetByName()` 把 ST 主菜单选中的预设切到当前工具正在编辑的这份
         │   └── CopyPanel.vue          # 跨预设复制提示词块的 tool（收进工具箱，preset/items 场景注册）：独立加载/编辑/保存，和 presetStore 的编辑会话完全隔离；容器窄于 760px 时竖排（container query），移动端把左右两栏中间的复制按钮换成上下箭头
         ├── toolbox/                  # 工具箱：按 (workspace, collection) 场景注册的工具面板，顶栏 toolbox 按钮开关（tabsStore.toolBoxOpen，按 workspace 各自记忆），三态同 PanelModeSwitch
@@ -135,4 +135,4 @@ ST_Workbench/
 
 ### 为什么 VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 在 `preset/` 而不是 `shared/`
 
-这几个组件的**实际功能**是纯 preset 专属的（VarNav 只认 `{{setvar/getvar}}` 在 preset 里的分布，Preview 只渲染 preset，CopyPanel 只复制预设提示词块，PresetMetaForm 只认预设的模型参数字段）——放进 `shared/` 名不副实（暗示 domain-agnostic，代码里却全是硬编码的 preset 概念）。放在 `preset/` 更诚实地反映现状：regex 域若要加搜索/预览，需要重构成按 domain 分派。`Modals.vue`/`MetaPanel.vue`/`FloatingPanelShell.vue` 留在 `shared/` 是因为它们的主体逻辑确实是通用宿主/路由容器——`MetaPanel.vue` 自己不认识"温度"或"talkativeness"是什么，只是照着 `activeWorkspace` 查表挂载 `PresetMetaForm`/`CharacterMetaForm`，跟 `EditorShell.vue`/`SettingsDock.vue` 是同一种"路由容器不持有 domain 知识"的模式；`Modals.vue` 现已只剩通用 confirm/prompt/multi + toast，preset 专属的"添加隐藏块"弹窗挪到了 `preset/PresetHiddenBlocksModal.vue`。
+这几个组件的**实际功能**是纯 preset 专属的（VarNav 整套挂在 presetStore（见「变量追踪」），Preview 只渲染 preset，CopyPanel 只复制预设提示词块，PresetMetaForm 只认预设的模型参数字段）——放进 `shared/` 名不副实（暗示 domain-agnostic，代码里却全是硬编码的 preset 概念）。放在 `preset/` 更诚实地反映现状：regex 域若要加搜索/预览，需要重构成按 domain 分派。`Modals.vue`/`MetaPanel.vue`/`FloatingPanelShell.vue` 留在 `shared/` 是因为它们的主体逻辑确实是通用宿主/路由容器——`MetaPanel.vue` 自己不认识"温度"或"talkativeness"是什么，只是照着 `activeWorkspace` 查表挂载 `PresetMetaForm`/`CharacterMetaForm`，跟 `EditorShell.vue`/`SettingsDock.vue` 是同一种"路由容器不持有 domain 知识"的模式；`Modals.vue` 现已只剩通用 confirm/prompt/multi + toast，preset 专属的"添加隐藏块"弹窗挪到了 `preset/PresetHiddenBlocksModal.vue`。

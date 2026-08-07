@@ -12,8 +12,8 @@ alwaysApply: false
 ## 接口契约
 
 - `v-model`（纯字符串）。打字时每次击键都同步 emit + 同步刷新高亮/行号/光标——不是"先跳过、等 idle 再补"，而是刷新本身足够便宜（见下面"打字调度"）。外部改 `modelValue`（切块、Replace All、切 regex 标签、切角色卡虚拟字段）通过与组件自己最后已知值比对检测，同样立即刷新。
-- 可选 props：`jump`（跳转请求令牌）、`lineClass`（行号槽每行额外 class，搜索高亮用）、`enableVarClick`（点中 `{{setvar/addvar/getvar}}` 变量名时发 `var-click`，默认关）、`showStatusbar`（默认开）、`placeholder`、**`disabled`**（textarea 设为 `readonly`，`onInput` 直接短路不 emit——供 `PresetContentEditor.vue` 在当前块是 marker 块时使用，见「状态与持久化 > marker 块受保护」；`readonly` 而不是 `disabled` 是为了保留原生文本选择/复制能力，只是禁止编辑）。
-- 事件：`update:modelValue`、`var-click`、`var-click-miss`。不需要的功能（regex/worldbook/character 编辑器不需要跳转/搜索高亮/变量弹窗）不传对应 prop 即可，组件内部天然是 no-op。
+- 可选 props：`jump`（跳转请求令牌）、`lineClass`（行号槽每行额外 class，搜索高亮用）、`enableVarClick`（点中变量宏名时发 `var-click`，默认关；变量宏识别与 `var-click` 语义见「变量追踪」）、`showStatusbar`（默认开）、`placeholder`、**`disabled`**（textarea 设为 `readonly`，`onInput` 直接短路不 emit——供 `PresetContentEditor.vue` 在当前块是 marker 块时使用，见「状态与持久化 > marker 块受保护」；`readonly` 而不是 `disabled` 是为了保留原生文本选择/复制能力，只是禁止编辑）。
+- 事件：`update:modelValue`、`var-click`、`var-click-miss`。不需要的功能不传对应 prop 即可，组件内部天然是 no-op（三个域的编辑器接入情况见「变量追踪」）。
 - `defineExpose({ refreshFont })`：设置弹窗改字体后 textarea 元素本身不 resize，`ResizeObserver` 感知不到——各个父组件各自 watch `uiStore.settings.editorFontSize/editorFontFamily`，变了就调 `editorRef.value?.refreshFont()` 让它重新测量。
 
 ## 三层结构
