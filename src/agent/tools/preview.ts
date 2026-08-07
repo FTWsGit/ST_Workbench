@@ -5,7 +5,6 @@
  *  - preset_preview_raw：getFinalRequestMessages 走真实 ctx.generate('normal')，
  *    监听 CHAT_COMPLETION_SETTINGS_READY 抓 completion.messages，拿到后立刻 stopGeneration，
  *    risk:'risky'，走 confirmStore.ask() 审批门
- *  - agent_draft_text：agent 自己再发起一次 3.1 的原生模型调用（子调用，tools 传空、纯文本生成，
  *    专门用来写一段角色描述/世界书条目草稿），返回文本给主循环，不直接写入任何 store——
  *    由模型在下一轮决定要不要调 preset_edit_block/character_set_field 把这段草稿落地
  *
@@ -19,6 +18,14 @@ import {
   TOOL_RESULT_TRUNCATE_BYTES,
 } from '../constants'
 import type { Message } from '../types'
+
+/* ====== 工具描述集中管理（英文，atomcode 风格） ====== */
+const TOOL_DESC = {
+  presetPreviewBlocks:
+    'Dry-run preview of every prompt block after macro/regex/plugin rendering. No network request, no persistent writes. Use before editing to preview rendering. No params. Returns per-block name, id, role, tokens. Errors (isError) if no preset loaded.',
+  presetPreviewRaw:
+    'Preview the exact request messages: runs real generation, aborts before sending. No network, no persistent writes. Use before editing to check what the API receives. No params. Returns role + content per message. Errors (isError) if nothing captured.',
+} as const
 
 /* ====== 入库截断 + framing ====== */
 function truncate(text: string): string {
@@ -52,7 +59,7 @@ function askApproval(
 /* ====== preset_preview_blocks：纯本地 dry-run，safe ====== */
 registerAgentTool({
   name: 'preset_preview_blocks',
-  description: '预览当前预设每个 block 经过宏/正则/插件处理后的真实渲染文本（纯本地 dry-run，不发网络请求）。用于在改之前先看渲染效果。返回每个 block 的渲染消息概要。',
+  description: TOOL_DESC.presetPreviewBlocks,
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
@@ -95,12 +102,12 @@ registerAgentTool({
   },
 })
 
-/* ====== preset_preview_raw：走真实 ctx.generate('normal')，risky ====== */
+/* ====== preset_preview_raw：走真实 ctx.generate('normal')，但是会自动stop，不请求API，safe ====== */
 registerAgentTool({
   name: 'preset_preview_raw',
-  description: '预览 ST 真正要发给 API 的完整 messages 数组（走真实 ctx.generate，从 CHAT_COMPLETION_SETTINGS_READY 事件捕获，拿到后立刻中断生成）。用于在改之前看 API 实际收到的内容。属于 risky 操作（会触发一次真实生成请求的前半段）。',
+  description: TOOL_DESC.presetPreviewRaw,
   parameters: { type: 'object', properties: {} },
-  risk: 'risky',
+  risk: 'safe',
   readonly: false,
   availableIn: ['preset'],
   async execute(_args, ctx): Promise<AgentToolResult> {
@@ -121,58 +128,6 @@ registerAgentTool({
       return { text: frame(lines.join('\n\n')) }
     } catch (e) {
       return { text: frame(`preview failed: ${e instanceof Error ? e.message : String(e)}`), isError: true }
-    }
-  },
-})
-
-/* ====== agent_draft_text：子调用纯文本生成，safe ====== */
-registerAgentTool({
-  name: 'agent_draft_text',
-  description: '让 agent 自己再发起一次纯文本生成（不接 tools、不写入任何 store），专门用来写一段角色描述/世界书条目草稿等创作文本。返回生成的文本给主循环，由模型在下一轮决定要不要调 preset_edit_block/character_set_field 把这段草稿落地。',
-  parameters: {
-    type: 'object',
-    properties: {
-      instruction: { type: 'string', description: '给生成模型的指令：要写什么内容、什么风格、多长等' },
-      context: { type: 'string', description: '可选的上下文文本（比如要续写的原文、要参考的角色设定等）' },
-      max_tokens: { type: 'number', description: '生成最大 token 数，默认 2048' },
-    },
-    required: ['instruction'],
-  },
-  risk: 'safe',
-  readonly: true,
-  availableIn: ['preset', 'worldbook', 'character'],
-  async execute(args, _ctx): Promise<AgentToolResult> {
-    const instruction = String(args?.instruction ?? '').trim()
-    if (!instruction) return { text: frame('missing parameter: instruction'), isError: true }
-    const context = String(args?.context ?? '').trim()
-    const maxTokens = typeof args?.max_tokens === 'number' && args.max_tokens > 0
-      ? Math.min(args.max_tokens, 4096)
-      : 2048
-
-    // 构造子调用消息：system 指令 + 可选 context + user instruction
-    const draftMessages: any[] = [
-      {
-        role: 'system',
-        content: '你是一个创作助手。根据用户的指令生成文本。只输出创作内容本身，不要加任何解释、前言或后记。',
-      },
-    ]
-    if (context) {
-      draftMessages.push({ role: 'user', content: `参考以下上下文：\n\n${context}` })
-      draftMessages.push({ role: 'assistant', content: '好的，我已了解上下文。请告诉我具体要写什么。' })
-    }
-    draftMessages.push({ role: 'user', content: instruction })
-
-    try {
-      const result = await callModelRaw(draftMessages, [], {
-        systemPrompt: '',
-        temperature: 0.8, // 创作用高温度增加多样性
-        maxTokens,
-      })
-      const draft = result.content || ''
-      if (!draft.trim()) return { text: frame('draft generation returned empty content'), isError: true }
-      return { text: frame(truncate(draft)) }
-    } catch (e) {
-      return { text: frame(`draft generation failed: ${e instanceof Error ? e.message : String(e)}`), isError: true }
     }
   },
 })

@@ -10,6 +10,19 @@ import {
   TOOL_RESULT_TRUNCATE_BYTES,
 } from '../constants'
 
+/* ====== 工具 description 集中管理（英文，atomcode 风格） ====== */
+
+const TOOL_DESC = {
+  presetListBlocks: 'List all prompt blocks in the current preset: identifier/name/role/disabled/hidden (no content). Map structure, pick a block to edit or read via preset_get_block. Returns a bullet list, capped with a truncation notice; errors if no preset loaded.',
+  presetGetBlock: 'Read one prompt block by identifier: raw content + fields, not macro/regex-rendered (use preset_preview_blocks for rendered text). Pass offset/limit to page long content (1-based); truncated output reports next offset. Errors on missing identifier.',
+  presetSearch: 'Search current preset prompt blocks for a substring; returns hits with block identifier, field, line/col and snippet. Use to find which blocks mention a variable/macro before editing. No hits returns a plain message; results capped with a notice.',
+  worldbookListEntries: 'List all entries in the current worldbook: uid/comment/keys/disabled/position (no content). Map structure, pick an entry to edit or read via worldbook_get_entry. Returns a bullet list, capped with a truncation notice; errors if no worldbook loaded.',
+  worldbookGetEntry: 'Read one worldbook entry by uid: raw content + all fields. Long content: pass offset/limit to page lines (1-based); truncated output reports the next offset. Use before editing an entry. Errors if uid invalid or entry not found.',
+  worldbookSearch: 'Search current worldbook entry content/comment for a substring; returns hits with uid, field, line/col and snippet. Use to find which entries mention a keyword before editing. No hits returns a plain message; results capped with a notice.',
+  characterGetFields: "List current character card's creator fields (description/personality/scenario/mes_example/system_prompt/post_history_instructions) and greetings with length + preview, no full text. Use to map the card before editing. Errors if no character loaded.",
+  characterGetField: 'Read one card field by key: description/personality/scenario/mesExample/systemPrompt/postHistoryInstructions/depthPrompt, or greeting:N (N-th). offset/limit page lines (1-based); truncated output reports next offset. Unknown key or bad index errors.',
+} as const
+
 /* ====== 入库截断 + framing ====== */
 
 /** 入库截断：tool_result 写入前过字节上限。 */
@@ -31,11 +44,35 @@ function capItems<T>(items: T[], max = LIST_TOOLS_MAX_ITEMS): { items: T[]; trun
   return { items: items.slice(0, max), truncated: true, total }
 }
 
+/**
+ * 长文本按行切片（1-based offset，默认从头读 limit 行）。
+ * 超出范围返回空切片；末尾附翻页报告"total N lines, showing [offset, offset+len)"，
+ * 让模型知道还有多少行、怎么调 offset 读下一段。参考 atomcode read_file 的 offset/limit。
+ */
+function sliceLines(text: string, offset?: number, limit?: number): string {
+  const lines = text.split('\n')
+  const total = lines.length
+  const off = Math.max(1, Math.floor(Number(offset) || 1))
+  const lim = Math.max(1, Math.min(2000, Math.floor(Number(limit) || 200)))
+  const start = off - 1 // 转 0-based
+  if (start >= total) return `[offset ${off} out of range, total ${total} lines]`
+  const slice = lines.slice(start, start + lim)
+  const shownFrom = off
+  const shownTo = Math.min(off + slice.length - 1, total)
+  let out = slice.join('\n')
+  if (slice.length < lim) {
+    out += `\n…[end of content, total ${total} lines, showed ${shownFrom}-${shownTo}]`
+  } else {
+    out += `\n…[showing lines ${shownFrom}-${shownTo} of ${total}, call again with offset ${shownTo + 1} to read more]`
+  }
+  return out
+}
+
 /* ====== preset 只读工具 ====== */
 
 registerAgentTool({
   name: 'preset_list_blocks',
-  description: '列出当前预设的全部 prompt block（identifier/name/role/disabled）概要。用于了解预设结构、定位要改的块。不返回 content 全文。',
+  description: TOOL_DESC.presetListBlocks,
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
@@ -96,11 +133,13 @@ registerAgentTool({
 
 registerAgentTool({
   name: 'preset_get_block',
-  description: '按 identifier 读取单个 prompt block 的完整 content + 全部字段。用于改之前先看原文。',
+  description: TOOL_DESC.presetGetBlock,
   parameters: {
     type: 'object',
     properties: {
-      identifier: { type: 'string', description: '要读取的 block 的 identifier' },
+      identifier: { type: 'string', description: 'Block identifier to read.' },
+      offset: { type: 'number', description: '1-based line number to start reading from. Default 1 (head).' },
+      limit: { type: 'number', description: 'Max lines to return (default 200, max 2000).' },
     },
     required: ['identifier'],
   },
@@ -114,29 +153,29 @@ registerAgentTool({
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
     const b = (store.prompts as any[]).find(p => p.identifier === id)
     if (!b) return { text: frame(`block not found: ${id}`), isError: true }
-    const obj = {
+    const content = String(b.content ?? '')
+    const sliced = sliceLines(content, Number(args?.offset), Number(args?.limit))
+    const meta = JSON.stringify({
       identifier: b.identifier,
       name: b.name,
       role: b.role,
-      content: b.content ?? '',
       disable: !!b.disable,
       injection_position: b.injection_position,
       injection_depth: b.injection_depth,
       temperature: b.temperature,
-      // 保留未建模字段
       ...(b.extensions ? { extensions: b.extensions } : {}),
-    }
-    return { text: frame(truncate(JSON.stringify(obj, null, 2))) }
+    }, null, 2)
+    return { text: frame(`${meta}\n\n---- content (offset/limit applied) ----\n${sliced}`) }
   },
 })
 
 registerAgentTool({
   name: 'preset_search',
-  description: '在当前预设的 prompt block 内容里搜文本。返回命中（block identifier + 字段 + 行列位置 + 命中片段）。用于查找某个变量/宏/关键词出现在哪些块里。',
+  description: TOOL_DESC.presetSearch,
   parameters: {
     type: 'object',
     properties: {
-      query: { type: 'string', description: '搜索关键词（子串匹配）' },
+      query: { type: 'string', description: 'Search query (substring match).' },
     },
     required: ['query'],
   },
@@ -175,7 +214,7 @@ registerAgentTool({
 
 registerAgentTool({
   name: 'worldbook_list_entries',
-  description: '列出当前世界书的全部 entry（uid/comment/keys/disabled/position）概要。用于了解世界书结构、定位要改的条目。不返回 content 全文。',
+  description: TOOL_DESC.worldbookListEntries,
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
@@ -203,11 +242,13 @@ registerAgentTool({
 
 registerAgentTool({
   name: 'worldbook_get_entry',
-  description: '按 uid 读取单个世界书 entry 的完整 content + 全部字段。用于改之前先看原文。',
+  description: TOOL_DESC.worldbookGetEntry,
   parameters: {
     type: 'object',
     properties: {
-      uid: { type: 'number', description: '要读取的 entry 的 uid' },
+      uid: { type: 'number', description: 'Entry uid to read.' },
+      offset: { type: 'number', description: '1-based line number to start reading from. Default 1 (head).' },
+      limit: { type: 'number', description: 'Max lines to return (default 200, max 2000).' },
     },
     required: ['uid'],
   },
@@ -221,17 +262,27 @@ registerAgentTool({
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true }
     const e = (store.entries as any[]).find(x => Number(x.uid) === uid)
     if (!e) return { text: frame(`entry not found: uid=${uid}`), isError: true }
-    return { text: frame(truncate(JSON.stringify(e, null, 2))) }
+    const content = String(e.content ?? '')
+    const sliced = sliceLines(content, Number(args?.offset), Number(args?.limit))
+    const meta = JSON.stringify({
+      uid: e.uid,
+      comment: e.comment,
+      keys: e.keys,
+      disabled: !!e.disabled,
+      position: e.position,
+      ...(e.extensions ? { extensions: e.extensions } : {}),
+    }, null, 2)
+    return { text: frame(`${meta}\n\n---- content (offset/limit applied) ----\n${sliced}`) }
   },
 })
 
 registerAgentTool({
   name: 'worldbook_search',
-  description: '在当前世界书的 entry content/comment 里搜文本。返回命中（uid + 字段 + 行列位置 + 命中片段）。',
+  description: TOOL_DESC.worldbookSearch,
   parameters: {
     type: 'object',
     properties: {
-      query: { type: 'string', description: '搜索关键词（子串匹配）' },
+      query: { type: 'string', description: 'Search query (substring match).' },
     },
     required: ['query'],
   },
@@ -268,7 +319,7 @@ registerAgentTool({
 
 registerAgentTool({
   name: 'character_get_fields',
-  description: '读取当前角色卡的七个创作字段 + greetings 的概要（字段名 + 内容长度 + 前 100 字预览）。用于了解角色卡结构。',
+  description: TOOL_DESC.characterGetFields,
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
@@ -300,11 +351,13 @@ registerAgentTool({
 
 registerAgentTool({
   name: 'character_get_field',
-  description: '按字段 key 读取角色卡单个字段的完整内容。字段 key 可选：description/personality/scenario/mesExample/systemPrompt/postHistoryInstructions/depthPrompt，或 greeting:N 表示第 N 条开场白。',
+  description: TOOL_DESC.characterGetField,
   parameters: {
     type: 'object',
     properties: {
-      field_key: { type: 'string', description: '字段 key' },
+      field_key: { type: 'string', description: 'Field key.' },
+      offset: { type: 'number', description: '1-based line number to start reading from. Default 1 (head).' },
+      limit: { type: 'number', description: 'Max lines to return (default 200, max 2000).' },
     },
     required: ['field_key'],
   },
@@ -331,6 +384,6 @@ registerAgentTool({
     } else {
       return { text: frame(`unknown field_key: ${key}`), isError: true }
     }
-    return { text: frame(truncate(value)) }
+    return { text: frame(sliceLines(value, Number(args?.offset), Number(args?.limit))) }
   },
 })

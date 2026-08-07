@@ -5,7 +5,8 @@
  *  2. 入库截断（入口闸门）：所有 tool_result 写入前过字节上限；
  *  3. 整段摘要压缩：estimateTokens(messages) >= COMPACT_THRESHOLD_TOKENS 时触发。
  *
- * 设计文档 6.1/6.2。
+ * overflow 兜底也走 compact（而非把 history 干没）；compact 失败重试 3 次；
+ * summary 只针对 user/assistant 原文，tool_result 按体积折叠或原样保留。
  */
 import {
   TOOL_RESULT_TRUNCATE_BYTES,
@@ -14,6 +15,9 @@ import {
   SACRED_PREFIX_MESSAGES,
   TOKEN_BYTES_ESTIMATE,
   ACTIVE_SESSION_SOFT_LIMIT_BYTES,
+  SUMMARY_TIMEOUT_MS,
+  COMPACT_MAX_RETRIES,
+  SUMMARY_TOO_BIG_PREFIX,
 } from './constants'
 import { getCtx } from '../api/hostContext'
 import type { Message } from './types'
@@ -123,6 +127,41 @@ export function sacredFloorLength(messages: Message[]): number {
   return Math.min(messages.length, firstUserIdx + 1)
 }
 
+/* ====== 摘要判定与折叠 ====== */
+
+/**
+ * 把一条消息降级成"折叠"形态：只留前若干字节 + 标记，不再 summary。
+ * 用于 compact 时 tool_result 超长但又确实在抽干区间里——折叠保留开头供模型辨认，
+ * 不进 LLM summary（tool_result 摘要没有信息价值，模型自己就知道刚做了什么）。
+ */
+function foldToolResult(m: Message): Message {
+  const cut = SUMMARY_TOO_BIG_PREFIX
+  const text = m.text.length > cut
+    ? m.text.slice(0, cut) + `\n…[folded, original ${m.text.length} bytes]`
+    : m.text
+  return { ...m, text, synthetic: true }
+}
+
+/**
+ * 抽干区间分两路：
+ *  - user/assistant 原文 → 喂给 LLM 生成摘要（有信息价值）；
+ *  - tool/tool_result → 折叠或原样保留（不 summary）。
+ * 返回「要摘要的原文」+「折叠后直接保留的消息」。
+ */
+function splitForCompact(range: Message[]): { toSummarize: Message[]; folded: Message[] } {
+  const toSummarize: Message[] = []
+  const folded: Message[] = []
+  for (const m of range) {
+    if (m.role === 'user' || m.role === 'assistant') {
+      toSummarize.push(m)
+    } else {
+      // tool_result：超过折叠阈值才折叠，否则原样保留
+      folded.push(m.text.length > SUMMARY_TOO_BIG_PREFIX ? foldToolResult(m) : m)
+    }
+  }
+  return { toSummarize, folded }
+}
+
 /* ====== 整段摘要压缩 ====== */
 
 /**
@@ -185,50 +224,75 @@ export async function computeCompactRange(
 }
 
 /**
- * 执行摘要压缩。
+ * 执行摘要压缩（带重试）。
  *
  * 1. 抽取 [sacredFloor, drainTo) 区间的消息；
- * 2. 调 LLM 生成摘要（走 callModelRaw 纯文本调用，不接 tools）；
- * 3. 把抽干区间替换成一条 synthetic user 消息（带 framing）。
+ * 2. tool_result 折叠/保留，user/assistant 喂给 LLM 生成摘要；
+ * 3. 摘要失败重试 COMPACT_MAX_RETRIES 次，全失败才回退占位文本；
+ * 4. 把抽干区间替换成一条 synthetic system 消息（带 <previous_summary> tag）+ 折叠消息。
  *
- * 超时回退：SUMMARY_TIMEOUT_MS 内没拿到摘要，直接用"[早期上下文已省略]"占位。
+ * 若之前已有摘要，叠加新摘要而非蒸馏旧摘要（保留更远历史的关键事实）。
  */
 export async function compactMessages(
   messages: Message[],
-  generateSummary: (toSummarize: Message[]) => Promise<string>,
+  generateSummary: (toSummarize: Message[], prevSummary: string | null) => Promise<string>,
 ): Promise<Message[]> {
   if (!(await shouldCompact(messages))) return messages
 
   const { sacredFloor, drainTo } = await computeCompactRange(messages)
   if (drainTo <= sacredFloor) return messages
 
-  // 抽取要摘要的消息
-  const toSummarize = messages.slice(sacredFloor, drainTo)
+  // 抽取要处理的区间
+  const range = messages.slice(sacredFloor, drainTo)
+  if (range.length === 0) return messages
 
-  // 生成摘要（带超时回退）
-  let summary: string
-  try {
-    summary = await withTimeout(
-      generateSummary(toSummarize),
-      60_000, // SUMMARY_TIMEOUT_MS
-    )
-  } catch {
-    // 超时或失败：用占位文本
-    summary = '[早期上下文已省略，如需要请重新查询]'
+  // 分两路：user/assistant → summary；tool → 折叠/保留
+  const { toSummarize, folded } = splitForCompact(range)
+
+  // 找已有摘要（前一次 compact 产生的 synthetic system 消息），叠加而非蒸馏
+  let prevSummary: string | null = null
+  for (let i = 0; i < sacredFloor; i++) {
+    const m = messages[i]
+    if (m.role === 'system' && m.synthetic && m.text.includes('<previous_summary>')) {
+      prevSummary = m.text
+      break
+    }
   }
 
-  // 构造合成 user 消息（带 framing）
+  // 生成摘要（带重试 + 超时回退）
+  let summary: string | null = null
+  for (let attempt = 1; attempt <= COMPACT_MAX_RETRIES; attempt++) {
+    try {
+      summary = await withTimeout(
+        generateSummary(toSummarize, prevSummary),
+        SUMMARY_TIMEOUT_MS,
+      )
+      if (summary) break
+    } catch {
+      // 重试
+    }
+  }
+  if (!summary) {
+    summary = prevSummary ?? '[早期上下文已省略，如需要请重新查询]'
+  }
+
+  // 构造合成 system 消息（带 <previous_summary> tag 包裹）
   const syntheticMsg: Message = {
-    role: 'user',
-    text: `以下是早期对话的摘要，供参考：\n\n${summary}`,
+    role: 'system',
+    text: `<previous_summary>\n${summary}\n</previous_summary>`,
     synthetic: true,
     meta: { timestamp: Date.now() },
   }
 
-  // 替换抽干区间：保留 [0, sacredFloor) + syntheticMsg + [drainTo, end)
+  // 替换抽干区间：保留 [0, sacredFloor) + syntheticMsg + folded + [drainTo, end)
+  // 删掉前一次的 summary 消息（如果有，已被新摘要叠加取代）
+  const head = messages.slice(0, sacredFloor).filter(
+    m => !(m.role === 'system' && m.synthetic && m.text.includes('<previous_summary>'))
+  )
   return [
-    ...messages.slice(0, sacredFloor),
+    ...head,
     syntheticMsg,
+    ...folded,
     ...messages.slice(drainTo),
   ]
 }
@@ -254,23 +318,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 /**
  * 溢出兜底：模型/API 直接拒绝请求（上下文超窗）时调用。
  *
- * 只保留神圣前缀 + 当前这一轮，其余全部换成占位文本。
- * 不重试第二次（本产品不是长跑 agent，用户可以直接开新会话）。
+ * 走 compactMessages（而非把 history 干没）——溢出说明上下文确实超窗，
+ * 但用户的历史仍有价值，压缩成摘要保留。compactMessages 内部已有重试/折叠/叠加。
+ * compact 后若仍超窗，由调用方决定是否再调一次或停。
  */
-export function overflowFallback(messages: Message[]): Message[] {
-  const sacredFloor = sacredFloorLength(messages)
-  if (sacredFloor >= messages.length) return messages
-
-  const omitted: Message = {
-    role: 'user',
-    text: '[早期上下文已省略，如需要请重新查询]',
-    synthetic: true,
-    meta: { timestamp: Date.now() },
-  }
-
-  return [
-    ...messages.slice(0, sacredFloor),
-    omitted,
-    ...messages.slice(sacredFloor), // 保留神圣前缀之后的全部（当前轮）
-  ]
+export async function overflowFallback(
+  messages: Message[],
+  generateSummary: (toSummarize: Message[], prevSummary: string | null) => Promise<string>,
+): Promise<Message[]> {
+  return compactMessages(messages, generateSummary)
 }

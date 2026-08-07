@@ -12,11 +12,9 @@ import {
 import { listAgentTools, listAgentToolsForWorkspace, getAgentTool, type AgentToolContext, type AgentToolDef, type AgentWorkspace } from './toolRegistry'
 import {
   shouldCompact,
-  computeCompactRange,
+  compactMessages,
   truncateForStorage,
   overflowFallback,
-  estimateTokens,
-  sacredFloorLength,
 } from './contextManager'
 // side-effect import：触发只读工具注册到 AGENT_TOOL_REGISTRY。
 import './register'
@@ -415,10 +413,11 @@ export const useAgentStore = defineStore('agent', () => {
             thinking: config.value.thinking
           })
         } catch (e) {
-          // 溢出兜底（模块 6.2）：模型/API 直接拒绝请求（上下文超窗）
+          // 溢出兜底（模块 6.2）：模型/API 直接拒绝请求（上下文超窗）→ 走 compact 而非干掉 history
           const msg = e instanceof Error ? e.message : String(e)
           if (/context|too long|exceed|window|token/i.test(msg)) {
-            activeSessionMessages.value = overflowFallback(activeSessionMessages.value)
+            activeSessionMessages.value = await overflowFallback(activeSessionMessages.value, generateSummary)
+            await persist()
             throw e
           }
           throw e
@@ -438,14 +437,26 @@ export const useAgentStore = defineStore('agent', () => {
         runtime.value = { ...runtime.value, turnState: 'tool_loop' }
 
         // 串行执行工具（3.2：只读工具可并行，写类串行；P1 全是只读，简化为串行）
+        let stoppedByApproval = false
         for (const call of result.toolCalls) {
           runtime.value = { ...runtime.value, currentTool: call.name }
           const outcome = await executeTool(call, workspace)
           pushToolResultMessage(call.id, outcome.text, outcome.isError)
+          // 用户拒绝审批 → 直接停本轮，不再让模型续跑工具/续答
+          if (outcome.stopTurn) {
+            stoppedByApproval = true
+            break
+          }
         }
 
         // 持久化（每轮工具调用后存一次）
         await persist()
+
+        // 审批拒绝：finalize 成 canceled，跳出工具循环
+        if (stoppedByApproval) {
+          await finalizeTurn('canceled')
+          return
+        }
       }
 
       // 熔断：MAX_TOOL_ROUNDS 轮还没结束
@@ -460,7 +471,7 @@ export const useAgentStore = defineStore('agent', () => {
   }
 
   /** 执行单个工具调用（含 availableIn 越界校验 + 审批门 P2 接）。 */
-  async function executeTool(call: ToolCall, workspace: AgentWorkspace): Promise<{ text: string; isError?: boolean }> {
+  async function executeTool(call: ToolCall, workspace: AgentWorkspace): Promise<{ text: string; isError?: boolean; stopTurn?: boolean }> {
     const def = getAgentTool(call.name)
     if (!def) {
       return { text: `unknown tool: ${call.name}`, isError: true }
@@ -497,7 +508,7 @@ export const useAgentStore = defineStore('agent', () => {
   }
 
   /** finalizeTurn：回合结束，持久化，短暂展示后回 idle。 */
-  async function finalizeTurn(state: 'complete' | 'error'): Promise<void> {
+  async function finalizeTurn(state: 'complete' | 'error' | 'canceled'): Promise<void> {
     runtime.value = { ...initialRuntime, turnState: state }
     await persist()
     setTimeout(() => {
@@ -511,8 +522,9 @@ export const useAgentStore = defineStore('agent', () => {
    * P3 摘要压缩（模块 6.2）。
    *
    * 触发条件：shouldCompact(messages) 返回 true。
-   * 执行：把 [sacredFloor, drainTo) 区间整体替换成一条 LLM 生成的摘要（合成 user 消息，带 framing）。
-   * 摘要调用走 callModelRaw 纯文本路径，不接 tools，带硬超时（60s），超时回退到占位文本。
+   * 执行：把 [sacredFloor, drainTo) 区间分两路——user/assistant 喂 LLM summary，
+   * tool_result 折叠/原样保留；摘要失败重试 COMPACT_MAX_RETRIES 次，全失败才回退占位；
+   * 若已有上一次摘要，叠加而非蒸馏。
    */
   async function maybeAutoCompact(): Promise<void> {
     const messages = activeSessionMessages.value
@@ -522,58 +534,35 @@ export const useAgentStore = defineStore('agent', () => {
     const threshold = (maxCtx > 0 && ratio > 0) ? Math.floor(maxCtx * ratio) : COMPACT_THRESHOLD_TOKENS
     if (!(await shouldCompact(messages, threshold))) return
 
-    const { sacredFloor, drainTo } = await computeCompactRange(messages)
-    if (drainTo <= sacredFloor) return
-
-    // 抽取要摘要的消息
-    const toSummarize = messages.slice(sacredFloor, drainTo)
-    if (toSummarize.length === 0) return
-
-    // 生成摘要（带硬超时回退）
-    let summary: string
-    try {
-      summary = await withTimeout(
-        generateSummary(toSummarize),
-        60_000, // SUMMARY_TIMEOUT_MS
-      )
-    } catch {
-      // 超时或失败：用占位文本
-      summary = '[早期上下文已省略，如需要请重新查询]'
+    const compacted = await compactMessages(messages, generateSummary)
+    if (compacted !== messages) {
+      activeSessionMessages.value = compacted
+      await persist()
     }
-
-    // 构造合成 user 消息（带 framing）
-    const syntheticMsg: Message = {
-      role: 'user',
-      text: `以下是早期对话的摘要，供参考：\n\n${summary}`,
-      synthetic: true,
-      meta: { timestamp: Date.now() },
-    }
-
-    // 替换抽干区间：保留 [0, sacredFloor) + syntheticMsg + [drainTo, end)
-    activeSessionMessages.value = [
-      ...messages.slice(0, sacredFloor),
-      syntheticMsg,
-      ...messages.slice(drainTo),
-    ]
-    await persist()
   }
 
   /**
-   * 生成摘要：调 callModelRaw 纯文本路径（不接 tools），输入是要摘要的消息序列。
-   * 跟随会话语言（用户用中文交互就出中文摘要）。
+   * 生成摘要：调 callModelRaw 纯文本路径（不接 tools），输入是要摘要的 user/assistant 原文。
+   * 跟随会话语言（用户用中文交互就出中文摘要）。若已有上一次摘要，叠加保留更远历史的关键事实。
    */
-  async function generateSummary(toSummarize: Message[]): Promise<string> {
-    // 构造摘要提示：system 指令 + 要摘要的消息
-    const summaryPrompt = [
+  async function generateSummary(toSummarize: Message[], prevSummary: string | null): Promise<string> {
+    // 构造摘要提示：system 指令 + （可选）已有摘要 + 要摘要的新原文
+    const summaryPrompt: { role: 'system' | 'user'; content: string }[] = [
       {
         role: 'system',
-        content: '你是一个对话摘要助手。请把下面的早期对话内容压缩成一份简洁的摘要，保留关键事实、用户意图和已执行的操作。用与原文相同的语言输出摘要，不要添加任何评论或解释。',
-      },
-      {
-        role: 'user',
-        content: toSummarize.map(m => `[${m.role}] ${m.text}`).join('\n\n---\n\n'),
+        content: '你是一个对话摘要助手。请把下面的早期对话内容压缩成一份简洁的摘要，保留关键事实、用户意图和已执行的操作。用与原文相同的语言输出摘要，不要添加任何评论或解释。若提供了已有摘要，请在它基础上叠加新内容，保留更远历史的关键事实，不要丢弃。',
       },
     ]
+    if (prevSummary) {
+      summaryPrompt.push({
+        role: 'user',
+        content: `<previous_summary>\n${prevSummary}\n</previous_summary>`,
+      })
+    }
+    summaryPrompt.push({
+      role: 'user',
+      content: toSummarize.map(m => `[${m.role}] ${m.text}`).join('\n\n---\n\n'),
+    })
 
     const result = await callModelRaw(summaryPrompt, [], {
       temperature: 0.3, // 摘要用低温度保持事实性
@@ -585,22 +574,6 @@ export const useAgentStore = defineStore('agent', () => {
       thinking: { type: 'enabled' }
     })
     return result.content || '[摘要生成失败]'
-  }
-
-  /** 带超时的 Promise 包装。 */
-  function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`timeout after ${ms}ms`)), ms)
-      promise
-        .then(result => {
-          clearTimeout(timer)
-          resolve(result)
-        })
-        .catch(err => {
-          clearTimeout(timer)
-          reject(err)
-        })
-    })
   }
 
   /** 取消当前回合。 */

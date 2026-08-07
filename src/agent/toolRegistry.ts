@@ -31,6 +31,8 @@ export interface AgentToolResult {
   text: string
   /** 标记错误（如用户拒绝审批、工具抛错）。 */
   isError?: boolean
+  /** 终止本轮 agent 循环（如用户拒绝审批——不再让模型继续跑工具/续答，直接停）。 */
+  stopTurn?: boolean
 }
 
 /** JSON Schema 类型（极简子集，够 OpenAI parameters 用）。 */

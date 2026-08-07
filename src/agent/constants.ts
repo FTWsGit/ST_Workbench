@@ -15,6 +15,12 @@ export const SUMMARY_FIDELITY_RATIO = 0.3
 /** 摘要调用硬超时（毫秒）。比 agent-system-design.md 的 180s 短，本产品摘要输入本来就小。 */
 export const SUMMARY_TIMEOUT_MS = 60_000
 
+/** compact 失败重试次数。全失败才回退占位文本，不直接把 history 干没。 */
+export const COMPACT_MAX_RETRIES = 3
+
+/** tool_result 折叠阈值（字节）。compact 时超过此长度的 tool 消息折叠保留开头，不进 LLM summary。 */
+export const SUMMARY_TOO_BIG_PREFIX = 2 * 1024
+
 /** 单次用户提交内的工具调用轮数熔断。防止模型陷入调用循环。 */
 export const MAX_TOOL_ROUNDS = 8
 
@@ -38,3 +44,23 @@ export const SACRED_PREFIX_MESSAGES = 2
 
 /** 单 token 预估字节数，用于 estimateTokens 的粗略估算（1 token ≈ 4 字节，英文/代码场景）。 */
 export const TOKEN_BYTES_ESTIMATE = 4
+
+/* ====== 默认提示词模板（英文，结构化分块）======
+ * 用户可在 AgentPanel 设置区逐块编辑/覆盖；这里只是出厂默认值。
+ * runtime 块默认空——运行时由 agentStore 组装时注入（如当前 workspace 打开了什么文档），不持久化用户文本。 */
+export const DEFAULT_AGENT_PROMPTS = {
+  system: `You are an AI coding assistant operating inside ST_Workbench, a SillyTavern authoring tool.
+Your role: maintain prompt blocks, worldbook entries, and character cards via the provided tools.
+You act on explicit user instructions; when unclear, ask instead of guessing. Every write operation must pass the approval gate.`,
+  project: '',
+  workflow: `Suggested workflow:
+1. list_* to inspect what exists in the current workspace;
+2. read_* to load the specific block/entry/field you need to touch;
+3. propose the edit and wait for the user approval gate;
+4. after edits, save_* to persist to the server.
+Prefer reading over blind writes. Never batch unrelated edits in one turn.`,
+  knowledge: [
+    // 用户在 UI 里添加 KnowledgeBlock；默认空。
+  ],
+  runtime: '',
+} as const
