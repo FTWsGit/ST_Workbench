@@ -21,13 +21,13 @@
               <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'character' }" @click="switchWorkspace('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
             </div>
             <div class="wb-sep"></div>
-            <button class="wb-btn" :class="{ active: uiStore.agentPanelOpen }" @click="toggleAgent">{{ uiStore.t('agent.header.open') }}</button>
             <!-- 工具顺序跨 workspace 统一：先 toolbox 再 meta（worldbook 无 meta 表单）。 -->
             <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
             <button v-if="tabsStore.activeWorkspace !== 'worldbook'" class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
             <div class="wb-spacer"></div>
             <button class="wb-btn" :class="{ active: tabsStore.varNavOpen }" @click="toggleVarNav">{{ uiStore.t('preset.header.varNav') }}</button>
             <button class="wb-btn" :class="{ active: tabsStore.previewOpen }" @click="togglePreview">{{ uiStore.t('preset.header.preview') }}</button>
+            <button class="wb-btn" :class="{ active: uiStore.agentPanelOpen }" @click="toggleAgent">{{ uiStore.t('agent.header.open') }}</button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.new')" :aria-label="uiStore.t('preset.header.new')" @click="onNewWorkspace(workspaceRegistry.preset)">+</button>
               <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.delete')" :aria-label="uiStore.t('preset.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.preset)" :disabled="!presetStore.presetName">🗑</button>
