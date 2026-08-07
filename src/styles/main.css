@@ -489,6 +489,20 @@
 .wb-rp-tools{display:flex;gap:var(--wb-sp-2);padding:8px 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0}
 .wb-rp-tools input{flex:1;min-width:0;font-size:14px;padding:5px 8px}
 .wb-rp-nav{display:flex;gap:var(--wb-sp-2);padding:var(--wb-sp-2) 12px;align-items:center;border-bottom:1px solid var(--wb-border);flex-shrink:0;flex-wrap:wrap}
+
+/* ===== Panel three-mode segmented switch =====
+   Shared by right-side panels (Preview / Var Nav / Toolbox / Agent).
+   Compact icon-only capsule: 3 fixed-size square icon buttons, active one
+   gets accent fill. Replaces the old 3-text-button row. */
+.wb-mode-seg{display:inline-flex;gap:1px;padding:2px;background:var(--wb-bg-input);border:1px solid var(--wb-border);border-radius:var(--wb-rs);flex-shrink:0}
+.wb-mode-seg-btn{
+  width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;
+  border:none;background:transparent;border-radius:var(--wb-radius-0);
+  color:var(--wb-tx3);cursor:pointer;transition:all var(--wb-tr);
+}
+.wb-mode-seg-btn:hover{color:var(--wb-tx);background:var(--wb-bg-h)}
+.wb-mode-seg-btn.active{color:var(--wb-ac);background:var(--wb-ac-d)}
+.wb-mode-seg-btn svg{display:block;flex-shrink:0}
 .wb-rp-list{flex:1;overflow-y:auto;padding:var(--wb-sp-1) 8px}
 .wb-preset-vr-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:var(--wb-rs);font-size:13px;font-family:var(--wb-fc);cursor:pointer;transition:background var(--wb-tr);margin-left:8px}
 .wb-preset-vr-item:hover{background:var(--wb-bg-h)}
@@ -606,8 +620,16 @@
 .wb-agent-float-title{display:flex;align-items:center;gap:var(--wb-sp-1);flex:1;min-width:0}
 .wb-agent-float-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wb-agent-settings-toggle{align-self:flex-start;margin:8px 12px 0;flex-shrink:0}
-.wb-agent-settings{padding:10px 12px;border-bottom:1px solid var(--wb-border);background:var(--wb-bg);flex-shrink:0;overflow-y:auto}
+.wb-agent-settings{padding:14px 14px 16px;border-bottom:1px solid var(--wb-border);background:var(--wb-bg);flex-shrink:0;overflow-y:auto}
 .wb-agent-settings-prompt{width:100%;min-width:0;font-family:var(--wb-ff);font-size:var(--wb-fs);line-height:1.5;resize:vertical}
+/* Settings form field spacing: each field block needs breathing room between
+   label/controls and the next field. The 12px gap also pushes the bottom row
+   of buttons away from the textarea text above. */
+.wb-agent-settings .wb-form-section{display:flex;flex-direction:column;gap:12px}
+.wb-agent-settings .wb-form-field{display:flex;flex-direction:column;gap:6px}
+.wb-agent-settings .wb-form-label{font-size:12px;font-weight:600;color:var(--wb-tx2);margin:0}
+.wb-agent-settings select,
+.wb-agent-settings textarea{padding:6px 8px;border:1px solid var(--wb-border);border-radius:var(--wb-rs);background:var(--wb-bg-input);font-size:13px}
 .wb-agent-version-error{padding:12px;margin:10px 12px 0;border:1px solid var(--wb-amber-a3);border-radius:var(--wb-rs);background:var(--wb-bg);flex-shrink:0}
 .wb-agent-version-title{font-weight:700;margin-bottom:6px;color:var(--wb-tx)}
 .wb-agent-version-body{font-size:12.5px;color:var(--wb-tx2);margin-bottom:8px;line-height:1.5}
