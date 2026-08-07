@@ -1,7 +1,7 @@
 ---
 name: "精确预览"
 kind: "feature"
-description: "Precise Preview：真实调用 SillyTavern 自身渲染管线生成预览，不是本地模拟宏替换。改 PreviewPanel、macroAwareDiff/wordDiff 高亮算法、或排查'预览不准/预览不自动同步'类症状时读。跟正则脚本的本地模拟预览是两套不相关的机制，见同目录「正则本地模拟」。"
+description: "Precise Preview：真实调用 SillyTavern 自身渲染管线生成预览。改 PreviewPanel、macroAwareDiff/wordDiff 高亮算法、或排查'预览不准/预览不自动同步'类症状时读。跟正则脚本的本地模拟预览是两套不相关的机制。"
 alwaysApply: false
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: "国际化"
-description: "自研 useI18n（无 vue-i18n）与文案 key 命名规范。加新 locale key、加新语言、改文案、排查漏翻译兜底、用 LocaleKey 做 typecheck 校验时读。"
+description: "useI18n与文案 key 命名规范。加新 locale key、加新语言、改文案、排查漏翻译兜底、用 LocaleKey 做 typecheck 校验时读。"
 kind: "subsystem"
 alwaysApply: false
 ---

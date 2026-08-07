@@ -1,7 +1,7 @@
 ---
 name: "架构总览"
 kind: "architecture"
-description: "Pinia store 职责边界与多 domain 路由：标签页决定编辑区/设置区显示什么，顶栏两行正交轴控制工作区与子集合。改 store 间分工、加新 domain、改顶栏路由、加整份文档级元信息字段时读。常见功能该抄哪个模式的速查表已拆到同目录「新增功能套路表」。各 store 内部数据结构与 dirty/settings 持久化见'状态与持久化'。"
+description: "Pinia store 职责边界与多 domain 路由：标签页决定编辑区/设置区显示什么，顶栏两行正交轴控制工作区与子集合。改 store 间分工、加新 domain、改顶栏路由、加整份文档级元信息字段时读。"
 alwaysApply: true
 ---
 
