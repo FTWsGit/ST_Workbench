@@ -6,10 +6,12 @@
   "scripts": {
     "build": "vite build",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
-    "docs:get_always": "node .atomcode/skills/st-workbench-docs/scripts/print_always.mjs",
-    "docs:list": "node .atomcode/skills/st-workbench-docs/scripts/list_docs.mjs",
-    "docs:sync_agent": "node .atomcode/skills/st-workbench-docs/scripts/sync_project_doc.mjs",
-    "docs:create": "node .atomcode/skills/st-workbench-docs/scripts/create_docs.mjs"
+    "lint": "eslint src",
+    "format": "prettier --write src",
+    "docs:get_always": "node .atomcode/skills/ws-doc-read/scripts/print_always.mjs",
+    "docs:list": "node .atomcode/skills/ws-doc-read/scripts/list_docs.mjs",
+    "docs:sync_agent": "node .atomcode/skills/ws-doc-read/scripts/sync_project_doc.mjs",
+    "docs:create": "node .atomcode/skills/ws-doc-read/scripts/create_docs.mjs"
   },
   "dependencies": {
     "pinia": "^2.1.7",
@@ -17,10 +19,23 @@
     "vue": "^3.4.21"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/prismjs": "^1.26.6",
+    "@typescript-eslint/parser": "^8.66.0",
     "@vitejs/plugin-vue": "^5.0.4",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-vue": "^10.10.0",
+    "prettier": "^3.9.6",
     "typescript": "^5.4.5",
+    "typescript-eslint": "^8.66.0",
     "vite": "^5.2.8",
     "vue-tsc": "^2.0.7"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true,
+    "vue-demi@0.14.10": true,
+    "unrs-resolver@1.12.2": true
   }
 }
