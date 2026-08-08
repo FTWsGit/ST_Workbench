@@ -4,5 +4,4 @@
     <span class="wb-spacer"></span>
   </div>
 </template>
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>

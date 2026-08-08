@@ -1,19 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch, nextTick } from 'vue'
-import type { PresetData, PresetBlock, OrderItem, OrderGroup, OrderNode, VarOp, PreviewBlockGroup, RegexScript, ScriptTree, Script, ScriptFolder, TavernHelper } from '../types'
+import type {
+  PresetData,
+  PresetBlock,
+  OrderItem,
+  OrderGroup,
+  OrderNode,
+  RegexScript,
+  ScriptTree,
+  Script,
+  TavernHelper,
+} from '../types'
 import * as ST from '../api/presetApi'
 import type { PresetListEntry } from '../api/presetApi'
+import type { LocaleKey } from '../i18n'
 import * as Host from '../api/hostContext'
-import { macroAwareDiff, findVarOps } from '../utils'
 import { useUiStore } from './uiStore'
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList'
 import { useRegexScripts } from '../composables/useRegexScripts'
 import { useScriptTree } from '../composables/useScriptTree'
-import { usePreviewEngine } from '../composables/usePreviewEngine'
-import { useVarNav } from '../composables/useVarNav'
-import { useCharacterStore } from './characterStore'
-import { useWorldbookStore } from './worldbookStore'
-import { CHARACTER_FIELDS } from '../types'
 import { useDirtyFlag } from '../composables/useDirtyFlag'
 import { useTabsStore } from './tabsStore'
 import { useConfirmStore } from './confirmStore'
@@ -27,7 +32,8 @@ export const usePresetStore = defineStore('main', () => {
   const tabsStore = useTabsStore()
   const confirmStore = useConfirmStore()
   const uiStore = useUiStore()
-  const t: (key: string, params?: any) => string = (key, params) => uiStore.t(key as any, params)
+  const t: (key: string, params?: unknown) => string = (key, params) =>
+    uiStore.t(key as LocaleKey, params as Record<string, string | number>)
   const showToast = uiStore.showToast
 
   /* ====== Core State ====== */
@@ -46,9 +52,20 @@ export const usePresetStore = defineStore('main', () => {
    * bindSelected/unbindGroup
    *   被下面同名函数包一层 toast 后重新导出（略作改名避免撞名）。 */
   const {
-    selectedGi, anchorGi, flatNodes, identifierToGi, revealAndFindGi,
-    clearSelection, selectBlock, toggleBlock, toggleGroupCollapse, reorderBlock,
-    insertAfterActive, removeNode, bindSelected: bindSelectedNodes, unbindGroup: unbindGroupNode,
+    selectedGi,
+    anchorGi,
+    flatNodes,
+    identifierToGi,
+    revealAndFindGi,
+    clearSelection,
+    selectBlock,
+    toggleBlock,
+    toggleGroupCollapse,
+    reorderBlock,
+    insertAfterActive,
+    removeNode,
+    bindSelected: bindSelectedNodes,
+    unbindGroup: unbindGroupNode,
   } = useGroupedList(order)
 
   /** 活动标签驱动侧边栏高亮的单一真相源：活动 tab 切到某 block 时，展开包含它的折叠组
@@ -59,15 +76,19 @@ export const usePresetStore = defineStore('main', () => {
    *  点击都会把刚算好的 selectedGi 冲回单行。
    *  `flush: 'sync'`：让此 watcher 先于 useListScrollSync 由 open()/focus() 触发的
    *  requestListScroll 那条路径解析，避免同 tick race 拿到仍折叠的组而滚到空处。 */
-  watch(() => tabsStore.activeTab, (tab) => {
-    if (!tab || tab.domain !== 'preset') return
-    const gi = revealAndFindGi(tab.key)
-    if (gi < 0) return
-    // 幂等守卫：高亮实际不变时不给侧边栏 v-for 新 Set 引用
-    if (anchorGi.value === gi && selectedGi.value.size === 1 && selectedGi.value.has(gi)) return
-    selectedGi.value = new Set([gi])
-    anchorGi.value = gi
-  }, { immediate: true, flush: 'sync' })
+  watch(
+    () => tabsStore.activeTab,
+    (tab) => {
+      if (!tab || tab.domain !== 'preset') return
+      const gi = revealAndFindGi(tab.key)
+      if (gi < 0) return
+      // 幂等守卫：高亮实际不变时不给侧边栏 v-for 新 Set 引用
+      if (anchorGi.value === gi && selectedGi.value.size === 1 && selectedGi.value.has(gi)) return
+      selectedGi.value = new Set([gi])
+      anchorGi.value = gi
+    },
+    { immediate: true, flush: 'sync' }
+  )
 
   /* ====== Dirty flag ====== useDirtyFlag() 在 setup 最早期调用——regex/tavern 段的 useRegexScripts/useScriptTree
    *  要把 markDirty 传进 options，必须在它们声明前解构出 markDirty。watch 列表（哪些 ref 触发脏、deep 还是
@@ -78,18 +99,24 @@ export const usePresetStore = defineStore('main', () => {
   const regexScripts = computed<RegexScript[]>(() => {
     if (!rawData.value) return []
     if (!rawData.value.extensions) rawData.value.extensions = {}
-    if (!Array.isArray(rawData.value.extensions.regex_scripts)) rawData.value.extensions.regex_scripts = []
+    if (!Array.isArray(rawData.value.extensions.regex_scripts))
+      rawData.value.extensions.regex_scripts = []
     return rawData.value.extensions.regex_scripts
   })
 
   function getRegexScripts(): RegexScript[] | null {
     if (!rawData.value) return null
     if (!rawData.value.extensions) rawData.value.extensions = {}
-    if (!Array.isArray(rawData.value.extensions.regex_scripts)) rawData.value.extensions.regex_scripts = []
+    if (!Array.isArray(rawData.value.extensions.regex_scripts))
+      rawData.value.extensions.regex_scripts = []
     return rawData.value.extensions.regex_scripts
   }
 
-  const { addRegexScript: addRegexScriptRaw, deleteRegexScript: deleteRegexScriptRaw, reorderRegexScript } = useRegexScripts(getRegexScripts, {
+  const {
+    addRegexScript: addRegexScriptRaw,
+    deleteRegexScript: deleteRegexScriptRaw,
+    reorderRegexScript,
+  } = useRegexScripts(getRegexScripts, {
     markDirty,
     showToast,
     t,
@@ -106,13 +133,23 @@ export const usePresetStore = defineStore('main', () => {
    * （更新顺序与 _gid/_gname/_gcollapsed/_genabled/_gidx 字段）。双向模式同 preset 域的 order⇄prompts。 */
   const regexOrder = ref<OrderNode[]>([])
   const {
-    flatNodes: regexFlatNodes, selectedGi: regexSelectedGi, anchorGi: regexAnchorGi,
-    identifierToGi: regexIdentifierToGi, revealAndFindGi: regexRevealAndFindGi,
-    clearSelection: regexClearSelection, selectBlock: regexSelectBlock,
-    toggleBlock: regexToggleBlockRaw, toggleGroupCollapse: regexToggleGroupCollapse,
-    reorderBlock: regexReorderBlockRaw, insertAfterActive: regexInsertAfterActive,
-    removeNode: regexRemoveNode, bindSelected: regexBindSelectedRaw, unbindGroup: regexUnbindGroupRaw,
-  } = useGroupedList(regexOrder, { groupName: (n) => t('regex.sidebar.defaultGroupName', { count: n }) })
+    flatNodes: regexFlatNodes,
+    selectedGi: regexSelectedGi,
+    anchorGi: regexAnchorGi,
+    identifierToGi: regexIdentifierToGi,
+    revealAndFindGi: regexRevealAndFindGi,
+    clearSelection: regexClearSelection,
+    selectBlock: regexSelectBlock,
+    toggleBlock: regexToggleBlockRaw,
+    toggleGroupCollapse: regexToggleGroupCollapse,
+    reorderBlock: regexReorderBlockRaw,
+    insertAfterActive: _regexInsertAfterActive,
+    removeNode: regexRemoveNode,
+    bindSelected: regexBindSelectedRaw,
+    unbindGroup: regexUnbindGroupRaw,
+  } = useGroupedList(regexOrder, {
+    groupName: (n) => t('regex.sidebar.defaultGroupName', { count: n }),
+  })
 
   /** add/delete 后显式 rebuild 树：useRegexScripts 改裸数组，watch([regexScripts], rebuild) 浅 watch 永不触发
    *  原地变异（computed getter 返回同一数组引用）——sidebar 渲染源 regexFlatNodes 读的是 regexOrder，
@@ -139,8 +176,16 @@ export const usePresetStore = defineStore('main', () => {
    *  同 _gid 的复用同一个 group ref（折叠态/名字不丢）。抄 importOrderWithGroups 的逻辑。 */
   function rebuildRegexOrder() {
     const scripts = regexScripts.value
-    const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: { script: RegexScript; idx: number }[] }>()
-    scripts.forEach(script => {
+    const groups = new Map<
+      string,
+      {
+        name: string
+        collapsed: boolean
+        enabled: boolean
+        items: { script: RegexScript; idx: number }[]
+      }
+    >()
+    scripts.forEach((script) => {
       if (script._gid) {
         if (!groups.has(script._gid)) {
           groups.set(script._gid, {
@@ -153,10 +198,10 @@ export const usePresetStore = defineStore('main', () => {
         groups.get(script._gid)!.items.push({ script, idx: script._gidx ?? 0 })
       }
     })
-    groups.forEach(g => g.items.sort((a, b) => a.idx - b.idx))
+    groups.forEach((g) => g.items.sort((a, b) => a.idx - b.idx))
     const usedGroups = new Set<string>()
     const topLevel: OrderNode[] = []
-    scripts.forEach(script => {
+    scripts.forEach((script) => {
       if (script._gid) {
         if (usedGroups.has(script._gid)) return
         const g = groups.get(script._gid)!
@@ -166,11 +211,17 @@ export const usePresetStore = defineStore('main', () => {
           name: g.name,
           collapsed: g.collapsed,
           enabled: g.enabled,
-          children: g.items.map(x => ({ identifier: x.script.id, enabled: !x.script.disabled })),
+          children: g.items.map((x) => ({
+            identifier: x.script.id,
+            enabled: !x.script.disabled,
+          })),
         } as OrderGroup)
         usedGroups.add(script._gid)
       } else {
-        topLevel.push({ identifier: script.id, enabled: !script.disabled } as OrderItem)
+        topLevel.push({
+          identifier: script.id,
+          enabled: !script.disabled,
+        } as OrderItem)
       }
     })
     regexOrder.value = topLevel
@@ -180,23 +231,30 @@ export const usePresetStore = defineStore('main', () => {
   function syncRegexScriptsFromOrder() {
     const scripts = getRegexScripts()
     if (!scripts) return
-    const byId = new Map(scripts.map(s => [s.id, s]))
+    const byId = new Map(scripts.map((s) => [s.id, s]))
     const reordered: RegexScript[] = []
-    regexOrder.value.forEach(node => {
+    regexOrder.value.forEach((node) => {
       if (isGroup(node)) {
         node.children.forEach((child, cidx) => {
           const s = byId.get(child.identifier)
           if (!s) return
           s.disabled = !child.enabled
-          s._gid = node._gid; s._gname = node.name
-          s._gcollapsed = node.collapsed; s._genabled = node.enabled; s._gidx = cidx
+          s._gid = node._gid
+          s._gname = node.name
+          s._gcollapsed = node.collapsed
+          s._genabled = node.enabled
+          s._gidx = cidx
           reordered.push(s)
         })
       } else {
         const s = byId.get(node.identifier)
         if (!s) return
         s.disabled = !node.enabled
-        delete s._gid; delete s._gname; delete s._gcollapsed; delete s._genabled; delete s._gidx
+        delete s._gid
+        delete s._gname
+        delete s._gcollapsed
+        delete s._genabled
+        delete s._gidx
         reordered.push(s)
       }
     })
@@ -214,7 +272,10 @@ export const usePresetStore = defineStore('main', () => {
   /** regex sidebar 绑定：合并选中顶层 item 成新组后 sync 回 regexScripts。 */
   function regexBindSelected() {
     const result = regexBindSelectedRaw()
-    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    if (!result) {
+      showToast(t('preset.toast.select2PlusBlocks'))
+      return
+    }
     syncRegexScriptsFromOrder()
     markDirty()
     showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
@@ -229,7 +290,10 @@ export const usePresetStore = defineStore('main', () => {
 
   /** deep watch 监听数组元素字段变异（settings 表单改 script.disabled 后 sidebar 联动）——
    *  浅 watch([regexScripts], ...) 只追踪 computed 重新求值，push/splice/改字段都不触发（computed getter 返回同一数组引用）。 */
-  watch(regexScripts, () => rebuildRegexOrder(), { deep: true, immediate: true })
+  watch(regexScripts, () => rebuildRegexOrder(), {
+    deep: true,
+    immediate: true,
+  })
 
   /* ====== Bound Tavern Helper（tavern_helper 段，照 regex 段模式）======
    * preset 域注意：PresetData.extensions.tavern_helper 的内部变量字段名是 `variales`（拼写差异，
@@ -238,34 +302,39 @@ export const usePresetStore = defineStore('main', () => {
   const tavernHelper = computed<TavernHelper>(() => {
     if (!rawData.value) return { scripts: [], variales: {} } as unknown as TavernHelper
     if (!rawData.value.extensions) rawData.value.extensions = {}
-    const ext = rawData.value.extensions as any
+    const ext = rawData.value.extensions as Record<string, unknown>
     if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variales: {} }
     return ext.tavern_helper as TavernHelper
   })
 
   /** coerce 宽松 Record<string,any>[] 成严格 ScriptTree[] 形状：缺 type 补 'script'，缺 id 补 'th_...'。
    *  在 load 时一次性 mutate 原数据，不在 computed getter 里做（getter 里 mutate 触发响应式重算 → coerce 又跑 → 死循环）。 */
-  function coerceScriptTrees(scripts: any[]) {
+  function coerceScriptTrees(scripts: Record<string, unknown>[]) {
     if (!Array.isArray(scripts)) return
-    scripts.forEach((node: any) => {
+    scripts.forEach((node: Record<string, unknown>) => {
       if (!node || typeof node !== 'object') return
       if (!node.type) node.type = 'script'
-      if (!node.id) node.id = 'th_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+      if (!node.id)
+        node.id = 'th_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
     })
   }
 
   function getScriptTrees(): ScriptTree[] | null {
     if (!rawData.value) return null
     if (!rawData.value.extensions) rawData.value.extensions = {}
-    const ext = rawData.value.extensions as any
+    const ext = rawData.value.extensions as Record<string, unknown>
     if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variales: {} }
-    const th = ext.tavern_helper as any
+    const th = ext.tavern_helper as Record<string, unknown>
     if (!Array.isArray(th.scripts)) th.scripts = []
     if (!th.variales) th.variales = {}
     return th.scripts as ScriptTree[]
   }
 
-  const { addScriptTree: addScriptTreeRaw, deleteScriptTree: deleteScriptTreeRaw, reorderScriptTree } = useScriptTree(getScriptTrees, {
+  const {
+    addScriptTree: addScriptTreeRaw,
+    deleteScriptTree: deleteScriptTreeRaw,
+    reorderScriptTree,
+  } = useScriptTree(getScriptTrees, {
     markDirty,
     showToast,
     t,
@@ -285,13 +354,23 @@ export const usePresetStore = defineStore('main', () => {
    * （更新顺序与 _gid/_gname/_gcollapsed/_genabled/_gidx 字段）。 */
   const scriptTreeOrder = ref<OrderNode[]>([])
   const {
-    flatNodes: scriptTreeFlatNodes, selectedGi: scriptTreeSelectedGi, anchorGi: scriptTreeAnchorGi,
-    identifierToGi: scriptTreeIdentifierToGi, revealAndFindGi: scriptTreeRevealAndFindGi,
-    clearSelection: scriptTreeClearSelection, selectBlock: scriptTreeSelectBlock,
-    toggleBlock: scriptTreeToggleBlockRaw, toggleGroupCollapse: scriptTreeToggleGroupCollapse,
-    reorderBlock: scriptTreeReorderBlockRaw, insertAfterActive: scriptTreeInsertAfterActive,
-    removeNode: scriptTreeRemoveNode, bindSelected: scriptTreeBindSelectedRaw, unbindGroup: scriptTreeUnbindGroupRaw,
-  } = useGroupedList(scriptTreeOrder, { groupName: (n) => t('tavern.sidebar.defaultGroupName', { count: n }) })
+    flatNodes: scriptTreeFlatNodes,
+    selectedGi: scriptTreeSelectedGi,
+    anchorGi: scriptTreeAnchorGi,
+    identifierToGi: scriptTreeIdentifierToGi,
+    revealAndFindGi: scriptTreeRevealAndFindGi,
+    clearSelection: scriptTreeClearSelection,
+    selectBlock: scriptTreeSelectBlock,
+    toggleBlock: scriptTreeToggleBlockRaw,
+    toggleGroupCollapse: scriptTreeToggleGroupCollapse,
+    reorderBlock: scriptTreeReorderBlockRaw,
+    insertAfterActive: _scriptTreeInsertAfterActive,
+    removeNode: scriptTreeRemoveNode,
+    bindSelected: scriptTreeBindSelectedRaw,
+    unbindGroup: scriptTreeUnbindGroupRaw,
+  } = useGroupedList(scriptTreeOrder, {
+    groupName: (n) => t('tavern.sidebar.defaultGroupName', { count: n }),
+  })
 
   /** add/delete 后显式 rebuild 树：同 regex 段修法，watch 浅追踪不触发原地变异。 */
   function addScriptTree(): string | null {
@@ -317,8 +396,16 @@ export const usePresetStore = defineStore('main', () => {
    *  ScriptFolder 不参与 _gid 分组，直接挂顶层。抄 rebuildRegexOrder 的逻辑。 */
   function rebuildScriptTreeOrder() {
     const scripts = tavernHelper.value.scripts as ScriptTree[]
-    const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: { script: Script; idx: number }[] }>()
-    scripts.forEach(node => {
+    const groups = new Map<
+      string,
+      {
+        name: string
+        collapsed: boolean
+        enabled: boolean
+        items: { script: Script; idx: number }[]
+      }
+    >()
+    scripts.forEach((node) => {
       if (node.type === 'folder') return // folder 直接挂顶层，不参与 _gid 分组
       const script = node as Script
       if (script._gid) {
@@ -333,13 +420,16 @@ export const usePresetStore = defineStore('main', () => {
         groups.get(script._gid)!.items.push({ script, idx: script._gidx ?? 0 })
       }
     })
-    groups.forEach(g => g.items.sort((a, b) => a.idx - b.idx))
+    groups.forEach((g) => g.items.sort((a, b) => a.idx - b.idx))
     const usedGroups = new Set<string>()
     const topLevel: OrderNode[] = []
-    scripts.forEach(node => {
+    scripts.forEach((node) => {
       if (node.type === 'folder') {
         // ScriptFolder 直接挂顶层，enabled 取 folder.enabled，identifier 取 folder.id
-        topLevel.push({ identifier: node.id, enabled: node.enabled } as OrderItem)
+        topLevel.push({
+          identifier: node.id,
+          enabled: node.enabled,
+        } as OrderItem)
         return
       }
       const script = node as Script
@@ -352,11 +442,17 @@ export const usePresetStore = defineStore('main', () => {
           name: g.name,
           collapsed: g.collapsed,
           enabled: g.enabled,
-          children: g.items.map(x => ({ identifier: x.script.id, enabled: x.script.enabled })),
+          children: g.items.map((x) => ({
+            identifier: x.script.id,
+            enabled: x.script.enabled,
+          })),
         } as OrderGroup)
         usedGroups.add(script._gid)
       } else {
-        topLevel.push({ identifier: script.id, enabled: script.enabled } as OrderItem)
+        topLevel.push({
+          identifier: script.id,
+          enabled: script.enabled,
+        } as OrderItem)
       }
     })
     scriptTreeOrder.value = topLevel
@@ -368,16 +464,19 @@ export const usePresetStore = defineStore('main', () => {
   function syncScriptsFromOrder() {
     const scripts = getScriptTrees()
     if (!scripts) return
-    const byId = new Map(scripts.map(s => [s.id, s]))
+    const byId = new Map(scripts.map((s) => [s.id, s]))
     const reordered: ScriptTree[] = []
-    scriptTreeOrder.value.forEach(node => {
+    scriptTreeOrder.value.forEach((node) => {
       if (isGroup(node)) {
         node.children.forEach((child, cidx) => {
           const s = byId.get(child.identifier) as Script | undefined
           if (!s || s.type !== 'script') return
           s.enabled = child.enabled
-          s._gid = node._gid; s._gname = node.name
-          s._gcollapsed = node.collapsed; s._genabled = node.enabled; s._gidx = cidx
+          s._gid = node._gid
+          s._gname = node.name
+          s._gcollapsed = node.collapsed
+          s._genabled = node.enabled
+          s._gidx = cidx
           reordered.push(s)
         })
       } else {
@@ -390,7 +489,11 @@ export const usePresetStore = defineStore('main', () => {
         } else {
           const script = s as Script
           script.enabled = node.enabled
-          delete script._gid; delete script._gname; delete script._gcollapsed; delete script._genabled; delete script._gidx
+          delete script._gid
+          delete script._gname
+          delete script._gcollapsed
+          delete script._genabled
+          delete script._gidx
           reordered.push(script)
         }
       }
@@ -409,7 +512,10 @@ export const usePresetStore = defineStore('main', () => {
   /** tavern sidebar 绑定：合并选中顶层 item 成新组后 sync 回 scripts。 */
   function scriptTreeBindSelected() {
     const result = scriptTreeBindSelectedRaw()
-    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    if (!result) {
+      showToast(t('preset.toast.select2PlusBlocks'))
+      return
+    }
     syncScriptsFromOrder()
     markDirty()
     showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
@@ -424,7 +530,11 @@ export const usePresetStore = defineStore('main', () => {
 
   /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）——
    *  浅 watch([tavernHelper.value.scripts], ...) 永不触发原地变异（数组引用没变，只是内部 push/splice/改字段）。 */
-  watch(() => tavernHelper.value.scripts, () => rebuildScriptTreeOrder(), { deep: true, immediate: true })
+  watch(
+    () => tavernHelper.value.scripts,
+    () => rebuildScriptTreeOrder(),
+    { deep: true, immediate: true }
+  )
 
   /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import presetStore ======
    *  regex/tavern 是 host-dependent domain，数据切片由 host store 暴露。
@@ -433,12 +543,12 @@ export const usePresetStore = defineStore('main', () => {
   tabsStore.registerDomainAdapter('regex', 'preset', {
     scripts: () => regexScripts.value,
     workspace: 'preset',
-    t: (key, params) => uiStore.t(key as any, params),
+    t: (key, params) => uiStore.t(key, params),
   })
   tabsStore.registerDomainAdapter('tavern', 'preset', {
     scripts: () => tavernHelper.value.scripts,
     workspace: 'preset',
-    t: (key, params) => uiStore.t(key as any, params),
+    t: (key, params) => uiStore.t(key, params),
   })
 
   /* ====== 脏标记（驱动 header Save 按钮上的 `*`） ======
@@ -472,14 +582,18 @@ export const usePresetStore = defineStore('main', () => {
   const currentBlock = computed<PresetBlock | null>(() => {
     const tab = tabsStore.activeTab
     if (!tab || tab.domain !== 'preset') return null
-    return prompts.value.find(p => p.identifier === tab.key) ?? null
+    return prompts.value.find((p) => p.identifier === tab.key) ?? null
   })
 
   const hasData = computed(() => rawData.value !== null)
   const hiddenBlocks = computed(() => {
     // 展开组：grouped block 的 identifier 在 group.children 里，不在顶层
-    const ids = new Set(order.value.flatMap(o => isGroup(o) ? o.children.map(c => c.identifier) : [o.identifier]))
-    return prompts.value.filter(p => !ids.has(p.identifier))
+    const ids = new Set(
+      order.value.flatMap((o) =>
+        isGroup(o) ? o.children.map((c) => c.identifier) : [o.identifier]
+      )
+    )
+    return prompts.value.filter((p) => !ids.has(p.identifier))
   })
 
   /* ====== Preset IO ======
@@ -490,23 +604,31 @@ export const usePresetStore = defineStore('main', () => {
    *     也独立暴露以防 ST 别处增删预设时同步。
    */
   function importOrderWithGroups(raw: OrderItem[]): OrderNode[] {
-    const groups = new Map<string, { name: string; collapsed: boolean; enabled: boolean; items: {item: OrderItem; idx: number}[] }>()
+    const groups = new Map<
+      string,
+      {
+        name: string
+        collapsed: boolean
+        enabled: boolean
+        items: { item: OrderItem; idx: number }[]
+      }
+    >()
     const topLevel: OrderNode[] = []
     const used = new Set<number>()
-    raw.forEach((item, i) => {
+    raw.forEach((item, _i) => {
       if (item._gid) {
         if (!groups.has(item._gid)) {
           groups.set(item._gid, {
             name: item._gname || 'Group',
             collapsed: item._gcollapsed !== false,
             enabled: item._genabled !== false,
-            items: []
+            items: [],
           })
         }
         groups.get(item._gid)!.items.push({ item, idx: item._gidx ?? 0 })
       }
     })
-    groups.forEach(g => g.items.sort((a, b) => a.idx - b.idx))
+    groups.forEach((g) => g.items.sort((a, b) => a.idx - b.idx))
     raw.forEach((item, i) => {
       if (item._gid) {
         if (used.has(i)) return
@@ -517,10 +639,13 @@ export const usePresetStore = defineStore('main', () => {
           name: g.name,
           collapsed: g.collapsed,
           enabled: g.enabled,
-          children: g.items.map(x => ({ identifier: x.item.identifier, enabled: x.item.enabled }))
+          children: g.items.map((x) => ({
+            identifier: x.item.identifier,
+            enabled: x.item.enabled,
+          })),
         }
         topLevel.push(group)
-        g.items.forEach(x => used.add(raw.indexOf(x.item)))
+        g.items.forEach((x) => used.add(raw.indexOf(x.item)))
       } else {
         topLevel.push({ identifier: item.identifier, enabled: item.enabled })
       }
@@ -530,7 +655,7 @@ export const usePresetStore = defineStore('main', () => {
 
   function exportOrder(nodes: OrderNode[]): OrderItem[] {
     const out: OrderItem[] = []
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       if (isGroup(node)) {
         node.children.forEach((child, idx) => {
           out.push({
@@ -540,7 +665,7 @@ export const usePresetStore = defineStore('main', () => {
             _gname: node.name,
             _gcollapsed: node.collapsed,
             _genabled: node.enabled,
-            _gidx: idx
+            _gidx: idx,
           })
         })
       } else {
@@ -554,53 +679,77 @@ export const usePresetStore = defineStore('main', () => {
     rawData.value = data
     prompts.value = data.prompts || []
     const po = data.prompt_order
-    const rawOrder = (Array.isArray(po) && po.length)
-      ? (po.find((p: any) => p.character_id === 100001)?.order ?? [])
-      : []
+    const rawOrder =
+      Array.isArray(po) && po.length
+        ? (po.find((p) => p.character_id === 100001)?.order ?? [])
+        : []
     order.value = importOrderWithGroups(rawOrder)
     clearSelection()
     presetName.value = name
-    rebuildVarIndex()
+    uiStore.rebuildVarIndex()
     tabsStore.closeWorkspace('preset') // 旧标签（block、regex都算）都指向即将被替换的数据
     // coerce tavern_helper.scripts 宽松数组成严格 ScriptTree（load 时一次性 mutate，不在 computed getter 里）
-    if (rawData.value.extensions?.tavern_helper) coerceScriptTrees(rawData.value.extensions.tavern_helper.scripts)
+    if (rawData.value.extensions?.tavern_helper)
+      coerceScriptTrees(rawData.value.extensions.tavern_helper.scripts)
     rebuildScriptTreeOrder() // load 背真数据后显式 rebuild：watch([tavernHelper.value.scripts]) 是浅 watch，load 时 ext.tavern_helper 对象引用没变（只 scripts 属性被替），watch 不触发 → 树空
-    nextTick(() => { dirty.value = false })
+    nextTick(() => {
+      dirty.value = false
+    })
   }
 
   function refreshPresetList() {
-    try { presetList.value = ST.listPresets() }
-    catch (e: any) { showToast(t('preset.toast.listFailed', { msg: e?.message || e })) }
+    try {
+      presetList.value = ST.listPresets()
+    } catch (e: unknown) {
+      showToast(t('preset.toast.listFailed', { msg: e instanceof Error ? e.message : String(e) }))
+    }
   }
 
   function loadPresetByName(name: string, opts: { silent?: boolean } = {}) {
     Host.invalidateCache()
     let data: PresetData | null
-    try { data = ST.getPresetByName(name) }
-    catch (e: any) { showToast(t('preset.toast.loadFailed', { msg: e?.message || e })); return }
-    if (!data) { showToast(t('preset.toast.notFound', { name })); return }
+    try {
+      data = ST.getPresetByName(name)
+    } catch (e: unknown) {
+      showToast(t('preset.toast.loadFailed', { msg: e instanceof Error ? e.message : String(e) }))
+      return
+    }
+    if (!data) {
+      showToast(t('preset.toast.notFound', { name }))
+      return
+    }
     applyLoadedPreset(data, name)
     if (!opts.silent) showToast(t('preset.toast.loaded', { name }))
   }
-  
 
   /** 面板首次打开时加载：ST 当前选中的预设。 */
   function loadFromContext() {
     refreshPresetList()
     Host.invalidateCache()
     let name: string
-    try { name = ST.getSelectedPresetName() }
-    catch (e: any) { showToast(t('preset.toast.cantLoadContext', { msg: e?.message || e })); return }
-    if (!name) { showToast(t('preset.toast.noSelected')); return }
+    try {
+      name = ST.getSelectedPresetName()
+    } catch (e: unknown) {
+      showToast(
+        t('preset.toast.cantLoadContext', { msg: e instanceof Error ? e.message : String(e) })
+      )
+      return
+    }
+    if (!name) {
+      showToast(t('preset.toast.noSelected'))
+      return
+    }
     loadPresetByName(name)
   }
 
   function reloadPreset() {
     refreshPresetList()
     Host.invalidateCache()
-    let name: string
-    name = presetName.value
-    if (!name) { showToast(t('preset.toast.noSelected')); return }
+    const name: string = presetName.value
+    if (!name) {
+      showToast(t('preset.toast.noSelected'))
+      return
+    }
     loadPresetByName(name)
   }
 
@@ -612,10 +761,13 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   async function doSavePreset() {
-    if (!rawData.value) { showToast(t('preset.toast.noDataToSave')); return }
+    if (!rawData.value) {
+      showToast(t('preset.toast.noDataToSave'))
+      return
+    }
     rawData.value.prompts = [...prompts.value]
     if (rawData.value.prompt_order?.length) {
-      let entry = rawData.value.prompt_order.find((p: any) => p.character_id === 100001)
+      let entry = rawData.value.prompt_order.find((p) => p.character_id === 100001)
       if (!entry) {
         entry = { character_id: 100001, order: [] }
         rawData.value.prompt_order.push(entry)
@@ -632,12 +784,17 @@ export const usePresetStore = defineStore('main', () => {
       refreshPresetList() // 新名保存会新增条目，保持 picker 同步
       dirty.value = false
       showToast(t('preset.toast.saved', { name }))
-    } catch (e: any) { showToast(t('preset.toast.saveFailed', { msg: e.message })) }
+    } catch (e: unknown) {
+      showToast(t('preset.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) }))
+    }
   }
 
   async function createPreset(name: string) {
     refreshPresetList()
-    if (presetList.value.some(p => p.name === name)) { showToast(t('preset.toast.duplicateName')); return }
+    if (presetList.value.some((p) => p.name === name)) {
+      showToast(t('preset.toast.duplicateName'))
+      return
+    }
 
     const newPreset: PresetData = JSON.parse(JSON.stringify(DEFAULT_PRESET))
     try {
@@ -645,7 +802,9 @@ export const usePresetStore = defineStore('main', () => {
       refreshPresetList()
       applyLoadedPreset(newPreset, name)
       showToast(t('preset.toast.created', { name }))
-    } catch (e: any) { showToast(t('preset.toast.createFailed', { msg: e?.message || e })) }
+    } catch (e: unknown) {
+      showToast(t('preset.toast.createFailed', { msg: e instanceof Error ? e.message : String(e) }))
+    }
   }
   async function removeCurrentPreset() {
     const name = presetName.value
@@ -655,9 +814,14 @@ export const usePresetStore = defineStore('main', () => {
       refreshPresetList()
       const next = presetList.value[0]?.name
       if (next) loadPresetByName(next, { silent: true })
-      else { rawData.value = null as any; presetName.value = '' }
+      else {
+        rawData.value = null
+        presetName.value = ''
+      }
       showToast(t('preset.toast.deleted', { name }))
-    } catch (e: any) { showToast(t('preset.toast.deleteFailed', { msg: e?.message || e })) }
+    } catch (e: unknown) {
+      showToast(t('preset.toast.deleteFailed', { msg: e instanceof Error ? e.message : String(e) }))
+    }
   }
 
   /* ====== Block Ops ======
@@ -667,16 +831,29 @@ export const usePresetStore = defineStore('main', () => {
    * 故意不碰的东西：`prompts`（后端数据数组）、tabsStore（开/关标签）、confirmStore（删除确认）。
    * 它们调 insertAfterActive()/removeNode() 处理树形部分，其余自己处理。 */
   function addBlock() {
-    if (!rawData.value) { showToast(t('preset.toast.loadFirst')); return }
+    if (!rawData.value) {
+      showToast(t('preset.toast.loadFirst'))
+      return
+    }
     const id = 'custom_' + Date.now()
     prompts.value.push({
-      identifier: id, name: 'New Block', role: 'system',
-      content: '', system_prompt: false, enabled: true, marker: false,
+      identifier: id,
+      name: 'New Block',
+      role: 'system',
+      content: '',
+      system_prompt: false,
+      enabled: true,
+      marker: false,
     })
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
     insertAfterActive({ identifier: id, enabled: true }, activeId)
     // 直接打开新块的标签——编辑器内容由标签驱动
-    tabsStore.open({ domain: 'preset', key: id, label: 'New Block', workspace: 'preset' })
+    tabsStore.open({
+      domain: 'preset',
+      key: id,
+      label: 'New Block',
+      workspace: 'preset',
+    })
     showToast(t('preset.toast.blockCreated'))
   }
   function deleteBlock(gi: number) {
@@ -684,7 +861,7 @@ export const usePresetStore = defineStore('main', () => {
     if (!node) return
     if (!node.isGroup) {
       const id = (node.ref as OrderItem).identifier
-      const block = prompts.value.find(p => p.identifier === id)
+      const block = prompts.value.find((p) => p.identifier === id)
       if (block?.marker) {
         showToast(t('preset.toast.cannotDeleteMarker'))
         return
@@ -692,7 +869,8 @@ export const usePresetStore = defineStore('main', () => {
     }
     const name = node.isGroup
       ? (node.ref as OrderGroup).name || t('common.unnamed')
-      : prompts.value.find(p => p.identifier === (node.ref as OrderItem).identifier)?.name || t('common.new')
+      : prompts.value.find((p) => p.identifier === (node.ref as OrderItem).identifier)?.name ||
+        t('common.new')
     const wasGroup = node.isGroup
     confirmStore.ask({
       title: t('preset.confirm.deleteBlock.title'),
@@ -706,12 +884,12 @@ export const usePresetStore = defineStore('main', () => {
         // 叶子块：关自己标签 + 真删数据行。
         for (const id of removed.identifiers) tabsStore.close('preset', id)
         if (!wasGroup) {
-          const pi = prompts.value.findIndex(p => p.identifier === removed.identifiers[0])
+          const pi = prompts.value.findIndex((p) => p.identifier === removed.identifiers[0])
           if (pi >= 0) prompts.value.splice(pi, 1)
         }
-        rebuildVarIndex()
+        uiStore.rebuildVarIndex()
         showToast(t('preset.toast.blockDeleted'))
-      }
+      },
     })
   }
   function hideBlock(gi: number) {
@@ -719,7 +897,7 @@ export const usePresetStore = defineStore('main', () => {
     if (!node) return
     if (!node.isGroup) {
       const id = (node.ref as OrderItem).identifier
-      const block = prompts.value.find(p => p.identifier === id)
+      const block = prompts.value.find((p) => p.identifier === id)
       if (block?.marker) {
         showToast(t('preset.toast.cannotHideMarker'))
         return
@@ -737,8 +915,13 @@ export const usePresetStore = defineStore('main', () => {
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null
     insertAfterActive({ identifier, enabled: true }, activeId)
     // 打开新加块的标签
-    const block = prompts.value.find(p => p.identifier === identifier)
-    tabsStore.open({ domain: 'preset', key: identifier, label: block?.name || identifier, workspace: 'preset' })
+    const block = prompts.value.find((p) => p.identifier === identifier)
+    tabsStore.open({
+      domain: 'preset',
+      key: identifier,
+      label: block?.name || identifier,
+      workspace: 'preset',
+    })
     showToast(t('preset.toast.blockAdded'))
   }
 
@@ -746,7 +929,10 @@ export const usePresetStore = defineStore('main', () => {
    * useGroupedList() 的 bindSelected()/unbindGroup() 外包一层 toast。 */
   function bindSelected() {
     const result = bindSelectedNodes()
-    if (!result) { showToast(t('preset.toast.select2PlusBlocks')); return }
+    if (!result) {
+      showToast(t('preset.toast.select2PlusBlocks'))
+      return
+    }
     showToast(t('preset.toast.boundBlocks', { count: result.itemCount }))
   }
   function unbindGroup(gi: number) {
@@ -757,84 +943,49 @@ export const usePresetStore = defineStore('main', () => {
   /* ====== Search（工具箱通用版） ====== */
   /** 工具箱 Search 的通用"跳到命中"出口：按 itemId 定位（预设块 identifier 或正则脚本 id），
    *  开对应标签；content 文本命中再叠加编辑器跳转。不依赖 SearchResult 结构，跨域 SearchTool 可复用。 */
-  function jumpToFieldHit(itemId: string, fieldKey: string, line: number, col: number, len: number) {
-    const script = getRegexScripts()?.find(r => r.id === itemId)
+  function jumpToFieldHit(
+    itemId: string,
+    fieldKey: string,
+    line: number,
+    col: number,
+    len: number
+  ) {
+    const script = getRegexScripts()?.find((r) => r.id === itemId)
     if (script) {
-      tabsStore.open({ domain: 'regex', key: script.id, label: script.scriptName || script.id, workspace: 'preset' })
+      tabsStore.open({
+        domain: 'regex',
+        key: script.id,
+        label: script.scriptName || script.id,
+        workspace: 'preset',
+      })
       return
     }
-    const thNode = getScriptTrees()?.find(s => s.id === itemId)
+    const thNode = getScriptTrees()?.find((s) => s.id === itemId)
     if (thNode) {
-      tabsStore.open({ domain: 'tavern', key: thNode.id, label: thNode.name || thNode.id, workspace: 'preset' })
+      tabsStore.open({
+        domain: 'tavern',
+        key: thNode.id,
+        label: thNode.name || thNode.id,
+        workspace: 'preset',
+      })
       // 反查 scriptTreeIdentifierToGi 展组到该行（同 preset 域 jumpToFieldHit 的 revealAndFindGi）
       const gi = scriptTreeIdentifierToGi(thNode.id)
       if (gi >= 0) scriptTreeRevealAndFindGi(thNode.id)
       return
     }
-    const block = prompts.value.find(p => p.identifier === itemId)
+    const block = prompts.value.find((p) => p.identifier === itemId)
     if (!block) return
-    tabsStore.open({ domain: 'preset', key: block.identifier, label: block.name || block.identifier, workspace: 'preset' })
+    tabsStore.open({
+      domain: 'preset',
+      key: block.identifier,
+      label: block.name || block.identifier,
+      workspace: 'preset',
+    })
     // 只有 content 文本命中才有编辑器坐标；name/role/identifier 等字段只开标签不跳光标
     if (fieldKey === 'content' && line >= 0) requestEditorJump(line, col, len, false)
   }
 
-  /* ====== Var Nav + Var Popup ====== 抽到 composables/useVarNav.ts。
-   * varNav 跨三域扫描：preset 自扫 + 引用 character/worldbook 两 store 的当前数据一并扫。
-   * 跳转按 source.domain 分派——preset 走本 store jumpToFieldHit；character/worldbook 各自 jumpToFieldHit。 */
-  const characterStore = useCharacterStore()
-  const worldbookStore = useWorldbookStore()
-  function jumpAcrossDomain(v: VarOp) {
-    if (v.source.domain === 'preset') {
-      const block = prompts.value.find(p => p.identifier === v.source.blockId)
-      tabsStore.setActiveWorkspace('preset')
-      tabsStore.open({ domain: 'preset', key: v.source.blockId, label: block?.name || v.source.blockLabel, workspace: 'preset' })
-      requestEditorJump(v.source.line, v.source.col, v.varName.length)
-      return
-    }
-    if (v.source.domain === 'character') {
-      tabsStore.setActiveWorkspace('character')
-      characterStore.jumpToFieldHit(v.source.blockId, v.source.fieldName || '', v.source.line, v.source.col, v.varName.length)
-      requestEditorJump(v.source.line, v.source.col, v.varName.length)
-      return
-    }
-    tabsStore.setActiveWorkspace('worldbook')
-    worldbookStore.jumpToFieldHit(v.source.blockId, 'content', v.source.line, v.source.col, v.varName.length)
-    requestEditorJump(v.source.line, v.source.col, v.varName.length)
-  }
-  const {
-    varFilterQ, localRefs, globalRefs, localFiltered, globalFiltered, varIdx,
-    rebuildVarIndex, filterVarNav, jumpToVarOp, navVar,
-    varPopupOpen, varPopupVarName, varPopupScope, varPopupOps, varPopupIdx, varPopupPos,
-    showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
-  } = useVarNav(
-    {
-      preset: { order: () => order.value, prompts: () => prompts.value, presetName: () => presetName.value },
-      character: {
-        character: () => characterStore.character,
-        greetingIds: () => characterStore.greetingIds,
-        greetingKey: (id) => 'field:greeting:' + id,
-        fieldOrder: CHARACTER_FIELDS.map(f => ({ field: f.key, labelKey: f.labelKey })),
-      },
-      worldbook: { order: () => worldbookStore.order, entries: () => worldbookStore.entries, worldbookName: () => worldbookStore.worldbookName },
-    },
-    { onJump: jumpAcrossDomain },
-  )
-  /* variables 自动重扫：order 深 watch 覅获 block 增删/启用切换/重排序（粗粒度，content 编辑不触发避打字卡顿）。
-   *   prompts 是浅 watch 兜底——content 改字不自动重扫，用户点🔄或切预设时跑。
-   *   character/worldbook 域的 watch 挂在各自 store（走 useVarNav 跨域扫描器读的是三域当前数据，那边触发也会让本面板更新）。 */
-  watch(order, () => rebuildVarIndex(), { deep: true })
-  watch(prompts, () => rebuildVarIndex())
-  watch(() => characterStore.character, () => rebuildVarIndex(), { deep: true })
-  watch(() => worldbookStore.entries, () => rebuildVarIndex(), { deep: true })
-
-  /* ====== Preview ====== 抽到 composables/usePreviewEngine.ts。 */
-  const {
-    previewMode, previewLoading, previewError, previewCollapsed,
-    previewBlockGroups, previewRawText,
-    generatePreviewBlocks, generatePreviewRaw,
-    togglePreviewBlock, toggleAllPreviewBlocks,
-  } = usePreviewEngine(() => order.value, () => prompts.value, { showToast, t })
-
+  /* ====== Preview 生成前的 ST 主菜单对齐 ====== */
   /** 调用 ST 的主菜单选择预设（不是加载到编辑器），仅在 ST 当前选中不同时执行。 */
   function selectPresetByName(name: string) {
     if (!name || ST.getSelectedPresetName() === name) return
@@ -842,34 +993,83 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   return {
-    rawData, prompts, order, presetName, presetList,
-    flatNodes, selectedGi, anchorGi, identifierToGi, revealAndFindGi,
-    varFilterQ, localRefs, globalRefs, localFiltered, globalFiltered, varIdx,
-    varPopupOpen, varPopupVarName, varPopupScope, varPopupOps, varPopupIdx, varPopupPos,
-    showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
-    previewMode, previewLoading, previewError,
-    previewCollapsed, previewBlockGroups, previewRawText,
-    regexScripts, addRegexScript, deleteRegexScript, reorderRegexScript,
-    regexOrder, regexFlatNodes, regexSelectedGi, regexAnchorGi,
-    regexIdentifierToGi, regexRevealAndFindGi, regexClearSelection,
-    regexSelectBlock, regexToggleBlock, regexToggleGroupCollapse,
-    reorderRegexBlock, regexBindSelected, regexUnbindGroup, regexRemoveNode,
-    rebuildRegexOrder, syncRegexScriptsFromOrder,
-    tavernHelper, getScriptTrees, addScriptTree, deleteScriptTree, reorderScriptTree,
-    scriptTreeOrder, scriptTreeFlatNodes, scriptTreeSelectedGi, scriptTreeAnchorGi,
-    scriptTreeIdentifierToGi, scriptTreeRevealAndFindGi, scriptTreeClearSelection,
-    scriptTreeSelectBlock, scriptTreeToggleBlock, scriptTreeToggleGroupCollapse,
-    reorderScriptTreeBlock, scriptTreeBindSelected, scriptTreeUnbindGroup, scriptTreeRemoveNode,
-    rebuildScriptTreeOrder, syncScriptsFromOrder,
-    hiddenOpen, dirty, markDirty,
-    currentBlock, hasData, hiddenBlocks,
-    editorJump, requestEditorJump,
-    loadFromContext, doSavePreset, refreshPresetList, switchPreset, createPreset, removeCurrentPreset, reloadPreset,
-    selectBlock, addBlock, deleteBlock, hideBlock, addHiddenBlock,
-    toggleBlock, reorderBlock,
-    bindSelected, unbindGroup, toggleGroupCollapse,
+    rawData,
+    prompts,
+    order,
+    presetName,
+    presetList,
+    flatNodes,
+    selectedGi,
+    anchorGi,
+    identifierToGi,
+    revealAndFindGi,
+    regexScripts,
+    addRegexScript,
+    deleteRegexScript,
+    reorderRegexScript,
+    regexOrder,
+    regexFlatNodes,
+    regexSelectedGi,
+    regexAnchorGi,
+    regexIdentifierToGi,
+    regexRevealAndFindGi,
+    regexClearSelection,
+    regexSelectBlock,
+    regexToggleBlock,
+    regexToggleGroupCollapse,
+    reorderRegexBlock,
+    regexBindSelected,
+    regexUnbindGroup,
+    regexRemoveNode,
+    rebuildRegexOrder,
+    syncRegexScriptsFromOrder,
+    tavernHelper,
+    getScriptTrees,
+    addScriptTree,
+    deleteScriptTree,
+    reorderScriptTree,
+    scriptTreeOrder,
+    scriptTreeFlatNodes,
+    scriptTreeSelectedGi,
+    scriptTreeAnchorGi,
+    scriptTreeIdentifierToGi,
+    scriptTreeRevealAndFindGi,
+    scriptTreeClearSelection,
+    scriptTreeSelectBlock,
+    scriptTreeToggleBlock,
+    scriptTreeToggleGroupCollapse,
+    reorderScriptTreeBlock,
+    scriptTreeBindSelected,
+    scriptTreeUnbindGroup,
+    scriptTreeRemoveNode,
+    rebuildScriptTreeOrder,
+    syncScriptsFromOrder,
+    hiddenOpen,
+    dirty,
+    markDirty,
+    currentBlock,
+    hasData,
+    hiddenBlocks,
+    editorJump,
+    requestEditorJump,
+    loadFromContext,
+    doSavePreset,
+    refreshPresetList,
+    switchPreset,
+    createPreset,
+    removeCurrentPreset,
+    reloadPreset,
+    selectBlock,
+    addBlock,
+    deleteBlock,
+    hideBlock,
+    addHiddenBlock,
+    toggleBlock,
+    reorderBlock,
+    bindSelected,
+    unbindGroup,
+    toggleGroupCollapse,
     jumpToFieldHit,
-    rebuildVarIndex, filterVarNav, navVar, jumpToVarOp,
-    generatePreviewBlocks, generatePreviewRaw, togglePreviewBlock, toggleAllPreviewBlocks, selectPresetByName,
+    selectPresetByName,
   }
 })

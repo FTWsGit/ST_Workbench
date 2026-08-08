@@ -47,7 +47,7 @@ export function estimateTokens(messages: Message[]): number {
 }
 
 /** 单条消息字节估算（computeCompactRange 内部按消息粒度数 token 用）。 */
-function estimateMessageTokens(m: Message): number {
+function _estimateMessageTokens(m: Message): number {
   let len = m.text.length
   if (m.toolCalls) {
     for (const tc of m.toolCalls) len += tc.arguments.length + tc.name.length
@@ -71,7 +71,9 @@ function getStTokenFn(): ((str: string, padding?: number) => Promise<number>) | 
     const ctx = getCtx()
     const fn = ctx?.getTokenCountAsync
     if (typeof fn === 'function') cachedGetTokenCountAsync = fn.bind(ctx)
-  } catch { /* 回退字节估算 */ }
+  } catch {
+    /* 回退字节估算 */
+  }
   return cachedGetTokenCountAsync
 }
 
@@ -95,7 +97,7 @@ export async function countTokensAsync(messages: Message[]): Promise<number> {
  * 单条消息精确 token（异步）。
  * computeCompactRange 需要按消息粒度数 token，这里给一个 per-message 版本。
  */
-async function countMessageTokensAsync(m: Message): Promise<number> {
+async function _countMessageTokensAsync(m: Message): Promise<number> {
   return countTokensAsync([m])
 }
 
@@ -135,9 +137,10 @@ export function sacredFloorLength(messages: Message[]): number {
  */
 function foldToolResult(m: Message): Message {
   const cut = SUMMARY_TOO_BIG_PREFIX
-  const text = m.text.length > cut
-    ? m.text.slice(0, cut) + `\n…[folded, original ${m.text.length} bytes]`
-    : m.text
+  const text =
+    m.text.length > cut
+      ? m.text.slice(0, cut) + `\n…[folded, original ${m.text.length} bytes]`
+      : m.text
   return { ...m, text, synthetic: true }
 }
 
@@ -147,7 +150,10 @@ function foldToolResult(m: Message): Message {
  *  - tool/tool_result → 折叠或原样保留（不 summary）。
  * 返回「要摘要的原文」+「折叠后直接保留的消息」。
  */
-function splitForCompact(range: Message[]): { toSummarize: Message[]; folded: Message[] } {
+function splitForCompact(range: Message[]): {
+  toSummarize: Message[]
+  folded: Message[]
+} {
   const toSummarize: Message[] = []
   const folded: Message[] = []
   for (const m of range) {
@@ -176,10 +182,11 @@ function splitForCompact(range: Message[]): { toSummarize: Message[]; folded: Me
 export async function shouldCompact(
   messages: Message[],
   maxContextTokens: number,
-  compactThresholdRatio: number,
+  compactThresholdRatio: number
 ): Promise<boolean> {
   if (messages.length <= SACRED_PREFIX_MESSAGES + 2) return false
-  if (!(maxContextTokens > 0 && compactThresholdRatio > 0 && compactThresholdRatio < 1)) return false
+  if (!(maxContextTokens > 0 && compactThresholdRatio > 0 && compactThresholdRatio < 1))
+    return false
   const tokens = await countTokensAsync(messages)
   if (tokens / maxContextTokens > compactThresholdRatio) return true
   const bytes = estimateBytes(messages)
@@ -193,7 +200,7 @@ export async function shouldCompact(
  * 保真窗口：保留最近 N% token 的原文，其余抽干成摘要。
  */
 export async function computeCompactRange(
-  messages: Message[],
+  messages: Message[]
 ): Promise<{ sacredFloor: number; drainTo: number }> {
   const sacredFloor = sacredFloorLength(messages)
   if (sacredFloor >= messages.length) {
@@ -238,7 +245,7 @@ export async function compactMessages(
   messages: Message[],
   generateSummary: (toSummarize: Message[], prevSummary: string | null) => Promise<string>,
   maxContextTokens: number,
-  compactThresholdRatio: number,
+  compactThresholdRatio: number
 ): Promise<Message[]> {
   if (!(await shouldCompact(messages, maxContextTokens, compactThresholdRatio))) return messages
 
@@ -266,10 +273,7 @@ export async function compactMessages(
   let summary: string | null = null
   for (let attempt = 1; attempt <= COMPACT_MAX_RETRIES; attempt++) {
     try {
-      summary = await withTimeout(
-        generateSummary(toSummarize, prevSummary),
-        SUMMARY_TIMEOUT_MS,
-      )
+      summary = await withTimeout(generateSummary(toSummarize, prevSummary), SUMMARY_TIMEOUT_MS)
       if (summary) break
     } catch {
       // 重试
@@ -289,15 +293,10 @@ export async function compactMessages(
 
   // 替换抽干区间：保留 [0, sacredFloor) + syntheticMsg + folded + [drainTo, end)
   // 删掉前一次的 summary 消息（如果有，已被新摘要叠加取代）
-  const head = messages.slice(0, sacredFloor).filter(
-    m => !(m.role === 'system' && m.synthetic && m.text.includes('<previous_summary>'))
-  )
-  return [
-    ...head,
-    syntheticMsg,
-    ...folded,
-    ...messages.slice(drainTo),
-  ]
+  const head = messages
+    .slice(0, sacredFloor)
+    .filter((m) => !(m.role === 'system' && m.synthetic && m.text.includes('<previous_summary>')))
+  return [...head, syntheticMsg, ...folded, ...messages.slice(drainTo)]
 }
 
 /** 带超时的 Promise 包装。 */
@@ -305,11 +304,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timeout after ${ms}ms`)), ms)
     promise
-      .then(result => {
+      .then((result) => {
         clearTimeout(timer)
         resolve(result)
       })
-      .catch(err => {
+      .catch((err) => {
         clearTimeout(timer)
         reject(err)
       })
@@ -329,7 +328,7 @@ export async function overflowFallback(
   messages: Message[],
   generateSummary: (toSummarize: Message[], prevSummary: string | null) => Promise<string>,
   maxContextTokens: number,
-  compactThresholdRatio: number,
+  compactThresholdRatio: number
 ): Promise<Message[]> {
   return compactMessages(messages, generateSummary, maxContextTokens, compactThresholdRatio)
 }

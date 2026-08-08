@@ -13,13 +13,19 @@ export interface PresetBlock {
   role: 'system' | 'user' | 'assistant'
   system_prompt: boolean
   marker: boolean
-  [k: string]: any
+  [k: string]: unknown
 }
 
 export interface OrderItem {
   identifier: string
   enabled: boolean
-  [k: string]: any
+  /** 分组持久化字段：跟 WorldbookEntry 同模式，存成未知字段让 ST 原样忽略。 */
+  _gid?: string
+  _gname?: string
+  _gcollapsed?: boolean
+  _genabled?: boolean
+  _gidx?: number
+  [k: string]: unknown
 }
 
 export interface OrderGroup {
@@ -42,34 +48,38 @@ export interface FlatNode {
 }
 
 export interface PresetData {
-  openai_max_context: number;
-  openai_max_tokens: number;
+  openai_max_context: number
+  openai_max_tokens: number
 
   /** 每次生成几个回复 */
-  n: number;
+  n: number
 
   /** 流式传输 */
-  stream_openai: boolean;
+  stream_openai: boolean
 
-  temperature: number;
-  frequency_penalty: number;
-  presence_penalty: number;
-  top_p: number;
-  repetition_penalty: number;
-  min_p: number;
-  top_k: number;
-  top_a: number;
+  temperature: number
+  frequency_penalty: number
+  presence_penalty: number
+  top_p: number
+  repetition_penalty: number
+  min_p: number
+  top_k: number
+  top_a: number
 
   /** -1 表示随机 */
-  seed: number;
+  seed: number
 
   /** 压缩系统消息: 将连续的系统消息合并为一条消息 */
-  squash_system_messages: boolean;
+  squash_system_messages: boolean
 
   prompts: PresetBlock[]
-  prompt_order: { order: OrderItem[]; [k: string]: any }[]
-  extensions?: { regex_scripts?: RegexScript[]; tavern_helper?: TavernHelper; [k: string]: any }
-  [k: string]: any
+  prompt_order: { order: OrderItem[]; [k: string]: unknown }[]
+  extensions?: {
+    regex_scripts?: RegexScript[]
+    tavern_helper?: TavernHelper
+    [k: string]: unknown
+  }
+  [k: string]: unknown
 }
 
 export interface PreviewSegment {
@@ -135,9 +145,17 @@ export interface VarOp {
 }
 
 export interface SyntaxColors {
-  'hl-b': string; 'hl-k': string; 'hl-s': string; 'hl-v': string
-  'hl-c': string; 'hl-cm': string; 'hl-m': string
-  'hl-sq': string; 'hl-dq': string; 'hl-ab': string; 'hl-sb': string
+  'hl-b': string
+  'hl-k': string
+  'hl-s': string
+  'hl-v': string
+  'hl-c': string
+  'hl-cm': string
+  'hl-m': string
+  'hl-sq': string
+  'hl-dq': string
+  'hl-ab': string
+  'hl-sb': string
 }
 
 /** 右侧面板/工具箱的三种形态：
@@ -173,10 +191,17 @@ export const DEFAULT_SETTINGS: Settings = {
   editorFontSize: 15,
   editorFontFamily: 'Consolas',
   syntaxColors: {
-    'hl-b': '#58b8c0', 'hl-k': '#a078c0', 'hl-s': '#555570',
-    'hl-v': '#c8a045', 'hl-c': '#68b868', 'hl-cm': '#555570',
-    'hl-m': '#6090c0', 'hl-sq': '#c89850', 'hl-dq': '#78b0c0',
-    'hl-ab': '#60a870', 'hl-sb': '#d08a5c',
+    'hl-b': '#58b8c0',
+    'hl-k': '#a078c0',
+    'hl-s': '#555570',
+    'hl-v': '#c8a045',
+    'hl-c': '#68b868',
+    'hl-cm': '#555570',
+    'hl-m': '#6090c0',
+    'hl-sq': '#c89850',
+    'hl-dq': '#78b0c0',
+    'hl-ab': '#60a870',
+    'hl-sb': '#d08a5c',
   },
   sidebarWidth: 340,
   varPanelWidth: 360,
@@ -207,10 +232,17 @@ export const FONT_OPTIONS = [
 ]
 
 export const SYNTAX_LABEL_KEYS = {
-  'hl-b': 'shared.syntax.hl-b', 'hl-k': 'shared.syntax.hl-k', 'hl-s': 'shared.syntax.hl-s',
-  'hl-v': 'shared.syntax.hl-v', 'hl-c': 'shared.syntax.hl-c', 'hl-cm': 'shared.syntax.hl-cm',
-  'hl-m': 'shared.syntax.hl-m', 'hl-sq': 'shared.syntax.hl-sq', 'hl-dq': 'shared.syntax.hl-dq',
-  'hl-ab': 'shared.syntax.hl-ab', 'hl-sb': 'shared.syntax.hl-sb',
+  'hl-b': 'shared.syntax.hl-b',
+  'hl-k': 'shared.syntax.hl-k',
+  'hl-s': 'shared.syntax.hl-s',
+  'hl-v': 'shared.syntax.hl-v',
+  'hl-c': 'shared.syntax.hl-c',
+  'hl-cm': 'shared.syntax.hl-cm',
+  'hl-m': 'shared.syntax.hl-m',
+  'hl-sq': 'shared.syntax.hl-sq',
+  'hl-dq': 'shared.syntax.hl-dq',
+  'hl-ab': 'shared.syntax.hl-ab',
+  'hl-sb': 'shared.syntax.hl-sb',
 } as const
 
 export interface RegexScript {
@@ -221,13 +253,19 @@ export interface RegexScript {
   trimStrings: string[]
   placement: number[]
   disabled: boolean
-  markdownOnly: boolean   // 仅影响显示
-  promptOnly: boolean     // 仅影响后端提示词
+  markdownOnly: boolean // 仅影响显示
+  promptOnly: boolean // 仅影响后端提示词
   runOnEdit: boolean
   substituteRegex: number // 0 不替换 / 1 替换(原始) / 2 替换(转义)
   minDepth: number | null
   maxDepth: number | null
-  [k: string]: any
+  /** 分组持久化字段：跟 WorldbookEntry 同模式，存成未知字段让 ST 原样忽略。 */
+  _gid?: string
+  _gname?: string
+  _gcollapsed?: boolean
+  _genabled?: boolean
+  _gidx?: number
+  [k: string]: unknown
 }
 
 /** tavern_helper 脚本树的单条脚本。button.enabled 控制是否随脚本一起导出按钮区，
@@ -239,7 +277,7 @@ export interface RegexScript {
 export interface ScriptButton {
   name: string
   visible: boolean
-  [k: string]: any
+  [k: string]: unknown
 }
 
 export interface Script {
@@ -250,9 +288,15 @@ export interface Script {
   content: string
   info: string
   button: { enabled: boolean; buttons: ScriptButton[] }
-  data: Record<string, any>
+  data: Record<string, unknown>
   export_with: { data: boolean; button: boolean }
-  [k: string]: any
+  /** 分组持久化字段：跟 WorldbookEntry 同模式，存成未知字段让 ST 原样忽略。 */
+  _gid?: string
+  _gname?: string
+  _gcollapsed?: boolean
+  _genabled?: boolean
+  _gidx?: number
+  [k: string]: unknown
 }
 
 /** tavern_helper 脚本树的顶层 folder——本身就是 folder，不参与 _gid 分组（直接挂树顶层）。 */
@@ -274,7 +318,7 @@ export type ScriptTree = Script | ScriptFolder
  *  分派逻辑，类型层不体现这拼写差异）。 */
 export interface TavernHelper {
   scripts: ScriptTree[]
-  variables: Record<string, any>
+  variables: Record<string, unknown>
 }
 
 /**No value 4 here, decided by SillyTavern-v1.18*/
@@ -293,7 +337,7 @@ export const REGEX_SUBSTITUTE_OPTIONS = [
 ] as const
 
 import defaultPreset from '../default/default_preset.json'
-export const DEFAULT_PRESET = defaultPreset as PresetData  
+export const DEFAULT_PRESET = defaultPreset as PresetData
 
 /* ====== 世界书（Worldbook / Lorebook）====== 见 TODO.md 阶段1「数据结构」。
  * 工作层结构，跟 ST 原生 STWorldbook（entries 是 Record<uid, entry>）双向转换在 api/worldbookApi.ts
@@ -356,7 +400,7 @@ export interface WorldbookEntry {
   _genabled?: boolean
   _gidx?: number
 
-  [k: string]: any
+  [k: string]: unknown
 }
 
 export interface Worldbook {
@@ -447,9 +491,9 @@ export interface Character {
      *  `variales` 拼写不同，按用户给的保留差异；类型层统一用 TavernHelper，运行时按 workspace
      *  分派读对应字段名）。必填——characterStore 的 tavernHelper computed 缺则补默认。 */
     tavern_helper: TavernHelper
-    [k: string]: any
+    [k: string]: unknown
   }
-  [k: string]: any
+  [k: string]: unknown
 }
 
 /** 角色列表下拉框用的轻量条目——不含完整内容，只用来给用户选"要切换到哪个角色"。 */
@@ -463,7 +507,10 @@ export interface CharacterListEntry {
 export const CHARACTER_FIELDS = [
   { key: 'description', labelKey: 'character.field.description' },
   { key: 'systemPrompt', labelKey: 'character.field.systemPrompt' },
-  { key: 'postHistoryInstructions', labelKey: 'character.field.postHistoryInstructions' },
+  {
+    key: 'postHistoryInstructions',
+    labelKey: 'character.field.postHistoryInstructions',
+  },
   { key: 'personality', labelKey: 'character.field.personality' },
   { key: 'scenario', labelKey: 'character.field.scenario' },
   { key: 'depthPrompt', labelKey: 'character.field.depthPrompt' },

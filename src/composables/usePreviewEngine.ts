@@ -21,7 +21,7 @@ export function usePreviewEngine(
   getPrompts: () => PresetBlock[],
   options: {
     showToast: (msg: string) => void
-    t: (key: string, params?: any) => string
+    t: (key: string, params?: Record<string, string | number>) => string
   }
 ) {
   const { showToast, t } = options
@@ -51,12 +51,12 @@ export function usePreviewEngine(
     try {
       const results = await ST.getPromptManagerMessages()
       const groups: PreviewBlockGroup[] = []
-      const allItems = getOrder().flatMap(node => isGroupNode(node) ? node.children : [node])
+      const allItems = getOrder().flatMap((node) => (isGroupNode(node) ? node.children : [node]))
       const prompts = getPrompts()
       for (const o of allItems) {
         const msgs = results[o.identifier]
         if (!msgs || !msgs.length) continue
-        const p = prompts.find(pp => pp.identifier === o.identifier)
+        const p = prompts.find((pp) => pp.identifier === o.identifier)
         const isMarker = !!p?.marker
         const rawContent = p?.content || ''
         const diffable = !isMarker && msgs.length === 1
@@ -64,19 +64,21 @@ export function usePreviewEngine(
           id: o.identifier,
           name: p?.name || o.identifier,
           isMarker,
-          messages: msgs.map(m => ({
+          messages: msgs.map((m) => ({
             role: m.role,
             tokens: m.tokens,
             identifier: m.identifier,
-            segments: diffable ? diffAgainstRaw(rawContent, m.content) : [{ text: m.content, added: false }],
+            segments: diffable
+              ? diffAgainstRaw(rawContent, m.content)
+              : [{ text: m.content, added: false }],
           })),
         })
       }
       previewBlockGroups.value = groups
       previewMode.value = 'blocks'
       showToast(t('preset.toast.renderedBlocks', { count: groups.length }))
-    } catch (e: any) {
-      previewError.value = e?.message || String(e)
+    } catch (e: unknown) {
+      previewError.value = e instanceof Error ? e.message : String(e)
       showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
     } finally {
       previewLoading.value = false
@@ -92,11 +94,13 @@ export function usePreviewEngine(
     previewLoading.value = true
     try {
       const msgs = await ST.getFinalRequestMessages()
-      previewRawText.value = msgs.map(m => `[${(m.role || '?').toUpperCase()}]\n${m.content}`).join('\n\n')
+      previewRawText.value = msgs
+        .map((m) => `[${(m.role || '?').toUpperCase()}]\n${m.content}`)
+        .join('\n\n')
       previewMode.value = 'raw'
       showToast(t('preset.toast.renderedFullPrompt'))
-    } catch (e: any) {
-      previewError.value = e?.message || String(e)
+    } catch (e: unknown) {
+      previewError.value = e instanceof Error ? e.message : String(e)
       showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
     } finally {
       previewLoading.value = false
@@ -109,14 +113,22 @@ export function usePreviewEngine(
 
   function toggleAllPreviewBlocks() {
     if (!previewBlockGroups.value.length) return
-    const shouldCollapse = previewBlockGroups.value.some(b => !previewCollapsed.value[b.id])
-    previewBlockGroups.value.forEach(b => { previewCollapsed.value[b.id] = shouldCollapse })
+    const shouldCollapse = previewBlockGroups.value.some((b) => !previewCollapsed.value[b.id])
+    previewBlockGroups.value.forEach((b) => {
+      previewCollapsed.value[b.id] = shouldCollapse
+    })
   }
 
   return {
-    previewMode, previewLoading, previewError, previewCollapsed,
-    previewBlockGroups, previewRawText,
-    generatePreviewBlocks, generatePreviewRaw,
-    togglePreviewBlock, toggleAllPreviewBlocks,
+    previewMode,
+    previewLoading,
+    previewError,
+    previewCollapsed,
+    previewBlockGroups,
+    previewRawText,
+    generatePreviewBlocks,
+    generatePreviewRaw,
+    togglePreviewBlock,
+    toggleAllPreviewBlocks,
   }
 }

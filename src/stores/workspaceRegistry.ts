@@ -37,7 +37,10 @@ export interface DocumentWorkspaceAdapter {
   confirmCreateIfDirty?: { messageKey: string }
 }
 
-export function createWorkspaceRegistry(): Record<'preset' | 'worldbook' | 'character', DocumentWorkspaceAdapter> {
+export function createWorkspaceRegistry(): Record<
+  'preset' | 'worldbook' | 'character',
+  DocumentWorkspaceAdapter
+> {
   const preset = usePresetStore()
   const worldbook = useWorldbookStore()
   const character = useCharacterStore()
@@ -72,13 +75,15 @@ export function createWorkspaceRegistry(): Record<'preset' | 'worldbook' | 'char
       dirty: () => character.dirty,
       currentLabel: () => character.character?.name || '—',
       currentId: () => character.character?.avatar || '',
-      labelForId: (id) => character.characterList.find(c => c.avatar === id)?.name || id,
+      labelForId: (id) => character.characterList.find((c) => c.avatar === id)?.name || id,
       switchTo: (id) => character.switchCharacter(id),
       reload: () => character.reloadCharacter(),
       save: () => character.doSaveCharacter(),
       create: (name) => character.createNewCharacter(name),
       remove: () => character.removeCurrentCharacter(),
-      confirmCreateIfDirty: { messageKey: 'character.confirm.newCharacter.message' },
+      confirmCreateIfDirty: {
+        messageKey: 'character.confirm.newCharacter.message',
+      },
     },
   }
 }

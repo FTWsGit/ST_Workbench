@@ -8,11 +8,13 @@ import { deepClonePlain } from './apiUtils'
  * 状态全在模块实例内部，不发 HTTP 请求。import() 走浏览器原生模块缓存，同一 URL 拿到同一实例，
  * mod.world_names 是 ESM live binding。 */
 
-async function getWorldInfoModule(): Promise<any> {
+async function getWorldInfoModule() {
   const importer = await ensureTopImporter()
   const mod = await importer('/scripts/world-info.js')
   if (!mod || typeof mod.loadWorldInfo !== 'function') {
-    throw new Error('SillyTavern 世界书模块不可用（/scripts/world-info.js 结构异常，或当前 ST 版本已更新）')
+    throw new Error(
+      'SillyTavern 世界书模块不可用（/scripts/world-info.js 结构异常，或当前 ST 版本已更新）'
+    )
   }
   return mod
 }
@@ -26,7 +28,7 @@ async function getWorldInfoModule(): Promise<any> {
  *   - caseSensitive / matchWholeWords：boolean | null，透传。
  * 其余字段（scanDepth/position/role/sticky/cooldown/delay/group/groupWeight/probability 等）
  * 字段名完全一致，用 `{ ...raw }` 打底再覆盖不一致字段，保留未建模进接口的字段。 */
-function fromSTEntry(uidKey: string, raw: any): WorldbookEntry {
+function fromSTEntry(uidKey: string, raw: Record<string, unknown>): WorldbookEntry {
   const constant = !!raw?.constant
   const vectorized = !!raw?.vectorized
   return {
@@ -40,11 +42,11 @@ function fromSTEntry(uidKey: string, raw: any): WorldbookEntry {
     disabled: !!raw?.disable,
     groupPrioritized: !!raw?.groupOverride,
     displayIndex: typeof raw?.displayIndex === 'number' ? raw.displayIndex : 0,
-  }
+  } as WorldbookEntry
 }
 
-function toSTEntry(entry: WorldbookEntry): any {
-  const { keys, keyWord, disabled, groupPrioritized, ...rest } = entry
+function toSTEntry(entry: WorldbookEntry) {
+  const { keys, keyWord: _keyWord, disabled, groupPrioritized, ...rest } = entry
   return {
     ...rest,
     key: keys,
@@ -53,20 +55,23 @@ function toSTEntry(entry: WorldbookEntry): any {
   }
 }
 
-function fromSTWorldbook(name: string, data: any): Worldbook {
+function fromSTWorldbook(name: string, data: Record<string, unknown>): Worldbook {
   const rec = data?.entries
-  const list: WorldbookEntry[] = rec && typeof rec === 'object'
-    ? Object.entries(rec).map(([uidKey, raw]) => fromSTEntry(uidKey, raw))
-    : []
+  const list: WorldbookEntry[] =
+    rec && typeof rec === 'object'
+      ? Object.entries(rec).map(([uidKey, raw]) => fromSTEntry(uidKey, raw))
+      : []
   list.sort((a, b) => (a.displayIndex ?? 0) - (b.displayIndex ?? 0))
   return { name, entries: list }
 }
 
 /** entries 的 displayIndex 字段由调用方（worldbookStore）在保存前根据当前的 order 树（含展开
  *  折叠组）重新算好写入每个 entry，这里只管原样按 uid 打包成 Record，不重新计算顺序。 */
-function toSTEntries(wb: Worldbook): Record<string, any> {
-  const entries: Record<string, any> = {}
-  wb.entries.forEach(e => { entries[String(e.uid)] = toSTEntry(e) })
+function toSTEntries(wb: Worldbook): Record<string, unknown> {
+  const entries: Record<string, unknown> = {}
+  wb.entries.forEach((e) => {
+    entries[String(e.uid)] = toSTEntry(e)
+  })
   return entries
 }
 
@@ -125,8 +130,8 @@ interface CharacterBookEntryLike {
   insertion_order?: number
   enabled?: boolean
   position?: string // 'before_char' | 'after_char'，规范字段，只有两档
-  extensions?: Record<string, any>
-  [k: string]: any
+  extensions?: Record<string, unknown>
+  [k: string]: unknown
 }
 
 function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number): WorldbookEntry {
@@ -148,18 +153,28 @@ function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number
     keys: Array.isArray(raw.keys) ? [...raw.keys] : [],
     keysecondary: Array.isArray(raw.secondary_keys) ? [...raw.secondary_keys] : [],
     selective: !!(ext.selective ?? raw.selective),
-    selectiveLogic: (typeof ext.selectiveLogic === 'number' ? ext.selectiveLogic : 0) as 0 | 1 | 2 | 3,
-    constant, keyWord: !constant && !vectorized, vectorized,
+    selectiveLogic: (typeof ext.selectiveLogic === 'number' ? ext.selectiveLogic : 0) as
+      0 | 1 | 2 | 3,
+    constant,
+    keyWord: !constant && !vectorized,
+    vectorized,
     disabled: raw.enabled === false || !!ext.disable,
-    position: (typeof ext.position === 'number' ? ext.position : specPosition) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
+    position: (typeof ext.position === 'number' ? ext.position : specPosition) as
+      0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
     depth: typeof ext.depth === 'number' ? ext.depth : 4,
-    order: typeof ext.order === 'number' ? ext.order : (typeof raw.insertion_order === 'number' ? raw.insertion_order : 100),
-    role: (ext.role === 0 || ext.role === 1 || ext.role === 2) ? ext.role : null,
+    order:
+      typeof ext.order === 'number'
+        ? ext.order
+        : typeof raw.insertion_order === 'number'
+          ? raw.insertion_order
+          : 100,
+    role: (ext.role === 0 || ext.role === 1 || ext.role === 2 ? ext.role : null) as
+      0 | 1 | 2 | null,
     probability: typeof ext.probability === 'number' ? ext.probability : 100,
     useProbability: ext.useProbability !== false,
     excludeRecursion: !!ext.excludeRecursion,
     preventRecursion: !!ext.preventRecursion,
-    delayUntilRecursion: ext.delayUntilRecursion ?? false,
+    delayUntilRecursion: (ext.delayUntilRecursion ?? false) as boolean | number,
     scanDepth: typeof ext.scanDepth === 'number' ? ext.scanDepth : null,
     caseSensitive: typeof ext.caseSensitive === 'boolean' ? ext.caseSensitive : null,
     matchWholeWords: typeof ext.matchWholeWords === 'boolean' ? ext.matchWholeWords : null,
@@ -174,13 +189,18 @@ function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number
 
 /** 纯转换，不碰 ST——单独导出方便脱离 Vue 用 `npx tsx` 写测试用例。
  *  `fallbackUid` 用条目在数组里的下标兜底——只有当规范字段里没有 `id` 时才会用到。 */
-export function importCharacterBookEntries(entries: CharacterBookEntryLike[] | undefined | null): WorldbookEntry[] {
+export function importCharacterBookEntries(
+  entries: CharacterBookEntryLike[] | undefined | null
+): WorldbookEntry[] {
   return (entries ?? []).map((raw, idx) => fromCharacterBookEntry(raw, idx))
 }
 
 /** 把角色卡内嵌世界书导入成一份新的独立世界书文件。只负责 ST 端注册 + 写入，不负责加载进
  *  worldbookStore——调用方决定是否接着 getWorldbookByName() 读权威数据。 */
-export async function importCharacterBook(name: string, book: { entries?: CharacterBookEntryLike[] } | null | undefined): Promise<void> {
+export async function importCharacterBook(
+  name: string,
+  book: { entries?: CharacterBookEntryLike[] } | null | undefined
+): Promise<void> {
   await createWorldbook(name)
   const entries = importCharacterBookEntries(book?.entries)
   await saveWorldbook({ name, entries })

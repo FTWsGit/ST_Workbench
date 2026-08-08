@@ -10,8 +10,13 @@ export function getHostWindow(): Window {
   try {
     // window.top throws/denies in true cross-origin iframes, but Tavern Helper's srcdoc
     // iframe is same-origin, so this normally succeeds.
-    if (window.top && window.top.document) { cachedWin = window.top; return cachedWin }
-  } catch {}
+    if (window.top && window.top.document) {
+      cachedWin = window.top
+      return cachedWin
+    }
+  } catch {
+    // cross-origin top access denied — fall back to the iframe's own window
+  }
   cachedWin = window
   return cachedWin
 }
@@ -26,14 +31,14 @@ export function getHostDocument(): Document {
  * via the host document. Resolves to false on total failure.
  */
 export async function copyToHostClipboard(text: string): Promise<boolean> {
-  const hostWin = getHostWindow() as any
+  const hostWin = getHostWindow()
   try {
     if (hostWin.navigator?.clipboard?.writeText) {
       await hostWin.navigator.clipboard.writeText(text)
       return true
     }
-  } catch (e) {
-    console.warn('[ST_Workbench] navigator.clipboard.writeText failed, falling back to execCommand:', e)
+  } catch {
+    // navigator.clipboard unavailable — fall back to execCommand below
   }
   try {
     const doc: Document = hostWin.document
@@ -49,8 +54,8 @@ export async function copyToHostClipboard(text: string): Promise<boolean> {
     doc.body.removeChild(ta)
     if (!ok) throw new Error('execCommand("copy") returned false')
     return true
-  } catch (e) {
-    console.error('[ST_Workbench] Clipboard copy failed (both navigator.clipboard and execCommand):', e)
+  } catch {
+    // both copy paths failed
     return false
   }
 }
@@ -68,7 +73,9 @@ export function useIsMobile(): Ref<boolean> {
   const hostWin = getHostWindow()
   const isMobile = ref(hostWin.innerWidth <= MOBILE_BREAKPOINT)
 
-  function update() { isMobile.value = hostWin.innerWidth <= MOBILE_BREAKPOINT }
+  function update() {
+    isMobile.value = hostWin.innerWidth <= MOBILE_BREAKPOINT
+  }
 
   // Prefer matchMedia (fires on breakpoint crossing); fall back to 'resize' if unavailable.
   if (hostWin.matchMedia) {
@@ -83,4 +90,3 @@ export function useIsMobile(): Ref<boolean> {
 
   return isMobile
 }
-

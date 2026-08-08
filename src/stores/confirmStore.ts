@@ -13,7 +13,7 @@ import { ref } from 'vue'
  * 并发保护：三个 flow 共用同一个"当前是否打开"的闸门。任一 flow 已经 open 时，
  * 新进入的 ask/askInput/askMulti 会先强制 cancel 当前 flow（触发其 onCancel 让调用方回退 UI 状态），
  * 再开自己。这样既保证不丢回调（旧的 onConfirmCb 不再被静默覆盖），
- * 也避免两个弹窗叠加显示。出现并发覆盖本身通常是上游 bug 征兆，额外打一条 console.warn 便于排查。
+ * 也避免两个弹窗叠加显示。出现并发覆盖本身通常是上游 bug 征兆。
  */
 export interface ConfirmMultiItem {
   /** 一行列表项要显示的文字，调用方自己拼好（比如"预设：MyPreset *"），这个 store 不关心
@@ -77,13 +77,15 @@ export const useConfirmStore = defineStore('confirm', () => {
   function confirm() {
     open.value = false
     const cb = onConfirmCb
-    onConfirmCb = null; onCancelCb = null
+    onConfirmCb = null
+    onCancelCb = null
     cb?.()
   }
   function cancel() {
     open.value = false
     const cb = onCancelCb
-    onConfirmCb = null; onCancelCb = null
+    onConfirmCb = null
+    onCancelCb = null
     cb?.()
   }
 
@@ -147,13 +149,15 @@ export const useConfirmStore = defineStore('confirm', () => {
   function confirmMulti() {
     multiOpen.value = false
     const cb = onMultiConfirmCb
-    onMultiConfirmCb = null; onMultiCancelCb = null
+    onMultiConfirmCb = null
+    onMultiCancelCb = null
     cb?.()
   }
   function cancelMulti() {
     multiOpen.value = false
     const cb = onMultiCancelCb
-    onMultiConfirmCb = null; onMultiCancelCb = null
+    onMultiConfirmCb = null
+    onMultiCancelCb = null
     cb?.()
   }
 
@@ -163,19 +167,44 @@ export const useConfirmStore = defineStore('confirm', () => {
    * 因此本函数只挑当前真正 open 的那个 cancel，避免重复触发。
    */
   function ifAnyOpenCancel() {
-    if (open.value) { cancel(); warnConcurrent() }
-    else if (promptOpen.value) { cancelPrompt(); warnConcurrent() }
-    else if (multiOpen.value) { cancelMulti(); warnConcurrent() }
-  }
-  function warnConcurrent() {
-    console.warn('[ST_Workbench] confirmStore: 已有弹窗打开，新请求已强制取消旧的。这通常是上游并发调用 bug。')
+    if (open.value) {
+      cancel()
+    } else if (promptOpen.value) {
+      cancelPrompt()
+    } else if (multiOpen.value) {
+      cancelMulti()
+    }
   }
 
   return {
-    open, title, message, confirmText, cancelText, danger, ask, confirm, cancel,
-    promptOpen, promptTitle, promptMessage, promptPlaceholder, promptValue,
-    promptConfirmText, promptCancelText, askInput, confirmPrompt, cancelPrompt,
-    multiOpen, multiTitle, multiMessage, multiItems, multiConfirmText, multiCancelText, multiDanger,
-    askMulti, confirmMulti, cancelMulti,
+    open,
+    title,
+    message,
+    confirmText,
+    cancelText,
+    danger,
+    ask,
+    confirm,
+    cancel,
+    promptOpen,
+    promptTitle,
+    promptMessage,
+    promptPlaceholder,
+    promptValue,
+    promptConfirmText,
+    promptCancelText,
+    askInput,
+    confirmPrompt,
+    cancelPrompt,
+    multiOpen,
+    multiTitle,
+    multiMessage,
+    multiItems,
+    multiConfirmText,
+    multiCancelText,
+    multiDanger,
+    askMulti,
+    confirmMulti,
+    cancelMulti,
   }
 })

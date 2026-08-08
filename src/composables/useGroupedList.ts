@@ -3,7 +3,7 @@ import type { OrderNode, OrderGroup, OrderItem, FlatNode } from '../types'
 import { applyMultiSelect } from '../utils'
 
 export function isGroupNode(node: OrderNode): node is OrderGroup {
-  return 'children' in node && Array.isArray((node as any).children)
+  return 'children' in node && Array.isArray(node.children)
 }
 
 export interface UseGroupedListOptions {
@@ -27,7 +27,7 @@ export function useGroupedList(order: Ref<OrderNode[]>, opts: UseGroupedListOpti
       arr.forEach((nodeRef, parentIdx) => {
         const g = isGroupNode(nodeRef)
         nodes.push({ ref: nodeRef, parent, parentIdx, depth, isGroup: g })
-        if (g && !nodeRef.collapsed) walk(nodeRef.children, nodeRef.children as any, depth + 1)
+        if (g && !nodeRef.collapsed) walk(nodeRef.children, nodeRef.children, depth + 1)
       })
     }
     walk(order.value, order.value, 0)
@@ -36,13 +36,19 @@ export function useGroupedList(order: Ref<OrderNode[]>, opts: UseGroupedListOpti
 
   function identifierToGi(identifier: string | null | undefined): number {
     if (!identifier) return -1
-    return flatNodes.value.findIndex(n => !n.isGroup && (n.ref as OrderItem).identifier === identifier)
+    return flatNodes.value.findIndex(
+      (n) => !n.isGroup && (n.ref as OrderItem).identifier === identifier
+    )
   }
 
   /** identifier -> gi，但先自动展开包着它的折叠组，否则 flatNodes 对折叠组里的子节点返回 -1。 */
   function revealAndFindGi(identifier: string): number {
     for (const node of order.value) {
-      if (isGroupNode(node) && node.collapsed && node.children.some(c => c.identifier === identifier)) {
+      if (
+        isGroupNode(node) &&
+        node.collapsed &&
+        node.children.some((c) => c.identifier === identifier)
+      ) {
         node.collapsed = false
         break // 一个条目只能属于一个顶层组
       }
@@ -57,7 +63,10 @@ export function useGroupedList(order: Ref<OrderNode[]>, opts: UseGroupedListOpti
 
   function selectBlock(gi: number, selectOpts?: { ctrl?: boolean; shift?: boolean }) {
     const next = applyMultiSelect(
-      { selected: selectedGi.value, anchor: anchorGi.value >= 0 ? anchorGi.value : null },
+      {
+        selected: selectedGi.value,
+        anchor: anchorGi.value >= 0 ? anchorGi.value : null,
+      },
       gi,
       flatNodes.value.map((_, i) => i),
       selectOpts || {}
@@ -88,7 +97,7 @@ export function useGroupedList(order: Ref<OrderNode[]>, opts: UseGroupedListOpti
     const fromIdx = fromNode.parentIdx
     const toIdx = toNode.parentIdx
     const item = parent.splice(fromIdx, 1)[0]
-    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : (after ? toIdx + 1 : toIdx)
+    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : after ? toIdx + 1 : toIdx
     parent.splice(ni, 0, item)
   }
 
@@ -111,7 +120,7 @@ export function useGroupedList(order: Ref<OrderNode[]>, opts: UseGroupedListOpti
     const node = flatNodes.value[gi]
     if (!node) return null
     const identifiers = node.isGroup
-      ? (node.ref as OrderGroup).children.map(c => c.identifier)
+      ? (node.ref as OrderGroup).children.map((c) => c.identifier)
       : [(node.ref as OrderItem).identifier]
     node.parent.splice(node.parentIdx, 1)
     selectedGi.value.delete(gi)
@@ -122,17 +131,19 @@ export function useGroupedList(order: Ref<OrderNode[]>, opts: UseGroupedListOpti
    *  选中不足 2 个顶层行时返回 null。返回的 itemCount 是选中了几行，childCount 是实际叶子数。 */
   function bindSelected(): { itemCount: number; childCount: number } | null {
     const topLevelGi = Array.from(selectedGi.value)
-      .filter(gi => flatNodes.value[gi]?.parent === order.value)
+      .filter((gi) => flatNodes.value[gi]?.parent === order.value)
       .sort((a, b) => a - b)
     if (topLevelGi.length < 2) return null
     // items 按 gi（视觉顺序）升序取，保持原始顺序
-    const items = topLevelGi.map(gi => order.value[flatNodes.value[gi].parentIdx])
+    const items = topLevelGi.map((gi) => order.value[flatNodes.value[gi].parentIdx])
     // indices 单独降序排序，用于从后往前删除（避免索引漂移）
-    const indices = topLevelGi.map(gi => flatNodes.value[gi].parentIdx).sort((a, b) => b - a)
+    const indices = topLevelGi.map((gi) => flatNodes.value[gi].parentIdx).sort((a, b) => b - a)
     const firstIdx = Math.min(...indices)
-    indices.forEach(idx => order.value.splice(idx, 1))
-    const children = items.flatMap(item =>
-      isGroupNode(item) ? [...item.children] : [{ identifier: item.identifier, enabled: item.enabled }]
+    indices.forEach((idx) => order.value.splice(idx, 1))
+    const children = items.flatMap((item) =>
+      isGroupNode(item)
+        ? [...item.children]
+        : [{ identifier: item.identifier, enabled: item.enabled }]
     )
     const group: OrderGroup = {
       id: 'group_' + Date.now(),
@@ -157,9 +168,19 @@ export function useGroupedList(order: Ref<OrderNode[]>, opts: UseGroupedListOpti
   }
 
   return {
-    selectedGi, anchorGi, flatNodes,
-    identifierToGi, revealAndFindGi,
-    clearSelection, selectBlock, toggleBlock, toggleGroupCollapse, reorderBlock,
-    insertAfterActive, removeNode, bindSelected, unbindGroup,
+    selectedGi,
+    anchorGi,
+    flatNodes,
+    identifierToGi,
+    revealAndFindGi,
+    clearSelection,
+    selectBlock,
+    toggleBlock,
+    toggleGroupCollapse,
+    reorderBlock,
+    insertAfterActive,
+    removeNode,
+    bindSelected,
+    unbindGroup,
   }
 }

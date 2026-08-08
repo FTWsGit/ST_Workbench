@@ -8,5 +8,5 @@ export type LocaleKey = keyof typeof zhCN
 
 export const locales: Record<'zh-CN' | 'en', Record<LocaleKey, string>> = {
   'zh-CN': zhCN,
-  'en': en,
+  en: en,
 }

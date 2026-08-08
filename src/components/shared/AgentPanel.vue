@@ -15,78 +15,185 @@
       </span>
     </template>
     <div class="wb-agent-body">
-      <button class="wb-btn icon-btn" :class="{ active: settingsOpen }" :title="uiStore.t('agent.settings.title')" :aria-label="uiStore.t('agent.settings.title')" @click="settingsOpen = !settingsOpen">⚙</button>
+      <button
+        class="wb-btn icon-btn"
+        :class="{ active: settingsOpen }"
+        :title="uiStore.t('agent.settings.title')"
+        :aria-label="uiStore.t('agent.settings.title')"
+        @click="settingsOpen = !settingsOpen"
+      >
+        ⚙
+      </button>
       <div v-if="settingsOpen" class="wb-agent-settings">
         <div class="wb-form-section">
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.systemPrompt') }}</label>
-            <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.prompts.system" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
+            <textarea
+              class="wb-agent-settings-prompt"
+              rows="6"
+              :value="agentStore.config.prompts.system"
+              @change="onPromptChange"
+              :placeholder="uiStore.t('agent.settings.systemPromptHint')"
+            ></textarea>
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.temperature') }}</label>
-            <NumberInput :model-value="agentStore.config.temperature" :min="0" :max="2" :step="0.1" :nullable="false" @update:model-value="onTemperatureChange" />
+            <NumberInput
+              :model-value="agentStore.config.temperature"
+              :min="0"
+              :max="2"
+              :step="0.1"
+              :nullable="false"
+              @update:model-value="onTemperatureChange"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.maxTokens') }}</label>
-            <NumberInput :model-value="agentStore.config.maxTokens" :min="256" :max="16384" :step="256" :nullable="false" @update:model-value="onMaxTokensChange" />
+            <NumberInput
+              :model-value="agentStore.config.maxTokens"
+              :min="256"
+              :max="16384"
+              :step="256"
+              :nullable="false"
+              @update:model-value="onMaxTokensChange"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.topP') }}</label>
-            <NumberInput :model-value="agentStore.config.topP" :min="0" :max="1" :step="0.05" :placeholder="uiStore.t('agent.settings.topPHint')" @update:model-value="(v) => onNullableChange('topP', v)" />
+            <NumberInput
+              :model-value="agentStore.config.topP"
+              :min="0"
+              :max="1"
+              :step="0.05"
+              :placeholder="uiStore.t('agent.settings.topPHint')"
+              @update:model-value="(v) => onNullableChange('topP', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.topK') }}</label>
-            <NumberInput :model-value="agentStore.config.topK" :min="0" :max="1000" :step="1" :placeholder="uiStore.t('agent.settings.topKHint')" @update:model-value="(v) => onNullableChange('topK', v)" />
+            <NumberInput
+              :model-value="agentStore.config.topK"
+              :min="0"
+              :max="1000"
+              :step="1"
+              :placeholder="uiStore.t('agent.settings.topKHint')"
+              @update:model-value="(v) => onNullableChange('topK', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.presencePenalty') }}</label>
-            <NumberInput :model-value="agentStore.config.presencePenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('presencePenalty', v)" />
+            <NumberInput
+              :model-value="agentStore.config.presencePenalty"
+              :min="-2"
+              :max="2"
+              :step="0.1"
+              :placeholder="uiStore.t('agent.settings.penaltyHint')"
+              @update:model-value="(v) => onNullableChange('presencePenalty', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.frequencyPenalty') }}</label>
-            <NumberInput :model-value="agentStore.config.frequencyPenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('frequencyPenalty', v)" />
+            <NumberInput
+              :model-value="agentStore.config.frequencyPenalty"
+              :min="-2"
+              :max="2"
+              :step="0.1"
+              :placeholder="uiStore.t('agent.settings.penaltyHint')"
+              @update:model-value="(v) => onNullableChange('frequencyPenalty', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.thinking') }}</label>
             <label class="wb-agent-toggle">
-              <input type="checkbox" :checked="!!agentStore.config.thinking" @change="onThinkingChange" />
+              <input
+                type="checkbox"
+                :checked="!!agentStore.config.thinking"
+                @change="onThinkingChange"
+              />
               <span>{{ uiStore.t('agent.settings.thinkingHint') }}</span>
             </label>
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.maxContextTokens') }}</label>
-            <NumberInput :model-value="agentStore.config.maxContextTokens" :min="0" :max="2000000" :step="1000" :nullable="false" :placeholder="uiStore.t('agent.settings.maxContextTokensHint')" @update:model-value="onMaxContextTokensChange" />
+            <NumberInput
+              :model-value="agentStore.config.maxContextTokens"
+              :min="0"
+              :max="2000000"
+              :step="1000"
+              :nullable="false"
+              :placeholder="uiStore.t('agent.settings.maxContextTokensHint')"
+              @update:model-value="onMaxContextTokensChange"
+            />
           </div>
           <div class="wb-form-field">
-            <label class="wb-form-label">{{ uiStore.t('agent.settings.compactThresholdRatio') }}</label>
-            <NumberInput :model-value="agentStore.config.compactThresholdRatio" :min="0" :max="1" :step="0.05" :nullable="false" :placeholder="uiStore.t('agent.settings.compactThresholdRatioHint')" @update:model-value="onCompactRatioChange" />
+            <label class="wb-form-label">{{
+              uiStore.t('agent.settings.compactThresholdRatio')
+            }}</label>
+            <NumberInput
+              :model-value="agentStore.config.compactThresholdRatio"
+              :min="0"
+              :max="1"
+              :step="0.05"
+              :nullable="false"
+              :placeholder="uiStore.t('agent.settings.compactThresholdRatioHint')"
+              @update:model-value="onCompactRatioChange"
+            />
           </div>
         </div>
       </div>
 
       <!-- 版本不匹配错误横幅 -->
       <div v-if="agentStore.versionMismatch" class="wb-agent-version-error">
-        <div class="wb-agent-version-title">{{ uiStore.t('agent.error.version.title') }}</div>
-        <div class="wb-agent-version-body">{{ uiStore.t('agent.error.version.body') }}</div>
-        <div class="wb-agent-version-meta">
-          <div>{{ uiStore.t('agent.error.version.stored', { stored: String(agentStore.versionMismatch.storedVersion) }) }}</div>
-          <div>{{ uiStore.t('agent.error.version.expected', { expected: agentStore.versionMismatch.expectedVersion }) }}</div>
+        <div class="wb-agent-version-title">
+          {{ uiStore.t('agent.error.version.title') }}
         </div>
-        <button class="wb-btn accent" @click="onResetVersion">{{ uiStore.t('agent.error.version.reset') }}</button>
+        <div class="wb-agent-version-body">
+          {{ uiStore.t('agent.error.version.body') }}
+        </div>
+        <div class="wb-agent-version-meta">
+          <div>
+            {{
+              uiStore.t('agent.error.version.stored', {
+                stored: String(agentStore.versionMismatch.storedVersion),
+              })
+            }}
+          </div>
+          <div>
+            {{
+              uiStore.t('agent.error.version.expected', {
+                expected: agentStore.versionMismatch.expectedVersion,
+              })
+            }}
+          </div>
+        </div>
+        <button class="wb-btn accent" @click="onResetVersion">
+          {{ uiStore.t('agent.error.version.reset') }}
+        </button>
       </div>
 
       <!-- 会话头：title + 新建按钮 -->
-      <div v-if="agentStore.hasActiveSession && !agentStore.versionMismatch" class="wb-agent-session-bar">
+      <div
+        v-if="agentStore.hasActiveSession && !agentStore.versionMismatch"
+        class="wb-agent-session-bar"
+      >
         <span class="wb-agent-session-title">{{ activeSessionTitle }}</span>
-        <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">＋</button>
+        <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">
+          ＋
+        </button>
       </div>
 
       <!-- 消息列表 -->
       <div ref="messagesContainer" class="wb-agent-messages">
-        <template v-if="agentStore.activeSessionMessages.length === 0 && !agentStore.versionMismatch">
+        <template
+          v-if="agentStore.activeSessionMessages.length === 0 && !agentStore.versionMismatch"
+        >
           <div class="wb-agent-empty">
-            <div class="wb-agent-empty-title">{{ uiStore.t('agent.empty.title') }}</div>
-            <div class="wb-agent-empty-hint">{{ uiStore.t('agent.empty.hint') }}</div>
+            <div class="wb-agent-empty-title">
+              {{ uiStore.t('agent.empty.title') }}
+            </div>
+            <div class="wb-agent-empty-hint">
+              {{ uiStore.t('agent.empty.hint') }}
+            </div>
           </div>
         </template>
         <template v-else>
@@ -108,18 +215,34 @@
       </div>
 
       <!-- 审批卡片（内嵌，不弹全局模态、不挡其他操作） -->
-      <div v-if="agentStore.pendingApproval" class="wb-agent-approval" :class="{ danger: agentStore.pendingApproval.danger }">
+      <div
+        v-if="agentStore.pendingApproval"
+        class="wb-agent-approval"
+        :class="{ danger: agentStore.pendingApproval.danger }"
+      >
         <div class="wb-agent-approval-tool">🔧 {{ agentStore.pendingApproval.toolName }}</div>
-        <div class="wb-agent-approval-title">{{ agentStore.pendingApproval.title }}</div>
-        <div class="wb-agent-approval-msg">{{ agentStore.pendingApproval.message }}</div>
+        <div class="wb-agent-approval-title">
+          {{ agentStore.pendingApproval.title }}
+        </div>
+        <div class="wb-agent-approval-msg">
+          {{ agentStore.pendingApproval.message }}
+        </div>
         <div class="wb-agent-approval-actions">
           <label class="wb-agent-approval-auto">
             <input type="checkbox" v-model="autoApproveThisSession" />
             <span>{{ uiStore.t('agent.approval.autoThisSession') }}</span>
           </label>
           <div class="wb-row-tight">
-            <button class="wb-btn" @click="onApproval(false)">{{ uiStore.t('common.cancel') }}</button>
-            <button class="wb-btn accent" :class="{ danger: agentStore.pendingApproval.danger }" @click="onApproval(true)">{{ uiStore.t('common.confirm') }}</button>
+            <button class="wb-btn" @click="onApproval(false)">
+              {{ uiStore.t('common.cancel') }}
+            </button>
+            <button
+              class="wb-btn accent"
+              :class="{ danger: agentStore.pendingApproval.danger }"
+              @click="onApproval(true)"
+            >
+              {{ uiStore.t('common.confirm') }}
+            </button>
           </div>
         </div>
       </div>
@@ -154,14 +277,37 @@
   </FloatingPanelShell>
 
   <!-- 嵌入/悬浮态：docked 在文档流里挤开编辑区；overlay absolute 盖在右侧不挤开。 -->
-  <div v-else class="wb-right-panel wb-agent-panel" :class="{ float: mode === 'overlay' }" :style="{ width: uiStore.settings.agentWidth + 'px' }">
-    <div class="wb-right-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
+  <div
+    v-else
+    class="wb-right-panel wb-agent-panel"
+    :class="{ float: mode === 'overlay' }"
+    :style="{ width: uiStore.settings.agentWidth + 'px' }"
+  >
+    <div
+      class="wb-right-resize-handle"
+      :class="{ active: resize.active.value }"
+      @pointerdown="resize.onPointerDown"
+    ></div>
     <div class="wb-rp-header">
       <span>{{ uiStore.t('agent.panel.title') }}</span>
       <div class="wb-row-tight">
-        <button class="wb-btn icon-btn" :class="{ active: settingsOpen }" :title="uiStore.t('agent.settings.title')" :aria-label="uiStore.t('agent.settings.title')" @click="settingsOpen = !settingsOpen">⚙</button>
+        <button
+          class="wb-btn icon-btn"
+          :class="{ active: settingsOpen }"
+          :title="uiStore.t('agent.settings.title')"
+          :aria-label="uiStore.t('agent.settings.title')"
+          @click="settingsOpen = !settingsOpen"
+        >
+          ⚙
+        </button>
         <PanelModeSwitch :model-value="mode" @update:model-value="setMode" />
-        <button class="wb-btn close-btn compact" :aria-label="uiStore.t('common.close')" @click="close">✕</button>
+        <button
+          class="wb-btn close-btn compact"
+          :aria-label="uiStore.t('common.close')"
+          @click="close"
+        >
+          ✕
+        </button>
       </div>
     </div>
     <div class="wb-agent-body">
@@ -169,73 +315,172 @@
         <div class="wb-form-section">
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.systemPrompt') }}</label>
-            <textarea class="wb-agent-settings-prompt" rows="6" :value="agentStore.config.prompts.system" @change="onPromptChange" :placeholder="uiStore.t('agent.settings.systemPromptHint')"></textarea>
+            <textarea
+              class="wb-agent-settings-prompt"
+              rows="6"
+              :value="agentStore.config.prompts.system"
+              @change="onPromptChange"
+              :placeholder="uiStore.t('agent.settings.systemPromptHint')"
+            ></textarea>
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.temperature') }}</label>
-            <NumberInput :model-value="agentStore.config.temperature" :min="0" :max="2" :step="0.1" :nullable="false" @update:model-value="onTemperatureChange" />
+            <NumberInput
+              :model-value="agentStore.config.temperature"
+              :min="0"
+              :max="2"
+              :step="0.1"
+              :nullable="false"
+              @update:model-value="onTemperatureChange"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.maxTokens') }}</label>
-            <NumberInput :model-value="agentStore.config.maxTokens" :min="256" :max="16384" :step="256" :nullable="false" @update:model-value="onMaxTokensChange" />
+            <NumberInput
+              :model-value="agentStore.config.maxTokens"
+              :min="256"
+              :max="16384"
+              :step="256"
+              :nullable="false"
+              @update:model-value="onMaxTokensChange"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.topP') }}</label>
-            <NumberInput :model-value="agentStore.config.topP" :min="0" :max="1" :step="0.05" :placeholder="uiStore.t('agent.settings.topPHint')" @update:model-value="(v) => onNullableChange('topP', v)" />
+            <NumberInput
+              :model-value="agentStore.config.topP"
+              :min="0"
+              :max="1"
+              :step="0.05"
+              :placeholder="uiStore.t('agent.settings.topPHint')"
+              @update:model-value="(v) => onNullableChange('topP', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.topK') }}</label>
-            <NumberInput :model-value="agentStore.config.topK" :min="0" :max="1000" :step="1" :placeholder="uiStore.t('agent.settings.topKHint')" @update:model-value="(v) => onNullableChange('topK', v)" />
+            <NumberInput
+              :model-value="agentStore.config.topK"
+              :min="0"
+              :max="1000"
+              :step="1"
+              :placeholder="uiStore.t('agent.settings.topKHint')"
+              @update:model-value="(v) => onNullableChange('topK', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.presencePenalty') }}</label>
-            <NumberInput :model-value="agentStore.config.presencePenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('presencePenalty', v)" />
+            <NumberInput
+              :model-value="agentStore.config.presencePenalty"
+              :min="-2"
+              :max="2"
+              :step="0.1"
+              :placeholder="uiStore.t('agent.settings.penaltyHint')"
+              @update:model-value="(v) => onNullableChange('presencePenalty', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.frequencyPenalty') }}</label>
-            <NumberInput :model-value="agentStore.config.frequencyPenalty" :min="-2" :max="2" :step="0.1" :placeholder="uiStore.t('agent.settings.penaltyHint')" @update:model-value="(v) => onNullableChange('frequencyPenalty', v)" />
+            <NumberInput
+              :model-value="agentStore.config.frequencyPenalty"
+              :min="-2"
+              :max="2"
+              :step="0.1"
+              :placeholder="uiStore.t('agent.settings.penaltyHint')"
+              @update:model-value="(v) => onNullableChange('frequencyPenalty', v)"
+            />
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.thinking') }}</label>
             <label class="wb-agent-toggle">
-              <input type="checkbox" :checked="!!agentStore.config.thinking" @change="onThinkingChange" />
+              <input
+                type="checkbox"
+                :checked="!!agentStore.config.thinking"
+                @change="onThinkingChange"
+              />
               <span>{{ uiStore.t('agent.settings.thinkingHint') }}</span>
             </label>
           </div>
           <div class="wb-form-field">
             <label class="wb-form-label">{{ uiStore.t('agent.settings.maxContextTokens') }}</label>
-            <NumberInput :model-value="agentStore.config.maxContextTokens" :min="0" :max="2000000" :step="1000" :nullable="false" :placeholder="uiStore.t('agent.settings.maxContextTokensHint')" @update:model-value="onMaxContextTokensChange" />
+            <NumberInput
+              :model-value="agentStore.config.maxContextTokens"
+              :min="0"
+              :max="2000000"
+              :step="1000"
+              :nullable="false"
+              :placeholder="uiStore.t('agent.settings.maxContextTokensHint')"
+              @update:model-value="onMaxContextTokensChange"
+            />
           </div>
           <div class="wb-form-field">
-            <label class="wb-form-label">{{ uiStore.t('agent.settings.compactThresholdRatio') }}</label>
-            <NumberInput :model-value="agentStore.config.compactThresholdRatio" :min="0" :max="1" :step="0.05" :nullable="false" :placeholder="uiStore.t('agent.settings.compactThresholdRatioHint')" @update:model-value="onCompactRatioChange" />
+            <label class="wb-form-label">{{
+              uiStore.t('agent.settings.compactThresholdRatio')
+            }}</label>
+            <NumberInput
+              :model-value="agentStore.config.compactThresholdRatio"
+              :min="0"
+              :max="1"
+              :step="0.05"
+              :nullable="false"
+              :placeholder="uiStore.t('agent.settings.compactThresholdRatioHint')"
+              @update:model-value="onCompactRatioChange"
+            />
           </div>
         </div>
       </div>
 
       <!-- 版本不匹配错误横幅 -->
       <div v-if="agentStore.versionMismatch" class="wb-agent-version-error">
-        <div class="wb-agent-version-title">{{ uiStore.t('agent.error.version.title') }}</div>
-        <div class="wb-agent-version-body">{{ uiStore.t('agent.error.version.body') }}</div>
-        <div class="wb-agent-version-meta">
-          <div>{{ uiStore.t('agent.error.version.stored', { stored: String(agentStore.versionMismatch.storedVersion) }) }}</div>
-          <div>{{ uiStore.t('agent.error.version.expected', { expected: agentStore.versionMismatch.expectedVersion }) }}</div>
+        <div class="wb-agent-version-title">
+          {{ uiStore.t('agent.error.version.title') }}
         </div>
-        <button class="wb-btn accent" @click="onResetVersion">{{ uiStore.t('agent.error.version.reset') }}</button>
+        <div class="wb-agent-version-body">
+          {{ uiStore.t('agent.error.version.body') }}
+        </div>
+        <div class="wb-agent-version-meta">
+          <div>
+            {{
+              uiStore.t('agent.error.version.stored', {
+                stored: String(agentStore.versionMismatch.storedVersion),
+              })
+            }}
+          </div>
+          <div>
+            {{
+              uiStore.t('agent.error.version.expected', {
+                expected: agentStore.versionMismatch.expectedVersion,
+              })
+            }}
+          </div>
+        </div>
+        <button class="wb-btn accent" @click="onResetVersion">
+          {{ uiStore.t('agent.error.version.reset') }}
+        </button>
       </div>
 
       <!-- 会话头：title + 新建按钮 -->
-      <div v-if="agentStore.hasActiveSession && !agentStore.versionMismatch" class="wb-agent-session-bar">
+      <div
+        v-if="agentStore.hasActiveSession && !agentStore.versionMismatch"
+        class="wb-agent-session-bar"
+      >
         <span class="wb-agent-session-title">{{ activeSessionTitle }}</span>
-        <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">＋</button>
+        <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">
+          ＋
+        </button>
       </div>
 
       <!-- 消息列表 -->
       <div ref="messagesContainer" class="wb-agent-messages">
-        <template v-if="agentStore.activeSessionMessages.length === 0 && !agentStore.versionMismatch">
+        <template
+          v-if="agentStore.activeSessionMessages.length === 0 && !agentStore.versionMismatch"
+        >
           <div class="wb-agent-empty">
-            <div class="wb-agent-empty-title">{{ uiStore.t('agent.empty.title') }}</div>
-            <div class="wb-agent-empty-hint">{{ uiStore.t('agent.empty.hint') }}</div>
+            <div class="wb-agent-empty-title">
+              {{ uiStore.t('agent.empty.title') }}
+            </div>
+            <div class="wb-agent-empty-hint">
+              {{ uiStore.t('agent.empty.hint') }}
+            </div>
           </div>
         </template>
         <template v-else>
@@ -257,18 +502,34 @@
       </div>
 
       <!-- 审批卡片（内嵌，不弹全局模态、不挡其他操作） -->
-      <div v-if="agentStore.pendingApproval" class="wb-agent-approval" :class="{ danger: agentStore.pendingApproval.danger }">
+      <div
+        v-if="agentStore.pendingApproval"
+        class="wb-agent-approval"
+        :class="{ danger: agentStore.pendingApproval.danger }"
+      >
         <div class="wb-agent-approval-tool">🔧 {{ agentStore.pendingApproval.toolName }}</div>
-        <div class="wb-agent-approval-title">{{ agentStore.pendingApproval.title }}</div>
-        <div class="wb-agent-approval-msg">{{ agentStore.pendingApproval.message }}</div>
+        <div class="wb-agent-approval-title">
+          {{ agentStore.pendingApproval.title }}
+        </div>
+        <div class="wb-agent-approval-msg">
+          {{ agentStore.pendingApproval.message }}
+        </div>
         <div class="wb-agent-approval-actions">
           <label class="wb-agent-approval-auto">
             <input type="checkbox" v-model="autoApproveThisSession" />
             <span>{{ uiStore.t('agent.approval.autoThisSession') }}</span>
           </label>
           <div class="wb-row-tight">
-            <button class="wb-btn" @click="onApproval(false)">{{ uiStore.t('common.cancel') }}</button>
-            <button class="wb-btn accent" :class="{ danger: agentStore.pendingApproval.danger }" @click="onApproval(true)">{{ uiStore.t('common.confirm') }}</button>
+            <button class="wb-btn" @click="onApproval(false)">
+              {{ uiStore.t('common.cancel') }}
+            </button>
+            <button
+              class="wb-btn accent"
+              :class="{ danger: agentStore.pendingApproval.danger }"
+              @click="onApproval(true)"
+            >
+              {{ uiStore.t('common.confirm') }}
+            </button>
           </div>
         </div>
       </div>
@@ -313,11 +574,13 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useUiStore } from '../../stores/uiStore'
 import { useAgentStore } from '../../agent/agentStore'
+import type { AgentConfig } from '../../agent/types'
 import { usePanelResize } from '../../composables/usePanelResize'
 import FloatingPanelShell from './FloatingPanelShell.vue'
 import PanelModeSwitch from './PanelModeSwitch.vue'
 import NumberInput from './NumberInput.vue'
 import type { PanelMode } from '../../types'
+import type { LocaleKey } from '../../i18n'
 
 const uiStore = useUiStore()
 const agentStore = useAgentStore()
@@ -341,12 +604,12 @@ const autoApproveThisSession = ref(false)
 const activeSessionTitle = computed(() => {
   const id = agentStore.activeSessionId
   if (!id) return ''
-  const s = agentStore.sessions.find(x => x.id === id)
+  const s = agentStore.sessions.find((x) => x.id === id)
   return s?.title || uiStore.t('agent.session.untitled')
 })
 
 const stateLabel = computed(() => {
-  const map: Record<string, string> = {
+  const map: Record<string, LocaleKey> = {
     idle: 'agent.state.idle',
     thinking: 'agent.state.thinking',
     tool_loop: 'agent.state.tool_loop',
@@ -355,7 +618,7 @@ const stateLabel = computed(() => {
     complete: 'agent.state.complete',
   }
   const key = map[agentStore.turnState] || 'agent.state.idle'
-  return uiStore.t(key as any)
+  return uiStore.t(key)
 })
 
 function roleLabel(role: string): string {
@@ -369,10 +632,19 @@ function roleLabel(role: string): string {
 /** 嵌入/悬浮态右边缘拖拽改宽，拖完持久化（settings.agentWidth）。 */
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.agentWidth,
-  setWidth: (w) => { uiStore.settings.agentWidth = w },
-  min: 320, max: 900, dir: 'left',
+  setWidth: (w) => {
+    uiStore.settings.agentWidth = w
+  },
+  min: 320,
+  max: 900,
+  dir: 'left',
 })
-watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
+watch(
+  () => resize.active.value,
+  (v) => {
+    if (!v) uiStore.saveSettings()
+  }
+)
 
 function onInput(e: Event) {
   inputText.value = (e.target as HTMLTextAreaElement).value
@@ -431,8 +703,11 @@ function onMaxTokensChange(v: number | null) {
   if (v != null) agentStore.updateConfig({ maxTokens: v })
 }
 /** 可空数值字段统一入口：null 表示"不注入该采样参数"。 */
-function onNullableChange(key: 'topP' | 'topK' | 'presencePenalty' | 'frequencyPenalty', v: number | null) {
-  agentStore.updateConfig({ [key]: v } as any)
+function onNullableChange(
+  key: 'topP' | 'topK' | 'presencePenalty' | 'frequencyPenalty',
+  v: number | null
+) {
+  agentStore.updateConfig({ [key]: v } as Partial<AgentConfig>)
 }
 function onThinkingChange(e: Event) {
   const checked = (e.target as HTMLInputElement).checked
@@ -450,7 +725,10 @@ function close() {
 }
 
 // 消息列表变化时滚到底
-watch(() => agentStore.activeSessionMessages.length, () => {
-  scrollToBottom()
-})
+watch(
+  () => agentStore.activeSessionMessages.length,
+  () => {
+    scrollToBottom()
+  }
+)
 </script>

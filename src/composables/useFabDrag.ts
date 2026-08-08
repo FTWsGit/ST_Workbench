@@ -14,7 +14,10 @@ import { getHostWindow } from './hostEnv'
  * 关键：拖与点只用"指针有没有移动超过阈值"这一空间维度区分，不引入时间维度，
  * 因此慢按快松、快按快松都是纯点击；只有真把指针挪了超过阈值才算拖。
  * onClick 仍是 onTap 的唯一入口，避免 onUp 直接调 onTap 造成双触发。 */
-export interface FabPos { x: number; y: number }
+export interface FabPos {
+  x: number
+  y: number
+}
 
 export interface UseFabDragOptions {
   /** FAB 的边长（正方形），需要跟 CSS 里 .wb-fab 的 width/height 保持一致。默认 48。 */
@@ -43,20 +46,29 @@ export function useFabDrag(opts: UseFabDragOptions) {
     // 只按视口本身夹一下。CSS 默认位置处理 safe-area-inset-*，这里只处理用户手动拖动后的情况。
     const maxX = Math.max(0, hostWin.innerWidth - size)
     const maxY = Math.max(0, hostWin.innerHeight - size)
-    return { x: Math.min(Math.max(0, x), maxX), y: Math.min(Math.max(0, y), maxY) }
+    return {
+      x: Math.min(Math.max(0, x), maxX),
+      y: Math.min(Math.max(0, y), maxY),
+    }
   }
 
   const style = computed<CSSProperties | undefined>(() => {
     const pos = opts.getPos()
     if (!pos) return undefined
-    return { left: pos.x + 'px', top: pos.y + 'px', right: 'auto', bottom: 'auto' }
+    return {
+      left: pos.x + 'px',
+      top: pos.y + 'px',
+      right: 'auto',
+      bottom: 'auto',
+    }
   })
 
   function onPointerDown(e: PointerEvent) {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     const hostWin = getHostWindow()
     const el = e.currentTarget as HTMLElement
-    const startX = e.clientX, startY = e.clientY
+    const startX = e.clientX,
+      startY = e.clientY
     const pointerId = e.pointerId
     let isDragging = false
 
@@ -64,7 +76,11 @@ export function useFabDrag(opts: UseFabDragOptions) {
       if (ev.pointerId !== pointerId) return
       if (!isDragging) {
         // 指针还没挪过阈值——继续等，不算拖动开始。
-        if (Math.abs(ev.clientX - startX) < dragThreshold && Math.abs(ev.clientY - startY) < dragThreshold) return
+        if (
+          Math.abs(ev.clientX - startX) < dragThreshold &&
+          Math.abs(ev.clientY - startY) < dragThreshold
+        )
+          return
         // 超过阈值：立即进入拖动模式。把 FAB 当前渲染位置冻结成显式 left/top
         // （可能还锚定在默认的 bottom/right），之后才能让它自由跟着指针走。
         isDragging = true

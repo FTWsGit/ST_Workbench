@@ -51,7 +51,6 @@ export default {
   'shared.sidebar.bind': '🔗 绑定',
   'shared.sidebar.unbind': '🔓 解绑',
 
-
   // ---- 移动端专属 ----
   'shared.mobile.sidebar': '侧边栏',
   'shared.mobile.tools': '更多工具',
@@ -71,7 +70,8 @@ export default {
   'shared.confirm.unsaved.title': '未保存的更改',
   'shared.confirm.unsaved.message': '当前有未保存的更改，确定要放弃吗？',
   'shared.confirm.closePanel.title': '还有未保存的更改',
-  'shared.confirm.closePanel.message': '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
+  'shared.confirm.closePanel.message':
+    '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
 
   // ---- 通用组件 ----
   'shared.settingsDock.title': '⚙ 设置',
@@ -150,16 +150,19 @@ export default {
 
   // ---- 确认弹窗 ----
   'preset.confirm.switch.title': '切换预设？',
-  'preset.confirm.switch.message': '切换到预设 <strong>{name}</strong>？当前预设的未保存更改将丢失。',
+  'preset.confirm.switch.message':
+    '切换到预设 <strong>{name}</strong>？当前预设的未保存更改将丢失。',
   'preset.confirm.delete.title': '删除预设？',
   'preset.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
   'preset.confirm.deleteBlock.title': '删除提示词块？',
   'preset.confirm.deleteBlock.message': '这将从预设中永久移除 <strong>{name}</strong>。',
   'preset.confirm.reload.title': '重新加载预设？',
-  'preset.confirm.reload.message': '重新加载预设 <strong>{name}</strong>？当前预设的未保存更改将丢失。',
+  'preset.confirm.reload.message':
+    '重新加载预设 <strong>{name}</strong>？当前预设的未保存更改将丢失。',
   'preset.confirm.reload.confirm': '重新加载',
   'preset.confirm.removeBlock.title': '移除块？',
-  'preset.confirm.removeBlock.message': '从列表中移除 <strong>{name}</strong>？这仅影响当前复制会话——不会写入磁盘，直到你点击保存。',
+  'preset.confirm.removeBlock.message':
+    '从列表中移除 <strong>{name}</strong>？这仅影响当前复制会话——不会写入磁盘，直到你点击保存。',
   'preset.confirm.removeBlock.confirm': '移除',
   'preset.confirm.closeUnsaved.title': '不保存就关闭？',
   'preset.confirm.closeUnsaved.message': '你在一侧或两侧有未保存的复制/删除更改。',
@@ -180,7 +183,8 @@ export default {
   'preset.settings.name': '名称',
   'preset.settings.namePlaceholder': '给这个块起个名字',
   'preset.settings.role': '角色',
-  'preset.settings.markerHint': '这是一个 marker 块（{id}），内容由 SillyTavern 内部生成，这里的角色/名称改动可能不影响实际渲染。',
+  'preset.settings.markerHint':
+    '这是一个 marker 块（{id}），内容由 SillyTavern 内部生成，这里的角色/名称改动可能不影响实际渲染。',
   'preset.settings.empty': '选择一个块以编辑其设置',
 
   // ---- 搜索替换 ----
@@ -208,8 +212,10 @@ export default {
   'preset.preview.collapseExpand': '折叠/展开全部',
   'preset.preview.modeBlocks': '逐块',
   'preset.preview.modeRaw': '最终请求',
-  'preset.preview.hintBlocks': '来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。',
-  'preset.preview.hintRaw': 'SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。',
+  'preset.preview.hintBlocks':
+    '来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。',
+  'preset.preview.hintRaw':
+    'SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。',
   'preset.preview.generate': '▶ 生成',
   'preset.preview.copy': '📋 复制',
   'preset.preview.generating': '⏳ 生成中…',
@@ -282,7 +288,8 @@ export default {
   'regex.editor.testText': '测试文本',
   'regex.editor.testPlaceholder': '粘贴一段消息文本，切到「预览」看效果…',
   'regex.editor.invalidFindRegex': '查找正则语法无效，预览会原样返回输入文本',
-  'regex.editor.previewLimitation': '预览只做本地查找/替换/修剪，不解析宏、不代表作用范围与深度限制。',
+  'regex.editor.previewLimitation':
+    '预览只做本地查找/替换/修剪，不解析宏、不代表作用范围与深度限制。',
   'regex.editor.previewError': '预览出错: {msg}',
 
   // ---- 设置表单 ----
@@ -401,7 +408,8 @@ export default {
 
   // ---- 确认弹窗 ----
   'worldbook.confirm.switch.title': '切换世界书？',
-  'worldbook.confirm.switch.message': '切换到世界书 <strong>{name}</strong>？当前世界书的未保存更改将丢失。',
+  'worldbook.confirm.switch.message':
+    '切换到世界书 <strong>{name}</strong>？当前世界书的未保存更改将丢失。',
   'worldbook.confirm.delete.title': '删除世界书？',
   'worldbook.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
   'worldbook.confirm.deleteEntry.title': '删除条目？',
@@ -528,7 +536,8 @@ export default {
 
   // ---- 确认弹窗 ----
   'character.confirm.switch.title': '切换角色？',
-  'character.confirm.switch.message': '切换到角色 <strong>{name}</strong>？当前角色的未保存更改将丢失。',
+  'character.confirm.switch.message':
+    '切换到角色 <strong>{name}</strong>？当前角色的未保存更改将丢失。',
   'character.confirm.delete.title': '删除角色？',
   'character.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
   'character.confirm.deleteGreeting.title': '删除开场白？',
@@ -656,7 +665,8 @@ export default {
   'agent.empty.title': '向 Agent 提问',
   'agent.empty.hint': '例如：把 main 提示词块关掉',
   'agent.error.version.title': 'Agent 数据版本不匹配',
-  'agent.error.version.body': '存储的 Agent 数据版本与当前代码期望的不一致。点击"重置"会把 Agent 数据清空恢复默认。',
+  'agent.error.version.body':
+    '存储的 Agent 数据版本与当前代码期望的不一致。点击"重置"会把 Agent 数据清空恢复默认。',
   'agent.error.version.reset': '重置 Agent 数据',
   'agent.error.version.stored': '存储版本：{stored}',
   'agent.error.version.expected': '期望版本：{expected}',

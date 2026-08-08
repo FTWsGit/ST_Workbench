@@ -13,11 +13,13 @@
  */
 import { registerAgentTool, type AgentToolResult, type AgentToolContext } from '../toolRegistry'
 import { getPromptManagerMessages, getFinalRequestMessages } from '../../api/presetApi'
-import { callModelRaw } from '../callModel'
-import {
-  TOOL_RESULT_TRUNCATE_BYTES,
-} from '../constants'
-import type { Message } from '../types'
+import { TOOL_RESULT_TRUNCATE_BYTES } from '../constants'
+
+/** order 树遍历用宽松结构（OrderNode 可赋值到它，避免显式 any）。 */
+type OrderWalkNode = {
+  identifier?: unknown
+  children?: OrderWalkNode[]
+}
 
 /* ====== 工具描述集中管理（英文，atomcode 风格） ====== */
 const TOOL_DESC = {
@@ -41,9 +43,9 @@ function askApproval(
   ctx: AgentToolContext,
   title: string,
   message: string,
-  danger = true,
+  danger = true
 ): Promise<boolean> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     ctx.confirmStore.ask({
       title,
       message,
@@ -69,11 +71,11 @@ registerAgentTool({
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
     try {
       const results = await getPromptManagerMessages()
-      const order = store.order as any[]
-      const prompts = store.prompts as any[]
+      const order = store.order as OrderWalkNode[]
+      const prompts = store.prompts
       // 从 order 树展平 identifier 顺序
       const orderedIds: string[] = []
-      const walk = (nodes: any[]) => {
+      const walk = (nodes: OrderWalkNode[]) => {
         for (const n of nodes) {
           if (n && typeof n === 'object') {
             if (typeof n.identifier === 'string') orderedIds.push(n.identifier)
@@ -86,7 +88,7 @@ registerAgentTool({
       for (const id of orderedIds) {
         const msgs = results[id]
         if (!msgs || msgs.length === 0) continue
-        const p = prompts.find(pp => pp.identifier === id)
+        const p = prompts.find((pp) => pp.identifier === id)
         const name = p?.name || id
         for (const m of msgs) {
           lines.push(`### ${name} (${id}) [role=${m.role}, tokens=${m.tokens}]`)
@@ -94,10 +96,16 @@ registerAgentTool({
           lines.push('')
         }
       }
-      if (lines.length === 0) return { text: frame('no rendered blocks (preset may be empty or all blocks disabled)') }
+      if (lines.length === 0)
+        return {
+          text: frame('no rendered blocks (preset may be empty or all blocks disabled)'),
+        }
       return { text: frame(lines.join('\n')) }
     } catch (e) {
-      return { text: frame(`preview failed: ${e instanceof Error ? e.message : String(e)}`), isError: true }
+      return {
+        text: frame(`preview failed: ${e instanceof Error ? e.message : String(e)}`),
+        isError: true,
+      }
     }
   },
 })
@@ -117,17 +125,22 @@ registerAgentTool({
     const approved = await askApproval(
       ctx,
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.presetPreviewRaw'),
+      ctx.uiStore.t('agent.approval.presetPreviewRaw')
     )
     if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true }
 
     try {
       const msgs = await getFinalRequestMessages()
-      const lines: string[] = msgs.map(m => `### [${(m.role || '?').toUpperCase()}]\n${truncate(m.content)}`)
+      const lines: string[] = msgs.map(
+        (m) => `### [${(m.role || '?').toUpperCase()}]\n${truncate(m.content)}`
+      )
       if (lines.length === 0) return { text: frame('no messages captured') }
       return { text: frame(lines.join('\n\n')) }
     } catch (e) {
-      return { text: frame(`preview failed: ${e instanceof Error ? e.message : String(e)}`), isError: true }
+      return {
+        text: frame(`preview failed: ${e instanceof Error ? e.message : String(e)}`),
+        isError: true,
+      }
     }
   },
 })

@@ -15,10 +15,13 @@
  *  - inline=false（默认）：竖排，label 单独一行。
  *  间距/首项 margin 清零交由 main.css 结构选择器自动处理，调用方无需关心。
  *  v-else 分支用 <template> 多根节点而非包一层 div，避免打乱父容器 flex 间距。 */
-withDefaults(defineProps<{
-  /** 字段标签文字；不传则不渲染 label（如"启用"这类控件自带语义的场景）。 */
-  label?: string
-  /** true 同行横排，false（默认）竖排。 */
-  inline?: boolean
-}>(), { inline: false })
+withDefaults(
+  defineProps<{
+    /** 字段标签文字；不传则不渲染 label（如"启用"这类控件自带语义的场景）。 */
+    label?: string
+    /** true 同行横排，false（默认）竖排。 */
+    inline?: boolean
+  }>(),
+  { inline: false, label: '' }
+)
 </script>

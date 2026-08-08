@@ -14,11 +14,13 @@ import { AGENT_NS, AGENT_PERSISTED_VERSION } from '../agent/constants'
 import type { AgentPersisted } from '../agent/types'
 import { DEFAULT_AGENT_PERSISTED } from '../agent/defaultPersisted'
 
-async function getExtensionSettingsModule(): Promise<any> {
+async function getExtensionSettingsModule() {
   const importer = await ensureTopImporter()
   const mod = await importer('/scripts/extensions.js')
   if (!mod || typeof mod.extension_settings !== 'object') {
-    throw new Error('SillyTavern 扩展设置模块不可用（/scripts/extensions.js 结构异常，或当前 ST 版本已更新）')
+    throw new Error(
+      'SillyTavern 扩展设置模块不可用（/scripts/extensions.js 结构异常，或当前 ST 版本已更新）'
+    )
   }
   return mod
 }
@@ -73,7 +75,9 @@ export class AgentVersionMismatchError extends Error {
   readonly storedVersion: unknown
   readonly expectedVersion: number
   constructor(storedVersion: unknown, expectedVersion: number) {
-    super(`Agent 数据版本不匹配（存储=${String(storedVersion)}，期望=${expectedVersion}）。请重置 agent 数据。`)
+    super(
+      `Agent 数据版本不匹配（存储=${String(storedVersion)}，期望=${expectedVersion}）。请重置 agent 数据。`
+    )
     this.name = 'AgentVersionMismatchError'
     this.storedVersion = storedVersion
     this.expectedVersion = expectedVersion

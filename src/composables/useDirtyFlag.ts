@@ -9,6 +9,8 @@ import { ref } from 'vue'
  */
 export function useDirtyFlag() {
   const dirty = ref(false)
-  function markDirty() { dirty.value = true }
+  function markDirty() {
+    dirty.value = true
+  }
   return { dirty, markDirty }
 }

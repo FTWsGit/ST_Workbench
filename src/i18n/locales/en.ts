@@ -1,4 +1,3 @@
-import type { LocaleTable } from '../types'
 import zhCN from './zh-CN'
 // en.ts 必须覆盖 zh-CN.ts 里的每一个 key——i18n/index.ts 用 `Record<keyof typeof zhCN, string>`
 // 强制类型约束，漏一个 key 编译直接报错。新增文案永远先加 zh-CN.ts，再回来补这里。
@@ -48,7 +47,6 @@ export default {
   'shared.sidebar.bind': '🔗 Bind',
   'shared.sidebar.unbind': '🔓 Unbind',
 
-
   // ---- 移动端专属 ----
   'shared.mobile.sidebar': 'Sidebar',
   'shared.mobile.tools': 'More Tools',
@@ -66,9 +64,11 @@ export default {
 
   // ---- 通用确认弹窗 ----
   'shared.confirm.unsaved.title': 'Unsaved changes',
-  'shared.confirm.unsaved.message': 'You have unsaved changes. Are you sure you want to discard them?',
+  'shared.confirm.unsaved.message':
+    'You have unsaved changes. Are you sure you want to discard them?',
   'shared.confirm.closePanel.title': 'Unsaved changes remain',
-  'shared.confirm.closePanel.message': 'The following workspaces have unsaved changes. Closing the panel only hides it—changes stay in memory and will be restored next time you open it, but they will be lost if you refresh or close SillyTavern before saving:',
+  'shared.confirm.closePanel.message':
+    'The following workspaces have unsaved changes. Closing the panel only hides it—changes stay in memory and will be restored next time you open it, but they will be lost if you refresh or close SillyTavern before saving:',
 
   // ---- 通用组件 ----
   'shared.settingsDock.title': '⚙ Settings',
@@ -131,7 +131,8 @@ export default {
   'preset.toast.blockHidden': 'Hidden',
   'preset.toast.blockAdded': 'Added',
   'preset.toast.duplicateName': 'A preset with this name already exists',
-  'preset.toast.reloadNote': 'Note: this is the currently open preset—reload it in the main editor to see changes',
+  'preset.toast.reloadNote':
+    'Note: this is the currently open preset—reload it in the main editor to see changes',
   'preset.toast.copiedBlocks': 'Copied {n} blocks {dir}',
   'preset.toast.listFailedCopyPanel': 'Failed to fetch preset list: {msg}',
   'preset.toast.loadFailedCopyPanel': 'Failed to load: {msg}',
@@ -143,23 +144,30 @@ export default {
   'preset.toast.renderedBlocks': 'Rendered {count} blocks',
   'preset.toast.cannotDeleteMarker': 'Cannot delete marker',
   'preset.toast.cannotHideMarker': 'Cannot hide marker',
-  'preset.toast.selectPresetFailed': 'Failed to switch ST main menu preset, displayed data may be inaccurate',
+  'preset.toast.selectPresetFailed':
+    'Failed to switch ST main menu preset, displayed data may be inaccurate',
 
   // ---- 确认弹窗 ----
   'preset.confirm.switch.title': 'Switch preset?',
-  'preset.confirm.switch.message': 'Switch to preset <strong>{name}</strong>? Unsaved changes to the current preset will be lost.',
+  'preset.confirm.switch.message':
+    'Switch to preset <strong>{name}</strong>? Unsaved changes to the current preset will be lost.',
   'preset.confirm.delete.title': 'Delete preset?',
-  'preset.confirm.delete.message': 'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
+  'preset.confirm.delete.message':
+    'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
   'preset.confirm.deleteBlock.title': 'Delete prompt block?',
-  'preset.confirm.deleteBlock.message': 'This will permanently remove <strong>{name}</strong> from the preset.',
+  'preset.confirm.deleteBlock.message':
+    'This will permanently remove <strong>{name}</strong> from the preset.',
   'preset.confirm.reload.title': 'Reload preset?',
-  'preset.confirm.reload.message': 'Reload preset <strong>{name}</strong>? Unsaved changes to the current preset will be lost.',
+  'preset.confirm.reload.message':
+    'Reload preset <strong>{name}</strong>? Unsaved changes to the current preset will be lost.',
   'preset.confirm.reload.confirm': 'Reload',
   'preset.confirm.removeBlock.title': 'Remove block?',
-  'preset.confirm.removeBlock.message': 'Remove <strong>{name}</strong> from the list? This only affects the current copy session—it will not be written to disk until you save.',
+  'preset.confirm.removeBlock.message':
+    'Remove <strong>{name}</strong> from the list? This only affects the current copy session—it will not be written to disk until you save.',
   'preset.confirm.removeBlock.confirm': 'Remove',
   'preset.confirm.closeUnsaved.title': 'Close without saving?',
-  'preset.confirm.closeUnsaved.message': 'You have unsaved copy/delete changes on one or both sides.',
+  'preset.confirm.closeUnsaved.message':
+    'You have unsaved copy/delete changes on one or both sides.',
   'preset.confirm.closePanel.item': 'Preset: {name}',
 
   // ---- 输入弹窗 ----
@@ -177,7 +185,8 @@ export default {
   'preset.settings.name': 'Name',
   'preset.settings.namePlaceholder': 'Name this block',
   'preset.settings.role': 'Role',
-  'preset.settings.markerHint': 'This is a marker block ({id}). Its content is generated internally by SillyTavern; changes to role/name here may not affect actual rendering.',
+  'preset.settings.markerHint':
+    'This is a marker block ({id}). Its content is generated internally by SillyTavern; changes to role/name here may not affect actual rendering.',
   'preset.settings.empty': 'Select a block to edit its settings',
 
   // ---- 搜索替换 ----
@@ -205,14 +214,18 @@ export default {
   'preset.preview.collapseExpand': 'Collapse/Expand All',
   'preset.preview.modeBlocks': 'Per Block',
   'preset.preview.modeRaw': 'Final Request',
-  'preset.preview.hintBlocks': 'Real per-block rendering from SillyTavern\'s prompt manager. Highlighted text is substituted in (macros/regex etc.)—not literal in block source.',
-  'preset.preview.hintRaw': 'Exact messages array SillyTavern is about to send to the API—captured via a real generation that is immediately cancelled, so nothing is actually sent.',
+  'preset.preview.hintBlocks':
+    "Real per-block rendering from SillyTavern's prompt manager. Highlighted text is substituted in (macros/regex etc.)—not literal in block source.",
+  'preset.preview.hintRaw':
+    'Exact messages array SillyTavern is about to send to the API—captured via a real generation that is immediately cancelled, so nothing is actually sent.',
   'preset.preview.generate': '▶ Generate',
   'preset.preview.copy': '📋 Copy',
   'preset.preview.generating': '⏳ Generating…',
   'preset.preview.collapseExpandSingle': 'Collapse/Expand',
-  'preset.preview.emptyBlocks': 'Click "Generate" for a real per-block render (this runs an actual dry-run generation).',
-  'preset.preview.emptyRaw': 'Click "Generate" to capture the final request—this briefly starts a real generation then immediately cancels it.',
+  'preset.preview.emptyBlocks':
+    'Click "Generate" for a real per-block render (this runs an actual dry-run generation).',
+  'preset.preview.emptyRaw':
+    'Click "Generate" to capture the final request—this briefly starts a real generation then immediately cancels it.',
 
   // ---- 变量弹窗 ----
   'preset.varPopup.hit': '{count} matches',
@@ -279,7 +292,8 @@ export default {
   'regex.editor.testText': 'Test Text',
   'regex.editor.testPlaceholder': 'Paste a message text, switch to "Preview" to see the effect…',
   'regex.editor.invalidFindRegex': 'Find regex is invalid; preview will return input text as-is',
-  'regex.editor.previewLimitation': 'Preview only does local find/replace/trim; it does not resolve macros or represent scope/depth limits.',
+  'regex.editor.previewLimitation':
+    'Preview only does local find/replace/trim; it does not resolve macros or represent scope/depth limits.',
   'regex.editor.previewError': 'Preview error: {msg}',
 
   // ---- 设置表单 ----
@@ -398,11 +412,14 @@ export default {
 
   // ---- 确认弹窗 ----
   'worldbook.confirm.switch.title': 'Switch worldbook?',
-  'worldbook.confirm.switch.message': 'Switch to worldbook <strong>{name}</strong>? Unsaved changes to the current worldbook will be lost.',
+  'worldbook.confirm.switch.message':
+    'Switch to worldbook <strong>{name}</strong>? Unsaved changes to the current worldbook will be lost.',
   'worldbook.confirm.delete.title': 'Delete worldbook?',
-  'worldbook.confirm.delete.message': 'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
+  'worldbook.confirm.delete.message':
+    'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
   'worldbook.confirm.deleteEntry.title': 'Delete entry?',
-  'worldbook.confirm.deleteEntry.message': 'This will permanently remove <strong>{name}</strong> from the worldbook.',
+  'worldbook.confirm.deleteEntry.message':
+    'This will permanently remove <strong>{name}</strong> from the worldbook.',
   'worldbook.confirm.closePanel.item': 'Worldbook: {name}',
 
   // ---- 输入弹窗 ----
@@ -414,7 +431,8 @@ export default {
   // ---- 侧边栏 ----
   'worldbook.sidebar.title': 'Worldbook Entries ({count})',
   'worldbook.sidebar.newEntry': '+ New',
-  'worldbook.sidebar.empty': 'No worldbook loaded yet. Select one from the top right, or create a new one',
+  'worldbook.sidebar.empty':
+    'No worldbook loaded yet. Select one from the top right, or create a new one',
   'worldbook.sidebar.defaultGroupName': 'Group ({count})',
 
   // ---- 激活方式（settings 表 + 工具箱 BatchTool 共用） ----
@@ -426,8 +444,8 @@ export default {
   'worldbook.position.afterChar': 'After Character Definition',
   'worldbook.position.beforeExample': 'Before Example Messages',
   'worldbook.position.afterExample': 'After Example Messages',
-  'worldbook.position.beforeAuthorsNote': 'Before Author\'s Note',
-  'worldbook.position.afterAuthorsNote': 'After Author\'s Note',
+  'worldbook.position.beforeAuthorsNote': "Before Author's Note",
+  'worldbook.position.afterAuthorsNote': "After Author's Note",
   'worldbook.position.atDepth': 'At Depth ⚙',
   'worldbook.position.outlet': 'Outlet',
   'worldbook.logic.andAny': 'AND Any',
@@ -461,7 +479,8 @@ export default {
   // ---- 条目设置表单 ----
   'worldbook.settings.enabled': 'Enabled',
   'worldbook.settings.commentLabel': 'Title / Comment',
-  'worldbook.settings.commentPlaceholder': 'Entry title (for identification only, not matched for activation)',
+  'worldbook.settings.commentPlaceholder':
+    'Entry title (for identification only, not matched for activation)',
   'worldbook.settings.groupActivation': 'Activation Strategy',
   'worldbook.settings.groupPosition': 'Insertion Position',
   'worldbook.settings.groupRecursion': 'Recursion & Matching',
@@ -477,7 +496,8 @@ export default {
   'worldbook.settings.roleLabel': 'Role',
   'worldbook.settings.orderLabel': 'Insert Order (lower numbers come first)',
   'worldbook.settings.probabilityLabel': 'Trigger by probability',
-  'worldbook.settings.excludeRecursion': 'Exclude from recursion scan (will not be matched by other entries)',
+  'worldbook.settings.excludeRecursion':
+    'Exclude from recursion scan (will not be matched by other entries)',
   'worldbook.settings.preventRecursion': 'Prevent recursion (will not trigger other entries)',
   'worldbook.settings.delayUntilRecursion': 'Delay until recursion stage',
   'worldbook.settings.scanDepthLabel': 'Scan Depth',
@@ -525,12 +545,16 @@ export default {
 
   // ---- 确认弹窗 ----
   'character.confirm.switch.title': 'Switch character?',
-  'character.confirm.switch.message': 'Switch to character <strong>{name}</strong>? Unsaved changes to the current character will be lost.',
+  'character.confirm.switch.message':
+    'Switch to character <strong>{name}</strong>? Unsaved changes to the current character will be lost.',
   'character.confirm.delete.title': 'Delete character?',
-  'character.confirm.delete.message': 'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
+  'character.confirm.delete.message':
+    'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
   'character.confirm.deleteGreeting.title': 'Delete greeting?',
-  'character.confirm.deleteGreeting.message': 'This will permanently remove this greeting. This cannot be undone.',
-  'character.confirm.newCharacter.message': 'Creating a new character will discard current unsaved changes. Are you sure you want to continue?',
+  'character.confirm.deleteGreeting.message':
+    'This will permanently remove this greeting. This cannot be undone.',
+  'character.confirm.newCharacter.message':
+    'Creating a new character will discard current unsaved changes. Are you sure you want to continue?',
   'character.confirm.closePanel.item': 'Character: {name}',
 
   // ---- 输入弹窗 ----
@@ -559,7 +583,7 @@ export default {
   'character.field.postHistoryInstructions': 'Post-History Instructions',
   'character.field.personality': 'Personality summary',
   'character.field.scenario': 'Scenario',
-  'character.field.depthPrompt': 'Character\'s Note',
+  'character.field.depthPrompt': "Character's Note",
   'character.field.mesExample': 'Examples of dialogue',
 
   // ---- 角色元信息 ----
@@ -598,7 +622,8 @@ export default {
   'toolbox.search.replaceAll': 'Replace All',
   'toolbox.search.results': '{count} results',
   'toolbox.search.selectSide': 'Select to Sidebar',
-  'toolbox.search.selectSideHint': 'Sync hits to sidebar selection, then use Batch tool to modify them',
+  'toolbox.search.selectSideHint':
+    'Sync hits to sidebar selection, then use Batch tool to modify them',
   'toolbox.search.enumHint': 'Enum field: pick a candidate value to apply to selected hits',
   'toolbox.search.noEnumChoices': 'No batch-editable candidates for this field (read-only)',
 
@@ -610,10 +635,12 @@ export default {
   'toolbox.batch.roleLabel': 'Set Role',
   'toolbox.batch.activationLabel': 'Set Activation',
   'toolbox.batch.deleteSelected': 'Delete Selected',
-  'toolbox.batch.noSelection': 'Select items in the left list (Ctrl/Shift) or check them in this panel first',
+  'toolbox.batch.noSelection':
+    'Select items in the left list (Ctrl/Shift) or check them in this panel first',
   'toolbox.batch.applied': 'Applied to {count} items',
   'toolbox.batch.deleteConfirm.title': 'Delete selected items?',
-  'toolbox.batch.deleteConfirm.message': 'This will permanently remove the {count} selected items. This cannot be undone.',
+  'toolbox.batch.deleteConfirm.message':
+    'This will permanently remove the {count} selected items. This cannot be undone.',
   'toolbox.batch.noBatchTools': 'No batch tools available for this scene',
 
   // ========================================
@@ -653,7 +680,8 @@ export default {
   'agent.empty.title': 'Ask the Agent',
   'agent.empty.hint': 'e.g. disable the main prompt block',
   'agent.error.version.title': 'Agent data version mismatch',
-  'agent.error.version.body': 'The stored Agent data version does not match what the current code expects. Click "Reset" to clear Agent data and restore defaults.',
+  'agent.error.version.body':
+    'The stored Agent data version does not match what the current code expects. Click "Reset" to clear Agent data and restore defaults.',
   'agent.error.version.reset': 'Reset Agent data',
   'agent.error.version.stored': 'Stored version: {stored}',
   'agent.error.version.expected': 'Expected version: {expected}',
@@ -673,6 +701,7 @@ export default {
   'agent.approval.wbSave': 'Save worldbook "{name}" to server',
   'agent.approval.charSetField': 'Modify character field {key}: {preview}',
   'agent.approval.charSave': 'Save character "{name}" to server',
-  'agent.approval.presetPreviewRaw': 'Trigger a real generation request to preview full messages (consumes an API call)',
+  'agent.approval.presetPreviewRaw':
+    'Trigger a real generation request to preview full messages (consumes an API call)',
   'agent.approval.autoThisSession': 'Auto-approve this tool this session',
 } satisfies Record<keyof typeof zhCN, string>

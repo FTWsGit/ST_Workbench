@@ -38,7 +38,7 @@ export interface AgentToolResult {
 /** JSON Schema 类型（极简子集，够 OpenAI parameters 用）。 */
 export type JsonSchemaObject = {
   type: 'object'
-  properties?: Record<string, any>
+  properties?: Record<string, unknown>
   required?: string[]
   description?: string
 }
@@ -58,7 +58,7 @@ export interface AgentToolDef {
   /** 限定哪些 workspace 下可调用，越界则拒绝（模块 7.3）。 */
   availableIn: AgentWorkspace[]
   /** 执行函数。args 是已解析的参数对象。 */
-  execute: (args: any, ctx: AgentToolContext) => Promise<AgentToolResult>
+  execute: (args: Record<string, unknown>, ctx: AgentToolContext) => Promise<AgentToolResult>
 }
 
 /** 工具注册表：name → def。 */
@@ -81,5 +81,5 @@ export function listAgentTools(): AgentToolDef[] {
 
 /** 按 workspace 过滤可用工具（越界的不给模型选）。 */
 export function listAgentToolsForWorkspace(ws: AgentWorkspace): AgentToolDef[] {
-  return listAgentTools().filter(t => t.availableIn.includes(ws))
+  return listAgentTools().filter((t) => t.availableIn.includes(ws))
 }

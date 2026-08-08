@@ -4,64 +4,146 @@
       <div class="wb-preset-cp-col">
         <div class="wb-preset-cp-col-head">
           <select class="wb-preset-cp-sel" v-model="sides.left.name">
-            <option value="" disabled>{{ uiStore.t('preset.copyPanel.selectPreset') }}</option>
-            <option v-for="p in presetOptions" :key="p.name" :value="p.name">{{ p.name }}</option>
+            <option value="" disabled>
+              {{ uiStore.t('preset.copyPanel.selectPreset') }}
+            </option>
+            <option v-for="p in presetOptions" :key="p.name" :value="p.name">
+              {{ p.name }}
+            </option>
           </select>
-          <button class="wb-btn" :disabled="!sides.left.name" @click="loadSide('left')">{{ uiStore.t('common.load') }}</button>
+          <button class="wb-btn" :disabled="!sides.left.name" @click="loadSide('left')">
+            {{ uiStore.t('common.load') }}
+          </button>
         </div>
         <template v-if="sides.left.data">
           <div class="wb-preset-cp-toolbar">
-            <button class="wb-btn" @click="selectAll('left')">{{ uiStore.t('preset.copyPanel.selectAll') }}</button>
-            <button class="wb-btn" @click="clearSel('left')">{{ uiStore.t('preset.copyPanel.clearAll') }}</button>
-            <span class="wb-preset-search-count">{{ sides.left.sel.size }}/{{ sides.left.data.prompts.length }}</span>
+            <button class="wb-btn" @click="selectAll('left')">
+              {{ uiStore.t('preset.copyPanel.selectAll') }}
+            </button>
+            <button class="wb-btn" @click="clearSel('left')">
+              {{ uiStore.t('preset.copyPanel.clearAll') }}
+            </button>
+            <span class="wb-preset-search-count"
+              >{{ sides.left.sel.size }}/{{ sides.left.data.prompts.length }}</span
+            >
             <span class="wb-spacer"></span>
-            <button class="wb-btn accent" :disabled="!sides.left.dirty" @click="saveSide('left')">{{ uiStore.t('common.save') }}{{ sides.left.dirty ? ' *' : '' }}</button>
+            <button class="wb-btn accent" :disabled="!sides.left.dirty" @click="saveSide('left')">
+              {{ uiStore.t('common.save') }}{{ sides.left.dirty ? ' *' : '' }}
+            </button>
           </div>
           <div class="wb-preset-cp-list">
-            <p v-if="!leftOrdered.length" class="wb-preset-cp-empty">{{ uiStore.t('preset.copyPanel.noBlocks') }}</p>
-            <div v-for="e in leftOrdered" :key="e.block.identifier" class="wb-preset-cp-item wb-tree-item" :class="{ selected: sides.left.sel.has(e.block.identifier) }" @click="onItemClick('left', e.block.identifier, $event)">
+            <p v-if="!leftOrdered.length" class="wb-preset-cp-empty">
+              {{ uiStore.t('preset.copyPanel.noBlocks') }}
+            </p>
+            <div
+              v-for="e in leftOrdered"
+              :key="e.block.identifier"
+              class="wb-preset-cp-item wb-tree-item"
+              :class="{ selected: sides.left.sel.has(e.block.identifier) }"
+              @click="onItemClick('left', e.block.identifier, $event)"
+            >
               <span class="wb-tree-role" :class="roleClass(e.block.role)">{{ e.block.role }}</span>
               <span class="wb-tree-name">{{ e.block.name || e.block.identifier }}</span>
-              <span v-if="e.hidden" class="wb-hidden-badge" :title="uiStore.t('preset.sidebar.hiddenTitle')">{{ uiStore.t('common.hidden') }}</span>
-              <span class="wb-tree-act del" :title="uiStore.t('preset.copyPanel.removeBlock')" @click.stop="removeBlock('left', e.block.identifier)">🗑</span>
+              <span
+                v-if="e.hidden"
+                class="wb-hidden-badge"
+                :title="uiStore.t('preset.sidebar.hiddenTitle')"
+                >{{ uiStore.t('common.hidden') }}</span
+              >
+              <span
+                class="wb-tree-act del"
+                :title="uiStore.t('preset.copyPanel.removeBlock')"
+                @click.stop="removeBlock('left', e.block.identifier)"
+                >🗑</span
+              >
             </div>
           </div>
         </template>
-        <p v-else class="wb-preset-cp-empty">{{ uiStore.t('preset.copyPanel.pickPreset') }}</p>
+        <p v-else class="wb-preset-cp-empty">
+          {{ uiStore.t('preset.copyPanel.pickPreset') }}
+        </p>
       </div>
 
       <div class="wb-preset-cp-mid">
-        <button class="wb-btn accent" :disabled="!sides.left.sel.size || !sides.right.data" :title="uiStore.t('preset.copyPanel.copyRight')" @click="copy('left')">{{ isMobile ? '▼' : '▶' }}</button>
-        <button class="wb-btn accent" :disabled="!sides.right.sel.size || !sides.left.data" :title="uiStore.t('preset.copyPanel.copyLeft')" @click="copy('right')">{{ isMobile ? '▲' : '◀' }}</button>
+        <button
+          class="wb-btn accent"
+          :disabled="!sides.left.sel.size || !sides.right.data"
+          :title="uiStore.t('preset.copyPanel.copyRight')"
+          @click="copy('left')"
+        >
+          {{ isMobile ? '▼' : '▶' }}
+        </button>
+        <button
+          class="wb-btn accent"
+          :disabled="!sides.right.sel.size || !sides.left.data"
+          :title="uiStore.t('preset.copyPanel.copyLeft')"
+          @click="copy('right')"
+        >
+          {{ isMobile ? '▲' : '◀' }}
+        </button>
       </div>
 
       <div class="wb-preset-cp-col">
         <div class="wb-preset-cp-col-head">
           <select class="wb-preset-cp-sel" v-model="sides.right.name">
-            <option value="" disabled>{{ uiStore.t('preset.copyPanel.selectPreset') }}</option>
-            <option v-for="p in presetOptions" :key="p.name" :value="p.name">{{ p.name }}</option>
+            <option value="" disabled>
+              {{ uiStore.t('preset.copyPanel.selectPreset') }}
+            </option>
+            <option v-for="p in presetOptions" :key="p.name" :value="p.name">
+              {{ p.name }}
+            </option>
           </select>
-          <button class="wb-btn" :disabled="!sides.right.name" @click="loadSide('right')">{{ uiStore.t('common.load') }}</button>
+          <button class="wb-btn" :disabled="!sides.right.name" @click="loadSide('right')">
+            {{ uiStore.t('common.load') }}
+          </button>
         </div>
         <template v-if="sides.right.data">
           <div class="wb-preset-cp-toolbar">
-            <button class="wb-btn" @click="selectAll('right')">{{ uiStore.t('preset.copyPanel.selectAll') }}</button>
-            <button class="wb-btn" @click="clearSel('right')">{{ uiStore.t('preset.copyPanel.clearAll') }}</button>
-            <span class="wb-preset-search-count">{{ sides.right.sel.size }}/{{ sides.right.data.prompts.length }}</span>
+            <button class="wb-btn" @click="selectAll('right')">
+              {{ uiStore.t('preset.copyPanel.selectAll') }}
+            </button>
+            <button class="wb-btn" @click="clearSel('right')">
+              {{ uiStore.t('preset.copyPanel.clearAll') }}
+            </button>
+            <span class="wb-preset-search-count"
+              >{{ sides.right.sel.size }}/{{ sides.right.data.prompts.length }}</span
+            >
             <span class="wb-spacer"></span>
-            <button class="wb-btn accent" :disabled="!sides.right.dirty" @click="saveSide('right')">{{ uiStore.t('common.save') }}{{ sides.right.dirty ? ' *' : '' }}</button>
+            <button class="wb-btn accent" :disabled="!sides.right.dirty" @click="saveSide('right')">
+              {{ uiStore.t('common.save') }}{{ sides.right.dirty ? ' *' : '' }}
+            </button>
           </div>
           <div class="wb-preset-cp-list">
-            <p v-if="!rightOrdered.length" class="wb-preset-cp-empty">{{ uiStore.t('preset.copyPanel.noBlocks') }}</p>
-            <div v-for="e in rightOrdered" :key="e.block.identifier" class="wb-preset-cp-item wb-tree-item" :class="{ selected: sides.right.sel.has(e.block.identifier) }" @click="onItemClick('right', e.block.identifier, $event)">
+            <p v-if="!rightOrdered.length" class="wb-preset-cp-empty">
+              {{ uiStore.t('preset.copyPanel.noBlocks') }}
+            </p>
+            <div
+              v-for="e in rightOrdered"
+              :key="e.block.identifier"
+              class="wb-preset-cp-item wb-tree-item"
+              :class="{ selected: sides.right.sel.has(e.block.identifier) }"
+              @click="onItemClick('right', e.block.identifier, $event)"
+            >
               <span class="wb-tree-role" :class="roleClass(e.block.role)">{{ e.block.role }}</span>
               <span class="wb-tree-name">{{ e.block.name || e.block.identifier }}</span>
-              <span v-if="e.hidden" class="wb-hidden-badge" :title="uiStore.t('preset.sidebar.hiddenTitle')">{{ uiStore.t('common.hidden') }}</span>
-              <span class="wb-tree-act del" :title="uiStore.t('preset.copyPanel.removeBlock')" @click.stop="removeBlock('right', e.block.identifier)">🗑</span>
+              <span
+                v-if="e.hidden"
+                class="wb-hidden-badge"
+                :title="uiStore.t('preset.sidebar.hiddenTitle')"
+                >{{ uiStore.t('common.hidden') }}</span
+              >
+              <span
+                class="wb-tree-act del"
+                :title="uiStore.t('preset.copyPanel.removeBlock')"
+                @click.stop="removeBlock('right', e.block.identifier)"
+                >🗑</span
+              >
             </div>
           </div>
         </template>
-        <p v-else class="wb-preset-cp-empty">{{ uiStore.t('preset.copyPanel.pickPreset') }}</p>
+        <p v-else class="wb-preset-cp-empty">
+          {{ uiStore.t('preset.copyPanel.pickPreset') }}
+        </p>
       </div>
     </div>
   </div>
@@ -101,14 +183,25 @@ const sides = reactive<Record<Side, SideState>>({
 const other = (side: Side): Side => (side === 'left' ? 'right' : 'left')
 
 /** 块按实际生成顺序（prompt_order）排列，隐藏块（不在 order 内）追加到末尾并打标记。 */
-const leftOrdered = computed(() => sides.left.data ? orderedPromptsWithHidden(sides.left.data) : [])
-const rightOrdered = computed(() => sides.right.data ? orderedPromptsWithHidden(sides.right.data) : [])
+const leftOrdered = computed(() =>
+  sides.left.data ? orderedPromptsWithHidden(sides.left.data) : []
+)
+const rightOrdered = computed(() =>
+  sides.right.data ? orderedPromptsWithHidden(sides.right.data) : []
+)
 
 /** 作为工具箱 tool 每次被激活（KeepAlive 缓存实例，切回时重新激活）都刷新可用预设列表，
  *  不依赖主编辑器的 store.presetList（可能过期或未加载）。 */
 onActivated(() => {
-  try { presetOptions.value = ST.listPresets() }
-  catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.listFailedCopyPanel', { msg: e?.message || e })) }
+  try {
+    presetOptions.value = ST.listPresets()
+  } catch (e: unknown) {
+    uiStore.showToast(
+      uiStore.t('preset.toast.listFailedCopyPanel', {
+        msg: e instanceof Error ? e.message : String(e),
+      })
+    )
+  }
 })
 
 function genId() {
@@ -122,11 +215,26 @@ function loadSide(side: Side) {
   const doLoad = () => {
     try {
       const data = ST.getPresetByName(s.name)
-      if (!data) { uiStore.showToast(uiStore.t('preset.toast.notFound', { name: s.name })); return }
-      s.data = data; s.sel = new Set(); s.anchor = null; s.dirty = false
-    } catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.loadFailedCopyPanel', { msg: e?.message || e })) }
+      if (!data) {
+        uiStore.showToast(uiStore.t('preset.toast.notFound', { name: s.name }))
+        return
+      }
+      s.data = data
+      s.sel = new Set()
+      s.anchor = null
+      s.dirty = false
+    } catch (e: unknown) {
+      uiStore.showToast(
+        uiStore.t('preset.toast.loadFailedCopyPanel', {
+          msg: e instanceof Error ? e.message : String(e),
+        })
+      )
+    }
   }
-  if (!s.dirty) { doLoad(); return }
+  if (!s.dirty) {
+    doLoad()
+    return
+  }
   confirmStore.ask({
     title: uiStore.t('preset.confirm.reload.title'),
     message: uiStore.t('preset.confirm.reload.message', { name: esc(s.name) }),
@@ -144,18 +252,18 @@ function onItemClick(side: Side, id: string, e: MouseEvent) {
   const s = sides[side]
   if (!s.data) return
   const ordered = side === 'left' ? leftOrdered.value : rightOrdered.value
-  const all = ordered.map(x => x.block.identifier)
-  const next = applyMultiSelect(
-    { selected: s.sel, anchor: s.anchor },
-    id, all,
-    { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey }
-  )
-  s.sel = next.selected; s.anchor = next.anchor
+  const all = ordered.map((x) => x.block.identifier)
+  const next = applyMultiSelect({ selected: s.sel, anchor: s.anchor }, id, all, {
+    ctrl: e.ctrlKey || e.metaKey,
+    shift: e.shiftKey,
+  })
+  s.sel = next.selected
+  s.anchor = next.anchor
 }
 function selectAll(side: Side) {
   const s = sides[side]
   if (!s.data) return
-  s.sel = new Set(s.data.prompts.map(b => b.identifier))
+  s.sel = new Set(s.data.prompts.map((b) => b.identifier))
   s.anchor = null
 }
 function clearSel(side: Side) {
@@ -166,7 +274,7 @@ function clearSel(side: Side) {
 /** 确保 data.prompt_order 中存在 character_id === 100001 的条目及其 order 数组，返回该 order。 */
 function ensureOrder(data: PresetData): OrderItem[] {
   if (!Array.isArray(data.prompt_order)) data.prompt_order = []
-  let entry = data.prompt_order.find((p: any) => p.character_id === 100001)
+  let entry = data.prompt_order.find((p) => p.character_id === 100001)
   if (!entry) {
     entry = { character_id: 100001, order: [] }
     data.prompt_order.push(entry)
@@ -182,11 +290,17 @@ function ensureOrder(data: PresetData): OrderItem[] {
 function copy(from: Side) {
   const src = sides[from]
   const dst = sides[other(from)]
-  if (!src.data || !dst.data) { uiStore.showToast(uiStore.t('preset.copyPanel.loadBothFirst')); return }
-  if (!src.sel.size) { uiStore.showToast(uiStore.t('preset.copyPanel.selectBlocksFirst')); return }
+  if (!src.data || !dst.data) {
+    uiStore.showToast(uiStore.t('preset.copyPanel.loadBothFirst'))
+    return
+  }
+  if (!src.sel.size) {
+    uiStore.showToast(uiStore.t('preset.copyPanel.selectBlocksFirst'))
+    return
+  }
 
   const dstOrder = ensureOrder(dst.data)
-  const existingIds = new Set(dst.data.prompts.map(p => p.identifier))
+  const existingIds = new Set(dst.data.prompts.map((p) => p.identifier))
   let n = 0
   const srcOrdered = from === 'left' ? leftOrdered.value : rightOrdered.value
   for (const entry of srcOrdered) {
@@ -202,25 +316,36 @@ function copy(from: Side) {
     n++
   }
   dst.dirty = true
-  uiStore.showToast(uiStore.t('preset.toast.copiedBlocks', { n, dir: uiStore.t(from === 'left' ? 'preset.copyPanel.dirRight' : 'preset.copyPanel.dirLeft') }))
+  uiStore.showToast(
+    uiStore.t('preset.toast.copiedBlocks', {
+      n,
+      dir: uiStore.t(from === 'left' ? 'preset.copyPanel.dirRight' : 'preset.copyPanel.dirLeft'),
+    })
+  )
 }
 
 function removeBlock(side: Side, id: string) {
   const s = sides[side]
   if (!s.data) return
-  const block = s.data.prompts.find(p => p.identifier === id)
+  const block = s.data.prompts.find((p) => p.identifier === id)
   confirmStore.ask({
     title: uiStore.t('preset.confirm.removeBlock.title'),
-    message: uiStore.t('preset.confirm.removeBlock.message', { name: esc(block?.name || id) }),
+    message: uiStore.t('preset.confirm.removeBlock.message', {
+      name: esc(block?.name || id),
+    }),
     confirmText: uiStore.t('preset.confirm.removeBlock.confirm'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => {
       const data = s.data!
-      const pi = data.prompts.findIndex(p => p.identifier === id)
+      const pi = data.prompts.findIndex((p) => p.identifier === id)
       if (pi >= 0) data.prompts.splice(pi, 1)
       const order = ensureOrder(data)
       for (let i = order.length - 1; i >= 0; i--) if (order[i].identifier === id) order.splice(i, 1)
-      if (s.sel.has(id)) { const next = new Set(s.sel); next.delete(id); s.sel = next }
+      if (s.sel.has(id)) {
+        const next = new Set(s.sel)
+        next.delete(id)
+        s.sel = next
+      }
       if (s.anchor === id) s.anchor = null
       s.dirty = true
     },
@@ -237,6 +362,10 @@ async function saveSide(side: Side) {
     store.refreshPresetList()
     uiStore.showToast(uiStore.t('preset.toast.saved', { name: s.name }))
     if (s.name === store.presetName) uiStore.showToast(uiStore.t('preset.toast.reloadNote'))
-  } catch (e: any) { uiStore.showToast(uiStore.t('preset.toast.saveFailed', { msg: e?.message || e })) }
+  } catch (e: unknown) {
+    uiStore.showToast(
+      uiStore.t('preset.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) })
+    )
+  }
 }
 </script>

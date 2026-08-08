@@ -1,7 +1,12 @@
 import type { PresetData, PresetBlock } from './types'
+import type { LocaleKey } from './i18n'
 
 export function esc(t: string): string {
-  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return t
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }
 
 export function span(cls: string, inner: string): string {
@@ -15,13 +20,20 @@ export function escRe(s: string): string {
 /** setvar/addvar/getvar 的 badge label + CSS class 映射。 */
 export function varOpBadge(kind: VarMacroKind): { cls: string; label: string } {
   switch (kind) {
-    case 'set':    return { cls: 'set',    label: 'SET' }
-    case 'get':    return { cls: 'get',    label: 'GET' }
-    case 'add':    return { cls: 'add',    label: 'ADD' }
-    case 'inc':    return { cls: 'inc',    label: 'INC' }
-    case 'dec':    return { cls: 'dec',    label: 'DEC' }
-    case 'has':    return { cls: 'has',    label: 'HAS' }
-    case 'delete': return { cls: 'delete', label: 'DEL' }
+    case 'set':
+      return { cls: 'set', label: 'SET' }
+    case 'get':
+      return { cls: 'get', label: 'GET' }
+    case 'add':
+      return { cls: 'add', label: 'ADD' }
+    case 'inc':
+      return { cls: 'inc', label: 'INC' }
+    case 'dec':
+      return { cls: 'dec', label: 'DEC' }
+    case 'has':
+      return { cls: 'has', label: 'HAS' }
+    case 'delete':
+      return { cls: 'delete', label: 'DEL' }
   }
 }
 
@@ -31,18 +43,22 @@ export function roleClass(role: string | undefined, prefix = ''): string {
   return prefix + suffix
 }
 
-export interface OrderedBlockEntry { block: PresetBlock; hidden: boolean }
+export interface OrderedBlockEntry {
+  block: PresetBlock
+  hidden: boolean
+}
 
 /** 把 prompt_order 展开成视觉顺序的 block 列表（忽略 group 边界）。
  *  存在于 prompts 但未在 prompt_order 中引用的 hidden block 追加在末尾，标记 hidden: true。
  *  指向已删除 prompt 的悬空 order 条目静默跳过；同一 identifier 的重复条目只在首次位置出现。 */
 export function orderedPromptsWithHidden(data: PresetData): OrderedBlockEntry[] {
-  const byId = new Map(data.prompts.map(p => [p.identifier, p]))
+  const byId = new Map(data.prompts.map((p) => [p.identifier, p]))
   const seen = new Set<string>()
   const out: OrderedBlockEntry[] = []
-  const rawOrder = (Array.isArray(data.prompt_order) && data.prompt_order.length)
-    ? (data.prompt_order.find((p: any) => p.character_id === 100001)?.order ?? [])
-    : []
+  const rawOrder =
+    Array.isArray(data.prompt_order) && data.prompt_order.length
+      ? (data.prompt_order.find((p) => p.character_id === 100001)?.order ?? [])
+      : []
   for (const item of rawOrder) {
     if (seen.has(item.identifier)) continue
     const b = byId.get(item.identifier)
@@ -56,18 +72,26 @@ export function orderedPromptsWithHidden(data: PresetData): OrderedBlockEntry[] 
   return out
 }
 
-export function debounce<T extends (...a: any[]) => void>(fn: T, ms: number): T {
+export function debounce<T extends (...a: never[]) => void>(fn: T, ms: number): T {
   let t: ReturnType<typeof setTimeout>
-  return ((...a: any[]) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms) }) as unknown as T
+  return ((...a: never[]) => {
+    clearTimeout(t)
+    t = setTimeout(() => fn(...a), ms)
+  }) as unknown as T
 }
 
 /** 找到 `{{` 起始处匹配的 `}}` 后那个 index，处理嵌套 `{{...}}`。未匹配返回 -1。 */
 export function findMacroEnd(text: string, start: number): number {
-  let depth = 1, j = start + 2
+  let depth = 1,
+    j = start + 2
   while (j < text.length && depth > 0) {
-    if (text[j] === '{' && text[j + 1] === '{') { depth++; j += 2 }
-    else if (text[j] === '}' && text[j + 1] === '}') { depth--; j += 2 }
-    else j++
+    if (text[j] === '{' && text[j + 1] === '{') {
+      depth++
+      j += 2
+    } else if (text[j] === '}' && text[j + 1] === '}') {
+      depth--
+      j += 2
+    } else j++
   }
   return depth === 0 ? j : -1
 }
@@ -76,13 +100,18 @@ export function findMacroEnd(text: string, start: number): number {
  *  diff 前用：macro 自身的源字符（名字、`::`、变量名）与展开值无对应关系，
  *  整段移除而非占位符替换，保证 macro 整段展开值高亮为连续 span。 */
 export function stripMacros(text: string): string {
-  let out = '', i = 0
+  let out = '',
+    i = 0
   while (i < text.length) {
     if (text[i] === '{' && text[i + 1] === '{') {
       const end = findMacroEnd(text, i)
-      if (end !== -1) { i = end; continue }
+      if (end !== -1) {
+        i = end
+        continue
+      }
     }
-    out += text[i]; i++
+    out += text[i]
+    i++
   }
   return out
 }
@@ -95,28 +124,33 @@ export interface VarOpMatch {
   kind: VarMacroKind
   scope: VarScope
   varName: string
-  varValue: string   // 仅 set/add 携带值；其他宏恒为 ''
-  pos: number        // 此 macro 起始 `{{` 在 text 中的绝对 index
-  end: number        // 此 macro TRUE（嵌套感知）闭合 `}}` 之后的绝对 index
-  line: number       // 0-based
-  col: number        // 0-based，变量名所在列（非 `{{`），沿用 VarOp 的现有约定
+  varValue: string // 仅 set/add 携带值；其他宏恒为 ''
+  pos: number // 此 macro 起始 `{{` 在 text 中的绝对 index
+  end: number // 此 macro TRUE（嵌套感知）闭合 `}}` 之后的绝对 index
+  line: number // 0-based
+  col: number // 0-based，变量名所在列（非 `{{`），沿用 VarOp 的现有约定
 }
 
 /** 变量宏 → { kind, scope } 映射表。分隔符统一 `::`（旧引擎的 `/` 不再支持，只兼容未来）。 */
-const VAR_MACRO_PREFIXES: { prefix: string; kind: VarMacroKind; scope: VarScope; hasValue: boolean }[] = [
-  { prefix: 'setvar::',         kind: 'set',    scope: 'local',  hasValue: true  },
-  { prefix: 'getvar::',         kind: 'get',    scope: 'local',  hasValue: false },
-  { prefix: 'addvar::',         kind: 'add',    scope: 'local',  hasValue: true  },
-  { prefix: 'incvar::',         kind: 'inc',    scope: 'local',  hasValue: false },
-  { prefix: 'decvar::',         kind: 'dec',    scope: 'local',  hasValue: false },
-  { prefix: 'setglobalvar::',   kind: 'set',    scope: 'global', hasValue: true  },
-  { prefix: 'getglobalvar::',   kind: 'get',    scope: 'global', hasValue: false },
-  { prefix: 'addglobalvar::',   kind: 'add',    scope: 'global', hasValue: true  },
-  { prefix: 'incglobalvar::',   kind: 'inc',    scope: 'global', hasValue: false },
-  { prefix: 'decglobalvar::',   kind: 'dec',    scope: 'global', hasValue: false },
-  { prefix: 'hasvar::',         kind: 'has',    scope: 'local',  hasValue: false },
-  { prefix: 'hasglobalvar::',   kind: 'has',    scope: 'global', hasValue: false },
-  { prefix: 'deletevar::',      kind: 'delete', scope: 'local',  hasValue: false },
+const VAR_MACRO_PREFIXES: {
+  prefix: string
+  kind: VarMacroKind
+  scope: VarScope
+  hasValue: boolean
+}[] = [
+  { prefix: 'setvar::', kind: 'set', scope: 'local', hasValue: true },
+  { prefix: 'getvar::', kind: 'get', scope: 'local', hasValue: false },
+  { prefix: 'addvar::', kind: 'add', scope: 'local', hasValue: true },
+  { prefix: 'incvar::', kind: 'inc', scope: 'local', hasValue: false },
+  { prefix: 'decvar::', kind: 'dec', scope: 'local', hasValue: false },
+  { prefix: 'setglobalvar::', kind: 'set', scope: 'global', hasValue: true },
+  { prefix: 'getglobalvar::', kind: 'get', scope: 'global', hasValue: false },
+  { prefix: 'addglobalvar::', kind: 'add', scope: 'global', hasValue: true },
+  { prefix: 'incglobalvar::', kind: 'inc', scope: 'global', hasValue: false },
+  { prefix: 'decglobalvar::', kind: 'dec', scope: 'global', hasValue: false },
+  { prefix: 'hasvar::', kind: 'has', scope: 'local', hasValue: false },
+  { prefix: 'hasglobalvar::', kind: 'has', scope: 'global', hasValue: false },
+  { prefix: 'deletevar::', kind: 'delete', scope: 'local', hasValue: false },
 ]
 
 /** 扫描 `text` 中所有变量宏（13 种），嵌套在另一 macro 值中的也取。
@@ -136,7 +170,10 @@ export function scanVariableMacros(text: string): VarOpMatch[] {
     while (i < to) {
       if (text[i] === '{' && text[i + 1] === '{') {
         const end = findMacroEnd(text, i)
-        if (end === -1 || end > to) { i++; continue }
+        if (end === -1 || end > to) {
+          i++
+          continue
+        }
         const innerStart = i + 2
         const innerEnd = end - 2
         const inner = text.slice(innerStart, innerEnd)
@@ -151,12 +188,30 @@ export function scanVariableMacros(text: string): VarOpMatch[] {
             const varName = text.slice(after, sep).trim()
             const valueStart = sep + 2
             const { line, col } = lineColOf(i, after)
-            out.push({ kind: def.kind, scope: def.scope, varName, varValue: text.slice(valueStart, innerEnd), pos: i, end, line, col })
+            out.push({
+              kind: def.kind,
+              scope: def.scope,
+              varName,
+              varValue: text.slice(valueStart, innerEnd),
+              pos: i,
+              end,
+              line,
+              col,
+            })
             scan(valueStart, innerEnd) // set/add 值内可能嵌套 var op
           } else {
             const varName = text.slice(after, innerEnd).trim()
             const { line, col } = lineColOf(i, after)
-            out.push({ kind: def.kind, scope: def.scope, varName, varValue: '', pos: i, end, line, col })
+            out.push({
+              kind: def.kind,
+              scope: def.scope,
+              varName,
+              varValue: '',
+              pos: i,
+              end,
+              line,
+              col,
+            })
           }
           matched = true
           break
@@ -183,13 +238,20 @@ export const findVarOps = scanVariableMacros
  */
 function splitByMacros(text: string): string[] {
   const pieces: string[] = []
-  let out = '', i = 0
+  let out = '',
+    i = 0
   while (i < text.length) {
     if (text[i] === '{' && text[i + 1] === '{') {
       const end = findMacroEnd(text, i)
-      if (end !== -1) { pieces.push(out); out = ''; i = end; continue }
+      if (end !== -1) {
+        pieces.push(out)
+        out = ''
+        i = end
+        continue
+      }
     }
-    out += text[i]; i++
+    out += text[i]
+    i++
   }
   pieces.push(out)
   return pieces
@@ -264,7 +326,8 @@ type DiffAtom = { text: string; added: boolean; trusted: boolean }
 // Plain LCS，一 token 一 atom。base case：patience anchoring 框定的小段，或太小不值得 anchor 的段。
 // 这里匹配 `trusted: false`——只是 "某" 合法对齐，不一定是 "那" 正确的。
 function lcsAtoms(A: string[], B: string[]): DiffAtom[] {
-  const n = A.length, m = B.length
+  const n = A.length,
+    m = B.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
@@ -272,13 +335,25 @@ function lcsAtoms(A: string[], B: string[]): DiffAtom[] {
     }
   }
   const out: DiffAtom[] = []
-  let i = 0, j = 0
+  let i = 0,
+    j = 0
   while (i < n && j < m) {
-    if (A[i] === B[j]) { out.push({ text: B[j], added: false, trusted: false }); i++; j++ }
-    else if (dp[i + 1][j] >= dp[i][j + 1]) { i++ } // token 仅在 A：从渲染输出中丢
-    else { out.push({ text: B[j], added: true, trusted: false }); j++ } // token 仅在 B：被替换/插入
+    if (A[i] === B[j]) {
+      out.push({ text: B[j], added: false, trusted: false })
+      i++
+      j++
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      i++
+    } // token 仅在 A：从渲染输出中丢
+    else {
+      out.push({ text: B[j], added: true, trusted: false })
+      j++
+    } // token 仅在 B：被替换/插入
   }
-  while (j < m) { out.push({ text: B[j], added: true, trusted: false }); j++ }
+  while (j < m) {
+    out.push({ text: B[j], added: true, trusted: false })
+    j++
+  }
   return out
 }
 
@@ -293,10 +368,18 @@ function diffRange(A: string[], B: string[]): DiffAtom[] {
   if (A.length * B.length <= LCS_FALLBACK_MAX) return lcsAtoms(A, B)
 
   // 在 BOTH A 和 B 中都恰好出现一次的 token：构造上无歧义，不管别处发生什么。
-  const countA = new Map<string, number>(), firstA = new Map<string, number>()
-  A.forEach((t, idx) => { countA.set(t, (countA.get(t) || 0) + 1); if (!firstA.has(t)) firstA.set(t, idx) })
-  const countB = new Map<string, number>(), firstB = new Map<string, number>()
-  B.forEach((t, idx) => { countB.set(t, (countB.get(t) || 0) + 1); if (!firstB.has(t)) firstB.set(t, idx) })
+  const countA = new Map<string, number>(),
+    firstA = new Map<string, number>()
+  A.forEach((t, idx) => {
+    countA.set(t, (countA.get(t) || 0) + 1)
+    if (!firstA.has(t)) firstA.set(t, idx)
+  })
+  const countB = new Map<string, number>(),
+    firstB = new Map<string, number>()
+  B.forEach((t, idx) => {
+    countB.set(t, (countB.get(t) || 0) + 1)
+    if (!firstB.has(t)) firstB.set(t, idx)
+  })
 
   const candidates: { ai: number; bi: number }[] = []
   for (let ai = 0; ai < A.length; ai++) {
@@ -308,15 +391,17 @@ function diffRange(A: string[], B: string[]): DiffAtom[] {
 
   // Anchor 必须保相对顺序（不能 ai=5<->bi=10 和 ai=8<->bi=3 这样交叉）——
   // B-position 的 longest increasing subsequence（按 A 序）是这些 unique 匹配的最大非交叉集。
-  const lis = lisIndices(candidates.map(c => c.bi))
-  const anchors = lis.map(idx => candidates[idx])
+  const lis = lisIndices(candidates.map((c) => c.bi))
+  const anchors = lis.map((idx) => candidates[idx])
 
   const out: DiffAtom[] = []
-  let prevA = 0, prevB = 0
+  let prevA = 0,
+    prevB = 0
   for (const anc of anchors) {
     out.push(...diffRange(A.slice(prevA, anc.ai), B.slice(prevB, anc.bi)))
     out.push({ text: B[anc.bi], added: false, trusted: true })
-    prevA = anc.ai + 1; prevB = anc.bi + 1
+    prevA = anc.ai + 1
+    prevB = anc.bi + 1
   }
   out.push(...diffRange(A.slice(prevA), B.slice(prevB)))
   return out
@@ -329,7 +414,8 @@ function lisIndices(seq: number[]): number[] {
   const pileTops: number[] = []
   for (let idx = 0; idx < seq.length; idx++) {
     const v = seq[idx]
-    let lo = 0, hi = pileTops.length
+    let lo = 0,
+      hi = pileTops.length
     while (lo < hi) {
       const mid = (lo + hi) >> 1
       if (seq[pileTops[mid]] < v) lo = mid + 1
@@ -341,7 +427,10 @@ function lisIndices(seq: number[]): number[] {
   }
   const result: number[] = []
   let k = pileTops.length ? pileTops[pileTops.length - 1] : -1
-  while (k !== -1) { result.push(k); k = parent[k] }
+  while (k !== -1) {
+    result.push(k)
+    k = parent[k]
+  }
   return result.reverse()
 }
 
@@ -350,7 +439,8 @@ function lisIndices(seq: number[]): number[] {
 const MIN_TRUSTED_RUN = 2
 
 export function wordDiff(a: string, b: string): { text: string; added: boolean }[] {
-  const A = tokenizeForDiff(a), B = tokenizeForDiff(b)
+  const A = tokenizeForDiff(a),
+    B = tokenizeForDiff(b)
 
   // 先 trim 匹配的 prefix/suffix。预设 block 多为整段相同文本中一两处替换点，
   // 所以单这一步就把 anchoring/DP 工作量缩到实际编辑点附近，不管周围 block 多长。
@@ -358,10 +448,15 @@ export function wordDiff(a: string, b: string): { text: string; added: boolean }
   let lo = 0
   const maxLo = Math.min(A.length, B.length)
   while (lo < maxLo && A[lo] === B[lo]) lo++
-  let hiA = A.length, hiB = B.length
-  while (hiA > lo && hiB > lo && A[hiA - 1] === B[hiB - 1]) { hiA--; hiB-- }
+  let hiA = A.length,
+    hiB = B.length
+  while (hiA > lo && hiB > lo && A[hiA - 1] === B[hiB - 1]) {
+    hiA--
+    hiB--
+  }
 
-  const midA = A.slice(lo, hiA), midB = B.slice(lo, hiB)
+  const midA = A.slice(lo, hiA),
+    midB = B.slice(lo, hiB)
   const atoms: DiffAtom[] = []
   for (let k = 0; k < lo; k++) atoms.push({ text: B[k], added: false, trusted: true })
   if (midA.length * midB.length > DIFF_TOKEN_BUDGET) {
@@ -376,11 +471,25 @@ export function wordDiff(a: string, b: string): { text: string; added: boolean }
   // 把连续同 `added` 的 atom 合并成 run，跟踪 token 数量与 run 内是否任一 atom 为 trusted
   // （patience anchor 或边界 trim）——被任一 trusted atom 触及的 run 免除下面 noise-collapse 检查，
   // 同足够长的 untrusted run 一样。
-  const segs: { text: string; added: boolean; tokens: number; anyTrusted: boolean }[] = []
+  const segs: {
+    text: string
+    added: boolean
+    tokens: number
+    anyTrusted: boolean
+  }[] = []
   for (const at of atoms) {
     const last = segs[segs.length - 1]
-    if (last && last.added === at.added) { last.text += at.text; last.tokens++; last.anyTrusted = last.anyTrusted || at.trusted }
-    else segs.push({ text: at.text, added: at.added, tokens: 1, anyTrusted: at.trusted })
+    if (last && last.added === at.added) {
+      last.text += at.text
+      last.tokens++
+      last.anyTrusted = last.anyTrusted || at.trusted
+    } else
+      segs.push({
+        text: at.text,
+        added: at.added,
+        tokens: 1,
+        anyTrusted: at.trusted,
+      })
   }
 
   // Noise collapse：夹在两个 highlighted run 之间、token 数少于 MIN_TRUSTED_RUN 的 untrusted matched run，
@@ -391,7 +500,8 @@ export function wordDiff(a: string, b: string): { text: string; added: boolean }
     const seg = segs[k]
     const prevAdded = out.length ? out[out.length - 1].added : false
     const nextAdded = k + 1 < segs.length ? segs[k + 1].added : false
-    const isNoise = !seg.added && !seg.anyTrusted && prevAdded && nextAdded && seg.tokens < MIN_TRUSTED_RUN
+    const isNoise =
+      !seg.added && !seg.anyTrusted && prevAdded && nextAdded && seg.tokens < MIN_TRUSTED_RUN
     const added = isNoise ? true : seg.added
     if (out.length && out[out.length - 1].added === added) out[out.length - 1].text += seg.text
     else out.push({ text: seg.text, added })
@@ -429,20 +539,24 @@ export function applyMultiSelect<T>(
   const hasCtrl = opts.ctrl ?? false
   const hasShift = opts.shift ?? false
   if (!hasCtrl && !hasShift) {
-    if (state.selected.size === 1 && state.selected.has(id)) return { selected: new Set(), anchor: null }
+    if (state.selected.size === 1 && state.selected.has(id))
+      return { selected: new Set(), anchor: null }
     return { selected: new Set([id]), anchor: id }
   }
   if (hasShift && state.anchor !== null) {
-    const ai = all.indexOf(state.anchor), bi = all.indexOf(id)
+    const ai = all.indexOf(state.anchor),
+      bi = all.indexOf(id)
     if (ai === -1 || bi === -1) return state
-    const lo = Math.min(ai, bi), hi = Math.max(ai, bi)
+    const lo = Math.min(ai, bi),
+      hi = Math.max(ai, bi)
     const next = new Set<T>()
     for (let i = lo; i <= hi; i++) next.add(all[i])
     return { selected: next, anchor: state.anchor }
   }
   if (hasCtrl) {
     const next = new Set(state.selected)
-    if (next.has(id)) next.delete(id); else next.add(id)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
     return { selected: next, anchor: id }
   }
   return state
@@ -477,12 +591,24 @@ export interface SearchHit {
   ml: number
 }
 
-/** item 到 {id,name} 的 getter，由调用方（searchFields.ts adapter）按各域取法填。 */
-export type SearchItemMeta = (item: any) => { id: string; name: string }
+/** item 到 {id,name} 的 getter，由调用方（searchFields.ts adapter）按各域取法填。
+ *  item 的元数据字段：id/identifier/name/scriptName/comment/key 按字符串读，labelKey 是
+ *  i18n 键（LocaleKey），其余字段走 unknown 索引透传。 */
+type SearchItem = {
+  id: string
+  identifier: string
+  name: string
+  scriptName: string
+  comment: string
+  key: string
+  labelKey: LocaleKey
+  [k: string]: unknown
+}
+export type SearchItemMeta = (item: SearchItem) => { id: string; name: string }
 
 const SEARCH_WINDOW = 30
 
-function defaultGetItemMeta(item: any): { id: string; name: string } {
+function defaultGetItemMeta(item: Record<string, unknown>): { id: string; name: string } {
   const id = item?.identifier ?? item?.uid ?? item?.id ?? item?.key ?? ''
   const name = item?.name ?? item?.scriptName ?? item?.comment ?? item?.key ?? String(id)
   return { id: String(id), name: String(name) }
@@ -490,7 +616,8 @@ function defaultGetItemMeta(item: any): { id: string; name: string } {
 
 /** 命中位置 ±30 字的裁窗上下文。 */
 function searchWindow(line: string, start: number, len: number): { context: string; ms: number } {
-  const cs = Math.max(0, start - SEARCH_WINDOW), ce = Math.min(line.length, start + len + SEARCH_WINDOW)
+  const cs = Math.max(0, start - SEARCH_WINDOW),
+    ce = Math.min(line.length, start + len + SEARCH_WINDOW)
   return {
     context: (cs > 0 ? '…' : '') + line.substring(cs, ce) + (ce < line.length ? '…' : ''),
     ms: start - cs + (cs > 0 ? 1 : 0),
@@ -498,7 +625,11 @@ function searchWindow(line: string, start: number, len: number): { context: stri
 }
 
 /** 在单个文本串上做大小写不敏感的逐行子串搜索，回调每个命中位置。 */
-function searchTextLine(text: string, ql: string, onHit: (col: number, context: string, ms: number, ml: number) => void) {
+function searchTextLine(
+  text: string,
+  ql: string,
+  onHit: (col: number, context: string, ms: number, ml: number) => void
+) {
   const ll = text.toLowerCase()
   let si = 0
   while (true) {
@@ -518,10 +649,10 @@ function searchTextLine(text: string, ql: string, onHit: (col: number, context: 
  * 不碰 Vue 响应式——调方传 shallow items[]，返回纯 hits 数组；不查 i18n，labelKey 由 UI 自己翻。
  */
 export function searchFields(
-  items: any[],
+  items: Record<string, unknown>[],
   fields: SearchField[],
   query: string,
-  getItemMeta?: SearchItemMeta,
+  getItemMeta?: SearchItemMeta
 ): SearchHit[] {
   if (!query) return []
   const ql = query.toLowerCase()
@@ -529,7 +660,7 @@ export function searchFields(
   const hits: SearchHit[] = []
   for (const item of items) {
     if (item == null) continue
-    const meta = getMeta(item)
+    const meta = getMeta(item as SearchItem)
     for (const f of fields) {
       const raw = item[f.key]
       if (raw === undefined || raw === null) continue
@@ -537,14 +668,32 @@ export function searchFields(
         const s = String(raw)
         if (s !== query) continue
         const w = searchWindow(s, 0, s.length)
-        hits.push({ itemId: meta.id, itemName: meta.name, fieldKey: f.key, line: -1, col: -1, context: w.context, ms: w.ms, ml: s.length })
+        hits.push({
+          itemId: meta.id,
+          itemName: meta.name,
+          fieldKey: f.key,
+          line: -1,
+          col: -1,
+          context: w.context,
+          ms: w.ms,
+          ml: s.length,
+        })
         continue
       }
       if (f.kind === 'list') {
         if (!Array.isArray(raw)) continue
         raw.forEach((el, idx) => {
           searchTextLine(String(el ?? ''), ql, (col, context, ms, ml) => {
-            hits.push({ itemId: meta.id, itemName: meta.name, fieldKey: f.key, line: idx, col, context, ms, ml })
+            hits.push({
+              itemId: meta.id,
+              itemName: meta.name,
+              fieldKey: f.key,
+              line: idx,
+              col,
+              context,
+              ms,
+              ml,
+            })
           })
         })
         continue
@@ -553,7 +702,16 @@ export function searchFields(
       if (typeof raw !== 'string') continue
       raw.split('\n').forEach((line, li) => {
         searchTextLine(line, ql, (col, context, ms, ml) => {
-          hits.push({ itemId: meta.id, itemName: meta.name, fieldKey: f.key, line: li, col, context, ms, ml })
+          hits.push({
+            itemId: meta.id,
+            itemName: meta.name,
+            fieldKey: f.key,
+            line: li,
+            col,
+            context,
+            ms,
+            ml,
+          })
         })
       })
     }

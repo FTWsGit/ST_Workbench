@@ -3,14 +3,23 @@
     <div class="wb-editor-meta">
       <span class="wb-tavern-editor-name">{{ script.name || props.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
-      <button class="wb-btn sm" :class="{ active: uiStore.settingsDockOpen }" @click="uiStore.toggleSettingsDock()" :title="props.t('tavern.editor.settingsPanel')">⚙</button>
+      <button
+        class="wb-btn sm"
+        :class="{ active: uiStore.settingsDockOpen }"
+        @click="uiStore.toggleSettingsDock()"
+        :title="props.t('tavern.editor.settingsPanel')"
+      >
+        ⚙
+      </button>
     </div>
-    <HighlightedEditor v-model="contentModel"
+    <HighlightedEditor
+      v-model="contentModel"
       language="js"
       :placeholder="props.t('tavern.editor.placeholder')"
       :status-cursor-label="props.t('shared.highlightedEditor.cursor')"
       :status-chars-label="props.t('common.chars')"
-      :status-lines-label="props.t('common.lines')" />
+      :status-lines-label="props.t('common.lines')"
+    />
   </div>
 </template>
 
@@ -29,15 +38,25 @@ const uiStore = useUiStore()
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>()
 
 /** 当前选中 tavern 脚本（按 activeTab.key 匹配 id，只取 type='script'，folder 不进编辑器）。 */
-const script = computed(() => props.scripts.find((s: ScriptTree) => s.id === tabsStore.activeTab?.key && s.type === 'script') as Script | undefined)
+const script = computed(
+  () =>
+    props.scripts.find(
+      (s: ScriptTree) => s.id === tabsStore.activeTab?.key && s.type === 'script'
+    ) as Script | undefined
+)
 /** 当前选中脚本 content 的 v-model 桥接；切换标签时 getter 返回值变化，编辑器自动重渲染。 */
 const contentModel = computed<string>({
   get: () => script.value?.content ?? '',
-  set: (v) => { if (script.value) script.value.content = v },
+  set: (v) => {
+    if (script.value) script.value.content = v
+  },
 })
 
 /** 字号/字体变化不会改变 textarea 尺寸，ResizeObserver 捕捉不到，需主动 refresh。 */
-watch(() => [props.editorFontSize, props.editorFontFamily], () => {
-  editorRef.value?.refreshFont()
-})
+watch(
+  () => [props.editorFontSize, props.editorFontFamily],
+  () => {
+    editorRef.value?.refreshFont()
+  }
+)
 </script>

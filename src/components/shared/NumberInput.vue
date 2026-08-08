@@ -11,7 +11,12 @@
       :step="step ?? 1"
       @input="onNativeInput"
     />
-    <span class="wb-num-handle" title="拖拽调整数值（按住 Shift 精细调整）" @pointerdown="onPointerDown">⠿</span>
+    <span
+      class="wb-num-handle"
+      title="拖拽调整数值（按住 Shift 精细调整）"
+      @pointerdown="onPointerDown"
+      >⠿</span
+    >
   </div>
 </template>
 
@@ -22,15 +27,18 @@
 import { ref } from 'vue'
 import { useNumberDragScrub } from '../../composables/useNumberDragScrub'
 
-const props = withDefaults(defineProps<{
-  modelValue: number | null
-  step?: number
-  min?: number
-  max?: number
-  placeholder?: string
-  /** 是否允许清空为 null（如"跟随全局设置"），默认允许；关闭后清空回落到 0。 */
-  nullable?: boolean
-}>(), { nullable: true })
+const props = withDefaults(
+  defineProps<{
+    modelValue: number | null
+    step?: number
+    min?: number
+    max?: number
+    placeholder?: string
+    /** 是否允许清空为 null（如"跟随全局设置"），默认允许；关闭后清空回落到 0。 */
+    nullable?: boolean
+  }>(),
+  { nullable: true, step: 1, min: undefined, max: undefined, placeholder: '' }
+)
 
 const emit = defineEmits<{ 'update:modelValue': [v: number | null] }>()
 

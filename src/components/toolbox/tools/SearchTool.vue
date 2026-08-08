@@ -2,36 +2,70 @@
   <div class="wb-tools-body">
     <!-- 字段下拉（反馈4：并列按钮不友好，改下拉）+ 字段类型提示 -->
     <FormField :label="uiStore.t('toolbox.search.field')">
-      <select class="wb-toolbox-field-select" :value="fieldKey" @change="setField(($event.target as HTMLSelectElement).value)">
-        <option v-for="f in searchScene.fields" :key="f.key" :value="f.key">{{ t(f.labelKey) }}（{{ kindLabel(f.kind) }}）</option>
+      <select
+        class="wb-toolbox-field-select"
+        :value="fieldKey"
+        @change="setField(($event.target as HTMLSelectElement).value)"
+      >
+        <option v-for="f in searchScene.fields" :key="f.key" :value="f.key">
+          {{ t(f.labelKey) }}（{{ kindLabel(f.kind) }}）
+        </option>
       </select>
     </FormField>
 
     <!-- 搜索框（text/list 字段才需要 query 输入；enum 字段的命中即候选值本身，query 用候选 toggle 选） -->
-    <input v-if="currentFieldKind !== 'enum'" type="text" v-model="query" :placeholder="uiStore.t('toolbox.search.placeholder')"
-           @input="idx = -1" @keydown.enter.prevent="nav(1)">
+    <input
+      v-if="currentFieldKind !== 'enum'"
+      type="text"
+      v-model="query"
+      :placeholder="uiStore.t('toolbox.search.placeholder')"
+      @input="idx = -1"
+      @keydown.enter.prevent="nav(1)"
+    />
     <!-- enum 字段：候选 toggle 选 query（点哪个就把该候选值当 query，命中即"当前是这个值的全部 item"） -->
     <FormField v-if="currentFieldKind === 'enum'" :label="uiStore.t('toolbox.search.enumHint')">
       <div class="wb-regex-surface">
-        <button v-for="c in enumChoices" :key="String(c.value)"
-                type="button" class="wb-btn sm"
-                :class="{ active: query === String(c.value) }"
-                @click="setEnumQuery(c.value)">{{ t(c.labelKey) }}</button>
+        <button
+          v-for="c in enumChoices"
+          :key="String(c.value)"
+          type="button"
+          class="wb-btn sm"
+          :class="{ active: query === String(c.value) }"
+          @click="setEnumQuery(c.value)"
+        >
+          {{ t(c.labelKey) }}
+        </button>
       </div>
-      <p v-if="currentFieldKind === 'enum' && !enumChoices.length" class="wb-muted">{{ uiStore.t('toolbox.search.noEnumChoices') }}</p>
+      <p v-if="currentFieldKind === 'enum' && !enumChoices.length" class="wb-muted">
+        {{ uiStore.t('toolbox.search.noEnumChoices') }}
+      </p>
     </FormField>
 
     <!-- 替换输入框（仅 text/list 字段；enum 字段走候选 toggle 选目标值，反馈2） -->
-    <input v-if="currentFieldKind !== 'enum' && enumChoices.length === 0" type="text" v-model="replace" :placeholder="uiStore.t('toolbox.search.replacePlaceholder')"
-           @keydown.enter.prevent="replaceCurrent()">
+    <input
+      v-if="currentFieldKind !== 'enum' && enumChoices.length === 0"
+      type="text"
+      v-model="replace"
+      :placeholder="uiStore.t('toolbox.search.replacePlaceholder')"
+      @keydown.enter.prevent="replaceCurrent()"
+    />
 
     <!-- enum 字段的目标值候选区（替换=改成另一个候选值；反馈2：禁止字符串替换避免把布尔/数值改坏） -->
-    <FormField v-if="currentFieldKind === 'enum' && enumChoices.length" :label="uiStore.t('toolbox.search.replace')">
+    <FormField
+      v-if="currentFieldKind === 'enum' && enumChoices.length"
+      :label="uiStore.t('toolbox.search.replace')"
+    >
       <div class="wb-regex-surface">
-        <button v-for="c in enumChoices" :key="'r' + String(c.value)"
-                type="button" class="wb-btn sm"
-                :class="{ active: replace === String(c.value) }"
-                @click="replace = String(c.value)">{{ t(c.labelKey) }}</button>
+        <button
+          v-for="c in enumChoices"
+          :key="'r' + String(c.value)"
+          type="button"
+          class="wb-btn sm"
+          :class="{ active: replace === String(c.value) }"
+          @click="replace = String(c.value)"
+        >
+          {{ t(c.labelKey) }}
+        </button>
       </div>
     </FormField>
 
@@ -40,21 +74,41 @@
       <div class="wb-regex-surface">
         <button class="wb-btn sm" :disabled="!hits.length" @click="nav(-1)">◀</button>
         <button class="wb-btn sm" :disabled="!hits.length" @click="nav(1)">▶</button>
-        <button class="wb-btn sm" :disabled="idx < 0" @click="replaceCurrent()">{{ uiStore.t('toolbox.search.replace') }}</button>
-        <button class="wb-btn sm" :disabled="!hits.length" @click="replaceAll()">{{ uiStore.t('toolbox.search.replaceAll') }}</button>
-        <button v-if="canSelectSide" class="wb-btn sm" :disabled="!hits.length" @click="selectSide()">{{ uiStore.t('toolbox.search.selectSide') }}</button>
-        <span class="wb-preset-search-count">{{ uiStore.t('toolbox.search.results', { count: hits.length }) }}</span>
+        <button class="wb-btn sm" :disabled="idx < 0" @click="replaceCurrent()">
+          {{ uiStore.t('toolbox.search.replace') }}
+        </button>
+        <button class="wb-btn sm" :disabled="!hits.length" @click="replaceAll()">
+          {{ uiStore.t('toolbox.search.replaceAll') }}
+        </button>
+        <button
+          v-if="canSelectSide"
+          class="wb-btn sm"
+          :disabled="!hits.length"
+          @click="selectSide()"
+        >
+          {{ uiStore.t('toolbox.search.selectSide') }}
+        </button>
+        <span class="wb-preset-search-count">{{
+          uiStore.t('toolbox.search.results', { count: hits.length })
+        }}</span>
       </div>
-      <p v-if="canSelectSide" class="wb-muted">{{ uiStore.t('toolbox.search.selectSideHint') }}</p>
+      <p v-if="canSelectSide" class="wb-muted">
+        {{ uiStore.t('toolbox.search.selectSideHint') }}
+      </p>
     </div>
 
     <!-- 结果列表：点击行跳转（命中行本身不再勾选——批改走 sidebar 多选态，由 BatchTool 作用） -->
     <div class="wb-preset-search-results" v-if="hits.length">
-      <div v-for="(r, i) in displayHits" :key="i"
-           class="wb-preset-sr-item" :class="{ active: i === idx }"
-           @click="jumpTo(i)">
+      <div
+        v-for="(r, i) in displayHits"
+        :key="i"
+        class="wb-preset-sr-item"
+        :class="{ active: i === idx }"
+        @click="jumpTo(i)"
+      >
         <span class="wb-preset-sr-block">{{ r.itemName }}</span>
         <span class="wb-preset-sr-line">{{ r.line >= 0 ? 'L' + (r.line + 1) : '' }}</span>
+        <!-- eslint-disable-next-line vue/no-v-html -->
         <span class="wb-preset-sr-ctx" v-html="renderCtx(r)"></span>
       </div>
     </div>
@@ -75,9 +129,16 @@ import { usePresetStore } from '../../../stores/presetStore'
 import { useWorldbookStore } from '../../../stores/worldbookStore'
 import { useCharacterStore } from '../../../stores/characterStore'
 import { esc, searchFields, type SearchHit, type SearchField } from '../../../utils'
-import { getSearchScene, applyReplace, jumpToFieldHit, getEnumChoices, type EnumChoice } from '../searchFields'
+import {
+  getSearchScene,
+  applyReplace,
+  jumpToFieldHit,
+  getEnumChoices,
+  type EnumChoice,
+} from '../searchFields'
 import FormField from '../../shared/FormField.vue'
 import { SEARCH_MAX } from '../../../types'
+import type { LocaleKey } from '../../../i18n'
 
 const props = defineProps<{
   workspace?: string
@@ -91,13 +152,23 @@ const presetStore = usePresetStore()
 const worldbookStore = useWorldbookStore()
 const characterStore = useCharacterStore()
 
-const workspace = computed(() => props.scene?.workspace ?? props.workspace ?? tabsStore.activeWorkspace)
-const collection = computed(() => props.scene?.collection ?? props.collection ?? tabsStore.sidebarCollection)
+const workspace = computed(
+  () => props.scene?.workspace ?? props.workspace ?? tabsStore.activeWorkspace
+)
+const collection = computed(
+  () => props.scene?.collection ?? props.collection ?? tabsStore.sidebarCollection
+)
 
 /** SearchField.labelKey 声明为 string（纯函数不感知 i18n），UI 侧翻译时收窄成 LocaleKey。 */
-function t(key: string): string { return uiStore.t(key as any) }
+function t(key: string): string {
+  return uiStore.t(key as LocaleKey)
+}
 function kindLabel(kind: SearchField['kind']): string {
-  return kind === 'text' ? uiStore.t('common.text') : kind === 'list' ? uiStore.t('common.list') : uiStore.t('common.enum')
+  return kind === 'text'
+    ? uiStore.t('common.text')
+    : kind === 'list'
+      ? uiStore.t('common.list')
+      : uiStore.t('common.enum')
 }
 
 /** 当前 scene 的 items + 字段表 + meta getter（跟随 store 数据响应式更新）。 */
@@ -109,15 +180,25 @@ const replace = ref('')
 const idx = ref(-1)
 
 /** scene/字段切换后：旧字段不存在则回落到第一个字段；命中索引/替换值重置。 */
-watch(searchScene, (s) => {
-  if (!s.fields.some(f => f.key === fieldKey.value)) fieldKey.value = s.fields[0]?.key ?? ''
-  idx.value = -1
-  replace.value = ''
-}, { immediate: true })
+watch(
+  searchScene,
+  (s) => {
+    if (!s.fields.some((f) => f.key === fieldKey.value)) fieldKey.value = s.fields[0]?.key ?? ''
+    idx.value = -1
+    replace.value = ''
+  },
+  { immediate: true }
+)
 
-const currentField = computed<SearchField | undefined>(() => searchScene.value.fields.find(f => f.key === fieldKey.value))
+const currentField = computed<SearchField | undefined>(() =>
+  searchScene.value.fields.find((f) => f.key === fieldKey.value)
+)
 const currentFieldKind = computed(() => currentField.value?.kind ?? 'text')
-const enumChoices = computed<EnumChoice[]>(() => currentFieldKind.value === 'enum' ? getEnumChoices(workspace.value, collection.value, fieldKey.value) : [])
+const enumChoices = computed<EnumChoice[]>(() =>
+  currentFieldKind.value === 'enum'
+    ? getEnumChoices(workspace.value, collection.value, fieldKey.value)
+    : []
+)
 
 const hits = computed(() => {
   if (!query.value || !fieldKey.value) return []
@@ -130,10 +211,11 @@ const displayHits = computed(() => hits.value.slice(0, SEARCH_MAX))
 /** "modify what matched"回路挂了的 scene 全覆盖——preset/items + worldbook/items 走 store.selectedGi
  *  (useGroupedList 多选态)，regex scene 走 tabsStore 共享态(regex sidebar 无 useGroupedList，BatchTool
  *  读这份共享态批改)。character/fields 无批量工具不出按钮。 */
-const canSelectSide = computed(() =>
-  (workspace.value === 'preset' && collection.value === 'items') ||
-  (workspace.value === 'worldbook' && collection.value === 'items') ||
-  (collection.value === 'regex')
+const canSelectSide = computed(
+  () =>
+    (workspace.value === 'preset' && collection.value === 'items') ||
+    (workspace.value === 'worldbook' && collection.value === 'items') ||
+    collection.value === 'regex'
 )
 
 function setField(key: string) {
@@ -143,13 +225,15 @@ function setField(key: string) {
   replace.value = ''
 }
 /** enum 字段选候选值当 query：点哪个候选就把该值的字符串形式当 query，命中即"当前是这个值的全部 item"。 */
-function setEnumQuery(value: any) {
+function setEnumQuery(value: unknown) {
   query.value = String(value)
   idx.value = -1
 }
 
 function renderCtx(r: SearchHit) {
-  const b = esc(r.context.substring(0, r.ms)), m = esc(r.context.substring(r.ms, r.ms + r.ml)), a = esc(r.context.substring(r.ms + r.ml))
+  const b = esc(r.context.substring(0, r.ms)),
+    m = esc(r.context.substring(r.ms, r.ms + r.ml)),
+    a = esc(r.context.substring(r.ms + r.ml))
   return b + '<em>' + m + '</em>' + a
 }
 
@@ -166,7 +250,13 @@ function nav(dir: number) {
 
 function replaceCurrent() {
   if (idx.value < 0 || idx.value >= hits.value.length) return
-  applyReplace(workspace.value, collection.value, searchScene.value, hits.value[idx.value], replace.value)
+  applyReplace(
+    workspace.value,
+    collection.value,
+    searchScene.value,
+    hits.value[idx.value],
+    replace.value
+  )
   idx.value = -1
 }
 function replaceAll() {
@@ -179,7 +269,8 @@ function replaceAll() {
     groups.get(k)!.push(h)
   }
   for (const g of groups.values()) {
-    for (const h of g.slice().reverse()) applyReplace(workspace.value, collection.value, searchScene.value, h, replace.value)
+    for (const h of g.slice().reverse())
+      applyReplace(workspace.value, collection.value, searchScene.value, h, replace.value)
   }
   idx.value = -1
 }
@@ -200,10 +291,13 @@ function selectSide() {
     let anchor = -1
     for (const h of hits.value) {
       const gi = store.regexRevealAndFindGi(h.itemId)
-      if (gi >= 0) { gis.add(gi); if (anchor < 0) anchor = gi }
+      if (gi >= 0) {
+        gis.add(gi)
+        if (anchor < 0) anchor = gi
+      }
     }
     if (anchor >= 0) store.regexSelectBlock(anchor) // 脉冲：触发 requestListScroll 滚到 anchor
-    store.regexSelectedGi = gis                   // 覆写为命中集合（脉冲的多选态不是我们要的）
+    store.regexSelectedGi = gis // 覆写为命中集合（脉冲的多选态不是我们要的）
     store.regexAnchorGi = anchor
     return
   }
@@ -212,12 +306,13 @@ function selectSide() {
   let anchor = -1
   for (const h of hits.value) {
     const gi = store.revealAndFindGi(h.itemId)
-    if (gi >= 0) { gis.add(gi); if (anchor < 0) anchor = gi }
+    if (gi >= 0) {
+      gis.add(gi)
+      if (anchor < 0) anchor = gi
+    }
   }
   if (anchor >= 0) store.selectBlock(anchor) // 脉冲：触发 requestListScroll 滚到 anchor
-  store.selectedGi = gis                     // 覆写为命中集合（脉冲的多选态不是我们要的）
+  store.selectedGi = gis // 覆写为命中集合（脉冲的多选态不是我们要的）
   store.anchorGi = anchor
 }
 </script>
-
-

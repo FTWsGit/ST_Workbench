@@ -18,16 +18,16 @@ export function parseFindRegex(raw: string): RegExp | null {
 export function applyRegexScript(text: string, script: RegexScript): string {
   const re = parseFindRegex(script.findRegex)
   if (!re) return text
-  return text.replace(re, (...args: any[]) => {
+  return text.replace(re, (...args: unknown[]) => {
     let a = args
     if (typeof a[a.length - 1] === 'object') a = a.slice(0, -1) // 有命名捕获组时最后一个参数是个对象，先摘掉
-    const match: string = a[0]
-    const groups = a.slice(1, -2) // 去掉末尾的 offset、完整字符串，剩下的是数字捕获组
+    const match = a[0] as string
+    const groups = a.slice(1, -2) as string[] // 去掉末尾的 offset、完整字符串，剩下的是数字捕获组
     let trimmed = match
     for (const t of script.trimStrings || []) {
       if (t) trimmed = trimmed.split(t).join('')
     }
-    const trimmedGroups = groups.map(group => {
+    const trimmedGroups = groups.map((group) => {
       let trimmedGroup = group
       for (const t of script.trimStrings || []) {
         if (t) trimmedGroup = trimmedGroup.split(t).join('')
@@ -40,7 +40,6 @@ export function applyRegexScript(text: string, script: RegexScript): string {
       const g = trimmedGroups[parseInt(num, 10) - 1]
       return g == null ? '' : String(g)
     })
-    console.debug("out: " + out)
     return out
   })
 }

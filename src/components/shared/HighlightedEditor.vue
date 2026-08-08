@@ -9,14 +9,34 @@
 <template>
   <div class="wb-editor-content">
     <div class="wb-line-nums" ref="lnRef">
-      <div v-for="(h, i) in lineHeights" :key="i" class="ln" :class="lineClass(i)" :style="{ height: h + 'px' }">{{ i + 1 }}</div>
+      <div
+        v-for="(h, i) in lineHeights"
+        :key="i"
+        class="ln"
+        :class="lineClass(i)"
+        :style="{ height: h + 'px' }"
+      >
+        {{ i + 1 }}
+      </div>
     </div>
     <div class="wb-editor-wrap">
       <pre class="wb-editor-hl" ref="hlRef"></pre>
-      <textarea class="wb-editor-ta" ref="taRef" spellcheck="false" :placeholder="placeholder"
-                :readonly="disabled" autocomplete="off" data-lpignore="true" data-form-type="other"
-                :value="content" @input="onInput" @scroll="syncScroll"
-                @keydown="onKeydown" @click="onClick" @keyup="updateCursor"></textarea>
+      <textarea
+        class="wb-editor-ta"
+        ref="taRef"
+        spellcheck="false"
+        :placeholder="placeholder"
+        :readonly="disabled"
+        autocomplete="off"
+        data-lpignore="true"
+        data-form-type="other"
+        :value="content"
+        @input="onInput"
+        @scroll="syncScroll"
+        @keydown="onKeydown"
+        @click="onClick"
+        @keyup="updateCursor"
+      ></textarea>
       <!-- 隐藏镜像：用于测量单行高度 / 光标坐标（支持 CJK / tab / 混合宽度） -->
       <div class="wb-line-mirror" ref="mirrorRef" aria-hidden="true"></div>
       <!-- 隐藏批量容器：每个逻辑行的换行高度通过在子 div 中布局一次性测量（append + read ≈ 一次 layout），见 updateLineNums() -->
@@ -34,48 +54,64 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { highlightLines, type HighlightLanguage } from '../../composables/useHighlight'
 import { getHostWindow, getHostDocument } from '../../composables/hostEnv'
-import { findMacroEnd, esc, scanVariableMacros, type VarOpMatch } from '../../utils'
+import { esc, scanVariableMacros, type VarOpMatch } from '../../utils'
 
-interface JumpRequest { line: number; col: number; len: number; token: number; keepFocus: boolean }
+interface JumpRequest {
+  line: number
+  col: number
+  len: number
+  token: number
+  keepFocus: boolean
+}
 
-const props = withDefaults(defineProps<{
-  modelValue: string
-  /** 外部"请把光标移到此处"请求（搜索结果、变量导航）。无此需求的调用方（如 RegexContentEditor）可不传。 */
-  jump?: JumpRequest | null
-  /** 行号栏每行额外 CSS 类（搜索命中/当前命中高亮）。无结果概念的编辑器可不传。 */
-  lineClass?: (line: number) => string
-  /** 点击 {{setvar/addvar/getvar::name}} 是否发出 var-click。默认关闭——目前只有 block 编辑器有变量导航弹窗。 */
-  enableVarClick?: boolean
-  showStatusbar?: boolean
-  placeholder?: string
-  /** i18n：光标位置标签，如 "Ln {line}, Col {col}"，接收 {line}、{col} 参数。 */
-  statusCursorLabel?: string
-  /** i18n：字符计数标签，如 "{count} chars"，接收 {count} 参数。 */
-  statusCharsLabel?: string
-  /** i18n：行数标签，如 "{count} lines"，接收 {count} 参数。 */
-  statusLinesLabel?: string
-  disabled?: boolean
-  /** 高亮语法选择。默认 'macro'（ST 宏语法 {{...}}，四个域共用，见 useHighlight.ts）。
-   *  'js' 用于 tavern_helper 脚本内容——纯 JS，不会混 ST 宏，走 Prism 的真正 JS 语法
-   *  高亮（关键字/字符串/注释/数字/函数名等），而不是为提示词文本设计的宏语法扫描器。
-   *  仍然是纯 UI 配置，不碰任何 store，符合本组件 domain-agnostic 的契约。 */
-  language?: HighlightLanguage
-}>(), {
-  jump: null,
-  lineClass: () => '',
-  enableVarClick: false,
-  showStatusbar: true,
-  placeholder: '',
-  statusCursorLabel: 'Ln {line}, Col {col}',
-  statusCharsLabel: '{count} chars',
-  statusLinesLabel: '{count} lines',
-  disabled: false,
-  language: 'macro',
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    /** 外部"请把光标移到此处"请求（搜索结果、变量导航）。无此需求的调用方（如 RegexContentEditor）可不传。 */
+    jump?: JumpRequest | null
+    /** 行号栏每行额外 CSS 类（搜索命中/当前命中高亮）。无结果概念的编辑器可不传。 */
+    lineClass?: (line: number) => string
+    /** 点击 {{setvar/addvar/getvar::name}} 是否发出 var-click。默认关闭——目前只有 block 编辑器有变量导航弹窗。 */
+    enableVarClick?: boolean
+    showStatusbar?: boolean
+    placeholder?: string
+    /** i18n：光标位置标签，如 "Ln {line}, Col {col}"，接收 {line}、{col} 参数。 */
+    statusCursorLabel?: string
+    /** i18n：字符计数标签，如 "{count} chars"，接收 {count} 参数。 */
+    statusCharsLabel?: string
+    /** i18n：行数标签，如 "{count} lines"，接收 {count} 参数。 */
+    statusLinesLabel?: string
+    disabled?: boolean
+    /** 高亮语法选择。默认 'macro'（ST 宏语法 {{...}}，四个域共用，见 useHighlight.ts）。
+     *  'js' 用于 tavern_helper 脚本内容——纯 JS，不会混 ST 宏，走 Prism 的真正 JS 语法
+     *  高亮（关键字/字符串/注释/数字/函数名等），而不是为提示词文本设计的宏语法扫描器。
+     *  仍然是纯 UI 配置，不碰任何 store，符合本组件 domain-agnostic 的契约。 */
+    language?: HighlightLanguage
+  }>(),
+  {
+    jump: null,
+    lineClass: () => '',
+    enableVarClick: false,
+    showStatusbar: true,
+    placeholder: '',
+    statusCursorLabel: 'Ln {line}, Col {col}',
+    statusCharsLabel: '{count} chars',
+    statusLinesLabel: '{count} lines',
+    disabled: false,
+    language: 'macro',
+  }
+)
 
 const emit = defineEmits<{
   'update:modelValue': [string]
-  'var-click': [payload: { varName: string; scope: 'local' | 'global'; cursorPos: number; pos: { top: number; left: number } }]
+  'var-click': [
+    payload: {
+      varName: string
+      scope: 'local' | 'global'
+      cursorPos: number
+      pos: { top: number; left: number }
+    },
+  ]
   'var-click-miss': []
 }>()
 
@@ -102,10 +138,17 @@ const content = ref(props.modelValue)
 const cursorLine = ref(1)
 const cursorCol = ref(1)
 const cursorText = computed(() =>
-  props.statusCursorLabel.replace(/\{line\}/g, String(cursorLine.value)).replace(/\{col\}/g, String(cursorCol.value)))
+  props.statusCursorLabel
+    .replace(/\{line\}/g, String(cursorLine.value))
+    .replace(/\{col\}/g, String(cursorCol.value))
+)
 const lineCount = computed(() => 1 + (content.value.match(/\n/g) || []).length)
-const charsLabel = computed(() => props.statusCharsLabel.replace(/\{count\}/g, String(content.value.length)))
-const linesLabel = computed(() => props.statusLinesLabel.replace(/\{count\}/g, String(lineCount.value)))
+const charsLabel = computed(() =>
+  props.statusCharsLabel.replace(/\{count\}/g, String(content.value.length))
+)
+const linesLabel = computed(() =>
+  props.statusLinesLabel.replace(/\{count\}/g, String(lineCount.value))
+)
 
 const lineHeights = ref<number[]>([])
 
@@ -121,7 +164,10 @@ function getVisibleLineRange(totalLines: number): [number, number] {
   if (!ta) return [0, totalLines - 1]
   const lh = measureSingleLineHeight()
   const first = Math.max(0, Math.floor(ta.scrollTop / lh) - VIEWPORT_BUFFER_LINES)
-  const last = Math.min(totalLines - 1, Math.ceil((ta.scrollTop + ta.clientHeight) / lh) + VIEWPORT_BUFFER_LINES)
+  const last = Math.min(
+    totalLines - 1,
+    Math.ceil((ta.scrollTop + ta.clientHeight) / lh) + VIEWPORT_BUFFER_LINES
+  )
   return [first, last]
 }
 
@@ -157,7 +203,10 @@ function refreshHighlight() {
     }
     if (html === prevHlLines[i]) continue // 未变化——保留 <div> 不动
     let child = el.children[i] as HTMLElement | undefined
-    if (!child) { child = hostDoc.createElement('div'); el.appendChild(child) }
+    if (!child) {
+      child = hostDoc.createElement('div')
+      el.appendChild(child)
+    }
     child.innerHTML = html
     prevHlLines[i] = html
   }
@@ -166,17 +215,26 @@ function refreshHighlight() {
 }
 
 /** modelValue 外部变更（切换 block、Replace All、切换 regex 标签等），立即刷新。 */
-watch(() => props.modelValue, (v) => {
-  if (v === content.value) return
-  content.value = v
-  refreshHighlight()
-  nextTick(() => { updateLineNums(); updateCursor() })
-})
+watch(
+  () => props.modelValue,
+  (v) => {
+    if (v === content.value) return
+    content.value = v
+    refreshHighlight()
+    nextTick(() => {
+      updateLineNums()
+      updateCursor()
+    })
+  }
+)
 
-watch(() => props.jump, (jump) => {
-  if (!jump || !taRef.value) return
-  nextTick(() => moveCursorTo(jump.line, jump.col, jump.len, jump.keepFocus))
-})
+watch(
+  () => props.jump,
+  (jump) => {
+    if (!jump || !taRef.value) return
+    nextTick(() => moveCursorTo(jump.line, jump.col, jump.len, jump.keepFocus))
+  }
+)
 
 function onInput(e: Event) {
   if (props.disabled) return
@@ -227,15 +285,22 @@ function updateLineNums() {
   const cw = ta.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
   if (hlRef.value) hlRef.value.style.width = ta.clientWidth + 'px'
   if (text === lastLNText && cw === lastLNWidth) return
-  lastLNText = text; lastLNWidth = cw
-  if (cw <= 0) { lineHeights.value = []; return }
+  lastLNText = text
+  lastLNWidth = cw
+  if (cw <= 0) {
+    lineHeights.value = []
+    return
+  }
   const lh = measureSingleLineHeight()
   const lines = text.split('\n')
   const heights: number[] = new Array(lines.length)
   const misses: { i: number; key: string; line: string }[] = []
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    if (!line) { heights[i] = lh; continue } // 空逻辑行固定一行高
+    if (!line) {
+      heights[i] = lh
+      continue
+    } // 空逻辑行固定一行高
     const key = cw + '|' + line
     const hit = lineHeightCache.get(key)
     if (hit !== undefined) {
@@ -275,7 +340,8 @@ function updateLineNums() {
 let scrollSettleTimer: ReturnType<typeof setTimeout> | undefined
 function syncScroll() {
   if (!taRef.value || !hlRef.value || !lnRef.value) return
-  hlRef.value.scrollTop = taRef.value.scrollTop; hlRef.value.scrollLeft = taRef.value.scrollLeft
+  hlRef.value.scrollTop = taRef.value.scrollTop
+  hlRef.value.scrollLeft = taRef.value.scrollLeft
   lnRef.value.scrollTop = taRef.value.scrollTop
   // 大文件才需要：滚动过程中不重算高亮（scroll 事件密集，避免每次都做 DOM 写入），
   // 停下 SCROLL_SETTLE_MS 后再补一次，把新滚入视口、还是纯文本占位的行升级成彩色。
@@ -287,12 +353,17 @@ function syncScroll() {
 
 function updateCursor() {
   if (!taRef.value) return
-  const pos = taRef.value.selectionStart, val = taRef.value.value, before = val.substring(0, pos)
+  const pos = taRef.value.selectionStart,
+    val = taRef.value.value,
+    before = val.substring(0, pos)
   cursorLine.value = 1 + (before.match(/\n/g) || []).length
   cursorCol.value = pos - before.lastIndexOf('\n')
 }
 
-function onClick() { updateCursor(); if (props.enableVarClick) checkVarClick() }
+function onClick() {
+  updateCursor()
+  if (props.enableVarClick) checkVarClick()
+}
 
 function getLineColPos(line: number, col: number): number {
   const ls = content.value.split('\n')
@@ -320,7 +391,10 @@ function moveCursorTo(line: number, col: number, len: number, keepFocus = false)
  * 如 {{addvar::a::...{{getvar::b}}...}} 点击到 b 时返回 b。
  * 用 findMacroEnd（基于 {{/}} 深度计数）找宏真正结尾，正确处理嵌套。
  */
-function getVarNameAtPos(text: string, pos: number): { varName: string; scope: 'local' | 'global'; pos: number } | null {
+function getVarNameAtPos(
+  text: string,
+  pos: number
+): { varName: string; scope: 'local' | 'global'; pos: number } | null {
   // 复用 utils.scanVariableMacros：13 种变量宏全覆盖（含 inc/dec/has/global），嵌套感知。
   // 命名宏起始 `{{` 的 pos 已含在 VarOpMatch；命中条件 = 点击落在 [pos, end) 内。
   const hits = scanVariableMacros(text)
@@ -341,7 +415,8 @@ function getVarNameAtPos(text: string, pos: number): { varName: string; scope: '
  * 在末尾插入零宽 marker span，读其 getBoundingClientRect()。
  */
 function getCaretCoords(pos: number): { top: number; left: number } | null {
-  const ta = taRef.value, mirror = mirrorRef.value
+  const ta = taRef.value,
+    mirror = mirrorRef.value
   if (!ta || !mirror) return null
   const hostDoc = getHostDocument()
   mirror.style.width = ta.clientWidth + 'px'
@@ -380,20 +455,55 @@ function openVarPopupAt(varName: string, scope: 'local' | 'global', cursorPos: n
 }
 
 /** 括号/引号配对，1:1 对齐 MiMo 行为——纯文本编辑行为，与领域模型无关。 */
-const BRACKET_PAIR_MAP: Record<string, string> = { '{': '}', '(': ')', '[': ']', '<': '>', '"': '"', "'": "'" }
+const BRACKET_PAIR_MAP: Record<string, string> = {
+  '{': '}',
+  '(': ')',
+  '[': ']',
+  '<': '>',
+  '"': '"',
+  "'": "'",
+}
 
 function onKeydown(e: KeyboardEvent) {
-  const ta = taRef.value!; const pos = ta.selectionStart, end = ta.selectionEnd, val = ta.value, hasSel = pos !== end
+  const ta = taRef.value!
+  const pos = ta.selectionStart,
+    end = ta.selectionEnd,
+    val = ta.value,
+    hasSel = pos !== end
 
-  if (e.key === 'Tab') { e.preventDefault(); ta.value = val.substring(0, pos) + '\t' + val.substring(end); ta.selectionStart = ta.selectionEnd = pos + 1; emitContent(); return }
+  if (e.key === 'Tab') {
+    e.preventDefault()
+    ta.value = val.substring(0, pos) + '\t' + val.substring(end)
+    ta.selectionStart = ta.selectionEnd = pos + 1
+    emitContent()
+    return
+  }
 
   // 退格在相邻配对中间时同时删除两侧（如 {{|}} -> |）
   if (e.key === 'Backspace' && !hasSel && pos > 0 && pos < val.length) {
-    if (pos >= 2 && pos + 1 < val.length && val.substring(pos - 2, pos) === '{{' && val.substring(pos, pos + 2) === '}}') {
-      e.preventDefault(); ta.value = val.substring(0, pos - 2) + val.substring(pos + 2); ta.selectionStart = ta.selectionEnd = pos - 2; emitContent(); updateCursor(); return
+    if (
+      pos >= 2 &&
+      pos + 1 < val.length &&
+      val.substring(pos - 2, pos) === '{{' &&
+      val.substring(pos, pos + 2) === '}}'
+    ) {
+      e.preventDefault()
+      ta.value = val.substring(0, pos - 2) + val.substring(pos + 2)
+      ta.selectionStart = ta.selectionEnd = pos - 2
+      emitContent()
+      updateCursor()
+      return
     }
-    const pv = val[pos - 1], nx = val[pos]
-    if (BRACKET_PAIR_MAP[pv] === nx) { e.preventDefault(); ta.value = val.substring(0, pos - 1) + val.substring(pos + 1); ta.selectionStart = ta.selectionEnd = pos - 1; emitContent(); updateCursor(); return }
+    const pv = val[pos - 1],
+      nx = val[pos]
+    if (BRACKET_PAIR_MAP[pv] === nx) {
+      e.preventDefault()
+      ta.value = val.substring(0, pos - 1) + val.substring(pos + 1)
+      ta.selectionStart = ta.selectionEnd = pos - 1
+      emitContent()
+      updateCursor()
+      return
+    }
   }
 
   // 选中内容时输入括号/引号：包住选区
@@ -402,8 +512,10 @@ function onKeydown(e: KeyboardEvent) {
       e.preventDefault()
       const s = val.substring(pos, end)
       ta.value = val.substring(0, pos) + e.key + s + BRACKET_PAIR_MAP[e.key] + val.substring(end)
-      ta.selectionStart = pos + 1; ta.selectionEnd = end + 1
-      emitContent(); updateCursor()
+      ta.selectionStart = pos + 1
+      ta.selectionEnd = end + 1
+      emitContent()
+      updateCursor()
     }
     return
   }
@@ -411,8 +523,18 @@ function onKeydown(e: KeyboardEvent) {
   // 在已有匹配闭括号前输入闭合符：跳过而非重复插入
   if (pos < val.length) {
     const nc = val[pos]
-    if ((e.key === '}' && nc === '}') || (e.key === ')' && nc === ')') || (e.key === ']' && nc === ']') || (e.key === '>' && nc === '>') || (e.key === '"' && nc === '"') || (e.key === "'" && nc === "'")) {
-      e.preventDefault(); ta.selectionStart = ta.selectionEnd = pos + 1; updateCursor(); return
+    if (
+      (e.key === '}' && nc === '}') ||
+      (e.key === ')' && nc === ')') ||
+      (e.key === ']' && nc === ']') ||
+      (e.key === '>' && nc === '>') ||
+      (e.key === '"' && nc === '"') ||
+      (e.key === "'" && nc === "'")
+    ) {
+      e.preventDefault()
+      ta.selectionStart = ta.selectionEnd = pos + 1
+      updateCursor()
+      return
     }
   }
 
@@ -420,33 +542,64 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === '{') {
     e.preventDefault()
     if (pos > 0 && val[pos - 1] === '{') {
-      if (pos < val.length && val[pos] === '}') { ta.value = val.substring(0, pos - 1) + '{{}}' + val.substring(pos + 1); ta.selectionStart = ta.selectionEnd = pos + 1 }
-      else { ta.value = val.substring(0, pos) + '{}}' + val.substring(pos); ta.selectionStart = ta.selectionEnd = pos + 1 }
+      if (pos < val.length && val[pos] === '}') {
+        ta.value = val.substring(0, pos - 1) + '{{}}' + val.substring(pos + 1)
+        ta.selectionStart = ta.selectionEnd = pos + 1
+      } else {
+        ta.value = val.substring(0, pos) + '{}}' + val.substring(pos)
+        ta.selectionStart = ta.selectionEnd = pos + 1
+      }
     } else {
-      ta.value = val.substring(0, pos) + '{}' + val.substring(pos); ta.selectionStart = ta.selectionEnd = pos + 1
+      ta.value = val.substring(0, pos) + '{}' + val.substring(pos)
+      ta.selectionStart = ta.selectionEnd = pos + 1
     }
-    emitContent(); updateCursor(); return
+    emitContent()
+    updateCursor()
+    return
   }
 
   const bp: Record<string, string> = { '(': ')', '[': ']', '<': '>' }
-  if (bp[e.key]) { e.preventDefault(); ta.value = val.substring(0, pos) + e.key + bp[e.key] + val.substring(pos); ta.selectionStart = ta.selectionEnd = pos + 1; emitContent(); updateCursor(); return }
+  if (bp[e.key]) {
+    e.preventDefault()
+    ta.value = val.substring(0, pos) + e.key + bp[e.key] + val.substring(pos)
+    ta.selectionStart = ta.selectionEnd = pos + 1
+    emitContent()
+    updateCursor()
+    return
+  }
 
-  if (e.key === '"' || e.key === "'") { e.preventDefault(); ta.value = val.substring(0, pos) + e.key + e.key + val.substring(pos); ta.selectionStart = ta.selectionEnd = pos + 1; emitContent(); updateCursor(); return }
+  if (e.key === '"' || e.key === "'") {
+    e.preventDefault()
+    ta.value = val.substring(0, pos) + e.key + e.key + val.substring(pos)
+    ta.selectionStart = ta.selectionEnd = pos + 1
+    emitContent()
+    updateCursor()
+    return
+  }
 }
 
 /** ResizeObserver：编辑器尺寸变化时（拖动侧边栏/面板）延迟重测行号。 */
 let ro: ResizeObserver | null = null
 let roTimer: ReturnType<typeof setTimeout>
 onMounted(() => {
-  const HostResizeObserver = (getHostWindow() as any).ResizeObserver || ResizeObserver
+  const HostResizeObserver = (getHostWindow() as Window & typeof globalThis).ResizeObserver || ResizeObserver
   ro = new HostResizeObserver(() => {
     clearTimeout(roTimer)
-    roTimer = setTimeout(() => { updateLineNums() }, RESIZE_DEBOUNCE_MS)
+    roTimer = setTimeout(() => {
+      updateLineNums()
+    }, RESIZE_DEBOUNCE_MS)
   })
   if (taRef.value) ro!.observe(taRef.value)
-  nextTick(() => { refreshHighlight(); updateLineNums(); updateCursor() })
+  nextTick(() => {
+    refreshHighlight()
+    updateLineNums()
+    updateCursor()
+  })
 })
-onUnmounted(() => { if (ro) ro.disconnect(); clearTimeout(scrollSettleTimer) })
+onUnmounted(() => {
+  if (ro) ro.disconnect()
+  clearTimeout(scrollSettleTimer)
+})
 
 /** 字体 CSS 变量变化（设置对话框修改字号/字体）时调用：清空高度缓存并重测。字体变化不会触发 ResizeObserver，必须外部显式调用。 */
 function refreshFont() {

@@ -19,7 +19,7 @@ export function useScriptList<T extends { id: string }>(
     createScript: (id: string) => T
     markDirty?: () => void
     showToast: (msg: string) => void
-    t: (key: string, params?: any) => string
+    t: (key: string, params?: Record<string, string | number>) => string
     loadFirstMessageKey?: string
   }
 ) {
@@ -32,7 +32,10 @@ export function useScriptList<T extends { id: string }>(
 
   function add(): string | null {
     const scripts = getScripts()
-    if (!scripts) { showToast(t(loadFirstKey)); return null }
+    if (!scripts) {
+      showToast(t(loadFirstKey))
+      return null
+    }
 
     const id = genId()
     scripts.push(createScript(id))
@@ -43,7 +46,7 @@ export function useScriptList<T extends { id: string }>(
   function remove(id: string) {
     const scripts = getScripts()
     if (!scripts) return
-    const i = scripts.findIndex(s => s.id === id)
+    const i = scripts.findIndex((s) => s.id === id)
     if (i >= 0) {
       scripts.splice(i, 1)
       markDirty?.()
@@ -55,7 +58,7 @@ export function useScriptList<T extends { id: string }>(
     if (!scripts) return
     if (fromIdx < 0 || toIdx < 0 || fromIdx >= scripts.length || toIdx >= scripts.length) return
     const item = scripts.splice(fromIdx, 1)[0]
-    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : (after ? toIdx + 1 : toIdx)
+    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : after ? toIdx + 1 : toIdx
     scripts.splice(ni, 0, item)
     markDirty?.()
   }

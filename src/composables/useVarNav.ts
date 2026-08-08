@@ -1,10 +1,14 @@
 import { ref, watch } from 'vue'
 import type {
-  Character, OrderNode, OrderItem, PresetBlock,
-  VarOp, VarDomain, VarAssemblyLayer,
+  Character,
+  OrderNode,
+  PresetBlock,
+  VarOp,
+  VarDomain,
+  VarAssemblyLayer,
   WorldbookEntry,
 } from '../types'
-import { scanVariableMacros, type VarOpMatch, type VarMacroKind, type VarScope } from '../utils'
+import { scanVariableMacros, type VarOpMatch, type VarScope } from '../utils'
 import { isGroupNode } from './useGroupedList'
 
 /**
@@ -32,7 +36,10 @@ export function useVarNav(
       /** 虚拟字段 tab key 合成器（characterStore 已有此模式）。 */
       greetingKey: (id: string) => string
       /** 字段固定序（CHARACTER_FIELDS），intraOrder 按此序。 */
-      fieldOrder: readonly { field: keyof Character | 'greeting'; labelKey: string }[]
+      fieldOrder: readonly {
+        field: keyof Character | 'greeting'
+        labelKey: string
+      }[]
     } | null
     worldbook: {
       order: () => OrderNode[]
@@ -56,11 +63,23 @@ export function useVarNav(
     fieldName: string | undefined,
     layer: VarAssemblyLayer,
     intraOrder: number,
-    certain: boolean,
+    certain: boolean
   ): VarOp {
     return {
-      kind: hit.kind, scope: hit.scope, varName: hit.varName, varValue: hit.varValue,
-      source: { domain, fileId, blockId, fieldName, blockLabel, line: hit.line, col: hit.col, pos: hit.pos },
+      kind: hit.kind,
+      scope: hit.scope,
+      varName: hit.varName,
+      varValue: hit.varValue,
+      source: {
+        domain,
+        fileId,
+        blockId,
+        fieldName,
+        blockLabel,
+        line: hit.line,
+        col: hit.col,
+        pos: hit.pos,
+      },
       assemblyOrder: { layer, intraOrder },
       certain,
     }
@@ -75,7 +94,7 @@ export function useVarNav(
     const out: VarOp[] = []
     const prompts = p.prompts()
     const presetName = p.presetName()
-    const byId = new Map(prompts.map(b => [b.identifier, b]))
+    const byId = new Map(prompts.map((b) => [b.identifier, b]))
     let intra = 0
     function walk(node: OrderNode) {
       if (isGroupNode(node)) {
@@ -86,10 +105,21 @@ export function useVarNav(
       if (block) {
         const certain = node.enabled !== false
         const hits = scanVariableMacros(block.content || '')
-        hits.forEach(h => out.push(buildVarOp(
-          h, 'preset', presetName, block.identifier, block.name || block.identifier,
-          undefined, 'preset', intra, certain,
-        )))
+        hits.forEach((h) =>
+          out.push(
+            buildVarOp(
+              h,
+              'preset',
+              presetName,
+              block.identifier,
+              block.name || block.identifier,
+              undefined,
+              'preset',
+              intra,
+              certain
+            )
+          )
+        )
       }
       intra++
     }
@@ -110,12 +140,22 @@ export function useVarNav(
     for (const f of c.fieldOrder) {
       const isGreeting = f.field === 'greeting'
       const fieldLabel = f.labelKey
-      let pushHits: (hits: VarOpMatch[], blockId: string, blockLabel: string) => void
-      pushHits = (hits, blockId, blockLabel) => {
-        hits.forEach(h => out.push(buildVarOp(
-          h, 'character', fileId, blockId, blockLabel,
-          isGreeting ? 'greeting' : (f.field as string), 'character', intra, true,
-        )))
+      const pushHits = (hits: VarOpMatch[], blockId: string, blockLabel: string) => {
+        hits.forEach((h) =>
+          out.push(
+            buildVarOp(
+              h,
+              'character',
+              fileId,
+              blockId,
+              blockLabel,
+              isGreeting ? 'greeting' : (f.field as string),
+              'character',
+              intra,
+              true
+            )
+          )
+        )
       }
       if (isGreeting) {
         const ids = c.greetingIds()
@@ -125,10 +165,13 @@ export function useVarNav(
           pushHits(scanVariableMacros(val), c.greetingKey(id), fieldLabel)
         })
       } else {
-        const v = (char as any)[f.field]
-        const text = typeof v === 'string' ? v
-          : (v && typeof v === 'object' && 'prompt' in v) ? (v as { prompt: string }).prompt
-          : ''
+        const v = char[f.field]
+        const text =
+          typeof v === 'string'
+            ? v
+            : v && typeof v === 'object' && 'prompt' in v
+              ? (v as { prompt: string }).prompt
+              : ''
         pushHits(scanVariableMacros(text), `field:${String(f.field)}`, fieldLabel)
       }
       intra++
@@ -150,10 +193,21 @@ export function useVarNav(
       if (entry.disabled) return // 全局禁用，跳过
       const certain = !!entry.constant
       const hits = scanVariableMacros(entry.content || '')
-      hits.forEach(h => out.push(buildVarOp(
-        h, 'worldbook', w.worldbookName(), String(entry.uid),
-        entry.comment || String(entry.uid), undefined, 'worldbook', idx, certain,
-      )))
+      hits.forEach((h) =>
+        out.push(
+          buildVarOp(
+            h,
+            'worldbook',
+            w.worldbookName(),
+            String(entry.uid),
+            entry.comment || String(entry.uid),
+            undefined,
+            'worldbook',
+            idx,
+            certain
+          )
+        )
+      )
     })
     return out
   }
@@ -169,19 +223,24 @@ export function useVarNav(
   const varIdx = ref(-1)
 
   function sortByAssembly(ops: VarOp[]): VarOp[] {
-    const layerRank: Record<VarAssemblyLayer, number> = { worldbook: 0, character: 1, preset: 2 }
-    return [...ops].sort((a, b) =>
-      layerRank[a.assemblyOrder.layer] - layerRank[b.assemblyOrder.layer] ||
-      a.assemblyOrder.intraOrder - b.assemblyOrder.intraOrder ||
-      a.varName.localeCompare(b.varName),
+    const layerRank: Record<VarAssemblyLayer, number> = {
+      worldbook: 0,
+      character: 1,
+      preset: 2,
+    }
+    return [...ops].sort(
+      (a, b) =>
+        layerRank[a.assemblyOrder.layer] - layerRank[b.assemblyOrder.layer] ||
+        a.assemblyOrder.intraOrder - b.assemblyOrder.intraOrder ||
+        a.varName.localeCompare(b.varName)
     )
   }
 
   function rebuildVarIndex() {
     const all = [...scanWorldbook(), ...scanCharacter(), ...scanPreset()]
     const sorted = sortByAssembly(all)
-    localRefs.value = sorted.filter(o => o.scope === 'local')
-    globalRefs.value = sorted.filter(o => o.scope === 'global')
+    localRefs.value = sorted.filter((o) => o.scope === 'local')
+    globalRefs.value = sorted.filter((o) => o.scope === 'global')
     varIdx.value = -1
     filterVarNav()
   }
@@ -212,15 +271,18 @@ export function useVarNav(
   const varPopupPos = ref({ top: 0, left: 0 })
 
   function showVarPopup(
-    varName: string, scope: VarScope,
-    clickDomain: VarDomain, clickBlockId: string | null, clickPos: number,
-    pos: { top: number; left: number },
+    varName: string,
+    scope: VarScope,
+    clickDomain: VarDomain,
+    clickBlockId: string | null,
+    clickPos: number,
+    pos: { top: number; left: number }
   ) {
     // 当前 varNav 全量索引即覆盖三域，直接从中按 varName+scope 过滤即可，
     // 不再像老版那样现场重扫——重扫在 flatNodes 折叠组下会漏，且性能更差。
     // 用最近一次 rebuildVarIndex 的结果（localRefs/globalRefs）。
     const pool = scope === 'local' ? localRefs.value : globalRefs.value
-    const ops = pool.filter(o => o.varName === varName)
+    const ops = pool.filter((o) => o.varName === varName)
     // 当前点击命中：定位到 clickDomain+clickBlockId 且 pos 落在宏 span 内的那个。
     let currentIdx = -1
     ops.forEach((o, i) => {
@@ -248,16 +310,33 @@ export function useVarNav(
   }
   function navPopupVar(dir: number) {
     if (!varPopupOps.value.length) return
-    varPopupIdx.value = (varPopupIdx.value + dir + varPopupOps.value.length) % varPopupOps.value.length
+    varPopupIdx.value =
+      (varPopupIdx.value + dir + varPopupOps.value.length) % varPopupOps.value.length
     jumpToPopupVar(varPopupIdx.value)
   }
 
   return {
     // Var Nav
-    varFilterQ, localRefs, globalRefs, localFiltered, globalFiltered, varIdx,
-    rebuildVarIndex, filterVarNav, jumpToVarOp, navVar,
+    varFilterQ,
+    localRefs,
+    globalRefs,
+    localFiltered,
+    globalFiltered,
+    varIdx,
+    rebuildVarIndex,
+    filterVarNav,
+    jumpToVarOp,
+    navVar,
     // Var Popup
-    varPopupOpen, varPopupVarName, varPopupScope, varPopupOps, varPopupIdx, varPopupPos,
-    showVarPopup, hideVarPopup, jumpToPopupVar, navPopupVar,
+    varPopupOpen,
+    varPopupVarName,
+    varPopupScope,
+    varPopupOps,
+    varPopupIdx,
+    varPopupPos,
+    showVarPopup,
+    hideVarPopup,
+    jumpToPopupVar,
+    navPopupVar,
   }
 }

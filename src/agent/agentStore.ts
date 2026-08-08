@@ -1,14 +1,21 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { loadAgentStore, saveAgentStore, resetAgentStore, AgentVersionMismatchError } from '../api/agentApi'
-import { selectPresetByName as applyPresetByName } from '../api/presetApi'
+import {
+  loadAgentStore,
+  saveAgentStore,
+  resetAgentStore,
+  AgentVersionMismatchError,
+} from '../api/agentApi'
 import { DEFAULT_AGENT_PERSISTED } from './defaultPersisted'
 import { callModelRaw, renderMessages, type ModelTurnResult } from './callModel'
+import { MAX_TOOL_ROUNDS } from './constants'
 import {
-  MAX_TOOL_ROUNDS,
-  AGENT_NS,
-} from './constants'
-import { listAgentTools, listAgentToolsForWorkspace, getAgentTool, type AgentToolContext, type AgentToolDef, type AgentWorkspace } from './toolRegistry'
+  listAgentToolsForWorkspace,
+  getAgentTool,
+  type AgentToolContext,
+  type AgentToolDef,
+  type AgentWorkspace,
+} from './toolRegistry'
 import {
   shouldCompact,
   compactMessages,
@@ -21,7 +28,6 @@ import type {
   AgentPersisted,
   AgentConfig,
   AgentSessionMeta,
-  AgentTurnState,
   AgentRuntimeState,
   Message,
   ToolCall,
@@ -48,15 +54,23 @@ function genSessionId(): string {
 }
 
 /** 生成一个 tool_call id（供本地兜底用，正常情况模型会自带 id）。 */
-function genToolCallId(): string {
+function _genToolCallId(): string {
   return 'call_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }
 
 /** 延迟拿 store 实例的工具函数（避免在模块顶层直接 useXxxStore 触发 Pinia 未初始化报错）。 */
-function usePresetStoreSafe() { return usePresetStore() }
-function useWorldbookStoreSafe() { return useWorldbookStore() }
-function useCharacterStoreSafe() { return useCharacterStore() }
-function useConfirmStoreSafe() { return useConfirmStore() }
+function usePresetStoreSafe() {
+  return usePresetStore()
+}
+function useWorldbookStoreSafe() {
+  return useWorldbookStore()
+}
+function useCharacterStoreSafe() {
+  return useCharacterStore()
+}
+function useConfirmStoreSafe() {
+  return useConfirmStore()
+}
 
 /**
  * Agent store：跨 preset/worldbook/character 三个 store 的运维层。
@@ -109,15 +123,16 @@ export const useAgentStore = defineStore('agent', () => {
 
   /* ====== 工具注册表（P1 填充）====== */
   // 占位：P1 阶段在此注册只读工具，P2 注册写类工具
-  const availableTools = ref<any[]>([])
+  const availableTools = ref<AgentToolDef[]>([])
 
   /* ====== Computed ====== */
   const turnState = computed(() => runtime.value.turnState)
   const currentTool = computed(() => runtime.value.currentTool)
-  const isBusy = computed(() =>
-    runtime.value.turnState === 'thinking' ||
-    runtime.value.turnState === 'tool_loop' ||
-    runtime.value.turnState === 'pending_approval'
+  const isBusy = computed(
+    () =>
+      runtime.value.turnState === 'thinking' ||
+      runtime.value.turnState === 'tool_loop' ||
+      runtime.value.turnState === 'pending_approval'
   )
   const hasActiveSession = computed(() => activeSessionId.value !== null)
   const messageCount = computed(() => activeSessionMessages.value.length)
@@ -143,7 +158,7 @@ export const useAgentStore = defineStore('agent', () => {
         // 其它加载错误：记录但不阻塞 UI，用户可以重置
         versionMismatch.value = new AgentVersionMismatchError(
           'unknown',
-          DEFAULT_AGENT_PERSISTED.version,
+          DEFAULT_AGENT_PERSISTED.version
         )
         // 保留原 error 信息
         if (e instanceof Error) versionMismatch.value.message = e.message
@@ -159,9 +174,9 @@ export const useAgentStore = defineStore('agent', () => {
     const patch: Partial<AgentPersisted> = {
       version: version.value,
       config: { ...config.value },
-      sessions: sessions.value.map(s => ({ ...s })),
+      sessions: sessions.value.map((s) => ({ ...s })),
       activeSessionId: activeSessionId.value,
-      activeSessionMessages: activeSessionMessages.value.map(m => ({ ...m })),
+      activeSessionMessages: activeSessionMessages.value.map((m) => ({ ...m })),
     }
     await saveAgentStore(patch)
   }
@@ -181,7 +196,9 @@ export const useAgentStore = defineStore('agent', () => {
   /* ====== 会话管理 ====== */
 
   /** 新建一个会话并切换为活跃。 */
-  async function newSession(workspace: 'preset' | 'worldbook' | 'character' | null = null): Promise<void> {
+  async function newSession(
+    workspace: 'preset' | 'worldbook' | 'character' | null = null
+  ): Promise<void> {
     // 若已有活跃会话且有消息，先持久化当前状态
     if (activeSessionId.value && activeSessionMessages.value.length > 0) {
       await persist()
@@ -227,7 +244,7 @@ export const useAgentStore = defineStore('agent', () => {
 
   /** 删除一个会话索引。 */
   async function deleteSession(id: string): Promise<void> {
-    sessions.value = sessions.value.filter(s => s.id !== id)
+    sessions.value = sessions.value.filter((s) => s.id !== id)
     if (activeSessionId.value === id) {
       activeSessionId.value = null
       activeSessionMessages.value = []
@@ -242,14 +259,14 @@ export const useAgentStore = defineStore('agent', () => {
     // 按 createdAt 升序排，丢最旧的
     const sorted = [...sessions.value].sort((a, b) => a.createdAt - b.createdAt)
     const toRemove = sorted.slice(0, sessions.value.length - max)
-    const removeIds = new Set(toRemove.map(s => s.id))
-    sessions.value = sessions.value.filter(s => !removeIds.has(s.id))
+    const removeIds = new Set(toRemove.map((s) => s.id))
+    sessions.value = sessions.value.filter((s) => !removeIds.has(s.id))
   }
 
   /** 更新当前活跃会话的 title。 */
   async function updateSessionTitle(title: string): Promise<void> {
     if (!activeSessionId.value) return
-    const s = sessions.value.find(x => x.id === activeSessionId.value)
+    const s = sessions.value.find((x) => x.id === activeSessionId.value)
     if (s) {
       s.title = title
       s.updatedAt = Date.now()
@@ -361,7 +378,7 @@ export const useAgentStore = defineStore('agent', () => {
     pushUserMessage(text)
 
     // 若是首条真实 user 消息，把会话 title 设为消息摘要
-    const userMsgCount = activeSessionMessages.value.filter(m => m.role === 'user').length
+    const userMsgCount = activeSessionMessages.value.filter((m) => m.role === 'user').length
     if (userMsgCount === 1) {
       await updateSessionTitle(text.slice(0, 40) || uiStore.t('agent.session.untitled'))
     }
@@ -377,7 +394,8 @@ export const useAgentStore = defineStore('agent', () => {
     try {
       // 当前会话 workspace，用于工具越界校验
       const ws = tabsStore.activeWorkspace
-      const workspace: AgentWorkspace = ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character'
+      const workspace: AgentWorkspace =
+        ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character'
 
       // 按当前 workspace 过滤可用工具
       const tools = listAgentToolsForWorkspace(workspace)
@@ -409,7 +427,7 @@ export const useAgentStore = defineStore('agent', () => {
             topK: config.value.topK,
             presencePenalty: config.value.presencePenalty,
             frequencyPenalty: config.value.frequencyPenalty,
-            thinking: config.value.thinking
+            thinking: config.value.thinking,
           })
         } catch (e) {
           // 溢出兜底（模块 6.2）：模型/API 直接拒绝请求（上下文超窗）→ 走 compact 而非干掉 history
@@ -419,14 +437,14 @@ export const useAgentStore = defineStore('agent', () => {
               activeSessionMessages.value,
               generateSummary,
               config.value.maxContextTokens,
-              config.value.compactThresholdRatio,
+              config.value.compactThresholdRatio
             )
             await persist()
             throw e
           }
           throw e
         }
-        messages = [] as any // 释放引用
+        messages = [] // 释放引用
         void messages
 
         // 没有工具调用 → 追加 assistant 消息，回合完成
@@ -475,22 +493,31 @@ export const useAgentStore = defineStore('agent', () => {
   }
 
   /** 执行单个工具调用（含 availableIn 越界校验 + 审批门 P2 接）。 */
-  async function executeTool(call: ToolCall, workspace: AgentWorkspace): Promise<{ text: string; isError?: boolean; stopTurn?: boolean }> {
+  async function executeTool(
+    call: ToolCall,
+    workspace: AgentWorkspace
+  ): Promise<{ text: string; isError?: boolean; stopTurn?: boolean }> {
     const def = getAgentTool(call.name)
     if (!def) {
       return { text: `unknown tool: ${call.name}`, isError: true }
     }
     // 越界校验（7.3）
     if (!def.availableIn.includes(workspace)) {
-      return { text: `tool "${call.name}" not available in workspace "${workspace}"`, isError: true }
+      return {
+        text: `tool "${call.name}" not available in workspace "${workspace}"`,
+        isError: true,
+      }
     }
 
     // 解析参数（弱模型容错：arguments 可能不是合法 JSON）
-    let args: any = {}
+    let args: Record<string, unknown>
     try {
       args = call.arguments ? JSON.parse(call.arguments) : {}
     } catch {
-      return { text: `invalid JSON arguments: ${call.arguments}`, isError: true }
+      return {
+        text: `invalid JSON arguments: ${call.arguments}`,
+        isError: true,
+      }
     }
 
     // 构造工具执行上下文
@@ -533,17 +560,20 @@ export const useAgentStore = defineStore('agent', () => {
   async function maybeAutoCompact(): Promise<void> {
     const messages = activeSessionMessages.value
     // compact 阈值：配置了 maxContextTokens 就按百分比算，否则回落常数
-    if (!(await shouldCompact(
-      messages,
-      config.value.maxContextTokens,
-      config.value.compactThresholdRatio,
-    ))) return
+    if (
+      !(await shouldCompact(
+        messages,
+        config.value.maxContextTokens,
+        config.value.compactThresholdRatio
+      ))
+    )
+      return
 
     const compacted = await compactMessages(
       messages,
       generateSummary,
       config.value.maxContextTokens,
-      config.value.compactThresholdRatio,
+      config.value.compactThresholdRatio
     )
     if (compacted !== messages) {
       activeSessionMessages.value = compacted
@@ -555,12 +585,16 @@ export const useAgentStore = defineStore('agent', () => {
    * 生成摘要：调 callModelRaw 纯文本路径（不接 tools），输入是要摘要的 user/assistant 原文。
    * 跟随会话语言（用户用中文交互就出中文摘要）。若已有上一次摘要，叠加保留更远历史的关键事实。
    */
-  async function generateSummary(toSummarize: Message[], prevSummary: string | null): Promise<string> {
+  async function generateSummary(
+    toSummarize: Message[],
+    prevSummary: string | null
+  ): Promise<string> {
     // 构造摘要提示：system 指令 + （可选）已有摘要 + 要摘要的新原文
     const summaryPrompt: { role: 'system' | 'user'; content: string }[] = [
       {
         role: 'system',
-        content: '你是一个对话摘要助手。请把下面的早期对话内容压缩成一份简洁的摘要，保留关键事实、用户意图和已执行的操作。用与原文相同的语言输出摘要，不要添加任何评论或解释。若提供了已有摘要，请在它基础上叠加新内容，保留更远历史的关键事实，不要丢弃。',
+        content:
+          '你是一个对话摘要助手。请把下面的早期对话内容压缩成一份简洁的摘要，保留关键事实、用户意图和已执行的操作。用与原文相同的语言输出摘要，不要添加任何评论或解释。若提供了已有摘要，请在它基础上叠加新内容，保留更远历史的关键事实，不要丢弃。',
       },
     ]
     if (prevSummary) {
@@ -571,7 +605,7 @@ export const useAgentStore = defineStore('agent', () => {
     }
     summaryPrompt.push({
       role: 'user',
-      content: toSummarize.map(m => `[${m.role}] ${m.text}`).join('\n\n---\n\n'),
+      content: toSummarize.map((m) => `[${m.role}] ${m.text}`).join('\n\n---\n\n'),
     })
 
     const result = await callModelRaw(summaryPrompt, [], {
@@ -581,7 +615,7 @@ export const useAgentStore = defineStore('agent', () => {
       topK: null,
       presencePenalty: null,
       frequencyPenalty: null,
-      thinking: { type: 'enabled' }
+      thinking: { type: 'enabled' },
     })
     return result.content || '[摘要生成失败]'
   }
@@ -589,14 +623,20 @@ export const useAgentStore = defineStore('agent', () => {
   /** 取消当前回合。 */
   function cancelTurn(): void {
     if (abortController) {
-      try { abortController.abort() } catch {}
+      try {
+        abortController.abort()
+      } catch { /* abort 失败无需处理 */ }
       abortController = null
     }
     // 尝试中断 ST 的生成
     try {
-      const ctx = (window.top as any)?.SillyTavern?.getContext?.()
+      const ctx = (
+        window.top as unknown as {
+          SillyTavern?: { getContext?: () => { stopGeneration?: () => void } | null }
+        }
+      )?.SillyTavern?.getContext?.()
       ctx?.stopGeneration?.()
-    } catch {}
+    } catch { /* stopGeneration 失败无需处理 */ }
     runtime.value = { ...initialRuntime, turnState: 'idle' }
   }
 
@@ -632,7 +672,7 @@ export const useAgentStore = defineStore('agent', () => {
       message: opts.message,
       danger: opts.danger ?? true,
     }
-    return new Promise<boolean>(resolve => {
+    return new Promise<boolean>((resolve) => {
       approvalResolve = resolve
     })
   }
@@ -651,17 +691,40 @@ export const useAgentStore = defineStore('agent', () => {
 
   return {
     // persisted state
-    version, config, sessions, activeSessionId, activeSessionMessages,
+    version,
+    config,
+    sessions,
+    activeSessionId,
+    activeSessionMessages,
     // runtime state
-    runtime, versionMismatch, loading, loaded, availableTools,
+    runtime,
+    versionMismatch,
+    loading,
+    loaded,
+    availableTools,
     // approval gate
-    pendingApproval, autoApprovedTools, requestApproval, resolveApproval,
+    pendingApproval,
+    autoApprovedTools,
+    requestApproval,
+    resolveApproval,
     // computed
-    turnState, currentTool, isBusy, hasActiveSession, messageCount,
+    turnState,
+    currentTool,
+    isBusy,
+    hasActiveSession,
+    messageCount,
     // actions
-    loadAgentData, persist, resetData,
-    newSession, switchSession, deleteSession, updateSessionTitle,
-    submitUserMessage, cancelTurn, clearMessages, updateConfig,
+    loadAgentData,
+    persist,
+    resetData,
+    newSession,
+    switchSession,
+    deleteSession,
+    updateSessionTitle,
+    submitUserMessage,
+    cancelTurn,
+    clearMessages,
+    updateConfig,
   }
 })
 

@@ -12,7 +12,13 @@
       @click="$emit('update:modelValue', opt.value)"
     >
       <svg viewBox="0 0 16 16" width="15" height="15" fill="none" aria-hidden="true">
-        <path :d="opt.icon" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" />
+        <path
+          :d="opt.icon"
+          stroke="currentColor"
+          stroke-width="1.4"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
         <path v-if="opt.iconFill" :d="opt.iconFill" fill="currentColor" />
       </svg>
     </button>
@@ -35,7 +41,12 @@ defineEmits<{ 'update:modelValue': [v: PanelMode] }>()
 
 const uiStore = useUiStore()
 
-const options: { value: PanelMode; tooltip: LocaleKey; icon: string; iconFill?: string }[] = [
+const options: {
+  value: PanelMode
+  tooltip: LocaleKey
+  icon: string
+  iconFill?: string
+}[] = [
   {
     value: 'docked',
     tooltip: 'shared.panelMode.tooltip.docked',

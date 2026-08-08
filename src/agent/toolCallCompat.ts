@@ -15,48 +15,78 @@ export interface NormalizedToolCall {
 /** 标准化 source 名，判断是否 OpenAI 系。 */
 function isOpenAIFamily(source: string): boolean {
   return [
-    'openai', 'openrouter', 'custom', 'azure_openai', 'deepseek',
-    'xai', 'groq', 'mistralai', 'cohere', 'perplexity', 'google',
+    'openai',
+    'openrouter',
+    'custom',
+    'azure_openai',
+    'deepseek',
+    'xai',
+    'groq',
+    'mistralai',
+    'cohere',
+    'perplexity',
+    'google',
   ].includes(source)
 }
 
+/** 原始模型响应（OpenAI/Claude/Cohere 三族非流式响应的最小公共形状）。 */
+export interface RawModelResponse {
+  choices?: Array<{ message?: { content?: unknown; tool_calls?: unknown } }>
+  content?: unknown
+  text?: unknown
+  message?: { content?: unknown; tool_calls?: unknown }
+}
+
 /** 从原始响应里抠出 tool_calls。返回 null 表示这次响应没有 tool call。 */
-export function extractToolCalls(response: any, source: string): NormalizedToolCall[] | null {
+export function extractToolCalls(
+  response: RawModelResponse,
+  source: string
+): NormalizedToolCall[] | null {
   if (!response) return null
 
   // OpenAI 系：choices[0].message.tool_calls
   if (isOpenAIFamily(source)) {
     const calls = response?.choices?.[0]?.message?.tool_calls
     if (!Array.isArray(calls) || calls.length === 0) return null
-    return calls.map((c: any) => ({
-      id: String(c.id ?? ''),
-      name: String(c.function?.name ?? ''),
-      arguments: typeof c.function?.arguments === 'string' ? c.function.arguments : JSON.stringify(c.function?.arguments ?? {}),
-    })).filter(c => c.id && c.name)
+    return calls
+      .map((c) => ({
+        id: String(c.id ?? ''),
+        name: String(c.function?.name ?? ''),
+        arguments:
+          typeof c.function?.arguments === 'string'
+            ? c.function.arguments
+            : JSON.stringify(c.function?.arguments ?? {}),
+      }))
+      .filter((c) => c.id && c.name)
   }
 
   // Claude：content 里 type==='tool_use' 的块
   if (source === 'claude') {
     const blocks = Array.isArray(response?.content)
-      ? response.content.filter((b: any) => b && b.type === 'tool_use')
+      ? response.content.filter((b) => b && b.type === 'tool_use')
       : []
     if (blocks.length === 0) return null
-    return blocks.map((b: any) => ({
-      id: String(b.id ?? ''),
-      name: String(b.name ?? ''),
-      arguments: typeof b.input === 'string' ? b.input : JSON.stringify(b.input ?? {}),
-    })).filter((c: NormalizedToolCall) => c.id && c.name)
+    return blocks
+      .map((b) => ({
+        id: String(b.id ?? ''),
+        name: String(b.name ?? ''),
+        arguments: typeof b.input === 'string' ? b.input : JSON.stringify(b.input ?? {}),
+      }))
+      .filter((c: NormalizedToolCall) => c.id && c.name)
   }
 
   // Cohere：message.tool_calls
   if (source === 'cohere') {
     const calls = response?.message?.tool_calls
     if (!Array.isArray(calls) || calls.length === 0) return null
-    return calls.map((c: any) => ({
-      id: String(c.id ?? ''),
-      name: String(c.name ?? ''),
-      arguments: typeof c.parameters === 'string' ? c.parameters : JSON.stringify(c.parameters ?? {}),
-    })).filter(c => c.id && c.name)
+    return calls
+      .map((c) => ({
+        id: String(c.id ?? ''),
+        name: String(c.name ?? ''),
+        arguments:
+          typeof c.parameters === 'string' ? c.parameters : JSON.stringify(c.parameters ?? {}),
+      }))
+      .filter((c) => c.id && c.name)
   }
 
   // makersuite/vertexai 等按需补，MVP 阶段先返回 null

@@ -3,14 +3,19 @@ import { usePresetStore } from '../../stores/presetStore'
 import { useWorldbookStore } from '../../stores/worldbookStore'
 import { useCharacterStore } from '../../stores/characterStore'
 import { useUiStore } from '../../stores/uiStore'
-import { CHARACTER_FIELDS, REGEX_SUBSTITUTE_OPTIONS, WORLDBOOK_POSITION_OPTIONS, WORLDBOOK_ROLE_OPTIONS } from '../../types'
+import {
+  CHARACTER_FIELDS,
+  REGEX_SUBSTITUTE_OPTIONS,
+  WORLDBOOK_POSITION_OPTIONS,
+  WORLDBOOK_ROLE_OPTIONS,
+} from '../../types'
 import './register' // 注册 Search/Batch 工具到各 scene（幂等）
 
 /** 一个"搜索场景"：当前 (workspace, collection) 下可搜的 items + 字段表 + item 元数据 getter。
  *  items 是各 store 的 live 数据（presetStore.prompts / regexScripts 等），SearchTool 直接喂给
  *  searchFields 纯函数。getItemMeta 负责把每种 item 各自不同的 id/name 取法统一成 SearchHit 形状。 */
 export interface SearchScene {
-  items: any[]
+  items: Record<string, unknown>[]
   fields: SearchField[]
   getItemMeta: SearchItemMeta
 }
@@ -20,7 +25,10 @@ export interface SearchScene {
  * 不能走字符串 replace 输入框（会把布尔/数值字段改坏成不可解析的字符串）。SearchTool 选中 enum 字段时
  * 顶部显示这份候选清单的 toggle，点哪个就把选中命中改成哪个。每项 {value, labelKey}，value 原样回写
  * （保留原类型：number/boolean/null），SearchTool 通过 uiStore.t(labelKey) 显示候选名。 */
-export interface EnumChoice { value: any; labelKey: string }
+export interface EnumChoice {
+  value: unknown
+  labelKey: string
+}
 
 const PRESET_ROLE_CHOICES: EnumChoice[] = [
   { value: 'system', labelKey: 'preset.role.system' },
@@ -38,24 +46,38 @@ const BOOL_CHOICES: EnumChoice[] = [
  *  'role' 字段在 preset(worldbook) 各自候选不同，由 getEnumChoices() 按 scene 分派，不放进这张裸字典。 */
 const ENUM_CHOICES: Record<string, EnumChoice[]> = {
   // regex（preset/character 宿主共用）
-  'substituteRegex': REGEX_SUBSTITUTE_OPTIONS.map(o => ({ value: o.value, labelKey: o.labelKey })),
-  'disabled': BOOL_CHOICES,
+  substituteRegex: REGEX_SUBSTITUTE_OPTIONS.map((o) => ({
+    value: o.value,
+    labelKey: o.labelKey,
+  })),
+  disabled: BOOL_CHOICES,
   // worldbook/items
-  'position': WORLDBOOK_POSITION_OPTIONS.map(o => ({ value: o.value, labelKey: o.labelKey })),
-  'depth': [], // 数值字段，候选太分散——SearchTool 退化为只读
-  'order': [],
-  'probability': [],
-  'constant': BOOL_CHOICES,
-  'keyWord': BOOL_CHOICES,
-  'vectorized': BOOL_CHOICES,
+  position: WORLDBOOK_POSITION_OPTIONS.map((o) => ({
+    value: o.value,
+    labelKey: o.labelKey,
+  })),
+  depth: [], // 数值字段，候选太分散——SearchTool 退化为只读
+  order: [],
+  probability: [],
+  constant: BOOL_CHOICES,
+  keyWord: BOOL_CHOICES,
+  vectorized: BOOL_CHOICES,
 }
 
 /** 查某个 enum 字段的候选清单；返回空数组表示该字段无候选 UI（只读展示命中）。
  *  'role' 按 scene 分派：preset/items 是字符串角色三态，worldbook/items 是数值角色（含 null 默认）。 */
-export function getEnumChoices(workspace: string, collection: string, fieldKey: string): EnumChoice[] {
+export function getEnumChoices(
+  workspace: string,
+  collection: string,
+  fieldKey: string
+): EnumChoice[] {
   if (fieldKey === 'role') {
     if (workspace === 'preset' && collection === 'items') return PRESET_ROLE_CHOICES
-    if (workspace === 'worldbook') return WORLDBOOK_ROLE_OPTIONS.map(o => ({ value: o.value, labelKey: o.labelKey }))
+    if (workspace === 'worldbook')
+      return WORLDBOOK_ROLE_OPTIONS.map((o) => ({
+        value: o.value,
+        labelKey: o.labelKey,
+      }))
     return []
   }
   return ENUM_CHOICES[fieldKey] ?? []
@@ -76,7 +98,11 @@ const REGEX_FIELDS: SearchField[] = [
   { key: 'scriptName', labelKey: 'regex.field.scriptName', kind: 'text' },
   { key: 'placement', labelKey: 'regex.field.placement', kind: 'list' },
   { key: 'trimStrings', labelKey: 'regex.field.trimStrings', kind: 'list' },
-  { key: 'substituteRegex', labelKey: 'regex.field.substituteRegex', kind: 'enum' },
+  {
+    key: 'substituteRegex',
+    labelKey: 'regex.field.substituteRegex',
+    kind: 'enum',
+  },
   { key: 'disabled', labelKey: 'regex.field.disabled', kind: 'enum' },
 ]
 
@@ -84,7 +110,11 @@ const WORLDBOOK_FIELDS: SearchField[] = [
   { key: 'content', labelKey: 'worldbook.field.content', kind: 'text' },
   { key: 'comment', labelKey: 'worldbook.field.comment', kind: 'text' },
   { key: 'keys', labelKey: 'worldbook.field.keys', kind: 'list' },
-  { key: 'keysecondary', labelKey: 'worldbook.field.keysecondary', kind: 'list' },
+  {
+    key: 'keysecondary',
+    labelKey: 'worldbook.field.keysecondary',
+    kind: 'list',
+  },
   { key: 'group', labelKey: 'worldbook.field.group', kind: 'text' },
   { key: 'position', labelKey: 'worldbook.field.position', kind: 'enum' },
   { key: 'role', labelKey: 'worldbook.field.role', kind: 'enum' },
@@ -102,21 +132,34 @@ const WORLDBOOK_FIELDS: SearchField[] = [
  *  key 'list'（kind='list'，单元素数组）——getItemMeta 用 item.key（虚拟 tab key）做 id。 */
 function getCharacterFieldsScene(store: ReturnType<typeof useCharacterStore>): SearchScene {
   const uiStore = useUiStore()
-  const items: any[] = []
+  const items: Record<string, unknown>[] = []
   const char = store.character
   if (char) {
     for (const f of CHARACTER_FIELDS) {
-      const value = f.key === 'depthPrompt' ? char.depthPrompt.prompt : (char as any)[f.key]
+      const value = f.key === 'depthPrompt' ? char.depthPrompt.prompt : char[f.key]
       if (typeof value !== 'string') continue
       items.push({ key: 'field:' + f.key, labelKey: f.labelKey, value })
     }
     char.greetings.forEach((g, i) => {
       const gid = store.greetingIds[i]
-      if (gid) items.push({ key: 'field:greeting:' + gid, labelKey: 'character.sidebar.greetingsLabel', list: [g] })
+      if (gid)
+        items.push({
+          key: 'field:greeting:' + gid,
+          labelKey: 'character.sidebar.greetingsLabel',
+          list: [g],
+        })
     })
   }
-  const fields: SearchField[] = CHARACTER_FIELDS.map(f => ({ key: 'value', labelKey: f.labelKey, kind: 'text' as const }))
-  fields.push({ key: 'list', labelKey: 'character.sidebar.greetingsLabel', kind: 'list' })
+  const fields: SearchField[] = CHARACTER_FIELDS.map((f) => ({
+    key: 'value',
+    labelKey: f.labelKey,
+    kind: 'text' as const,
+  }))
+  fields.push({
+    key: 'list',
+    labelKey: 'character.sidebar.greetingsLabel',
+    kind: 'list',
+  })
   return {
     items,
     fields,
@@ -146,7 +189,10 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
     return {
       items: store.entries,
       fields: WORLDBOOK_FIELDS,
-      getItemMeta: (e) => ({ id: String(e.uid), name: e.comment || String(e.uid) }),
+      getItemMeta: (e) => ({
+        id: String(e.uid),
+        name: e.comment || String(e.uid),
+      }),
     }
   }
   const store = useCharacterStore()
@@ -164,8 +210,10 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
 
 /** 把一条命中转发到对应 store 的 jumpToFieldHit（preset 含正则脚本宿主，worldbook/character 各自实现）。 */
 export function jumpToFieldHit(workspace: string, hit: SearchHit): void {
-  if (workspace === 'preset') usePresetStore().jumpToFieldHit(hit.itemId, hit.fieldKey, hit.line, hit.col, hit.ml)
-  else if (workspace === 'worldbook') useWorldbookStore().jumpToFieldHit(hit.itemId, hit.fieldKey, hit.line, hit.col, hit.ml)
+  if (workspace === 'preset')
+    usePresetStore().jumpToFieldHit(hit.itemId, hit.fieldKey, hit.line, hit.col, hit.ml)
+  else if (workspace === 'worldbook')
+    useWorldbookStore().jumpToFieldHit(hit.itemId, hit.fieldKey, hit.line, hit.col, hit.ml)
   else useCharacterStore().jumpToFieldHit(hit.itemId, hit.fieldKey, hit.line, hit.col, hit.ml)
 }
 
@@ -185,8 +233,11 @@ function spliceStr(s: string, col: number, len: number, newText: string): string
 }
 
 /** 替换结果按原字段类型回写：数字字段解析 Number，布尔字段按 'true'/'false'，其余当字符串。 */
-function coerceValue(v: string, original: any): any {
-  if (typeof original === 'number') { const n = Number(v); return Number.isNaN(n) ? original : n }
+function coerceValue(v: string, original: unknown): unknown {
+  if (typeof original === 'number') {
+    const n = Number(v)
+    return Number.isNaN(n) ? original : n
+  }
   if (typeof original === 'boolean') return v === 'true' ? true : v === 'false' ? false : original
   return v
 }
@@ -205,19 +256,20 @@ export function applyReplace(
   collection: string,
   scene: SearchScene,
   hit: SearchHit,
-  newText: string,
+  newText: string
 ): void {
-  const field = scene.fields.find(f => f.key === hit.fieldKey)
-  const item = scene.items.find(it => scene.getItemMeta(it).id === hit.itemId)
+  const field = scene.fields.find((f) => f.key === hit.fieldKey)
+  const item = scene.items.find((it) => scene.getItemMeta(it as Parameters<SearchItemMeta>[0]).id === hit.itemId)
   if (!field || !item) return
 
   if (workspace === 'character' && collection === 'fields') {
     const store = useCharacterStore()
     store.jumpToFieldHit(hit.itemId, hit.fieldKey, hit.line, hit.col, hit.ml)
     const current = store.currentField?.value ?? ''
-    const newVal = field.kind === 'list'
-      ? spliceStr(current, hit.col, hit.ml, newText)
-      : spliceText(current, hit.line, hit.col, hit.ml, newText)
+    const newVal =
+      field.kind === 'list'
+        ? spliceStr(current, hit.col, hit.ml, newText)
+        : spliceText(current, hit.line, hit.col, hit.ml, newText)
     store.setCurrentFieldValue(newVal)
     return
   }

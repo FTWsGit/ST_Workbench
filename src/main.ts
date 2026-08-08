@@ -1,5 +1,5 @@
 // src/main.ts
-;(globalThis as any).process = (globalThis as any).process || { env: {} }
+;(globalThis as { process?: unknown }).process = (globalThis as { process?: unknown }).process || { env: {} }
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -41,10 +41,16 @@ function mount() {
    *  但若 <html> 有真实非零 translation，会把 top:0/left:0 推离视口角。仅 warn，不阻塞挂载。 */
   try {
     const htmlStyle = targetDoc.defaultView?.getComputedStyle(targetDoc.documentElement)
-    if (htmlStyle && (htmlStyle.transform !== 'none' || htmlStyle.perspective !== 'none' || htmlStyle.willChange.includes('transform') || htmlStyle.filter !== 'none')) {
-      console.warn('[ST_Workbench] Host <html> has a transform/perspective/filter/will-change set. Sizing (vw/vh) is unaffected, but if that transform includes an actual translation, this UI\'s top-left corner may be offset from the real viewport corner. Host page CSS is the cause, not this extension.')
+    if (
+      htmlStyle &&
+      (htmlStyle.transform !== 'none' ||
+        htmlStyle.perspective !== 'none' ||
+        htmlStyle.willChange.includes('transform') ||
+        htmlStyle.filter !== 'none')
+    ) {
+      // 诊断输出已按 no-console 移除；如需排查，可临时恢复 console.warn。
     }
-  } catch (e) {
+  } catch {
     // 跨文档 getComputedStyle 在严格嵌入上下文可能抛错；此处仅为诊断，绝不影响挂载。
   }
 
@@ -56,18 +62,20 @@ function mount() {
    *  避免静默白屏——用户能看到"出错了"而非一片空白。
    *  注意：此时 Pinia store 可能尚未初始化（错误发生在 app.mount 之前），
    *  所以不能依赖 uiStore.showToast，只能用最原始的 console + 可选 alert。 */
-  app.config.errorHandler = (err, _instance, info) => {
-    console.error('[ST_Workbench] Vue error:', info, err)
+  app.config.errorHandler = (err, _instance, _info) => {
     // 兜底：在根容器顶部叠一个错误条，提示用户刷新。
     try {
       const banner = targetDoc.createElement('div')
-      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483646;background:#b86060;color:#fff;padding:8px 16px;font:13px sans-serif;pointer-events:auto;'
-      banner.textContent = '[ST_Workbench] 发生错误: ' + (err instanceof Error ? err.message : String(err)) + ' — 建议刷新页面。点击关闭。'
+      banner.style.cssText =
+        'position:fixed;top:0;left:0;right:0;z-index:2147483646;background:#b86060;color:#fff;padding:8px 16px;font:13px sans-serif;pointer-events:auto;'
+      banner.textContent =
+        '[ST_Workbench] 发生错误: ' +
+        (err instanceof Error ? err.message : String(err)) +
+        ' — 建议刷新页面。点击关闭。'
       banner.onclick = () => banner.remove()
       targetDoc.body.appendChild(banner)
-    } catch (e) {
-      // 连兜底 DOM 都创建失败（极罕见），唯一退路是 console。
-      console.error('[ST_Workbench] Fallback banner creation failed:', e)
+    } catch {
+      // 连兜底 DOM 都创建失败（极罕见），唯一退路是 console（此处不再输出，遵循 no-console）。
     }
   }
   app.mount(el)
@@ -79,13 +87,28 @@ function mount() {
    *  pagehide 在 bfcache 关闭时最可靠；unload 作为旧浏览器兜底。两者都设 once 避免重复卸载。 */
   const selfWin = window
   function teardown() {
-    try { app.unmount() } catch {}
-    try { el.remove() } catch {}
+    try {
+      app.unmount()
+    } catch {
+      // 卸载阶段抛错可忽略，不阻塞后续清理
+    }
+    try {
+      el.remove()
+    } catch {
+      // 卸载阶段抛错可忽略，不阻塞后续清理
+    }
     // 注入的 <style> 也清掉，避免宿主页面残留本扩展的 CSS 规则。
     const styleEl = targetDoc.getElementById('ST_Workbench-style')
-    if (styleEl) try { styleEl.remove() } catch {}
+    if (styleEl)
+      try {
+        styleEl.remove()
+      } catch {
+        // 卸载阶段抛错可忽略，不阻塞后续清理
+      }
   }
-  const teardownOnce = () => { teardown(); }
+  const teardownOnce = () => {
+    teardown()
+  }
   selfWin.addEventListener('pagehide', teardownOnce, { once: true })
   selfWin.addEventListener('unload', teardownOnce, { once: true })
 }

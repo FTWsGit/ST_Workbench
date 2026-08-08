@@ -1,16 +1,29 @@
 <template>
   <div v-if="store.character" class="wb-form">
-    <label class="wb-form-check"><input type="checkbox" v-model="fav" /> {{ uiStore.t('character.metaForm.favLabel') }}</label>
+    <label class="wb-form-check"
+      ><input type="checkbox" v-model="fav" /> {{ uiStore.t('character.metaForm.favLabel') }}</label
+    >
 
     <FormField :label="uiStore.t('character.metaForm.worldbookLabel')">
       <select class="wb-select-wide" v-model="worldbookModel">
-        <option :value="null">{{ uiStore.t('character.metaForm.worldbookNone') }}</option>
-        <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">{{ n }}</option>
+        <option :value="null">
+          {{ uiStore.t('character.metaForm.worldbookNone') }}
+        </option>
+        <option v-for="n in worldbookStore.worldbookList" :key="n" :value="n">
+          {{ n }}
+        </option>
       </select>
     </FormField>
 
     <FormField :label="uiStore.t('character.metaForm.talkativenessLabel')">
-      <input class="wb-form-input wb-form-num" type="number" step="0.1" min="0" max="1" v-model.number="talkativeness" />
+      <input
+        class="wb-form-input wb-form-num"
+        type="number"
+        step="0.1"
+        min="0"
+        max="1"
+        v-model.number="talkativeness"
+      />
     </FormField>
 
     <AdvancedGroup :title="uiStore.t('character.metaForm.creatorToggle')">
@@ -27,11 +40,17 @@
       </FormField>
 
       <FormField :label="uiStore.t('character.metaForm.tagsLabel')">
-        <input class="wb-form-input" v-model="tagsText" :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')" />
+        <input
+          class="wb-form-input"
+          v-model="tagsText"
+          :placeholder="uiStore.t('character.metaForm.tagsPlaceholder')"
+        />
       </FormField>
     </AdvancedGroup>
   </div>
-  <p v-else class="wb-preset-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
+  <p v-else class="wb-preset-cp-empty">
+    {{ uiStore.t('character.sidebar.empty') }}
+  </p>
 </template>
 
 <script setup lang="ts">
@@ -39,6 +58,7 @@
  *  仅服务角色卡 domain，不参数化；世界书列表只读跨 domain 取 worldbookStore.worldbookList（App.vue 打开面板时已 refreshWorldbookList）。
  *  worldbook 字段最终写入 v2CharData.extensions.world 由 characterApi.ts 保存时处理。 */
 import { computed } from 'vue'
+import type { Character } from '../../types'
 import { useCharacterStore } from '../../stores/characterStore'
 import { useWorldbookStore } from '../../stores/worldbookStore'
 import { useUiStore } from '../../stores/uiStore'
@@ -52,7 +72,10 @@ const uiStore = useUiStore()
 function field<K extends 'creator' | 'creatorNotes' | 'version' | 'talkativeness' | 'fav'>(key: K) {
   return computed({
     get: () => store.character![key],
-    set: (v: any) => { store.character![key] = v; store.markDirty() },
+    set: (v: string | number | boolean) => {
+      store.character![key] = v as Character[K]
+      store.markDirty()
+    },
   })
 }
 
@@ -67,13 +90,21 @@ const tagsText = computed({
   get: () => (store.character?.tags || []).join(', '),
   set: (v: string) => {
     if (!store.character) return
-    store.character.tags = v.split(',').map(s => s.trim()).filter(Boolean)
+    store.character.tags = v
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
     store.markDirty()
   },
 })
 
 const worldbookModel = computed<string | null>({
   get: () => store.character?.worldbook ?? null,
-  set: (v) => { if (store.character) { store.character.worldbook = v; store.markDirty() } },
+  set: (v) => {
+    if (store.character) {
+      store.character.worldbook = v
+      store.markDirty()
+    }
+  },
 })
 </script>

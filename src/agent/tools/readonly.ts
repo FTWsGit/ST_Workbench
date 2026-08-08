@@ -3,30 +3,41 @@
  * 设计文档 5.2：只读工具（risk:'safe'）接入，工具调用循环跑通（3.2/3.3）。
  * 工具直接复用/包装现有 store 方法与 searchFields.ts 的 SearchHit 契约。
  */
-import { registerAgentTool, type AgentToolResult, type AgentToolContext } from '../toolRegistry'
+import { registerAgentTool, type AgentToolResult } from '../toolRegistry'
 import { searchFields, type SearchHit } from '../../utils'
-import {
-  LIST_TOOLS_MAX_ITEMS,
-  TOOL_RESULT_TRUNCATE_BYTES,
-} from '../constants'
+import { LIST_TOOLS_MAX_ITEMS, TOOL_RESULT_TRUNCATE_BYTES } from '../constants'
+
+/** order 树遍历用宽松结构（OrderNode 可赋值到它，避免显式 any）。 */
+type OrderWalkNode = {
+  identifier?: unknown
+  children?: OrderWalkNode[]
+}
 
 /* ====== 工具 description 集中管理（英文，atomcode 风格） ====== */
 
 const TOOL_DESC = {
-  presetListBlocks: 'List all prompt blocks in the current preset: identifier/name/role/disabled/hidden (no content). Map structure, pick a block to edit or read via preset_get_block. Returns a bullet list, capped with a truncation notice; errors if no preset loaded.',
-  presetGetBlock: 'Read one prompt block by identifier: raw content + fields, not macro/regex-rendered (use preset_preview_blocks for rendered text). Pass offset/limit to page long content (1-based); truncated output reports next offset. Errors on missing identifier.',
-  presetSearch: 'Search current preset prompt blocks for a substring; returns hits with block identifier, field, line/col and snippet. Use to find which blocks mention a variable/macro before editing. No hits returns a plain message; results capped with a notice.',
-  worldbookListEntries: 'List all entries in the current worldbook: uid/comment/keys/disabled/position (no content). Map structure, pick an entry to edit or read via worldbook_get_entry. Returns a bullet list, capped with a truncation notice; errors if no worldbook loaded.',
-  worldbookGetEntry: 'Read one worldbook entry by uid: raw content + all fields. Long content: pass offset/limit to page lines (1-based); truncated output reports the next offset. Use before editing an entry. Errors if uid invalid or entry not found.',
-  worldbookSearch: 'Search current worldbook entry content/comment for a substring; returns hits with uid, field, line/col and snippet. Use to find which entries mention a keyword before editing. No hits returns a plain message; results capped with a notice.',
-  characterGetFields: "List current character card's creator fields (description/personality/scenario/mes_example/system_prompt/post_history_instructions) and greetings with length + preview, no full text. Use to map the card before editing. Errors if no character loaded.",
-  characterGetField: 'Read one card field by key: description/personality/scenario/mesExample/systemPrompt/postHistoryInstructions/depthPrompt, or greeting:N (N-th). offset/limit page lines (1-based); truncated output reports next offset. Unknown key or bad index errors.',
+  presetListBlocks:
+    'List all prompt blocks in the current preset: identifier/name/role/disabled/hidden (no content). Map structure, pick a block to edit or read via preset_get_block. Returns a bullet list, capped with a truncation notice; errors if no preset loaded.',
+  presetGetBlock:
+    'Read one prompt block by identifier: raw content + fields, not macro/regex-rendered (use preset_preview_blocks for rendered text). Pass offset/limit to page long content (1-based); truncated output reports next offset. Errors on missing identifier.',
+  presetSearch:
+    'Search current preset prompt blocks for a substring; returns hits with block identifier, field, line/col and snippet. Use to find which blocks mention a variable/macro before editing. No hits returns a plain message; results capped with a notice.',
+  worldbookListEntries:
+    'List all entries in the current worldbook: uid/comment/keys/disabled/position (no content). Map structure, pick an entry to edit or read via worldbook_get_entry. Returns a bullet list, capped with a truncation notice; errors if no worldbook loaded.',
+  worldbookGetEntry:
+    'Read one worldbook entry by uid: raw content + all fields. Long content: pass offset/limit to page lines (1-based); truncated output reports the next offset. Use before editing an entry. Errors if uid invalid or entry not found.',
+  worldbookSearch:
+    'Search current worldbook entry content/comment for a substring; returns hits with uid, field, line/col and snippet. Use to find which entries mention a keyword before editing. No hits returns a plain message; results capped with a notice.',
+  characterGetFields:
+    "List current character card's creator fields (description/personality/scenario/mes_example/system_prompt/post_history_instructions) and greetings with length + preview, no full text. Use to map the card before editing. Errors if no character loaded.",
+  characterGetField:
+    'Read one card field by key: description/personality/scenario/mesExample/systemPrompt/postHistoryInstructions/depthPrompt, or greeting:N (N-th). offset/limit page lines (1-based); truncated output reports next offset. Unknown key or bad index errors.',
 } as const
 
 /* ====== 入库截断 + framing ====== */
 
 /** 入库截断：tool_result 写入前过字节上限。 */
-function truncate(text: string): string {
+function _truncate(text: string): string {
   if (text.length <= TOOL_RESULT_TRUNCATE_BYTES) return text
   const cut = TOOL_RESULT_TRUNCATE_BYTES
   return text.slice(0, cut) + `\n…[truncated, original ${text.length} bytes]`
@@ -38,7 +49,10 @@ function frame(text: string): string {
 }
 
 /** 列表类工具返回条目数上限保护。 */
-function capItems<T>(items: T[], max = LIST_TOOLS_MAX_ITEMS): { items: T[]; truncated: boolean; total: number } {
+function capItems<T>(
+  items: T[],
+  max = LIST_TOOLS_MAX_ITEMS
+): { items: T[]; truncated: boolean; total: number } {
   const total = items.length
   if (total <= max) return { items, truncated: false, total }
   return { items: items.slice(0, max), truncated: true, total }
@@ -80,11 +94,11 @@ registerAgentTool({
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
-    const prompts = store.prompts as any[]
-    const order = store.order as any[]
+    const prompts = store.prompts
+    const order = store.order as OrderWalkNode[]
     // 从 order 树展平 identifier 顺序（忽略 group 边界）
     const orderedIds: string[] = []
-    const walk = (nodes: any[]) => {
+    const walk = (nodes: OrderWalkNode[]) => {
       for (const n of nodes) {
         if (n && typeof n === 'object') {
           if (typeof n.identifier === 'string') orderedIds.push(n.identifier)
@@ -93,9 +107,15 @@ registerAgentTool({
       }
     }
     walk(order)
-    const byId = new Map(prompts.map((p: any) => [p.identifier, p]))
+    const byId = new Map(prompts.map((p) => [p.identifier, p]))
     const seen = new Set<string>()
-    type Row = { identifier: string; name: string; role: string; disabled: boolean; hidden: boolean }
+    type Row = {
+      identifier: string
+      name: string
+      role: string
+      disabled: boolean
+      hidden: boolean
+    }
     const rows: Row[] = []
     for (const id of orderedIds) {
       if (seen.has(id)) continue
@@ -123,9 +143,12 @@ registerAgentTool({
       })
     }
     const capped = capItems(rows)
-    let text = capped.items.map(r =>
-      `- ${r.identifier}${r.hidden ? ' (hidden)' : ''} | name=${r.name} | role=${r.role} | disabled=${r.disabled}`
-    ).join('\n')
+    let text = capped.items
+      .map(
+        (r) =>
+          `- ${r.identifier}${r.hidden ? ' (hidden)' : ''} | name=${r.name} | role=${r.role} | disabled=${r.disabled}`
+      )
+      .join('\n')
     if (capped.truncated) text += `\n…[showing first ${capped.items.length} of ${capped.total}]`
     return { text: frame(text) }
   },
@@ -138,8 +161,14 @@ registerAgentTool({
     type: 'object',
     properties: {
       identifier: { type: 'string', description: 'Block identifier to read.' },
-      offset: { type: 'number', description: '1-based line number to start reading from. Default 1 (head).' },
-      limit: { type: 'number', description: 'Max lines to return (default 200, max 2000).' },
+      offset: {
+        type: 'number',
+        description: '1-based line number to start reading from. Default 1 (head).',
+      },
+      limit: {
+        type: 'number',
+        description: 'Max lines to return (default 200, max 2000).',
+      },
     },
     required: ['identifier'],
   },
@@ -151,21 +180,27 @@ registerAgentTool({
     const id = String(args?.identifier ?? '').trim()
     if (!id) return { text: frame('missing parameter: identifier'), isError: true }
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
-    const b = (store.prompts as any[]).find(p => p.identifier === id)
+    const b = store.prompts.find((p) => p.identifier === id)
     if (!b) return { text: frame(`block not found: ${id}`), isError: true }
     const content = String(b.content ?? '')
     const sliced = sliceLines(content, Number(args?.offset), Number(args?.limit))
-    const meta = JSON.stringify({
-      identifier: b.identifier,
-      name: b.name,
-      role: b.role,
-      disable: !!b.disable,
-      injection_position: b.injection_position,
-      injection_depth: b.injection_depth,
-      temperature: b.temperature,
-      ...(b.extensions ? { extensions: b.extensions } : {}),
-    }, null, 2)
-    return { text: frame(`${meta}\n\n---- content (offset/limit applied) ----\n${sliced}`) }
+    const meta = JSON.stringify(
+      {
+        identifier: b.identifier,
+        name: b.name,
+        role: b.role,
+        disable: !!b.disable,
+        injection_position: b.injection_position,
+        injection_depth: b.injection_depth,
+        temperature: b.temperature,
+        ...(b.extensions ? { extensions: b.extensions } : {}),
+      },
+      null,
+      2
+    )
+    return {
+      text: frame(`${meta}\n\n---- content (offset/limit applied) ----\n${sliced}`),
+    }
   },
 })
 
@@ -189,22 +224,33 @@ registerAgentTool({
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
     // 复用 searchFields 纯函数
     const PRESET_ITEM_FIELDS = [
-      { key: 'content', labelKey: 'preset.field.content', kind: 'text' as const },
+      {
+        key: 'content',
+        labelKey: 'preset.field.content',
+        kind: 'text' as const,
+      },
       { key: 'name', labelKey: 'preset.field.name', kind: 'text' as const },
       { key: 'role', labelKey: 'preset.field.role', kind: 'enum' as const },
-      { key: 'identifier', labelKey: 'preset.field.identifier', kind: 'enum' as const },
+      {
+        key: 'identifier',
+        labelKey: 'preset.field.identifier',
+        kind: 'enum' as const,
+      },
     ]
     const hits: SearchHit[] = searchFields(
-      store.prompts as any[],
+      store.prompts,
       PRESET_ITEM_FIELDS,
       query,
-      (b: any) => ({ id: b.identifier, name: b.name || b.identifier }),
+      (b) => ({ id: b.identifier, name: b.name || b.identifier })
     )
     if (hits.length === 0) return { text: frame(`no hits for "${query}"`) }
     const capped = capItems(hits)
-    let text = capped.items.map(h =>
-      `- ${h.itemId} / ${h.fieldKey} @ line ${h.line} col ${h.col} (len ${h.ml}): ${h.context.slice(0, 80)}`
-    ).join('\n')
+    let text = capped.items
+      .map(
+        (h) =>
+          `- ${h.itemId} / ${h.fieldKey} @ line ${h.line} col ${h.col} (len ${h.ml}): ${h.context.slice(0, 80)}`
+      )
+      .join('\n')
     if (capped.truncated) text += `\n…[showing first ${capped.items.length} of ${capped.total}]`
     return { text: frame(text) }
   },
@@ -222,9 +268,15 @@ registerAgentTool({
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true }
-    const entries = store.entries as any[]
-    type Row = { uid: number; comment: string; keys: string[]; disabled: boolean; position: number }
-    const rows: Row[] = entries.map(e => ({
+    const entries = store.entries
+    type Row = {
+      uid: number
+      comment: string
+      keys: string[]
+      disabled: boolean
+      position: number
+    }
+    const rows: Row[] = entries.map((e) => ({
       uid: Number(e.uid),
       comment: String(e.comment ?? ''),
       keys: Array.isArray(e.keys) ? e.keys : [],
@@ -232,9 +284,12 @@ registerAgentTool({
       position: Number(e.position ?? 0),
     }))
     const capped = capItems(rows)
-    let text = capped.items.map(r =>
-      `- uid=${r.uid} | comment=${r.comment} | keys=[${r.keys.join(',')}] | disabled=${r.disabled} | position=${r.position}`
-    ).join('\n')
+    let text = capped.items
+      .map(
+        (r) =>
+          `- uid=${r.uid} | comment=${r.comment} | keys=[${r.keys.join(',')}] | disabled=${r.disabled} | position=${r.position}`
+      )
+      .join('\n')
     if (capped.truncated) text += `\n…[showing first ${capped.items.length} of ${capped.total}]`
     return { text: frame(text) }
   },
@@ -247,8 +302,14 @@ registerAgentTool({
     type: 'object',
     properties: {
       uid: { type: 'number', description: 'Entry uid to read.' },
-      offset: { type: 'number', description: '1-based line number to start reading from. Default 1 (head).' },
-      limit: { type: 'number', description: 'Max lines to return (default 200, max 2000).' },
+      offset: {
+        type: 'number',
+        description: '1-based line number to start reading from. Default 1 (head).',
+      },
+      limit: {
+        type: 'number',
+        description: 'Max lines to return (default 200, max 2000).',
+      },
     },
     required: ['uid'],
   },
@@ -258,21 +319,28 @@ registerAgentTool({
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore
     const uid = Number(args?.uid)
-    if (!Number.isFinite(uid)) return { text: frame('missing or invalid parameter: uid'), isError: true }
+    if (!Number.isFinite(uid))
+      return { text: frame('missing or invalid parameter: uid'), isError: true }
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true }
-    const e = (store.entries as any[]).find(x => Number(x.uid) === uid)
+    const e = store.entries.find((x) => Number(x.uid) === uid)
     if (!e) return { text: frame(`entry not found: uid=${uid}`), isError: true }
     const content = String(e.content ?? '')
     const sliced = sliceLines(content, Number(args?.offset), Number(args?.limit))
-    const meta = JSON.stringify({
-      uid: e.uid,
-      comment: e.comment,
-      keys: e.keys,
-      disabled: !!e.disabled,
-      position: e.position,
-      ...(e.extensions ? { extensions: e.extensions } : {}),
-    }, null, 2)
-    return { text: frame(`${meta}\n\n---- content (offset/limit applied) ----\n${sliced}`) }
+    const meta = JSON.stringify(
+      {
+        uid: e.uid,
+        comment: e.comment,
+        keys: e.keys,
+        disabled: !!e.disabled,
+        position: e.position,
+        ...(e.extensions ? { extensions: e.extensions } : {}),
+      },
+      null,
+      2
+    )
+    return {
+      text: frame(`${meta}\n\n---- content (offset/limit applied) ----\n${sliced}`),
+    }
   },
 })
 
@@ -295,21 +363,30 @@ registerAgentTool({
     if (!query) return { text: frame('missing parameter: query'), isError: true }
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true }
     const WB_FIELDS = [
-      { key: 'content', labelKey: 'worldbook.field.content', kind: 'text' as const },
-      { key: 'comment', labelKey: 'worldbook.field.comment', kind: 'text' as const },
+      {
+        key: 'content',
+        labelKey: 'worldbook.field.content',
+        kind: 'text' as const,
+      },
+      {
+        key: 'comment',
+        labelKey: 'worldbook.field.comment',
+        kind: 'text' as const,
+      },
       { key: 'keys', labelKey: 'worldbook.field.keys', kind: 'list' as const },
     ]
-    const hits: SearchHit[] = searchFields(
-      store.entries as any[],
-      WB_FIELDS,
-      query,
-      (e: any) => ({ id: String(e.uid), name: e.comment || String(e.uid) }),
-    )
+    const hits: SearchHit[] = searchFields(store.entries, WB_FIELDS, query, (e) => ({
+      id: String(e.uid),
+      name: e.comment || String(e.uid),
+    }))
     if (hits.length === 0) return { text: frame(`no hits for "${query}"`) }
     const capped = capItems(hits)
-    let text = capped.items.map(h =>
-      `- uid=${h.itemId} / ${h.fieldKey} @ line ${h.line} col ${h.col} (len ${h.ml}): ${h.context.slice(0, 80)}`
-    ).join('\n')
+    let text = capped.items
+      .map(
+        (h) =>
+          `- uid=${h.itemId} / ${h.fieldKey} @ line ${h.line} col ${h.col} (len ${h.ml}): ${h.context.slice(0, 80)}`
+      )
+      .join('\n')
     if (capped.truncated) text += `\n…[showing first ${capped.items.length} of ${capped.total}]`
     return { text: frame(text) }
   },
@@ -338,12 +415,14 @@ registerAgentTool({
     ]
     const rows: string[] = []
     for (const f of fields) {
-      const v = String((c as any)[f.key] ?? '')
+      const v = String(c[f.key] ?? '')
       rows.push(`- ${f.label}: len=${v.length}, preview=${v.slice(0, 100).replace(/\n/g, ' ')}`)
     }
     rows.push(`- greetings: count=${c.greetings.length}`)
     c.greetings.forEach((g, i) => {
-      rows.push(`  - greeting[${i}]: len=${g.length}, preview=${g.slice(0, 80).replace(/\n/g, ' ')}`)
+      rows.push(
+        `  - greeting[${i}]: len=${g.length}, preview=${g.slice(0, 80).replace(/\n/g, ' ')}`
+      )
     })
     return { text: frame(rows.join('\n')) }
   },
@@ -356,8 +435,14 @@ registerAgentTool({
     type: 'object',
     properties: {
       field_key: { type: 'string', description: 'Field key.' },
-      offset: { type: 'number', description: '1-based line number to start reading from. Default 1 (head).' },
-      limit: { type: 'number', description: 'Max lines to return (default 200, max 2000).' },
+      offset: {
+        type: 'number',
+        description: '1-based line number to start reading from. Default 1 (head).',
+      },
+      limit: {
+        type: 'number',
+        description: 'Max lines to return (default 200, max 2000).',
+      },
     },
     required: ['field_key'],
   },
@@ -370,7 +455,7 @@ registerAgentTool({
     if (!key) return { text: frame('missing parameter: field_key'), isError: true }
     if (!store.character) return { text: frame('当前没有加载任何角色卡。'), isError: true }
     const c = store.character
-    let value = ''
+    let value: string
     if (key === 'depthPrompt') {
       value = c.depthPrompt.prompt
     } else if (key.startsWith('greeting:')) {
@@ -379,11 +464,22 @@ registerAgentTool({
         return { text: frame(`invalid greeting index: ${key}`), isError: true }
       }
       value = c.greetings[idx]
-    } else if (['description', 'personality', 'scenario', 'mesExample', 'systemPrompt', 'postHistoryInstructions'].includes(key)) {
-      value = String((c as any)[key] ?? '')
+    } else if (
+      [
+        'description',
+        'personality',
+        'scenario',
+        'mesExample',
+        'systemPrompt',
+        'postHistoryInstructions',
+      ].includes(key)
+    ) {
+      value = String(c[key] ?? '')
     } else {
       return { text: frame(`unknown field_key: ${key}`), isError: true }
     }
-    return { text: frame(sliceLines(value, Number(args?.offset), Number(args?.limit))) }
+    return {
+      text: frame(sliceLines(value, Number(args?.offset), Number(args?.limit))),
+    }
   },
 })

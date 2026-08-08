@@ -1,8 +1,16 @@
 <template>
   <div class="st-wb" :style="uiStore.cssVars">
     <Transition name="wb-fab">
-      <button v-if="!uiStore.panelOpen" class="wb-fab" :class="{ dragging: fab.dragging }"
-              :style="fab.style" @pointerdown="fab.onPointerDown" @click="fab.onClick">W</button>
+      <button
+        v-if="!uiStore.panelOpen"
+        class="wb-fab"
+        :class="{ dragging: fab.dragging }"
+        :style="fab.style"
+        @pointerdown="fab.onPointerDown"
+        @click="fab.onClick"
+      >
+        W
+      </button>
     </Transition>
 
     <Transition name="wb-panel">
@@ -10,46 +18,159 @@
         <div class="wb-header">
           <!-- 桌面端完整按钮行；移动端紧凑行（☰ / 保存 / 预设 / ⋯ / ✕），其余按钮收入下面的 ⋯ 操作表 -->
           <template v-if="!isMobile">
-            <button class="wb-btn accent" @click="onSave()">{{ saveLabel }}</button>
+            <button class="wb-btn accent" @click="onSave()">
+              {{ saveLabel }}
+            </button>
             <div class="wb-sep"></div>
-            <button class="wb-btn" @click="onReload()">{{ uiStore.t('shared.header.reload') }}</button>
-             <button class="wb-btn" @click="uiStore.settingsOpen = true">{{ uiStore.t('shared.header.settings') }}</button>
+            <button class="wb-btn" @click="onReload()">
+              {{ uiStore.t('shared.header.reload') }}
+            </button>
+            <button class="wb-btn" @click="uiStore.settingsOpen = true">
+              {{ uiStore.t('shared.header.settings') }}
+            </button>
             <div class="wb-sep"></div>
             <div class="wb-mode-switch">
-              <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'preset' }" @click="switchWorkspace('preset')">{{ uiStore.t('shared.header.mode.preset') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'worldbook' }" @click="switchWorkspace('worldbook')">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
-              <button class="wb-btn sm" :class="{ active: tabsStore.activeWorkspace === 'character' }" @click="switchWorkspace('character')">{{ uiStore.t('shared.header.mode.character') }}</button>
+              <button
+                class="wb-btn sm"
+                :class="{ active: tabsStore.activeWorkspace === 'preset' }"
+                @click="switchWorkspace('preset')"
+              >
+                {{ uiStore.t('shared.header.mode.preset') }}
+              </button>
+              <button
+                class="wb-btn sm"
+                :class="{ active: tabsStore.activeWorkspace === 'worldbook' }"
+                @click="switchWorkspace('worldbook')"
+              >
+                {{ uiStore.t('shared.header.mode.worldbook') }}
+              </button>
+              <button
+                class="wb-btn sm"
+                :class="{ active: tabsStore.activeWorkspace === 'character' }"
+                @click="switchWorkspace('character')"
+              >
+                {{ uiStore.t('shared.header.mode.character') }}
+              </button>
             </div>
             <div class="wb-sep"></div>
             <!-- 工具顺序跨 workspace 统一：先 toolbox 再 meta（worldbook 无 meta 表单）。 -->
-            <button class="wb-btn" :class="{ active: tabsStore.toolBoxOpen }" @click="toggleToolBox">{{ uiStore.t('shared.header.toolBox') }}</button>
-            <button v-if="tabsStore.activeWorkspace !== 'worldbook'" class="wb-btn" :class="{ active: uiStore.metaPanelOpen }" @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen">{{ uiStore.t('shared.header.meta') }}</button>
+            <button
+              class="wb-btn"
+              :class="{ active: tabsStore.toolBoxOpen }"
+              @click="toggleToolBox"
+            >
+              {{ uiStore.t('shared.header.toolBox') }}
+            </button>
+            <button
+              v-if="tabsStore.activeWorkspace !== 'worldbook'"
+              class="wb-btn"
+              :class="{ active: uiStore.metaPanelOpen }"
+              @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen"
+            >
+              {{ uiStore.t('shared.header.meta') }}
+            </button>
             <div class="wb-spacer"></div>
-            <button class="wb-btn" :class="{ active: tabsStore.varNavOpen }" @click="toggleVarNav">{{ uiStore.t('preset.header.varNav') }}</button>
-            <button class="wb-btn" :class="{ active: tabsStore.previewOpen }" @click="togglePreview">{{ uiStore.t('preset.header.preview') }}</button>
-            <button class="wb-btn" :class="{ active: uiStore.agentPanelOpen }" @click="toggleAgent">{{ uiStore.t('agent.header.open') }}</button>
+            <button class="wb-btn" :class="{ active: uiStore.varNavOpen }" @click="toggleVarNav">
+              {{ uiStore.t('preset.header.varNav') }}
+            </button>
+            <button class="wb-btn" :class="{ active: uiStore.previewOpen }" @click="togglePreview">
+              {{ uiStore.t('preset.header.preview') }}
+            </button>
+            <button class="wb-btn" :class="{ active: uiStore.agentPanelOpen }" @click="toggleAgent">
+              {{ uiStore.t('agent.header.open') }}
+            </button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
-              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.new')" :aria-label="uiStore.t('preset.header.new')" @click="onNewWorkspace(workspaceRegistry.preset)">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('preset.header.delete')" :aria-label="uiStore.t('preset.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.preset)" :disabled="!presetStore.presetName">🗑</button>
+              <button
+                class="wb-btn icon-btn"
+                :title="uiStore.t('preset.header.new')"
+                :aria-label="uiStore.t('preset.header.new')"
+                @click="onNewWorkspace(workspaceRegistry.preset)"
+              >
+                +
+              </button>
+              <button
+                class="wb-btn icon-btn"
+                :title="uiStore.t('preset.header.delete')"
+                :aria-label="uiStore.t('preset.header.delete')"
+                @click="onDeleteWorkspace(workspaceRegistry.preset)"
+                :disabled="!presetStore.presetName"
+              >
+                🗑
+              </button>
               <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.new')" :aria-label="uiStore.t('worldbook.header.new')" @click="onNewWorkspace(workspaceRegistry.worldbook)">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.importFromCharacter')" :aria-label="uiStore.t('worldbook.header.importFromCharacter')" :disabled="!embeddedCharacterBook" @click="onImportFromCharacterBook"> ⤓ </button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('worldbook.header.delete')" :aria-label="uiStore.t('worldbook.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.worldbook)" :disabled="!worldbookStore.worldbookName">🗑</button>
+              <button
+                class="wb-btn icon-btn"
+                :title="uiStore.t('worldbook.header.new')"
+                :aria-label="uiStore.t('worldbook.header.new')"
+                @click="onNewWorkspace(workspaceRegistry.worldbook)"
+              >
+                +
+              </button>
+              <button
+                class="wb-btn icon-btn"
+                :title="uiStore.t('worldbook.header.importFromCharacter')"
+                :aria-label="uiStore.t('worldbook.header.importFromCharacter')"
+                :disabled="!embeddedCharacterBook"
+                @click="onImportFromCharacterBook"
+              >
+                ⤓
+              </button>
+              <button
+                class="wb-btn icon-btn"
+                :title="uiStore.t('worldbook.header.delete')"
+                :aria-label="uiStore.t('worldbook.header.delete')"
+                @click="onDeleteWorkspace(workspaceRegistry.worldbook)"
+                :disabled="!worldbookStore.worldbookName"
+              >
+                🗑
+              </button>
               <WorkspaceSelect />
             </template>
             <template v-else-if="tabsStore.activeWorkspace === 'character'">
-              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.new')" :aria-label="uiStore.t('character.header.new')" @click="onNewWorkspace(workspaceRegistry.character)">+</button>
-              <button class="wb-btn icon-btn" :title="uiStore.t('character.header.delete')" :aria-label="uiStore.t('character.header.delete')" @click="onDeleteWorkspace(workspaceRegistry.character)" :disabled="!characterStore.character?.avatar">🗑</button>
+              <button
+                class="wb-btn icon-btn"
+                :title="uiStore.t('character.header.new')"
+                :aria-label="uiStore.t('character.header.new')"
+                @click="onNewWorkspace(workspaceRegistry.character)"
+              >
+                +
+              </button>
+              <button
+                class="wb-btn icon-btn"
+                :title="uiStore.t('character.header.delete')"
+                :aria-label="uiStore.t('character.header.delete')"
+                @click="onDeleteWorkspace(workspaceRegistry.character)"
+                :disabled="!characterStore.character?.avatar"
+              >
+                🗑
+              </button>
               <WorkspaceSelect />
             </template>
-            <button class="wb-btn close-btn" :aria-label="uiStore.t('common.close')" @click="onClosePanel()">✕</button>
+            <button
+              class="wb-btn close-btn"
+              :aria-label="uiStore.t('common.close')"
+              @click="onClosePanel()"
+            >
+              ✕
+            </button>
           </template>
           <template v-else>
-            <button class="wb-mobile-hamburger" :title="uiStore.t('shared.mobile.sidebar')" :aria-label="uiStore.t('shared.mobile.sidebar')" @click="drawer.toggleSidebar">☰</button>
-            <button class="wb-btn accent" @click="onSave()">{{ saveLabel }}</button>
-            <button class="wb-btn" @click="onReload()">{{ uiStore.t('shared.header.reload') }}</button>
+            <button
+              class="wb-mobile-hamburger"
+              :title="uiStore.t('shared.mobile.sidebar')"
+              :aria-label="uiStore.t('shared.mobile.sidebar')"
+              @click="drawer.toggleSidebar"
+            >
+              ☰
+            </button>
+            <button class="wb-btn accent" @click="onSave()">
+              {{ saveLabel }}
+            </button>
+            <button class="wb-btn" @click="onReload()">
+              {{ uiStore.t('shared.header.reload') }}
+            </button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <WorkspaceSelect />
             </template>
@@ -60,95 +181,336 @@
               <WorkspaceSelect />
             </template>
             <div class="wb-spacer"></div>
-            <button class="wb-mobile-tools-btn" :class="{ active: drawer.visible === 'tools' }" :title="uiStore.t('shared.mobile.tools')" :aria-label="uiStore.t('shared.mobile.tools')" @click="drawer.toggleTools">⋯</button>
-            <button class="wb-btn close-btn" :aria-label="uiStore.t('common.close')" @click="onClosePanel()">✕</button>
+            <button
+              class="wb-mobile-tools-btn"
+              :class="{ active: drawer.visible === 'tools' }"
+              :title="uiStore.t('shared.mobile.tools')"
+              :aria-label="uiStore.t('shared.mobile.tools')"
+              @click="drawer.toggleTools"
+            >
+              ⋯
+            </button>
+            <button
+              class="wb-btn close-btn"
+              :aria-label="uiStore.t('common.close')"
+              @click="onClosePanel()"
+            >
+              ✕
+            </button>
           </template>
         </div>
 
         <!-- 顶栏第二行：仅 preset/character 工作区需要"条目 vs 正则"二级切换；worldbook 没有独立于条目之外的集合，不渲染此行。 -->
-        <div v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'" class="wb-collection-switch">
-          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern' }"
-                  @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, tabsStore.activeWorkspace === 'character' ? 'fields' : 'items')">
-            {{ tabsStore.activeWorkspace === 'character' ? uiStore.t('character.header.collectionFields') : uiStore.t('preset.header.collectionItems') }}
+        <div
+          v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'"
+          class="wb-collection-switch"
+        >
+          <button
+            class="wb-btn sm"
+            :class="{
+              active:
+                tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern',
+            }"
+            @click="
+              tabsStore.setSidebarCollection(
+                tabsStore.activeWorkspace,
+                tabsStore.activeWorkspace === 'character' ? 'fields' : 'items'
+              )
+            "
+          >
+            {{
+              tabsStore.activeWorkspace === 'character'
+                ? uiStore.t('character.header.collectionFields')
+                : uiStore.t('preset.header.collectionItems')
+            }}
           </button>
-          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection === 'regex' }"
-                  @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex')">
+          <button
+            class="wb-btn sm"
+            :class="{ active: tabsStore.sidebarCollection === 'regex' }"
+            @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex')"
+          >
             {{ uiStore.t('shared.header.mode.regex') }}
           </button>
-          <button class="wb-btn sm" :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
-                  @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern')">
+          <button
+            class="wb-btn sm"
+            :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
+            @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern')"
+          >
             {{ uiStore.t('shared.header.mode.tavern') }}
           </button>
         </div>
 
         <div class="wb-main">
-          <PresetSidebar v-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
-          <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'regex'"
-            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
-          <ScriptTreeSidebar v-else-if="tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'tavern'"
-            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
-          <WorldbookSidebar v-else-if="tabsStore.activeWorkspace === 'worldbook'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
-          <CharacterSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern'" :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
-          <RegexSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'regex'"
-            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
-          <ScriptTreeSidebar v-else-if="tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'tavern'"
-            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'" />
+          <PresetSidebar
+            v-if="
+              tabsStore.activeWorkspace === 'preset' &&
+              tabsStore.sidebarCollection !== 'regex' &&
+              tabsStore.sidebarCollection !== 'tavern'
+            "
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
+          />
+          <RegexSidebar
+            v-else-if="
+              tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'regex'
+            "
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
+          />
+          <ScriptTreeSidebar
+            v-else-if="
+              tabsStore.activeWorkspace === 'preset' && tabsStore.sidebarCollection === 'tavern'
+            "
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
+          />
+          <WorldbookSidebar
+            v-else-if="tabsStore.activeWorkspace === 'worldbook'"
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
+          />
+          <CharacterSidebar
+            v-else-if="
+              tabsStore.activeWorkspace === 'character' &&
+              tabsStore.sidebarCollection !== 'regex' &&
+              tabsStore.sidebarCollection !== 'tavern'
+            "
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
+          />
+          <RegexSidebar
+            v-else-if="
+              tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'regex'
+            "
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
+          />
+          <ScriptTreeSidebar
+            v-else-if="
+              tabsStore.activeWorkspace === 'character' && tabsStore.sidebarCollection === 'tavern'
+            "
+            :mobile-drawer-open="isMobile && drawer.visible === 'sidebar'"
+          />
           <div class="wb-editor-col">
             <TabBar />
             <div class="wb-editor-row">
               <EditorShell />
-              <SettingsDock :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'settingsDock' }" />
+              <SettingsDock
+                :class="{
+                  'wb-mobile-drawer-open': isMobile && drawer.visible === 'settingsDock',
+                }"
+              />
             </div>
           </div>
-          <VarPanel v-if="tabsStore.varNavOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'varNav' }" />
-          <PreviewPanel v-if="tabsStore.previewOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'preview' }" />
+          <VarPanel
+            v-if="uiStore.varNavOpen"
+            :class="{
+              'wb-mobile-drawer-open': isMobile && drawer.visible === 'varNav',
+            }"
+          />
+          <PreviewPanel
+            v-if="uiStore.previewOpen"
+            :class="{
+              'wb-mobile-drawer-open': isMobile && drawer.visible === 'preview',
+            }"
+          />
           <ToolBoxPanel v-if="tabsStore.toolBoxOpen" />
-          <AgentPanel v-if="uiStore.agentPanelOpen" :class="{ 'wb-mobile-drawer-open': isMobile && drawer.visible === 'agent' }" />
+          <AgentPanel
+            v-if="uiStore.agentPanelOpen"
+            :class="{
+              'wb-mobile-drawer-open': isMobile && drawer.visible === 'agent',
+            }"
+          />
         </div>
 
         <!-- 移动端遮罩：任一抽屉/操作表打开时覆盖编辑区，点击关闭；桌面端不渲染。 -->
-        <div v-if="isMobile && drawer.visible !== 'none'" class="wb-mobile-backdrop" @click="drawer.close"></div>
+        <div
+          v-if="isMobile && drawer.visible !== 'none'"
+          class="wb-mobile-backdrop"
+          @click="drawer.close"
+        ></div>
 
         <!-- 移动端 ⋯ 操作表：容纳紧凑顶栏塞不下的所有按钮。 -->
-        <div v-if="isMobile" class="wb-mobile-tools-sheet" :class="{ 'wb-mobile-drawer-open': drawer.visible === 'tools' }">
+        <div
+          v-if="isMobile"
+          class="wb-mobile-tools-sheet"
+          :class="{ 'wb-mobile-drawer-open': drawer.visible === 'tools' }"
+        >
           <div class="wb-mobile-tools-grip"></div>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'preset' }" @click="drawer.runTool(() => switchWorkspace('preset'))">{{ uiStore.t('shared.header.mode.preset') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'worldbook' }" @click="drawer.runTool(() => switchWorkspace('worldbook'))">{{ uiStore.t('shared.header.mode.worldbook') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.activeWorkspace === 'character' }" @click="drawer.runTool(() => switchWorkspace('character'))">{{ uiStore.t('shared.header.mode.character') }}</button>
-          <template v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'">
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern' }"
-                    @click="drawer.runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, tabsStore.activeWorkspace === 'character' ? 'fields' : 'items'))">
-              {{ tabsStore.activeWorkspace === 'character' ? uiStore.t('character.header.collectionFields') : uiStore.t('preset.header.collectionItems') }}
+          <button
+            class="wb-mobile-tools-item"
+            :class="{ active: tabsStore.activeWorkspace === 'preset' }"
+            @click="drawer.runTool(() => switchWorkspace('preset'))"
+          >
+            {{ uiStore.t('shared.header.mode.preset') }}
+          </button>
+          <button
+            class="wb-mobile-tools-item"
+            :class="{ active: tabsStore.activeWorkspace === 'worldbook' }"
+            @click="drawer.runTool(() => switchWorkspace('worldbook'))"
+          >
+            {{ uiStore.t('shared.header.mode.worldbook') }}
+          </button>
+          <button
+            class="wb-mobile-tools-item"
+            :class="{ active: tabsStore.activeWorkspace === 'character' }"
+            @click="drawer.runTool(() => switchWorkspace('character'))"
+          >
+            {{ uiStore.t('shared.header.mode.character') }}
+          </button>
+          <template
+            v-if="
+              tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'
+            "
+          >
+            <button
+              class="wb-mobile-tools-item"
+              :class="{
+                active:
+                  tabsStore.sidebarCollection !== 'regex' &&
+                  tabsStore.sidebarCollection !== 'tavern',
+              }"
+              @click="
+                drawer.runTool(() =>
+                  tabsStore.setSidebarCollection(
+                    tabsStore.activeWorkspace,
+                    tabsStore.activeWorkspace === 'character' ? 'fields' : 'items'
+                  )
+                )
+              "
+            >
+              {{
+                tabsStore.activeWorkspace === 'character'
+                  ? uiStore.t('character.header.collectionFields')
+                  : uiStore.t('preset.header.collectionItems')
+              }}
             </button>
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection === 'regex' }"
-                    @click="drawer.runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex'))">
+            <button
+              class="wb-mobile-tools-item"
+              :class="{ active: tabsStore.sidebarCollection === 'regex' }"
+              @click="
+                drawer.runTool(() =>
+                  tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex')
+                )
+              "
+            >
               {{ uiStore.t('shared.header.mode.regex') }}
             </button>
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
-                    @click="drawer.runTool(() => tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern'))">
+            <button
+              class="wb-mobile-tools-item"
+              :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
+              @click="
+                drawer.runTool(() =>
+                  tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern')
+                )
+              "
+            >
               {{ uiStore.t('shared.header.mode.tavern') }}
             </button>
           </template>
           <!-- 工具顺序跨 workspace 统一：先 toolbox 再 meta（worldbook 无 meta 表单）。 -->
-          <button class="wb-mobile-tools-item" :class="{ active: uiStore.agentPanelOpen }" @click="drawer.runTool(toggleAgent)">{{ uiStore.t('agent.header.open') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
-          <button v-if="tabsStore.activeWorkspace !== 'worldbook'" class="wb-mobile-tools-item" :class="{ active: uiStore.metaPanelOpen }" @click="drawer.runTool(() => { uiStore.metaPanelOpen = !uiStore.metaPanelOpen })">{{ uiStore.t('shared.header.meta') }}</button>
-          <button class="wb-mobile-tools-item" @click="drawer.runTool(() => { uiStore.settingsOpen = true })">{{ uiStore.t('shared.header.settings') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.varNavOpen }" @click="drawer.runTool(toggleVarNav)">{{ uiStore.t('preset.header.varNav') }}</button>
-          <button class="wb-mobile-tools-item" :class="{ active: tabsStore.previewOpen }" @click="drawer.runTool(togglePreview)">{{ uiStore.t('preset.header.preview') }}</button>
+          <button
+            class="wb-mobile-tools-item"
+            :class="{ active: uiStore.agentPanelOpen }"
+            @click="drawer.runTool(toggleAgent)"
+          >
+            {{ uiStore.t('agent.header.open') }}
+          </button>
+          <button
+            class="wb-mobile-tools-item"
+            :class="{ active: tabsStore.toolBoxOpen }"
+            @click="drawer.runTool(toggleToolBox)"
+          >
+            {{ uiStore.t('shared.header.toolBox') }}
+          </button>
+          <button
+            v-if="tabsStore.activeWorkspace !== 'worldbook'"
+            class="wb-mobile-tools-item"
+            :class="{ active: uiStore.metaPanelOpen }"
+            @click="
+              drawer.runTool(() => {
+                uiStore.metaPanelOpen = !uiStore.metaPanelOpen
+              })
+            "
+          >
+            {{ uiStore.t('shared.header.meta') }}
+          </button>
+          <button
+            class="wb-mobile-tools-item"
+            @click="
+              drawer.runTool(() => {
+                uiStore.settingsOpen = true
+              })
+            "
+          >
+            {{ uiStore.t('shared.header.settings') }}
+          </button>
+          <button
+            class="wb-mobile-tools-item"
+            :class="{ active: uiStore.varNavOpen }"
+            @click="drawer.runTool(toggleVarNav)"
+          >
+            {{ uiStore.t('preset.header.varNav') }}
+          </button>
+          <button
+            class="wb-mobile-tools-item"
+            :class="{ active: uiStore.previewOpen }"
+            @click="drawer.runTool(togglePreview)"
+          >
+            {{ uiStore.t('preset.header.preview') }}
+          </button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
-            <button class="wb-mobile-tools-item" @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.preset))">{{ uiStore.t('preset.header.new') }}</button>
-            <button class="wb-mobile-tools-item" :disabled="!presetStore.presetName" @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.preset))">{{ uiStore.t('preset.header.delete') }}</button>
+            <button
+              class="wb-mobile-tools-item"
+              @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.preset))"
+            >
+              {{ uiStore.t('preset.header.new') }}
+            </button>
+            <button
+              class="wb-mobile-tools-item"
+              :disabled="!presetStore.presetName"
+              @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.preset))"
+            >
+              {{ uiStore.t('preset.header.delete') }}
+            </button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'worldbook'">
-            <button class="wb-mobile-tools-item" :class="{ active: tabsStore.toolBoxOpen }" @click="drawer.runTool(toggleToolBox)">{{ uiStore.t('shared.header.toolBox') }}</button>
-            <button class="wb-mobile-tools-item" @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.worldbook))">{{ uiStore.t('worldbook.header.new') }}</button>
-            <button class="wb-mobile-tools-item" :disabled="!embeddedCharacterBook" @click="drawer.runTool(onImportFromCharacterBook)">{{ uiStore.t('worldbook.header.importFromCharacter') }}</button>
-            <button class="wb-mobile-tools-item" :disabled="!worldbookStore.worldbookName" @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.worldbook))">{{ uiStore.t('worldbook.header.delete') }}</button>
+            <button
+              class="wb-mobile-tools-item"
+              :class="{ active: tabsStore.toolBoxOpen }"
+              @click="drawer.runTool(toggleToolBox)"
+            >
+              {{ uiStore.t('shared.header.toolBox') }}
+            </button>
+            <button
+              class="wb-mobile-tools-item"
+              @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.worldbook))"
+            >
+              {{ uiStore.t('worldbook.header.new') }}
+            </button>
+            <button
+              class="wb-mobile-tools-item"
+              :disabled="!embeddedCharacterBook"
+              @click="drawer.runTool(onImportFromCharacterBook)"
+            >
+              {{ uiStore.t('worldbook.header.importFromCharacter') }}
+            </button>
+            <button
+              class="wb-mobile-tools-item"
+              :disabled="!worldbookStore.worldbookName"
+              @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.worldbook))"
+            >
+              {{ uiStore.t('worldbook.header.delete') }}
+            </button>
           </template>
           <template v-else-if="tabsStore.activeWorkspace === 'character'">
-            <button class="wb-mobile-tools-item" @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.character))">{{ uiStore.t('character.header.new') }}</button>
-            <button class="wb-mobile-tools-item" :disabled="!characterStore.character?.avatar" @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.character))">{{ uiStore.t('character.header.delete') }}</button>
+            <button
+              class="wb-mobile-tools-item"
+              @click="drawer.runTool(() => onNewWorkspace(workspaceRegistry.character))"
+            >
+              {{ uiStore.t('character.header.new') }}
+            </button>
+            <button
+              class="wb-mobile-tools-item"
+              :disabled="!characterStore.character?.avatar"
+              @click="drawer.runTool(() => onDeleteWorkspace(workspaceRegistry.character))"
+            >
+              {{ uiStore.t('character.header.delete') }}
+            </button>
           </template>
         </div>
 
@@ -165,13 +527,13 @@
 import { usePresetStore } from './stores/presetStore'
 import { useUiStore } from './stores/uiStore'
 import PresetSidebar from './components/preset/PresetSidebar.vue'
-import VarPanel from './components/preset/VarPanel.vue'
-import PreviewPanel from './components/preset/PreviewPanel.vue'
+import VarPanel from './components/shared/VarPanel.vue'
+import PreviewPanel from './components/shared/PreviewPanel.vue'
 import ToolBoxPanel from './components/toolbox/ToolBoxPanel.vue'
 // side-effect import：触发 register.ts 把 Search/Batch 工具填进 TOOL_REGISTRY。
 // ToolBoxPanel 只查表不填表，不接这一行 TOOL_REGISTRY 永远空、工具箱显示"无可用工具"。
 import './components/toolbox/register'
-import VarPopup from './components/preset/VarPopup.vue'
+import VarPopup from './components/shared/VarPopup.vue'
 import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue'
 import MetaPanel from './components/shared/MetaPanel.vue'
 import AgentPanel from './components/shared/AgentPanel.vue'
@@ -192,7 +554,7 @@ import { useConfirmStore } from './stores/confirmStore'
 import { esc } from './utils'
 import type { LocaleKey } from './i18n'
 import type { Workspace } from './types'
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useIsMobile, getHostWindow } from './composables/hostEnv'
 import { useFabDrag } from './composables/useFabDrag'
 import { useMobileWorkspaceDrawer } from './composables/useMobileWorkspaceDrawer'
@@ -232,10 +594,33 @@ const isMobile = useIsMobile()
 const drawer = useMobileWorkspaceDrawer({
   isMobile,
   panels: [
-    { key: 'varNav', isOpen: () => tabsStore.varNavOpen, setOpen: (open) => tabsStore.setVarNavOpen('preset', open) },
-    { key: 'preview', isOpen: () => tabsStore.previewOpen, setOpen: (open) => tabsStore.setPreviewOpen('preset', open) },
-    { key: 'settingsDock', isOpen: () => uiStore.settingsDockOpen, setOpen: (open) => { if (uiStore.settingsDockOpen !== open) uiStore.toggleSettingsDock() } },
-    { key: 'agent', isOpen: () => uiStore.agentPanelOpen, setOpen: (open) => { if (uiStore.agentPanelOpen !== open) { if (open) agentStore.loadAgentData(); uiStore.agentPanelOpen = open } } },
+    {
+      key: 'varNav',
+      isOpen: () => uiStore.varNavOpen,
+      setOpen: (open) => (uiStore.varNavOpen = open),
+    },
+    {
+      key: 'preview',
+      isOpen: () => uiStore.previewOpen,
+      setOpen: (open) => (uiStore.previewOpen = open),
+    },
+    {
+      key: 'settingsDock',
+      isOpen: () => uiStore.settingsDockOpen,
+      setOpen: (open) => {
+        if (uiStore.settingsDockOpen !== open) uiStore.toggleSettingsDock()
+      },
+    },
+    {
+      key: 'agent',
+      isOpen: () => uiStore.agentPanelOpen,
+      setOpen: (open) => {
+        if (uiStore.agentPanelOpen !== open) {
+          if (open) agentStore.loadAgentData()
+          uiStore.agentPanelOpen = open
+        }
+      },
+    },
   ],
   /** 切换 workspace / "条目↔正则"集合后，自动露出侧边栏。 */
   revealSidebarOn: [() => tabsStore.activeWorkspace, () => tabsStore.sidebarCollection],
@@ -246,20 +631,21 @@ const drawer = useMobileWorkspaceDrawer({
 /** FAB 长按拖动（useFabDrag.ts），持久化到 uiStore.settings.fabPos；点击则打开面板。 */
 const fab = useFabDrag({
   getPos: () => uiStore.settings.fabPos,
-  setPos: (pos) => { uiStore.settings.fabPos = pos },
+  setPos: (pos) => {
+    uiStore.settings.fabPos = pos
+  },
   commit: () => uiStore.saveSettings(),
   onTap: () => openPanel(),
 })
 
 function handleKeydown(e: KeyboardEvent) {
   if (!uiStore.panelOpen) return
-  
+
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault()
     onSave()
   }
 }
-
 
 onMounted(() => {
   fab.onHostResize()
@@ -320,9 +706,16 @@ function onClosePanel() {
     .map(([ws]) => {
       const adapter = workspaceRegistry[ws as keyof typeof workspaceRegistry]
       if (!adapter) return { label: ws }
-      return { label: uiStore.t(workspaceKey(adapter, 'confirm.closePanel.item'), { name: adapter.currentLabel() }) }
+      return {
+        label: uiStore.t(workspaceKey(adapter, 'confirm.closePanel.item'), {
+          name: adapter.currentLabel(),
+        }),
+      }
     })
-  if (!items.length) { uiStore.panelOpen = false; return }
+  if (!items.length) {
+    uiStore.panelOpen = false
+    return
+  }
   confirmStore.askMulti({
     title: uiStore.t('shared.confirm.closePanel.title'),
     message: uiStore.t('shared.confirm.closePanel.message'),
@@ -330,16 +723,18 @@ function onClosePanel() {
     confirmText: uiStore.t('common.close'),
     cancelText: uiStore.t('common.cancel'),
     danger: false,
-    onConfirm: () => { uiStore.panelOpen = false },
+    onConfirm: () => {
+      uiStore.panelOpen = false
+    },
   })
 }
 
-/** Search/VarNav/Preview 目前仅 preset 工作区使用，workspace 硬编码为 'preset'。 */
+/** VarNav/Preview 是跨 workspace 通用工具，开关在 uiStore 全局（跟 agentPanelOpen 一样，切换 workspace 不关闭）。 */
 function toggleVarNav() {
-  tabsStore.setVarNavOpen(tabsStore.activeWorkspace, !tabsStore.varNavOpen)
+  uiStore.varNavOpen = !uiStore.varNavOpen
 }
 function togglePreview() {
-  tabsStore.setPreviewOpen(tabsStore.activeWorkspace, !tabsStore.previewOpen)
+  uiStore.previewOpen = !uiStore.previewOpen
 }
 /** 工具箱是跨 workspace 通用的（preset/worldbook/character 都能开），按当前 activeWorkspace 分桶开关。 */
 function toggleToolBox() {
@@ -359,13 +754,16 @@ function workspaceKey(adapter: DocumentWorkspaceAdapter, suffix: string): Locale
  * 顶栏 <select> 的切换逻辑已移入 WorkspaceSelect.vue。
  */
 function onNewWorkspace(adapter: DocumentWorkspaceAdapter) {
-  const openDialog = () => confirmStore.askInput({
-    title: uiStore.t(workspaceKey(adapter, 'prompt.new.title')),
-    placeholder: uiStore.t(workspaceKey(adapter, 'prompt.new.placeholder')),
-    confirmText: uiStore.t('common.create'),
-    cancelText: uiStore.t('common.cancel'),
-    onConfirm: (name) => { adapter.create(name) },
-  })
+  const openDialog = () =>
+    confirmStore.askInput({
+      title: uiStore.t(workspaceKey(adapter, 'prompt.new.title')),
+      placeholder: uiStore.t(workspaceKey(adapter, 'prompt.new.placeholder')),
+      confirmText: uiStore.t('common.create'),
+      cancelText: uiStore.t('common.cancel'),
+      onConfirm: (name) => {
+        adapter.create(name)
+      },
+    })
   if (adapter.confirmCreateIfDirty && adapter.dirty()) {
     confirmStore.ask({
       title: uiStore.t('shared.confirm.unsaved.title'),
@@ -383,7 +781,9 @@ function onDeleteWorkspace(adapter: DocumentWorkspaceAdapter) {
   if (!adapter.currentId()) return
   confirmStore.ask({
     title: uiStore.t(workspaceKey(adapter, 'confirm.delete.title')),
-    message: uiStore.t(workspaceKey(adapter, 'confirm.delete.message'), { name: esc(adapter.currentLabel()) }),
+    message: uiStore.t(workspaceKey(adapter, 'confirm.delete.message'), {
+      name: esc(adapter.currentLabel()),
+    }),
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => adapter.remove(),
@@ -394,19 +794,38 @@ function onDeleteWorkspace(adapter: DocumentWorkspaceAdapter) {
  * "从角色卡导入世界书"：唯一跨 domain 集成点。只读 characterStore.oldRaw（v1CharData），
  * character_book 位于 v2 数据 `oldRaw.data.character_book`（v1 顶层无此字段）。
  */
-const embeddedCharacterBook = computed<{ name?: string; entries?: any[] } | null>(() => characterStore.oldRaw?.data?.character_book ?? null)
+const embeddedCharacterBook = computed<{
+  name?: string
+  entries?: unknown[]
+} | null>(
+  () =>
+    (characterStore.oldRaw as {
+      data?: { character_book?: { name?: string; entries?: unknown[] } }
+    } | null)?.data?.character_book ?? null
+)
 function onImportFromCharacterBook() {
   const book = embeddedCharacterBook.value
-  if (!book) { uiStore.showToast(uiStore.t('worldbook.toast.importNoBook')); return }
-  const suggested = (typeof book.name === 'string' && book.name.trim())
-    || `${characterStore.character?.name || ''}${uiStore.t('worldbook.prompt.import.suffix')}`
+  if (!book) {
+    uiStore.showToast(uiStore.t('worldbook.toast.importNoBook'))
+    return
+  }
+  const suggested =
+    (typeof book.name === 'string' && book.name.trim()) ||
+    `${characterStore.character?.name || ''}${uiStore.t('worldbook.prompt.import.suffix')}`
   confirmStore.askInput({
     title: uiStore.t('worldbook.prompt.import.title'),
     placeholder: uiStore.t('worldbook.prompt.new.placeholder'),
     initialValue: suggested,
     confirmText: uiStore.t('common.create'),
     cancelText: uiStore.t('common.cancel'),
-    onConfirm: (name) => { worldbookStore.importFromCharacterBook(book, name) },
+    onConfirm: (name) => {
+      // worldbookApi.ts 里的 CharacterBookEntryLike 是私有 interface 不可导入，这里按
+      // worldbookStore.importFromCharacterBook 的签名（Parameters<typeof WB.importCharacterBook>[1]）断言整个 book。
+      worldbookStore.importFromCharacterBook(
+        book as Parameters<typeof worldbookStore.importFromCharacterBook>[0],
+        name
+      )
+    },
   })
 }
 </script>

@@ -12,25 +12,51 @@
       <input class="wb-form-input wb-form-num" type="number" min="1" v-model.number="n" />
     </FormField>
 
-    <label class="wb-form-check"><input type="checkbox" v-model="streamOpenai" /> {{ uiStore.t('preset.metaForm.streamLabel') }}</label>
-    <label class="wb-form-check"><input type="checkbox" v-model="squashSystemMessages" /> {{ uiStore.t('preset.metaForm.squashLabel') }}</label>
+    <label class="wb-form-check"
+      ><input type="checkbox" v-model="streamOpenai" />
+      {{ uiStore.t('preset.metaForm.streamLabel') }}</label
+    >
+    <label class="wb-form-check"
+      ><input type="checkbox" v-model="squashSystemMessages" />
+      {{ uiStore.t('preset.metaForm.squashLabel') }}</label
+    >
 
     <AdvancedGroup :title="uiStore.t('preset.metaForm.samplingToggle')">
       <div class="wb-row">
         <label class="wb-form-label">{{ uiStore.t('preset.metaForm.temperatureLabel') }}</label>
-        <input class="wb-form-input wb-form-num" type="number" step="0.01" v-model.number="temperature" />
+        <input
+          class="wb-form-input wb-form-num"
+          type="number"
+          step="0.01"
+          v-model.number="temperature"
+        />
         <label class="wb-form-label">{{ uiStore.t('preset.metaForm.topPLabel') }}</label>
         <input class="wb-form-input wb-form-num" type="number" step="0.01" v-model.number="topP" />
       </div>
       <div class="wb-row">
         <label class="wb-form-label">{{ uiStore.t('preset.metaForm.freqPenaltyLabel') }}</label>
-        <input class="wb-form-input wb-form-num" type="number" step="0.01" v-model.number="frequencyPenalty" />
+        <input
+          class="wb-form-input wb-form-num"
+          type="number"
+          step="0.01"
+          v-model.number="frequencyPenalty"
+        />
         <label class="wb-form-label">{{ uiStore.t('preset.metaForm.presPenaltyLabel') }}</label>
-        <input class="wb-form-input wb-form-num" type="number" step="0.01" v-model.number="presencePenalty" />
+        <input
+          class="wb-form-input wb-form-num"
+          type="number"
+          step="0.01"
+          v-model.number="presencePenalty"
+        />
       </div>
       <div class="wb-row">
         <label class="wb-form-label">{{ uiStore.t('preset.metaForm.repPenaltyLabel') }}</label>
-        <input class="wb-form-input wb-form-num" type="number" step="0.01" v-model.number="repetitionPenalty" />
+        <input
+          class="wb-form-input wb-form-num"
+          type="number"
+          step="0.01"
+          v-model.number="repetitionPenalty"
+        />
         <label class="wb-form-label">{{ uiStore.t('preset.metaForm.minPLabel') }}</label>
         <input class="wb-form-input wb-form-num" type="number" step="0.01" v-model.number="minP" />
       </div>
@@ -41,11 +67,18 @@
         <input class="wb-form-input wb-form-num" type="number" step="0.01" v-model.number="topA" />
       </div>
       <FormField :label="uiStore.t('preset.metaForm.seedLabel')">
-        <input class="wb-form-input wb-form-num" type="number" v-model.number="seed" :placeholder="uiStore.t('preset.metaForm.seedHint')" />
+        <input
+          class="wb-form-input wb-form-num"
+          type="number"
+          v-model.number="seed"
+          :placeholder="uiStore.t('preset.metaForm.seedHint')"
+        />
       </FormField>
     </AdvancedGroup>
   </div>
-  <p v-else class="wb-preset-cp-empty">{{ uiStore.t('preset.toast.loadFirst') }}</p>
+  <p v-else class="wb-preset-cp-empty">
+    {{ uiStore.t('preset.toast.loadFirst') }}
+  </p>
 </template>
 
 <script setup lang="ts">
@@ -65,7 +98,10 @@ const uiStore = useUiStore()
 function field<K extends keyof PresetData>(key: K) {
   return computed<PresetData[K]>({
     get: () => store.rawData![key],
-    set: (v) => { store.rawData![key] = v; store.markDirty() },
+    set: (v) => {
+      store.rawData![key] = v
+      store.markDirty()
+    },
   })
 }
 

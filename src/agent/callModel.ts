@@ -7,8 +7,9 @@
  * 上层接口：callModel(store) → Promise<ModelTurnResult>，工具循环代码不关心走 A 还是 B。
  */
 import { getCtx } from '../api/hostContext'
-import { extractToolCalls } from './toolCallCompat'
+import { extractToolCalls, type RawModelResponse } from './toolCallCompat'
 import type { ToolCall } from './types'
+import type { AgentToolDef } from './toolRegistry'
 
 /** 单次模型调用的归一化结果。 */
 export interface ModelTurnResult {
@@ -17,20 +18,36 @@ export interface ModelTurnResult {
   /** 解析出的 tool_calls，没有则 null。 */
   toolCalls: ToolCall[] | null
   /** 原始响应对象（调试/扩展用）。 */
-  raw?: any
+  raw?: unknown
 }
 
 /** 判断是否 OpenAI 系（与 toolCallCompat 保持同一清单）。 */
 function isOpenAIFamilyInternal(source: string): boolean {
   return [
-    'openai', 'openrouter', 'custom', 'azure_openai', 'deepseek',
-    'xai', 'groq', 'mistralai', 'cohere', 'perplexity', 'google',
+    'openai',
+    'openrouter',
+    'custom',
+    'azure_openai',
+    'deepseek',
+    'xai',
+    'groq',
+    'mistralai',
+    'cohere',
+    'perplexity',
+    'google',
   ].includes(source)
 }
 
 /** 把内部 Message[] 渲染成发给 provider 的请求消息数组（OpenAI wire format）。 */
-export function renderMessages(messages: Array<{ role: string; text: string; toolCallId?: string; toolCalls?: ToolCall[] }>): any[] {
-  return messages.map(m => {
+export function renderMessages(
+  messages: Array<{
+    role: string
+    text: string
+    toolCallId?: string
+    toolCalls?: ToolCall[]
+  }>
+): unknown[] {
+  return messages.map((m) => {
     if (m.role === 'tool') {
       return {
         role: 'tool',
@@ -42,7 +59,7 @@ export function renderMessages(messages: Array<{ role: string; text: string; too
       return {
         role: 'assistant',
         content: m.text || null,
-        tool_calls: m.toolCalls.map(tc => ({
+        tool_calls: m.toolCalls.map((tc) => ({
           id: tc.id,
           type: 'function',
           function: { name: tc.name, arguments: tc.arguments },
@@ -54,8 +71,8 @@ export function renderMessages(messages: Array<{ role: string; text: string; too
 }
 
 /** 把 AgentToolDef[] 转成 OpenAI tools wire format。 */
-function buildToolsWire(tools: any[]): any[] {
-  return tools.map(t => ({
+function buildToolsWire(tools: AgentToolDef[]): unknown[] {
+  return tools.map((t) => ({
     type: 'function',
     function: {
       name: t.name,
@@ -88,9 +105,9 @@ export interface CallModelConfig {
  * @param config agent 配置
  */
 export async function callModelRaw(
-  messages: any[],
-  tools: any[],
-  config: CallModelConfig,
+  messages: unknown[],
+  tools: AgentToolDef[],
+  config: CallModelConfig
 ): Promise<ModelTurnResult> {
   const ctx = getCtx()
   if (!ctx) throw new Error('SillyTavern context 不可用（getContext 缺失）')
@@ -111,7 +128,7 @@ export async function callModelRaw(
   // 准备 tools 注入（方案 A：在 CHAT_COMPLETION_SETTINGS_READY 回调里 mutate generate_data）
   const toolsWire = tools.length > 0 ? buildToolsWire(tools) : null
 
-  const handler = (generateData: any) => {
+  const handler = (generateData: Record<string, unknown>) => {
     if (!generateData || typeof generateData !== 'object') return
     if (toolsWire) {
       generateData.tools = toolsWire
@@ -134,7 +151,7 @@ export async function callModelRaw(
     eventSource.on(CHAT_COMPLETION_SETTINGS_READY, handler)
   }
 
-  let response: any
+  let response: RawModelResponse
   try {
     // generateRawData 返回原始 response object（含 choices/message/tool_calls）
     if (typeof ctx.generateRawData === 'function') {
@@ -148,21 +165,23 @@ export async function callModelRaw(
     }
   } finally {
     if (!useOnce) {
-      try { eventSource.removeListener?.(CHAT_COMPLETION_SETTINGS_READY, handler) } catch {}
+      try {
+        eventSource.removeListener?.(CHAT_COMPLETION_SETTINGS_READY, handler)
+      } catch { /* 移除监听失败无需处理 */ }
     }
   }
 
   const source = ctx.chatCompletionSource || ctx.chat_completion_source || 'openai'
   const toolCalls = extractToolCallsInternal(response, source)
 
-  let content = ''
+  let content: string
   if (isOpenAIFamilyInternal(source)) {
     content = String(response?.choices?.[0]?.message?.content ?? '')
   } else if (source === 'claude') {
     const textBlocks = Array.isArray(response?.content)
-      ? response.content.filter((b: any) => b && b.type === 'text')
+      ? response.content.filter((b) => b && b.type === 'text')
       : []
-    content = textBlocks.map((b: any) => String(b.text ?? '')).join('\n')
+    content = textBlocks.map((b) => String(b.text ?? '')).join('\n')
   } else if (source === 'cohere') {
     content = String(response?.text ?? response?.message?.content ?? '')
   } else {
@@ -172,10 +191,13 @@ export async function callModelRaw(
   return { content, toolCalls, raw: response }
 }
 
-function extractToolCallsInternal(response: any, source: string): ToolCall[] | null {
+function extractToolCallsInternal(
+  response: RawModelResponse,
+  source: string
+): ToolCall[] | null {
   const raw = extractToolCalls(response, source)
   if (!raw || raw.length === 0) return null
-  return raw.map(r => ({
+  return raw.map((r) => ({
     id: r.id,
     name: r.name,
     arguments: r.arguments,

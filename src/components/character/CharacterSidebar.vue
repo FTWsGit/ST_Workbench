@@ -1,42 +1,76 @@
 <template>
-  <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
+  <aside
+    class="wb-sidebar"
+    ref="sidebarRef"
+    :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }"
+    :style="{ width: uiStore.settings.sidebarWidth + 'px' }"
+  >
     <div class="wb-sidebar-header">
       <span>{{ uiStore.t('character.sidebar.title') }}</span>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.hasData" class="wb-preset-cp-empty">{{ uiStore.t('character.sidebar.empty') }}</p>
+      <p v-if="!store.hasData" class="wb-preset-cp-empty">
+        {{ uiStore.t('character.sidebar.empty') }}
+      </p>
       <template v-else>
-        <div class="wb-list-section-label">{{ uiStore.t('character.sidebar.fieldsLabel') }}</div>
-        <div v-for="f in CHARACTER_FIELDS" :key="f.key"
-             class="wb-tree-item"
-             :class="{ selected: tabsStore.activeId === 'character:field:' + f.key }"
-             @click="openField(f.key)">
+        <div class="wb-list-section-label">
+          {{ uiStore.t('character.sidebar.fieldsLabel') }}
+        </div>
+        <div
+          v-for="f in CHARACTER_FIELDS"
+          :key="f.key"
+          class="wb-tree-item"
+          :class="{
+            selected: tabsStore.activeId === 'character:field:' + f.key,
+          }"
+          @click="openField(f.key)"
+        >
           <span class="wb-tree-name">{{ uiStore.t(f.labelKey) }}</span>
         </div>
 
         <div class="wb-list-section-header">
-          <span class="wb-list-section-label">{{ uiStore.t('character.sidebar.greetingsLabel') }}</span>
-          <button class="wb-btn sm" @click="store.addGreeting()">{{ uiStore.t('character.sidebar.addGreeting') }}</button>
+          <span class="wb-list-section-label">{{
+            uiStore.t('character.sidebar.greetingsLabel')
+          }}</span>
+          <button class="wb-btn sm" @click="store.addGreeting()">
+            {{ uiStore.t('character.sidebar.addGreeting') }}
+          </button>
         </div>
-        <div v-for="(g, i) in store.character?.greetings ?? []" :key="store.greetingIds[i]"
-             :ref="(el) => setItemRef(el, i)"
-             class="wb-tree-item"
-             :class="{ selected: tabsStore.activeId === 'character:field:greeting:' + store.greetingIds[i],
-                       dragging: dragIdx === i,
-                       'drag-over-top': dragOverIdx === i && dragOverPos === 'top',
-                       'drag-over-bottom': dragOverIdx === i && dragOverPos === 'bottom' }"
-             @pointerdown="onDragStart(i, $event)"
-             @click="onGreetingClick(i)">
+        <div
+          v-for="(g, i) in store.character?.greetings ?? []"
+          :key="store.greetingIds[i]"
+          :ref="(el) => setItemRef(el, i)"
+          class="wb-tree-item"
+          :class="{
+            selected: tabsStore.activeId === 'character:field:greeting:' + store.greetingIds[i],
+            dragging: dragIdx === i,
+            'drag-over-top': dragOverIdx === i && dragOverPos === 'top',
+            'drag-over-bottom': dragOverIdx === i && dragOverPos === 'bottom',
+          }"
+          @pointerdown="onDragStart(i, $event)"
+          @click="onGreetingClick(i)"
+        >
           <span class="wb-drag-handle">⠿</span>
-          <span class="wb-tree-name">{{ uiStore.t('character.sidebar.greetingLabel', { n: i + 1 }) }}</span>
+          <span class="wb-tree-name">{{
+            uiStore.t('character.sidebar.greetingLabel', { n: i + 1 })
+          }}</span>
           <span class="wb-tree-actions">
-            <span class="wb-tree-act del" :title="uiStore.t('character.sidebar.deleteGreetingTitle')" @click.stop="store.deleteGreeting(store.greetingIds[i])">🗑</span>
+            <span
+              class="wb-tree-act del"
+              :title="uiStore.t('character.sidebar.deleteGreetingTitle')"
+              @click.stop="store.deleteGreeting(store.greetingIds[i])"
+              >🗑</span
+            >
           </span>
         </div>
       </template>
     </div>
   </aside>
-  <div class="wb-resize-handle" :class="{ active: resize.active.value }" @pointerdown="resize.onPointerDown"></div>
+  <div
+    class="wb-resize-handle"
+    :class="{ active: resize.active.value }"
+    @pointerdown="resize.onPointerDown"
+  ></div>
 </template>
 
 <script setup lang="ts">
@@ -59,8 +93,13 @@ const tabsStore = useTabsStore()
 const listRef = ref<HTMLElement>()
 
 function openField(key: string) {
-  const field = CHARACTER_FIELDS.find(f => f.key === key)
-  tabsStore.open({ domain: 'character', key: 'field:' + key, label: field ? uiStore.t(field.labelKey) : key, workspace: 'character' })
+  const field = CHARACTER_FIELDS.find((f) => f.key === key)
+  tabsStore.open({
+    domain: 'character',
+    key: 'field:' + key,
+    label: field ? uiStore.t(field.labelKey) : key,
+    workspace: 'character',
+  })
 }
 
 const { dragIdx, dragOverIdx, dragOverPos, setItemRef, onItemMouseDown, consumeSuppressClick } =
@@ -73,13 +112,27 @@ function onGreetingClick(i: number) {
   if (consumeSuppressClick()) return
   const id = store.greetingIds[i]
   if (!id) return
-  tabsStore.open({ domain: 'character', key: 'field:greeting:' + id, label: uiStore.t('character.sidebar.greetingLabel', { n: i + 1 }), workspace: 'character' })
+  tabsStore.open({
+    domain: 'character',
+    key: 'field:greeting:' + id,
+    label: uiStore.t('character.sidebar.greetingLabel', { n: i + 1 }),
+    workspace: 'character',
+  })
 }
 
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
-  setWidth: (w) => { uiStore.settings.sidebarWidth = w },
-  min: 220, max: 600, dir: 'right',
+  setWidth: (w) => {
+    uiStore.settings.sidebarWidth = w
+  },
+  min: 220,
+  max: 600,
+  dir: 'right',
 })
-watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
+watch(
+  () => resize.active.value,
+  (v) => {
+    if (!v) uiStore.saveSettings()
+  }
+)
 </script>

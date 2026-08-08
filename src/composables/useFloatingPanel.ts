@@ -34,12 +34,17 @@ export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
   const y = ref(Math.max(0, (hostWin.innerHeight - height.value) / 2))
 
   const zIndex = ref(0)
-  function bringToFront() { zIndex.value = ++topZCounter }
+  function bringToFront() {
+    zIndex.value = ++topZCounter
+  }
   bringToFront() // 刚创建出来的悬浮窗默认就是当前最上层的那个
 
   /* ---- 拖拽移动（从 header 发起）---- */
   let dragPointerId: number | null = null
-  let dragStartX = 0, dragStartY = 0, dragOriginX = 0, dragOriginY = 0
+  let dragStartX = 0,
+    dragStartY = 0,
+    dragOriginX = 0,
+    dragOriginY = 0
   const dragging = ref(false)
   function onDragMove(e: PointerEvent) {
     if (dragPointerId === null || e.pointerId !== dragPointerId) return
@@ -61,8 +66,10 @@ export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
     bringToFront()
     dragging.value = true
     dragPointerId = e.pointerId
-    dragStartX = e.clientX; dragStartY = e.clientY
-    dragOriginX = x.value; dragOriginY = y.value
+    dragStartX = e.clientX
+    dragStartY = e.clientY
+    dragOriginX = x.value
+    dragOriginY = y.value
     hostWin.document.body.style.userSelect = 'none'
     hostWin.addEventListener('pointermove', onDragMove)
     hostWin.addEventListener('pointerup', onDragUp)
@@ -71,7 +78,10 @@ export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
 
   /* ---- resize（右下角把手）---- */
   let resizePointerId: number | null = null
-  let resizeStartX = 0, resizeStartY = 0, resizeStartW = 0, resizeStartH = 0
+  let resizeStartX = 0,
+    resizeStartY = 0,
+    resizeStartW = 0,
+    resizeStartH = 0
   function onResizeMove(e: PointerEvent) {
     if (resizePointerId === null || e.pointerId !== resizePointerId) return
     // 上限留 8px 边距，不让面板边缘完全顶死视口边界；用 hostWin.innerWidth/innerHeight 估算即可。
@@ -93,8 +103,10 @@ export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
     e.preventDefault()
     bringToFront()
     resizePointerId = e.pointerId
-    resizeStartX = e.clientX; resizeStartY = e.clientY
-    resizeStartW = width.value; resizeStartH = height.value
+    resizeStartX = e.clientX
+    resizeStartY = e.clientY
+    resizeStartW = width.value
+    resizeStartH = height.value
     hostWin.document.body.style.userSelect = 'none'
     hostWin.addEventListener('pointermove', onResizeMove)
     hostWin.addEventListener('pointerup', onResizeUp)
@@ -114,8 +126,10 @@ export function useFloatingPanel(opts: UseFloatingPanelOptions = {}) {
   const style = computed<CSSProperties>(() => {
     if (isMobile.value) return { zIndex: String(zIndex.value) }
     return {
-      left: x.value + 'px', top: y.value + 'px',
-      width: width.value + 'px', height: height.value + 'px',
+      left: x.value + 'px',
+      top: y.value + 'px',
+      width: width.value + 'px',
+      height: height.value + 'px',
       zIndex: String(zIndex.value),
     }
   })

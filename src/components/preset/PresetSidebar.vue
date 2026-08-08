@@ -1,66 +1,132 @@
 <template>
-  <aside class="wb-sidebar" ref="sidebarRef" :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }" :style="{ width: uiStore.settings.sidebarWidth + 'px' }">
+  <aside
+    class="wb-sidebar"
+    ref="sidebarRef"
+    :class="{ 'wb-mobile-drawer-open': props.mobileDrawerOpen }"
+    :style="{ width: uiStore.settings.sidebarWidth + 'px' }"
+  >
     <div class="wb-sidebar-header">
       <span>{{ uiStore.t('preset.sidebar.title', { count: store.order.length }) }}</span>
       <ListToolbar>
-        <button class="wb-btn" @click="store.addBlock()">{{ uiStore.t('preset.sidebar.newBlock') }}</button>
-        <button class="wb-btn" @click="store.hiddenOpen = true">{{ uiStore.t('preset.sidebar.hiddenBlock') }}</button>
+        <button class="wb-btn" @click="store.addBlock()">
+          {{ uiStore.t('preset.sidebar.newBlock') }}
+        </button>
+        <button class="wb-btn" @click="store.hiddenOpen = true">
+          {{ uiStore.t('preset.sidebar.hiddenBlock') }}
+        </button>
       </ListToolbar>
       <div class="wb-sidebar-tools">
-        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">{{ uiStore.t('shared.sidebar.bind') }}</button>
-        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">{{ uiStore.t('shared.sidebar.unbind') }}</button>
+        <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">
+          {{ uiStore.t('shared.sidebar.bind') }}
+        </button>
+        <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">
+          {{ uiStore.t('shared.sidebar.unbind') }}
+        </button>
       </div>
     </div>
     <div class="wb-list" ref="listRef">
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">
-        <div v-if="node.isGroup"
-             :ref="(el) => setItemRef(el, gi)"
-             class="wb-tree-group"
-             :class="{ selected: store.selectedGi.has(gi), disabled: !(node.ref as OrderGroup).enabled, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom' }"
-             :style="itemStyle(node)"
-             @pointerdown="onItemMouseDown(gi, $event)"
-             @click="onItemClick(gi, $event)">
-          <span class="wb-tree-group-toggle" :class="{ collapsed: (node.ref as OrderGroup).collapsed }" @click.stop="onGroupToggle(gi)">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M4 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div
+          v-if="node.isGroup"
+          :ref="(el) => setItemRef(el, gi)"
+          class="wb-tree-group"
+          :class="{
+            selected: store.selectedGi.has(gi),
+            disabled: !(node.ref as OrderGroup).enabled,
+            'drag-over-top': dragOverIdx === gi && dragOverPos === 'top',
+            'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom',
+          }"
+          :style="itemStyle(node)"
+          @pointerdown="onItemMouseDown(gi, $event)"
+          @click="onItemClick(gi, $event)"
+        >
+          <span
+            class="wb-tree-group-toggle"
+            :class="{ collapsed: (node.ref as OrderGroup).collapsed }"
+            @click.stop="onGroupToggle(gi)"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M4 3l4 4-4 4"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
           </span>
-          <span v-if="editingGroupGi !== gi" class="wb-tree-name" @dblclick.stop="startEditGroupName(gi)">{{ (node.ref as OrderGroup).name }}</span>
-          <input v-else
-                 :ref="(el) => setGroupNameInput(el, gi)"
-                 class="wb-tree-group-name-input"
-                 :value="(node.ref as OrderGroup).name"
-                 @blur="finishEditGroupName(gi, $event)"
-                 @keydown.enter.prevent="finishEditGroupName(gi, $event)"
-                 @keydown.esc.prevent="cancelEditGroupName()"
-                 @click.stop
-                 @pointerdown.stop />
+          <span
+            v-if="editingGroupGi !== gi"
+            class="wb-tree-name"
+            @dblclick.stop="startEditGroupName(gi)"
+            >{{ (node.ref as OrderGroup).name }}</span
+          >
+          <input
+            v-else
+            :ref="(el) => setGroupNameInput(el, gi)"
+            class="wb-tree-group-name-input"
+            :value="(node.ref as OrderGroup).name"
+            @blur="finishEditGroupName(gi, $event)"
+            @keydown.enter.prevent="finishEditGroupName(gi, $event)"
+            @keydown.esc.prevent="cancelEditGroupName()"
+            @click.stop
+            @pointerdown.stop
+          />
           <span class="wb-tree-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
           <span class="wb-tree-actions">
             <span class="wb-tree-act" @click.stop="store.toggleBlock(gi)">👁</span>
             <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
           </span>
         </div>
-        <div v-else
-             :ref="(el) => setItemRef(el, gi)"
-             class="wb-tree-item"
-             :class="{ selected: store.selectedGi.has(gi), disabled: !(node.ref as OrderItem).enabled, dragging: dragIdx === gi, 'drag-over-top': dragOverIdx === gi && dragOverPos === 'top', 'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom', nested: node.depth > 0 }"
-             :style="itemStyle(node)"
-             @pointerdown="onItemMouseDown(gi, $event)"
-             @click="onItemClick(gi, $event)">
+        <div
+          v-else
+          :ref="(el) => setItemRef(el, gi)"
+          class="wb-tree-item"
+          :class="{
+            selected: store.selectedGi.has(gi),
+            disabled: !(node.ref as OrderItem).enabled,
+            dragging: dragIdx === gi,
+            'drag-over-top': dragOverIdx === gi && dragOverPos === 'top',
+            'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom',
+            nested: node.depth > 0,
+          }"
+          :style="itemStyle(node)"
+          @pointerdown="onItemMouseDown(gi, $event)"
+          @click="onItemClick(gi, $event)"
+        >
           <span class="wb-drag-handle">⠿</span>
-          <span class="wb-toggle-sw" :class="{ on: (node.ref as OrderItem).enabled }" @click.stop="store.toggleBlock(gi)"></span>
-          <span v-if="editingBlockGi !== gi" class="wb-tree-name" @dblclick.stop="startEditBlockName(gi)">
-            {{ getBlock((node.ref as OrderItem).identifier)?.name || (node.ref as OrderItem).identifier }}
+          <span
+            class="wb-toggle-sw"
+            :class="{ on: (node.ref as OrderItem).enabled }"
+            @click.stop="store.toggleBlock(gi)"
+          ></span>
+          <span
+            v-if="editingBlockGi !== gi"
+            class="wb-tree-name"
+            @dblclick.stop="startEditBlockName(gi)"
+          >
+            {{
+              getBlock((node.ref as OrderItem).identifier)?.name ||
+              (node.ref as OrderItem).identifier
+            }}
           </span>
-          <input v-else
-                 :ref="(el) => setBlockNameInput(el, gi)"
-                 class="wb-tree-name-input"
-                 :value="getBlock((node.ref as OrderItem).identifier)?.name || (node.ref as OrderItem).identifier"
-                 @blur="finishEditBlockName(gi, $event)"
-                 @keydown.enter.prevent="finishEditBlockName(gi, $event)"
-                 @keydown.esc.prevent="cancelEditBlockName()"
-                 @click.stop
-                 @pointerdown.stop />
-          <span class="wb-tree-role" :class="roleClass((node.ref as OrderItem).identifier)">{{ getBlock((node.ref as OrderItem).identifier)?.role || 'system' }}</span>
+          <input
+            v-else
+            :ref="(el) => setBlockNameInput(el, gi)"
+            class="wb-tree-name-input"
+            :value="
+              getBlock((node.ref as OrderItem).identifier)?.name ||
+              (node.ref as OrderItem).identifier
+            "
+            @blur="finishEditBlockName(gi, $event)"
+            @keydown.enter.prevent="finishEditBlockName(gi, $event)"
+            @keydown.esc.prevent="cancelEditBlockName()"
+            @click.stop
+            @pointerdown.stop
+          />
+          <span class="wb-tree-role" :class="roleClass((node.ref as OrderItem).identifier)">{{
+            getBlock((node.ref as OrderItem).identifier)?.role || 'system'
+          }}</span>
           <span class="wb-tree-actions">
             <span class="wb-tree-act" @click.stop="store.hideBlock(gi)">👁</span>
             <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
@@ -69,7 +135,11 @@
       </template>
     </div>
   </aside>
-  <div class="wb-resize-handle" :class="{ active: resize.active.value }" @pointerdown="onResizeStart"></div>
+  <div
+    class="wb-resize-handle"
+    :class="{ active: resize.active.value }"
+    @pointerdown="onResizeStart"
+  ></div>
 </template>
 
 <script setup lang="ts">
@@ -102,26 +172,31 @@ const listRef = ref<HTMLElement>()
  * 这里保留 preset 特有逻辑：onDrop 的 (from, to, after) 直接交给 store.reorderBlock 处理 group-insert 语义。
  */
 const {
-  dragIdx, dragOverIdx, dragOverPos, itemEls,
+  dragIdx,
+  dragOverIdx,
+  dragOverPos,
+  itemEls,
   setItemRef,
   onItemMouseDown: onDragPointerDown,
   consumeSuppressClick: consumeDragSuppressClick,
 } = useDragReorder<number>({ autoScrollContainer: () => listRef.value })
 
 const canBind = computed(() => {
-  const topLevel = Array.from(store.selectedGi).filter(gi =>
-    store.flatNodes[gi]?.parent === store.order
+  const topLevel = Array.from(store.selectedGi).filter(
+    (gi) => store.flatNodes[gi]?.parent === store.order
   )
   return topLevel.length >= 2
 })
 const canUnbind = computed(() => {
-  return Array.from(store.selectedGi).some(gi => {
+  return Array.from(store.selectedGi).some((gi) => {
     const node = store.flatNodes[gi]
     return node?.isGroup ?? false
   })
 })
 
-function getBlock(id: string) { return store.prompts.find(p => p.identifier === id) }
+function getBlock(id: string) {
+  return store.prompts.find((p) => p.identifier === id)
+}
 function roleClass(id: string) {
   return roleClassOf(getBlock(id)?.role)
 }
@@ -130,10 +205,10 @@ function nodeKey(node: FlatNode, gi: number) {
   return node.isGroup ? (node.ref as OrderGroup).id : (node.ref as OrderItem).identifier + '_' + gi
 }
 function itemStyle(node: FlatNode) {
-  return node.depth > 0 ? { paddingLeft: (8 + node.depth * 16) + 'px' } : {}
+  return node.depth > 0 ? { paddingLeft: 8 + node.depth * 16 + 'px' } : {}
 }
 function unbindCurrent() {
-  const groupGi = Array.from(store.selectedGi).find(gi => {
+  const groupGi = Array.from(store.selectedGi).find((gi) => {
     const node = store.flatNodes[gi]
     return node?.isGroup ?? false
   })
@@ -158,7 +233,9 @@ const {
     if (node && node.isGroup) (node.ref as OrderGroup).name = newName
   },
 })
-function setGroupNameInput(el: any, _gi: number) { setGroupNameInputRaw(el) }
+function setGroupNameInput(el: object | null, _gi: number) {
+  setGroupNameInputRaw(el)
+}
 function startEditGroupName(gi: number) {
   const node = store.flatNodes[gi]
   if (!node || !node.isGroup) return
@@ -183,14 +260,16 @@ const {
     const node = store.flatNodes[gi]
     if (!node || node.isGroup) return
     const item = node.ref as OrderItem
-    const p = store.prompts.find(pp => pp.identifier === item.identifier)
+    const p = store.prompts.find((pp) => pp.identifier === item.identifier)
     if (!p) return
     p.name = newName
     store.markDirty() // 嵌套字段变更，浅层 prompts watch 捕获不到
     tabsStore.renameTab('preset', item.identifier, newName || item.identifier)
   },
 })
-function setBlockNameInput(el: any, _gi: number) { setBlockNameInputRaw(el) }
+function setBlockNameInput(el: object | null, _gi: number) {
+  setBlockNameInputRaw(el)
+}
 function startEditBlockName(gi: number) {
   const node = store.flatNodes[gi]
   if (!node || node.isGroup) return
@@ -204,11 +283,22 @@ function onGroupToggle(gi: number) {
 /** 侧边栏宽度拖拽：实时改 ref，拖拽结束后持久化。 */
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
-  setWidth: (w) => { uiStore.settings.sidebarWidth = w },
-  min: 220, max: 600, dir: 'right',
+  setWidth: (w) => {
+    uiStore.settings.sidebarWidth = w
+  },
+  min: 220,
+  max: 600,
+  dir: 'right',
 })
-function onResizeStart(e: PointerEvent) { resize.onPointerDown(e) }
-watch(() => resize.active.value, (v) => { if (!v) uiStore.saveSettings() })
+function onResizeStart(e: PointerEvent) {
+  resize.onPointerDown(e)
+}
+watch(
+  () => resize.active.value,
+  (v) => {
+    if (!v) uiStore.saveSettings()
+  }
+)
 
 /**
  * 跳转请求时把当前激活标签对应的行滚入视口。
@@ -252,8 +342,13 @@ const listSelection = useListSelection<number>({
       store.toggleGroupCollapse(gi)
     } else {
       const item = node.ref as OrderItem
-      const block = store.prompts.find(p => p.identifier === item.identifier)
-      tabsStore.open({ domain: 'preset', key: item.identifier, label: block?.name || item.identifier, workspace: 'preset' })
+      const block = store.prompts.find((p) => p.identifier === item.identifier)
+      tabsStore.open({
+        domain: 'preset',
+        key: item.identifier,
+        label: block?.name || item.identifier,
+        workspace: 'preset',
+      })
     }
   },
 })

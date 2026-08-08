@@ -13,7 +13,7 @@ export function useInlineRename<T>(opts: {
   const inputRef = ref<HTMLInputElement | null>(null)
 
   /** 绑定编辑模式 <input> 的 :ref。挂载后自动聚焦并全选文本。 */
-  function setInputRef(el: any) {
+  function setInputRef(el: object | null) {
     if (el) {
       inputRef.value = el as HTMLInputElement
       nextTick(() => {
@@ -44,5 +44,12 @@ export function useInlineRename<T>(opts: {
     inputRef.value = null
   }
 
-  return { editingId, getCurrentName: opts.getCurrentName, setInputRef, start, finish, cancel }
+  return {
+    editingId,
+    getCurrentName: opts.getCurrentName,
+    setInputRef,
+    start,
+    finish,
+    cancel,
+  }
 }

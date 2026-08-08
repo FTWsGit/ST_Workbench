@@ -1,7 +1,13 @@
 <template>
   <div v-if="store.currentBlock" class="wb-form">
     <FormField :label="uiStore.t('preset.settings.name')">
-      <input class="wb-form-input" type="text" :value="store.currentBlock.name" @input="onNameInput" :placeholder="uiStore.t('preset.settings.namePlaceholder')" />
+      <input
+        class="wb-form-input"
+        type="text"
+        :value="store.currentBlock.name"
+        @input="onNameInput"
+        :placeholder="uiStore.t('preset.settings.namePlaceholder')"
+      />
     </FormField>
 
     <FormField :label="uiStore.t('preset.settings.role')">
@@ -12,8 +18,12 @@
       </select>
     </FormField>
 
-    <p v-if="store.currentBlock.marker" class="wb-muted" style="font-size:12px;margin-top:10px">
-      {{ uiStore.t('preset.settings.markerHint', { id: store.currentBlock.identifier }) }}
+    <p v-if="store.currentBlock.marker" class="wb-muted" style="font-size: 12px; margin-top: 10px">
+      {{
+        uiStore.t('preset.settings.markerHint', {
+          id: store.currentBlock.identifier,
+        })
+      }}
     </p>
   </div>
   <p v-else class="wb-empty-note">{{ uiStore.t('preset.settings.empty') }}</p>
@@ -39,13 +49,17 @@ function onNameInput(e: Event) {
 }
 function onRoleChange(e: Event) {
   if (!store.currentBlock) return
-  store.currentBlock.role = (e.target as HTMLSelectElement).value as any
+  store.currentBlock.role = (e.target as HTMLSelectElement).value as
+    'system' | 'user' | 'assistant'
   store.markDirty()
 }
 
 /** block 改名时同步标签栏文字；用 renameTab() 而非 open()，避免逐字触发侧边栏 scrollIntoView。 */
-watch(() => store.currentBlock?.name, (name) => {
-  const b = store.currentBlock
-  if (b && name !== undefined) tabsStore.renameTab('preset', b.identifier, name || b.identifier)
-})
+watch(
+  () => store.currentBlock?.name,
+  (name) => {
+    const b = store.currentBlock
+    if (b && name !== undefined) tabsStore.renameTab('preset', b.identifier, name || b.identifier)
+  }
+)
 </script>

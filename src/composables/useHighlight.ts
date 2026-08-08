@@ -21,14 +21,22 @@ import 'prismjs/components/prism-javascript.js'
 
 type Tier = 1 | 2 | 3
 
-export interface Token { text: string; cls: string | null }
+export interface Token {
+  text: string
+  cls: string | null
+}
 
 function findMacroEnd(text: string, start: number): number {
-  let depth = 1, j = start + 2
+  let depth = 1,
+    j = start + 2
   while (j < text.length && depth > 0) {
-    if (j + 1 < text.length && text[j] === '{' && text[j + 1] === '{') { depth++; j += 2 }
-    else if (j + 1 < text.length && text[j] === '}' && text[j + 1] === '}') { depth--; j += 2 }
-    else j++
+    if (j + 1 < text.length && text[j] === '{' && text[j + 1] === '{') {
+      depth++
+      j += 2
+    } else if (j + 1 < text.length && text[j] === '}' && text[j + 1] === '}') {
+      depth--
+      j += 2
+    } else j++
   }
   return depth === 0 ? j : -1
 }
@@ -42,19 +50,19 @@ function pushMacroTokens(out: Token[], inner: string): void {
     // 13 种变量宏：name 用 hl-v，宏名用 hl-k，:: 用 hl-s，值（仅 set/add）走 hl-val 递归高亮。
     // 排序让多字符前缀先匹配——setglobalvar 先于 setvar，避免 setvar::foo 被误吞 setglobalvar::foo。
     const VAR_HL: { prefix: string; hasValue: boolean }[] = [
-      { prefix: 'setglobalvar::',    hasValue: true  },
-      { prefix: 'getglobalvar::',    hasValue: false },
-      { prefix: 'addglobalvar::',    hasValue: true  },
-      { prefix: 'incglobalvar::',    hasValue: false },
-      { prefix: 'decglobalvar::',    hasValue: false },
-      { prefix: 'setvar::',          hasValue: true  },
-      { prefix: 'getvar::',          hasValue: false },
-      { prefix: 'addvar::',          hasValue: true  },
-      { prefix: 'incvar::',          hasValue: false },
-      { prefix: 'decvar::',          hasValue: false },
-      { prefix: 'hasvar::',          hasValue: false },
-      { prefix: 'hasglobalvar::',    hasValue: false },
-      { prefix: 'deletevar::',       hasValue: false },
+      { prefix: 'setglobalvar::', hasValue: true },
+      { prefix: 'getglobalvar::', hasValue: false },
+      { prefix: 'addglobalvar::', hasValue: true },
+      { prefix: 'incglobalvar::', hasValue: false },
+      { prefix: 'decglobalvar::', hasValue: false },
+      { prefix: 'setvar::', hasValue: true },
+      { prefix: 'getvar::', hasValue: false },
+      { prefix: 'addvar::', hasValue: true },
+      { prefix: 'incvar::', hasValue: false },
+      { prefix: 'decvar::', hasValue: false },
+      { prefix: 'hasvar::', hasValue: false },
+      { prefix: 'hasglobalvar::', hasValue: false },
+      { prefix: 'deletevar::', hasValue: false },
     ]
     let matched = false
     for (const def of VAR_HL) {
@@ -66,8 +74,12 @@ function pushMacroTokens(out: Token[], inner: string): void {
         if (sep === -1) break
         const varName = inner.slice(after, sep)
         const valuePart = inner.slice(sep + 2)
-        out.push({ text: macroName, cls: 'hl-k' }, { text: '::', cls: 'hl-s' },
-                  { text: varName, cls: 'hl-v' }, { text: '::', cls: 'hl-s' })
+        out.push(
+          { text: macroName, cls: 'hl-k' },
+          { text: '::', cls: 'hl-s' },
+          { text: varName, cls: 'hl-v' },
+          { text: '::', cls: 'hl-s' }
+        )
         out.push(...scan(valuePart, 0, 1, null, 'hl-val').tokens)
       } else {
         const varName = inner.slice(after)
@@ -92,7 +104,14 @@ function pushMacroTokens(out: Token[], inner: string): void {
  * 原始 `text` 中第一个未消费字符的绝对索引——要么是 `stopChar` 的位置（如果找到），要么是
  * `text.length`（未找到）。
  */
-function scan(text: string, start: number, minTier: Tier, stopChar: string | null, baseCls: string | null, memo: Map<string, { tokens: Token[]; endIndex: number }> = new Map()): { tokens: Token[]; endIndex: number } {
+function scan(
+  text: string,
+  start: number,
+  minTier: Tier,
+  stopChar: string | null,
+  baseCls: string | null,
+  memo: Map<string, { tokens: Token[]; endIndex: number }> = new Map()
+): { tokens: Token[]; endIndex: number } {
   // 记忆化：(start, minTier, stopChar) 唯一确定"从 start 找匹配闭合符"这次尝试的结果——
   // baseCls 由 (minTier, stopChar) 决定，不需要进 key。缺记忆化时，一串连续未匹配的定界符
   // （典型场景：JS 代码里一串没有对应 `>` 的比较运算符 `<`）会让每个起点各自重新扫一遍它之后
@@ -105,14 +124,23 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
   if (cached) return cached
 
   const out: Token[] = []
-  let i = start, plainStart = start
-  const flushPlain = (upTo: number) => { if (upTo > plainStart) out.push({ text: text.substring(plainStart, upTo), cls: baseCls }) }
-  const finish = (result: { tokens: Token[]; endIndex: number }) => { memo.set(key, result); return result }
+  let i = start,
+    plainStart = start
+  const flushPlain = (upTo: number) => {
+    if (upTo > plainStart) out.push({ text: text.substring(plainStart, upTo), cls: baseCls })
+  }
+  const finish = (result: { tokens: Token[]; endIndex: number }) => {
+    memo.set(key, result)
+    return result
+  }
 
   while (i < text.length) {
     if (stopChar !== null && text[i] === stopChar) {
       // 闭合单引号的 word-boundary 检查，模拟原 regex 的 (?!\w)
-      if ((stopChar === "'" || stopChar === '\u2019') && /\w/.test(text[i + 1] || '')) { i++; continue }
+      if ((stopChar === "'" || stopChar === '\u2019') && /\w/.test(text[i + 1] || '')) {
+        i++
+        continue
+      }
       flushPlain(i)
       return finish({ tokens: out, endIndex: i })
     }
@@ -123,7 +151,8 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
       if (end !== -1) {
         flushPlain(i)
         pushMacroTokens(out, text.substring(i + 2, end - 2))
-        i = end; plainStart = i
+        i = end
+        plainStart = i
         continue
       }
     }
@@ -135,8 +164,12 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
       const inner = scan(text, i + 1, 3, '>', 'hl-ab', memo)
       if (inner.endIndex < text.length && text[inner.endIndex] === '>') {
         flushPlain(i)
-        out.push({ text: '<', cls: 'hl-ab' }, ...inner.tokens, { text: '>', cls: 'hl-ab' })
-        i = inner.endIndex + 1; plainStart = i
+        out.push({ text: '<', cls: 'hl-ab' }, ...inner.tokens, {
+          text: '>',
+          cls: 'hl-ab',
+        })
+        i = inner.endIndex + 1
+        plainStart = i
         continue
       }
     }
@@ -147,19 +180,27 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
       const inner = scan(text, i + 1, 2, ']', 'hl-sb', memo)
       if (inner.endIndex < text.length && text[inner.endIndex] === ']') {
         flushPlain(i)
-        out.push({ text: '[', cls: 'hl-sb' }, ...inner.tokens, { text: ']', cls: 'hl-sb' })
-        i = inner.endIndex + 1; plainStart = i
+        out.push({ text: '[', cls: 'hl-sb' }, ...inner.tokens, {
+          text: ']',
+          cls: 'hl-sb',
+        })
+        i = inner.endIndex + 1
+        plainStart = i
         continue
       }
     }
 
     // Tier 1: 中文双引号 “...” — 颜色同英文双引号
-    if (minTier <= 1 && text[i] === '\u201C') {  // U+201C = “
+    if (minTier <= 1 && text[i] === '\u201C') {
+      // U+201C = “
       const cls = 'hl-dq'
-      const inner = scan(text, i + 1, 2, '\u201D', cls, memo)  // stopChar = ” (U+201D)
+      const inner = scan(text, i + 1, 2, '\u201D', cls, memo) // stopChar = ” (U+201D)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u201D') {
         flushPlain(i)
-        out.push({ text: '\u201C', cls }, ...inner.tokens, { text: '\u201D', cls })
+        out.push({ text: '\u201C', cls }, ...inner.tokens, {
+          text: '\u201D',
+          cls,
+        })
         i = inner.endIndex + 1
         plainStart = i
         continue
@@ -167,24 +208,31 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
     }
 
     // Tier 1: 中文单引号 ‘...’ — 颜色同英文单引号
-    if (minTier <= 1 && text[i] === '\u2018') {  // U+2018 = ‘
+    if (minTier <= 1 && text[i] === '\u2018') {
+      // U+2018 = ‘
       const cls = 'hl-sq'
-      const inner = scan(text, i + 1, 2, '\u2019', cls, memo)  // stopChar = ’ (U+2019)
+      const inner = scan(text, i + 1, 2, '\u2019', cls, memo) // stopChar = ’ (U+2019)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u2019') {
         flushPlain(i)
-        out.push({ text: '\u2018', cls }, ...inner.tokens, { text: '\u2019', cls })
+        out.push({ text: '\u2018', cls }, ...inner.tokens, {
+          text: '\u2019',
+          cls,
+        })
         i = inner.endIndex + 1
         plainStart = i
         continue
       }
     }
 
-    if (minTier <= 1 && text[i] === '\u300C') { 
-      const cls = 'hl-dq' 
+    if (minTier <= 1 && text[i] === '\u300C') {
+      const cls = 'hl-dq'
       const inner = scan(text, i + 1, 2, '\u300D', cls, memo)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u300D') {
         flushPlain(i)
-        out.push({ text: '\u300C', cls }, ...inner.tokens, { text: '\u300D', cls })
+        out.push({ text: '\u300C', cls }, ...inner.tokens, {
+          text: '\u300D',
+          cls,
+        })
         i = inner.endIndex + 1
         plainStart = i
         continue
@@ -204,7 +252,8 @@ function scan(text: string, start: number, minTier: Tier, stopChar: string | nul
         if (inner.endIndex < text.length && text[inner.endIndex] === qc) {
           flushPlain(i)
           out.push({ text: qc, cls }, ...inner.tokens, { text: qc, cls })
-          i = inner.endIndex + 1; plainStart = i
+          i = inner.endIndex + 1
+          plainStart = i
           continue
         }
       }
@@ -241,7 +290,8 @@ function flattenPrismTokens(tokens: (string | Prism.Token)[], out: Token[] = [])
     // t.content 也可能直接是字符串（不是数组/嵌套 Token），上面已经统一转成数组处理；
     // 这里把这次递归新产出的 token 全部打上当前 token.type 的 class——因为 Prism 的
     // token.content 里嵌套的字符串没有自己的 cls，需要从外层继承。
-    for (let i = before; i < out.length; i++) if (out[i].cls === null) out[i].cls = `hl-js-${t.type}`
+    for (let i = before; i < out.length; i++)
+      if (out[i].cls === null) out[i].cls = `hl-js-${t.type}`
   }
   return out
 }

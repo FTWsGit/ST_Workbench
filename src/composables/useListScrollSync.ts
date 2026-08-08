@@ -11,13 +11,16 @@ export function useListScrollSync<T>(opts: {
   keyOf: () => T | null | undefined
 }) {
   const tabsStore = useTabsStore()
-  watch(() => tabsStore.listScrollToken[opts.domain], () => {
-    nextTick(() => {
-      if (!tabsStore.activeTab || tabsStore.activeTab.domain !== opts.domain) return
-      const key = opts.keyOf()
-      if (key == null) return
-      const el = opts.itemEls.get(key)
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    })
-  })
+  watch(
+    () => tabsStore.listScrollToken[opts.domain],
+    () => {
+      nextTick(() => {
+        if (!tabsStore.activeTab || tabsStore.activeTab.domain !== opts.domain) return
+        const key = opts.keyOf()
+        if (key == null) return
+        const el = opts.itemEls.get(key)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
+    }
+  )
 }

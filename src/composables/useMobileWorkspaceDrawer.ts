@@ -30,11 +30,15 @@ export function useMobileWorkspaceDrawer(opts: UseMobileWorkspaceDrawerOptions) 
   // 'sidebar'/'tools' 是内置特殊值：每个工作区都有一个侧边栏和一个工具抽屉，不需要放进 panels 表。
   const visible = ref<string>('none')
 
-  function toggleSidebar() { visible.value = visible.value === 'sidebar' ? 'none' : 'sidebar' }
-  function toggleTools() { visible.value = visible.value === 'tools' ? 'none' : 'tools' }
+  function toggleSidebar() {
+    visible.value = visible.value === 'sidebar' ? 'none' : 'sidebar'
+  }
+  function toggleTools() {
+    visible.value = visible.value === 'tools' ? 'none' : 'tools'
+  }
 
   function close() {
-    const panel = panels.find(p => p.key === visible.value)
+    const panel = panels.find((p) => p.key === visible.value)
     if (panel) panel.setOpen(false)
     visible.value = 'none'
   }
@@ -54,10 +58,14 @@ export function useMobileWorkspaceDrawer(opts: UseMobileWorkspaceDrawerOptions) 
     })
   }
   for (const src of revealSidebarOn) {
-    watch(src, () => { if (isMobile.value) visible.value = 'sidebar' })
+    watch(src, () => {
+      if (isMobile.value) visible.value = 'sidebar'
+    })
   }
   for (const src of closeOn) {
-    watch(src, () => { if (isMobile.value) visible.value = 'none' })
+    watch(src, () => {
+      if (isMobile.value) visible.value = 'none'
+    })
   }
 
   // reactive() 包一层，使模板里嵌套成员访问（`drawer.visible` 等）能自动解包内部 ref。

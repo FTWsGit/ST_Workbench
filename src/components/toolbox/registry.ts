@@ -29,6 +29,9 @@ export function registerTool(workspace: string, collection: string, def: ToolDef
 }
 
 /** 查询某个场景当前可用的工具列表。未注册过任何工具的 (workspace, collection) 返回空数组。 */
-export function getToolsForScene(workspace: ToolScene['workspace'], collection: ToolScene['collection']): ToolDef[] {
+export function getToolsForScene(
+  workspace: ToolScene['workspace'],
+  collection: ToolScene['collection']
+): ToolDef[] {
   return TOOL_REGISTRY[workspace]?.[collection] ?? []
 }

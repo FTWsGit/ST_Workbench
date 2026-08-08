@@ -10,7 +10,7 @@ export function useRegexScripts(
   options: {
     markDirty?: () => void
     showToast: (msg: string) => void
-    t: (key: string, params?: any) => string
+    t: (key: string, params?: Record<string, string | number>) => string
     loadFirstMessageKey?: string
     defaultPlacement?: number[]
   }

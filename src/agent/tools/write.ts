@@ -13,33 +13,45 @@
  *   character: character_set_field / character_save
  */
 import { registerAgentTool, type AgentToolResult, type AgentToolContext } from '../toolRegistry'
-import { useConfirmStore } from '../../stores/confirmStore'
-import { useUiStore } from '../../stores/uiStore'
-import { usePresetStore } from '../../stores/presetStore'
-import { useWorldbookStore } from '../../stores/worldbookStore'
-import { useCharacterStore } from '../../stores/characterStore'
 import { useAgentStore } from '../agentStore'
-import { CHARACTER_FIELDS } from '../../types'
-import {
-  TOOL_RESULT_TRUNCATE_BYTES,
-} from '../constants'
+import type { PresetBlock, OrderItem, OrderNode } from '../../types'
+import { TOOL_RESULT_TRUNCATE_BYTES } from '../constants'
+
+/** order 树删除遍历用宽松结构（OrderNode 可赋值到它，避免显式 any）。 */
+type OrderTreeNode = {
+  isGroup?: unknown
+  ref?: { identifier?: unknown }
+  children?: OrderNode[]
+}
 
 /* ====== 工具描述（英文集中管理）======
  * atomcode 风格：做什么 + 不做什么 + 边界 + 何时用 + 参数语义 + 返回形态 + 错误边界 + 反例陷阱。
  * 所有写类工具都是 risky：execute 前弹审批；只改内存，必须调对应 save 才持久化。 */
 const TOOL_DESC = {
-  presetEditBlock: "Modify fields (content/name/role etc.) of an existing preset block by identifier. RISKY: approval required. In-memory only — you MUST call preset_save afterwards to persist; do NOT change identifier. Errors: missing params or block not found.",
-  presetCreateBlock: "Create a new prompt block in the loaded preset, appended to end of order. RISKY: approval required. In-memory only — MUST call preset_save to persist. name required; role defaults to system. Returns new identifier.",
-  presetReorderBlock: "Move an existing preset block by identifier one position up or down in prompt order. RISKY: approval required. In-memory only — MUST call preset_save to persist. direction must be 'up' or 'down'. Errors: block not found or already at edge.",
-  presetBindGroup: "Bind the currently multi-selected blocks in the preset into one group; no parameters. RISKY: approval required. Requires 2+ selected blocks, else error. In-memory only — MUST call preset_save to persist.",
-  presetUnbindGroup: "Ungroup the currently selected group in the preset back into separate blocks; no parameters. RISKY: approval required. In-memory only — MUST call preset_save to persist. Errors: no loaded preset or nothing selected.",
-  presetSave: "Persist ALL pending preset edits (edit/create/reorder/bind/unbind) to the preset file on the server; call only after finishing all changes. No parameters. RISKY: approval required — writes a file. Returns saved preset name or an error.",
-  worldbookCreateEntry: "Create a new entry in the currently loaded worldbook, appended last. RISKY: approval required. comment required; content, keys (array), position (0=before_char,1=after_char) optional. In-memory only — MUST call worldbook_save to persist.",
-  worldbookReorderEntry: "Move an existing worldbook entry (numeric uid) one position up or down. RISKY: approval required. In-memory only — MUST call worldbook_save to persist. direction must be 'up' or 'down'. Errors: uid not found or already at edge.",
-  worldbookDeleteEntry: "Permanently delete a worldbook entry by numeric uid. IRREVERSIBLE — no undo; double-check uid before use. RISKY: approval required. In-memory only — MUST call worldbook_save to persist. Errors: invalid uid or entry not found.",
-  worldbookSave: "Persist ALL pending worldbook edits (create/reorder/delete) to the server; call only after finishing all changes. No parameters. RISKY: approval required — writes to server. Returns saved worldbook name or an error.",
-  characterSetField: "Set a single character card field by field_key (valid values listed in the parameter; 'greeting:N' = Nth greeting, 0-based). RISKY: approval required. In-memory only — MUST call character_save to persist. Errors: unknown key or bad greeting index.",
-  characterSave: "Persist ALL pending character card edits (set_field) to the server; call only after finishing all changes. No parameters. RISKY: approval required — writes to server. Returns saved character name or an error.",
+  presetEditBlock:
+    'Modify fields (content/name/role etc.) of an existing preset block by identifier. RISKY: approval required. In-memory only — you MUST call preset_save afterwards to persist; do NOT change identifier. Errors: missing params or block not found.',
+  presetCreateBlock:
+    'Create a new prompt block in the loaded preset, appended to end of order. RISKY: approval required. In-memory only — MUST call preset_save to persist. name required; role defaults to system. Returns new identifier.',
+  presetReorderBlock:
+    "Move an existing preset block by identifier one position up or down in prompt order. RISKY: approval required. In-memory only — MUST call preset_save to persist. direction must be 'up' or 'down'. Errors: block not found or already at edge.",
+  presetBindGroup:
+    'Bind the currently multi-selected blocks in the preset into one group; no parameters. RISKY: approval required. Requires 2+ selected blocks, else error. In-memory only — MUST call preset_save to persist.',
+  presetUnbindGroup:
+    'Ungroup the currently selected group in the preset back into separate blocks; no parameters. RISKY: approval required. In-memory only — MUST call preset_save to persist. Errors: no loaded preset or nothing selected.',
+  presetSave:
+    'Persist ALL pending preset edits (edit/create/reorder/bind/unbind) to the preset file on the server; call only after finishing all changes. No parameters. RISKY: approval required — writes a file. Returns saved preset name or an error.',
+  worldbookCreateEntry:
+    'Create a new entry in the currently loaded worldbook, appended last. RISKY: approval required. comment required; content, keys (array), position (0=before_char,1=after_char) optional. In-memory only — MUST call worldbook_save to persist.',
+  worldbookReorderEntry:
+    "Move an existing worldbook entry (numeric uid) one position up or down. RISKY: approval required. In-memory only — MUST call worldbook_save to persist. direction must be 'up' or 'down'. Errors: uid not found or already at edge.",
+  worldbookDeleteEntry:
+    'Permanently delete a worldbook entry by numeric uid. IRREVERSIBLE — no undo; double-check uid before use. RISKY: approval required. In-memory only — MUST call worldbook_save to persist. Errors: invalid uid or entry not found.',
+  worldbookSave:
+    'Persist ALL pending worldbook edits (create/reorder/delete) to the server; call only after finishing all changes. No parameters. RISKY: approval required — writes to server. Returns saved worldbook name or an error.',
+  characterSetField:
+    "Set a single character card field by field_key (valid values listed in the parameter; 'greeting:N' = Nth greeting, 0-based). RISKY: approval required. In-memory only — MUST call character_save to persist. Errors: unknown key or bad greeting index.",
+  characterSave:
+    'Persist ALL pending character card edits (set_field) to the server; call only after finishing all changes. No parameters. RISKY: approval required — writes to server. Returns saved character name or an error.',
 } as const
 
 /* ====== 入库截断 + framing（与 readonly.ts 一致）====== */
@@ -60,7 +72,7 @@ function askApproval(
   toolName: string,
   title: string,
   message: string,
-  danger = true,
+  danger = true
 ): Promise<boolean> {
   return useAgentStore().requestApproval({ toolName, title, message, danger })
 }
@@ -73,10 +85,14 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      identifier: { type: 'string', description: 'Identifier of the block to edit (from the current preset).' },
+      identifier: {
+        type: 'string',
+        description: 'Identifier of the block to edit (from the current preset).',
+      },
       fields: {
         type: 'object',
-        description: "Key-value map of fields to change: content, name, role, injection_position, injection_depth, temperature, disable, etc. 'identifier' is not allowed.",
+        description:
+          "Key-value map of fields to change: content, name, role, injection_position, injection_depth, temperature, disable, etc. 'identifier' is not allowed.",
       },
     },
     required: ['identifier', 'fields'],
@@ -89,28 +105,35 @@ registerAgentTool({
     const id = String(args?.identifier ?? '').trim()
     const fields = args?.fields
     if (!id) return { text: frame('missing parameter: identifier'), isError: true }
-    if (!fields || typeof fields !== 'object') return { text: frame('missing parameter: fields'), isError: true }
+    if (!fields || typeof fields !== 'object')
+      return { text: frame('missing parameter: fields'), isError: true }
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
 
-    const block = (store.prompts as any[]).find(p => p.identifier === id)
+    const block = store.prompts.find((p) => p.identifier === id)
     if (!block) return { text: frame(`block not found: ${id}`), isError: true }
 
     // 审批门：展示要改的字段摘要
-    const summary = Object.entries(fields).map(([k, v]) => `${k}=${truncate(String(v))}`).join(', ')
+    const summary = Object.entries(fields)
+      .map(([k, v]) => `${k}=${truncate(String(v))}`)
+      .join(', ')
     const approved = await askApproval(
       ctx,
       'preset_edit_block',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.presetEdit', { id, summary }),
+      ctx.uiStore.t('agent.approval.presetEdit', { id, summary })
     )
     if (!approved) {
-      return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
     }
 
     // 应用字段修改
     for (const [k, v] of Object.entries(fields)) {
       if (k === 'identifier') continue // 不允许改 identifier
-      ;(block as any)[k] = v
+      block[k] = v
     }
     store.markDirty()
     return { text: frame(`block "${id}" 已修改，需调 preset_save 持久化`) }
@@ -123,9 +146,18 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      name: { type: 'string', description: 'Display name of the new block (required).' },
-      role: { type: 'string', description: 'Role of the block: system, user or assistant (default: system).' },
-      content: { type: 'string', description: 'Body/content text of the new block (optional).' },
+      name: {
+        type: 'string',
+        description: 'Display name of the new block (required).',
+      },
+      role: {
+        type: 'string',
+        description: 'Role of the block: system, user or assistant (default: system).',
+      },
+      content: {
+        type: 'string',
+        description: 'Body/content text of the new block (optional).',
+      },
     },
     required: ['name'],
   },
@@ -144,22 +176,34 @@ registerAgentTool({
       ctx,
       'preset_create_block',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.presetCreate', { name, role }),
+      ctx.uiStore.t('agent.approval.presetCreate', { name, role })
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
 
     // 复用 addBlock 的创建逻辑，但 addBlock 会自己 showToast 并打开标签，
     // 这里直接操作 prompts + order 更可控
     const id = 'custom_' + Date.now()
-    ;(store.prompts as any[]).push({
-      identifier: id, name, role,
-      content, system_prompt: false, enabled: true, marker: false,
-    })
+    store.prompts.push({
+      identifier: id,
+      name,
+      role,
+      content,
+      system_prompt: false,
+      enabled: true,
+      marker: false,
+    } as PresetBlock)
     // 插入到 order 末尾
-    const order = store.order as any[]
+    const order = store.order
     order.push({ identifier: id, enabled: true })
     store.markDirty()
-    return { text: frame(`block "${name}" 已创建（identifier=${id}），需调 preset_save 持久化`) }
+    return {
+      text: frame(`block "${name}" 已创建（identifier=${id}），需调 preset_save 持久化`),
+    }
   },
 })
 
@@ -169,8 +213,14 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      identifier: { type: 'string', description: 'Identifier of the block to move.' },
-      direction: { type: 'string', description: "Direction to move: 'up' or 'down' (required)." },
+      identifier: {
+        type: 'string',
+        description: 'Identifier of the block to move.',
+      },
+      direction: {
+        type: 'string',
+        description: "Direction to move: 'up' or 'down' (required).",
+      },
     },
     required: ['identifier', 'direction'],
   },
@@ -181,27 +231,45 @@ registerAgentTool({
     const store = ctx.presetStore
     const id = String(args?.identifier ?? '').trim()
     const direction = String(args?.direction ?? '').trim()
-    if (!id || !direction) return { text: frame('missing parameter: identifier/direction'), isError: true }
-    if (direction !== 'up' && direction !== 'down') return { text: frame('direction must be up/down'), isError: true }
+    if (!id || !direction)
+      return {
+        text: frame('missing parameter: identifier/direction'),
+        isError: true,
+      }
+    if (direction !== 'up' && direction !== 'down')
+      return { text: frame('direction must be up/down'), isError: true }
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true }
 
     // 找到 flatNodes 里对应的 gi
-    const flat = (store as any).flatNodes as any[]
-    const gi = flat.findIndex((n: any) => n && !n.isGroup && (n.ref as any)?.identifier === id)
-    if (gi < 0) return { text: frame(`block not found in flat tree: ${id}`), isError: true }
+    const flat = store.flatNodes
+    const gi = flat.findIndex((n) => n && !n.isGroup && (n.ref as OrderItem)?.identifier === id)
+    if (gi < 0)
+      return {
+        text: frame(`block not found in flat tree: ${id}`),
+        isError: true,
+      }
 
     const approved = await askApproval(
       ctx,
       'preset_reorder_block',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.presetReorder', { id, direction }),
+      ctx.uiStore.t('agent.approval.presetReorder', { id, direction })
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
 
     // 用 useGroupedList 的 reorderBlock 原语
-    const reorder = (store as any).reorderBlock as (gi: number, direction: 'up' | 'down') => boolean
+    const reorder = store.reorderBlock as unknown as (gi: number, direction: 'up' | 'down') => boolean
     const ok = reorder(gi, direction)
-    if (!ok) return { text: frame(`cannot move ${id} ${direction} (already at edge or blocked)`), isError: true }
+    if (!ok)
+      return {
+        text: frame(`cannot move ${id} ${direction} (already at edge or blocked)`),
+        isError: true,
+      }
     store.markDirty()
     return { text: frame(`block "${id}" moved ${direction}`) }
   },
@@ -221,12 +289,21 @@ registerAgentTool({
       ctx,
       'preset_bind_group',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.presetBind'),
+      ctx.uiStore.t('agent.approval.presetBind')
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
-    const bind = (store as any).bindSelected as () => boolean
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
+    const bind = store.bindSelected as unknown as () => boolean
     const ok = bind()
-    if (!ok) return { text: frame('需要先选中 2 个以上的 block 才能绑定'), isError: true }
+    if (!ok)
+      return {
+        text: frame('需要先选中 2 个以上的 block 才能绑定'),
+        isError: true,
+      }
     return { text: frame('blocks bound into group') }
   },
 })
@@ -245,10 +322,15 @@ registerAgentTool({
       ctx,
       'preset_unbind_group',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.presetUnbind'),
+      ctx.uiStore.t('agent.approval.presetUnbind')
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
-    const unbind = (store as any).unbindGroup as () => void
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
+    const unbind = store.unbindGroup as unknown as () => void
     unbind()
     return { text: frame('group unbound') }
   },
@@ -269,14 +351,22 @@ registerAgentTool({
       'preset_save',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.presetSave', { name: store.presetName }),
-      false,
+      false
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
     try {
       await store.doSavePreset()
       return { text: frame(`preset saved: ${store.presetName}`) }
     } catch (e) {
-      return { text: frame(`save failed: ${e instanceof Error ? e.message : String(e)}`), isError: true }
+      return {
+        text: frame(`save failed: ${e instanceof Error ? e.message : String(e)}`),
+        isError: true,
+      }
     }
   },
 })
@@ -289,10 +379,23 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      comment: { type: 'string', description: 'Display name (comment) of the new entry (required).' },
-      content: { type: 'string', description: 'Body/content text of the new entry (optional).' },
-      keys: { type: 'array', items: { type: 'string' }, description: 'List of trigger keywords (optional).' },
-      position: { type: 'number', description: 'Insertion position: 0=before_char, 1=after_char, etc (optional).' },
+      comment: {
+        type: 'string',
+        description: 'Display name (comment) of the new entry (required).',
+      },
+      content: {
+        type: 'string',
+        description: 'Body/content text of the new entry (optional).',
+      },
+      keys: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'List of trigger keywords (optional).',
+      },
+      position: {
+        type: 'number',
+        description: 'Insertion position: 0=before_char, 1=after_char, etc (optional).',
+      },
     },
     required: ['comment'],
   },
@@ -309,23 +412,30 @@ registerAgentTool({
       ctx,
       'worldbook_create_entry',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.wbCreate', { comment }),
+      ctx.uiStore.t('agent.approval.wbCreate', { comment })
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
 
     // 复用 addEntry 的创建逻辑
     store.addEntry()
     // addEntry 创建的 entry 是空模板，这里填入用户提供的字段
-    const entries = store.entries as any[]
+    const entries = store.entries
     const newEntry = entries[entries.length - 1]
     if (newEntry) {
       newEntry.comment = comment
       newEntry.content = String(args?.content ?? '')
       newEntry.keys = Array.isArray(args?.keys) ? args.keys : []
-      if (typeof args?.position === 'number') newEntry.position = args.position
+      if (typeof args?.position === 'number') newEntry.position = args.position as typeof newEntry.position
     }
     store.markDirty()
-    return { text: frame(`entry "${comment}" created, need to call worldbook_save to persist`) }
+    return {
+      text: frame(`entry "${comment}" created, need to call worldbook_save to persist`),
+    }
   },
 })
 
@@ -336,7 +446,10 @@ registerAgentTool({
     type: 'object',
     properties: {
       uid: { type: 'number', description: 'Numeric uid of the entry to move.' },
-      direction: { type: 'string', description: "Direction to move: 'up' or 'down' (required)." },
+      direction: {
+        type: 'string',
+        description: "Direction to move: 'up' or 'down' (required).",
+      },
     },
     required: ['uid', 'direction'],
   },
@@ -347,25 +460,42 @@ registerAgentTool({
     const store = ctx.worldbookStore
     const uid = Number(args?.uid)
     const direction = String(args?.direction ?? '').trim()
-    if (!Number.isFinite(uid)) return { text: frame('missing or invalid parameter: uid'), isError: true }
-    if (direction !== 'up' && direction !== 'down') return { text: frame('direction must be up/down'), isError: true }
+    if (!Number.isFinite(uid))
+      return { text: frame('missing or invalid parameter: uid'), isError: true }
+    if (direction !== 'up' && direction !== 'down')
+      return { text: frame('direction must be up/down'), isError: true }
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true }
 
-    const flat = (store as any).flatNodes as any[]
-    const gi = flat.findIndex((n: any) => n && !n.isGroup && (n.ref as any)?.identifier === String(uid))
-    if (gi < 0) return { text: frame(`entry not found in flat tree: uid=${uid}`), isError: true }
+    const flat = store.flatNodes
+    const gi = flat.findIndex(
+      (n) => n && !n.isGroup && (n.ref as OrderItem)?.identifier === String(uid)
+    )
+    if (gi < 0)
+      return {
+        text: frame(`entry not found in flat tree: uid=${uid}`),
+        isError: true,
+      }
 
     const approved = await askApproval(
       ctx,
       'worldbook_reorder_entry',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.wbReorder', { uid, direction }),
+      ctx.uiStore.t('agent.approval.wbReorder', { uid, direction })
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
 
-    const reorder = (store as any).reorderBlock as (gi: number, direction: 'up' | 'down') => boolean
+    const reorder = store.reorderBlock as unknown as (gi: number, direction: 'up' | 'down') => boolean
     const ok = reorder(gi, direction)
-    if (!ok) return { text: frame(`cannot move uid=${uid} ${direction}`), isError: true }
+    if (!ok)
+      return {
+        text: frame(`cannot move uid=${uid} ${direction}`),
+        isError: true,
+      }
     store.markDirty()
     return { text: frame(`entry uid=${uid} moved ${direction}`) }
   },
@@ -377,7 +507,10 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      uid: { type: 'number', description: 'Numeric uid of the entry to delete.' },
+      uid: {
+        type: 'number',
+        description: 'Numeric uid of the entry to delete.',
+      },
     },
     required: ['uid'],
   },
@@ -387,32 +520,42 @@ registerAgentTool({
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore
     const uid = Number(args?.uid)
-    if (!Number.isFinite(uid)) return { text: frame('missing or invalid parameter: uid'), isError: true }
+    if (!Number.isFinite(uid))
+      return { text: frame('missing or invalid parameter: uid'), isError: true }
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true }
 
-    const entries = store.entries as any[]
-    const entry = entries.find(e => Number(e.uid) === uid)
+    const entries = store.entries
+    const entry = entries.find((e) => Number(e.uid) === uid)
     if (!entry) return { text: frame(`entry not found: uid=${uid}`), isError: true }
 
     const approved = await askApproval(
       ctx,
       'worldbook_delete_entry',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.wbDelete', { uid, comment: entry.comment || '' }),
+      ctx.uiStore.t('agent.approval.wbDelete', {
+        uid,
+        comment: entry.comment || '',
+      })
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
 
     // 直接从 entries 数组删除（不走 deleteEntry 的 confirm 二次弹窗）
-    const idx = entries.findIndex(e => Number(e.uid) === uid)
+    const idx = entries.findIndex((e) => Number(e.uid) === uid)
     if (idx >= 0) entries.splice(idx, 1)
     // 同步 order：删除 order 里 identifier === String(uid) 的节点
-    const order = store.order as any[]
-    const removeNode = (nodes: any[]): any[] => {
-      const out: any[] = []
+    const order = store.order
+    const removeNode = (nodes: OrderNode[]): OrderNode[] => {
+      const out: OrderNode[] = []
       for (const n of nodes) {
         if (n && typeof n === 'object') {
-          if (!n.isGroup && (n.ref as any)?.identifier === String(uid)) continue
-          if (Array.isArray(n.children)) n.children = removeNode(n.children)
+          const node = n as OrderTreeNode
+          if (!node.isGroup && node.ref?.identifier === String(uid)) continue
+          if (Array.isArray(node.children)) node.children = removeNode(node.children)
         }
         out.push(n)
       }
@@ -439,14 +582,22 @@ registerAgentTool({
       'worldbook_save',
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.wbSave', { name: store.worldbookName }),
-      false,
+      false
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
     try {
       await store.doSaveWorldbook()
       return { text: frame(`worldbook saved: ${store.worldbookName}`) }
     } catch (e) {
-      return { text: frame(`save failed: ${e instanceof Error ? e.message : String(e)}`), isError: true }
+      return {
+        text: frame(`save failed: ${e instanceof Error ? e.message : String(e)}`),
+        isError: true,
+      }
     }
   },
 })
@@ -461,9 +612,13 @@ registerAgentTool({
     properties: {
       field_key: {
         type: 'string',
-        description: "Field key: description, systemPrompt, postHistoryInstructions, personality, scenario, depthPrompt, mesExample; or 'greeting:N' to set the Nth (0-based) greeting.",
+        description:
+          "Field key: description, systemPrompt, postHistoryInstructions, personality, scenario, depthPrompt, mesExample; or 'greeting:N' to set the Nth (0-based) greeting.",
       },
-      value: { type: 'string', description: 'New content/value for the field.' },
+      value: {
+        type: 'string',
+        description: 'New content/value for the field.',
+      },
     },
     required: ['field_key', 'value'],
   },
@@ -478,7 +633,15 @@ registerAgentTool({
     if (!store.character) return { text: frame('当前没有加载任何角色卡。'), isError: true }
 
     // 校验 field_key 合法性
-    const validFields = ['description', 'systemPrompt', 'postHistoryInstructions', 'personality', 'scenario', 'depthPrompt', 'mesExample']
+    const validFields = [
+      'description',
+      'systemPrompt',
+      'postHistoryInstructions',
+      'personality',
+      'scenario',
+      'depthPrompt',
+      'mesExample',
+    ]
     const isGreeting = key.startsWith('greeting:')
     if (!validFields.includes(key) && !isGreeting) {
       return { text: frame(`unknown field_key: ${key}`), isError: true }
@@ -488,12 +651,19 @@ registerAgentTool({
       ctx,
       'character_set_field',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.charSetField', { key, preview: truncate(value.slice(0, 60)) }),
+      ctx.uiStore.t('agent.approval.charSetField', {
+        key,
+        preview: truncate(value.slice(0, 60)),
+      })
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
 
     // 通过 tabsStore.open + setCurrentFieldValue 修改字段
-    const tabsStore = (ctx as any).tabsStore
     if (key === 'depthPrompt') {
       store.character.depthPrompt.prompt = value
     } else if (isGreeting) {
@@ -503,10 +673,12 @@ registerAgentTool({
       }
       store.character.greetings[idx] = value
     } else {
-      ;(store.character as any)[key] = value
+      store.character[key] = value
     }
     store.markDirty()
-    return { text: frame(`field "${key}" updated, need to call character_save to persist`) }
+    return {
+      text: frame(`field "${key}" updated, need to call character_save to persist`),
+    }
   },
 })
 
@@ -524,15 +696,27 @@ registerAgentTool({
       ctx,
       'character_save',
       ctx.uiStore.t('agent.approval.title'),
-      ctx.uiStore.t('agent.approval.charSave', { name: store.character.name || store.character.avatar }),
-      false,
+      ctx.uiStore.t('agent.approval.charSave', {
+        name: store.character.name || store.character.avatar,
+      }),
+      false
     )
-    if (!approved) return { text: frame('用户拒绝了这次操作'), isError: true, stopTurn: true }
+    if (!approved)
+      return {
+        text: frame('用户拒绝了这次操作'),
+        isError: true,
+        stopTurn: true,
+      }
     try {
       await store.doSaveCharacter()
-      return { text: frame(`character saved: ${store.character?.name || store.character?.avatar}`) }
+      return {
+        text: frame(`character saved: ${store.character?.name || store.character?.avatar}`),
+      }
     } catch (e) {
-      return { text: frame(`save failed: ${e instanceof Error ? e.message : String(e)}`), isError: true }
+      return {
+        text: frame(`save failed: ${e instanceof Error ? e.message : String(e)}`),
+        isError: true,
+      }
     }
   },
 })

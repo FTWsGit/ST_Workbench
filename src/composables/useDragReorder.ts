@@ -10,7 +10,9 @@ const AUTO_SCROLL_MAX_SPEED = 40
  * 基于 Pointer 的列表拖拽重排，泛型 T 覆盖所有域（PresetSidebar 用 gi / RegexSidebar 用索引 / 未来用 string 标识的列表）。
  * `dragOverIdx` 用 null（而非 -1）作为空值哨兵。自动滚动通过 `autoScrollContainer` getter 选择性启用。
  */
-export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => HTMLElement | null | undefined }) {
+export function useDragReorder<T = number>(opts?: {
+  autoScrollContainer?: () => HTMLElement | null | undefined
+}) {
   const dragIdx = ref<T | null>(null)
   const dragOverIdx = ref<T | null>(null)
   const dragOverPos = ref<'top' | 'bottom'>('top')
@@ -19,7 +21,7 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
   let suppressClick = false
   let dragScrollRAF: number | null = null
 
-  function setItemRef(el: any, i: T) {
+  function setItemRef(el: object | null, i: T) {
     if (el) itemEls.set(i, el as HTMLElement)
     else itemEls.delete(i)
   }
@@ -54,15 +56,23 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
       const entries = Array.from(itemEls.entries())
       const [firstIdx, firstEl] = entries[0]
       const [lastIdx, lastEl] = entries[entries.length - 1]
-      if (clientY < firstEl.getBoundingClientRect().top) { bestIdx = firstIdx; bestPos = 'top' }
-      else if (clientY > lastEl.getBoundingClientRect().bottom) { bestIdx = lastIdx; bestPos = 'bottom' }
+      if (clientY < firstEl.getBoundingClientRect().top) {
+        bestIdx = firstIdx
+        bestPos = 'top'
+      } else if (clientY > lastEl.getBoundingClientRect().bottom) {
+        bestIdx = lastIdx
+        bestPos = 'bottom'
+      }
     }
     pendingOver = bestIdx === null ? null : { idx: bestIdx, pos: bestPos }
     if (!dragRAF) dragRAF = requestAnimationFrame(flushDragOver)
   }
 
   function stopDragScroll() {
-    if (dragScrollRAF) { cancelAnimationFrame(dragScrollRAF); dragScrollRAF = null }
+    if (dragScrollRAF) {
+      cancelAnimationFrame(dragScrollRAF)
+      dragScrollRAF = null
+    }
   }
   function startDragScroll(container: HTMLElement, speed: number) {
     if (dragScrollRAF) return
@@ -77,9 +87,15 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
     if (!container) return
     const rect = container.getBoundingClientRect()
     if (clientY - rect.top < AUTO_SCROLL_EDGE_PX) {
-      startDragScroll(container, -Math.ceil(AUTO_SCROLL_MAX_SPEED * (1 - (clientY - rect.top) / AUTO_SCROLL_EDGE_PX)))
+      startDragScroll(
+        container,
+        -Math.ceil(AUTO_SCROLL_MAX_SPEED * (1 - (clientY - rect.top) / AUTO_SCROLL_EDGE_PX))
+      )
     } else if (rect.bottom - clientY < AUTO_SCROLL_EDGE_PX) {
-      startDragScroll(container, Math.ceil(AUTO_SCROLL_MAX_SPEED * (1 - (rect.bottom - clientY) / AUTO_SCROLL_EDGE_PX)))
+      startDragScroll(
+        container,
+        Math.ceil(AUTO_SCROLL_MAX_SPEED * (1 - (rect.bottom - clientY) / AUTO_SCROLL_EDGE_PX))
+      )
     } else {
       stopDragScroll()
     }
@@ -89,32 +105,41 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
   function suppressSelection() {
     const hostDoc = getHostDocument()
     hostDoc.body.style.userSelect = 'none'
-    ;(hostDoc.body.style as any).webkitUserSelect = 'none'
+    hostDoc.body.style.webkitUserSelect = 'none'
   }
   function restoreSelection() {
     const hostDoc = getHostDocument()
     hostDoc.body.style.userSelect = ''
-    ;(hostDoc.body.style as any).webkitUserSelect = ''
+    hostDoc.body.style.webkitUserSelect = ''
   }
 
   /**
    * 使用 Pointer Events 统一处理鼠标/触摸/笔。触摸拖拽限 .wb-drag-handle 元素内，避免与原生滚动冲突。
    * `onDrop` 职责窄化：(from, to, after) → 域内语义由调用方 onDrop 回调解释。
    */
-  function onItemMouseDown(i: T, e: PointerEvent, onDrop: (from: T, to: T, after: boolean) => void) {
+  function onItemMouseDown(
+    i: T,
+    e: PointerEvent,
+    onDrop: (from: T, to: T, after: boolean) => void
+  ) {
     if (e.pointerType === 'mouse') {
       if (e.button !== 0) return
     } else if (!(e.target as HTMLElement).closest('.wb-drag-handle')) {
       return
     }
     const hostWin = getHostWindow()
-    const startX = e.clientX, startY = e.clientY
+    const startX = e.clientX,
+      startY = e.clientY
     const pointerId = e.pointerId
     let dragging = false
     function onMove(ev: PointerEvent) {
       if (ev.pointerId !== pointerId) return
       if (!dragging) {
-        if (Math.abs(ev.clientX - startX) < DRAG_THRESHOLD && Math.abs(ev.clientY - startY) < DRAG_THRESHOLD) return
+        if (
+          Math.abs(ev.clientX - startX) < DRAG_THRESHOLD &&
+          Math.abs(ev.clientY - startY) < DRAG_THRESHOLD
+        )
+          return
         dragging = true
         dragIdx.value = i
         suppressSelection()
@@ -144,9 +169,20 @@ export function useDragReorder<T = number>(opts?: { autoScrollContainer?: () => 
     hostWin.addEventListener('pointercancel', onUp)
   }
   function consumeSuppressClick(): boolean {
-    if (suppressClick) { suppressClick = false; return true }
+    if (suppressClick) {
+      suppressClick = false
+      return true
+    }
     return false
   }
-  return { dragIdx, dragOverIdx, dragOverPos, itemEls, setItemRef, onItemMouseDown, consumeSuppressClick, scrollItemIntoView }
+  return {
+    dragIdx,
+    dragOverIdx,
+    dragOverPos,
+    itemEls,
+    setItemRef,
+    onItemMouseDown,
+    consumeSuppressClick,
+    scrollItemIntoView,
+  }
 }
-

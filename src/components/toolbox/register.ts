@@ -9,21 +9,61 @@ import CopyPanel from '../preset/CopyPanel.vue'
  *  若想在更早的启动链路触发，App.vue / ToolBoxPanel.vue 任一处 import 本文件亦可（幂等，重复 import 无副作用）。 */
 
 // preset/items：Search + Batch + Copy（跨预设复制提示词块，只属于预设域）
-registerTool('preset', 'items', { id: 'search', labelKey: 'toolbox.tool.search', component: SearchTool })
-registerTool('preset', 'items', { id: 'batch', labelKey: 'toolbox.tool.batch', component: BatchTool })
-registerTool('preset', 'items', { id: 'copy', labelKey: 'toolbox.tool.copy', component: CopyPanel })
+registerTool('preset', 'items', {
+  id: 'search',
+  labelKey: 'toolbox.tool.search',
+  component: SearchTool,
+})
+registerTool('preset', 'items', {
+  id: 'batch',
+  labelKey: 'toolbox.tool.batch',
+  component: BatchTool,
+})
+registerTool('preset', 'items', {
+  id: 'copy',
+  labelKey: 'toolbox.tool.copy',
+  component: CopyPanel,
+})
 
 // preset 工作区的正则集合：Search + Batch
-registerTool('preset', 'regex', { id: 'search', labelKey: 'toolbox.tool.search', component: SearchTool })
-registerTool('preset', 'regex', { id: 'batch', labelKey: 'toolbox.tool.batch', component: BatchTool })
+registerTool('preset', 'regex', {
+  id: 'search',
+  labelKey: 'toolbox.tool.search',
+  component: SearchTool,
+})
+registerTool('preset', 'regex', {
+  id: 'batch',
+  labelKey: 'toolbox.tool.batch',
+  component: BatchTool,
+})
 
 // worldbook/items：Search + Batch
-registerTool('worldbook', 'items', { id: 'search', labelKey: 'toolbox.tool.search', component: SearchTool })
-registerTool('worldbook', 'items', { id: 'batch', labelKey: 'toolbox.tool.batch', component: BatchTool })
+registerTool('worldbook', 'items', {
+  id: 'search',
+  labelKey: 'toolbox.tool.search',
+  component: SearchTool,
+})
+registerTool('worldbook', 'items', {
+  id: 'batch',
+  labelKey: 'toolbox.tool.batch',
+  component: BatchTool,
+})
 
 // character/fields：只有 Search（character 无批量工具）
-registerTool('character', 'fields', { id: 'search', labelKey: 'toolbox.tool.search', component: SearchTool })
+registerTool('character', 'fields', {
+  id: 'search',
+  labelKey: 'toolbox.tool.search',
+  component: SearchTool,
+})
 
 // character 工作区的正则集合：Search + Batch
-registerTool('character', 'regex', { id: 'search', labelKey: 'toolbox.tool.search', component: SearchTool })
-registerTool('character', 'regex', { id: 'batch', labelKey: 'toolbox.tool.batch', component: BatchTool })
+registerTool('character', 'regex', {
+  id: 'search',
+  labelKey: 'toolbox.tool.search',
+  component: SearchTool,
+})
+registerTool('character', 'regex', {
+  id: 'batch',
+  labelKey: 'toolbox.tool.batch',
+  component: BatchTool,
+})

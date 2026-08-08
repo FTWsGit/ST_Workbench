@@ -7,7 +7,9 @@
       class="wb-btn sm"
       :class="{ active: opt.value === modelValue }"
       @click="emit('update:modelValue', opt.value)"
-    >{{ opt.label }}</button>
+    >
+      {{ opt.label }}
+    </button>
   </div>
 </template>
 

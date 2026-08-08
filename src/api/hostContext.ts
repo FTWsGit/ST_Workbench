@@ -2,17 +2,33 @@
  * 只负责获取 SillyTavern 的 ctx / 顶层 window 等跟具体业务无关的机制。domain 读写逻辑放
  * presetApi.ts / characterApi.ts / worldbookApi.ts，它们都从这里拿 getCtx()/getTopWindow()。 */
 
-let cachedCtx: any = null
-
-export function getTopWindow(): Window {
-  try { return window.top! } catch { return window }
+/** 顶层 window 上由 ST 或本工具注入的全局。SillyTavern/__stpmImport 都是宿主扩展，不在标准
+ *  Window 类型里，这里补出来。 */
+interface STWindow extends Window {
+  SillyTavern?: { getContext?: () => unknown }
+  __stpmImport?: (spec: string) => Promise<unknown>
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ST 宿主 ctx 是无类型外部对象，所有 domain 都按动态对象访问
+let cachedCtx: any = null
+
+export function getTopWindow(): STWindow {
+  try {
+    return window.top as STWindow
+  } catch {
+    return window as STWindow
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 同上，返回给各 domain API 做动态方法调用（ST 无类型声明）
 export function getCtx(): any {
   if (cachedCtx) return cachedCtx
   const top = getTopWindow()
-  try { cachedCtx = (top as any).SillyTavern?.getContext?.() || {} }
-  catch { cachedCtx = {} }
+  try {
+    cachedCtx = top.SillyTavern?.getContext?.() || {}
+  } catch {
+    cachedCtx = {}
+  }
   return cachedCtx
 }
 
@@ -29,11 +45,12 @@ export function invalidateCache() {
  *
  * 这个机制不属于任何 domain——只解决"怎么在顶层文档跑一次 dynamic import"，因此放这里而非
  * presetApi.ts。 */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- import() 结果是无类型模块对象，各 domain API 按需动态访问
 let topImporterPromise: Promise<(spec: string) => Promise<any>> | null = null
-export function ensureTopImporter(): Promise<(spec: string) => Promise<any>> {
+export function ensureTopImporter() {
   if (topImporterPromise) return topImporterPromise
   topImporterPromise = (async () => {
-    const top = getTopWindow() as any
+    const top = getTopWindow()
     if (typeof top.__stpmImport === 'function') return top.__stpmImport
     const doc = top.document as Document
     if (!doc.getElementById('st-wb-importer')) {
@@ -46,7 +63,7 @@ export function ensureTopImporter(): Promise<(spec: string) => Promise<any>> {
     // module script 是异步执行的（下一个 microtask/task，而不是同步 appendChild 就绪），轮询等它跑完
     for (let i = 0; i < 100; i++) {
       if (typeof top.__stpmImport === 'function') return top.__stpmImport
-      await new Promise(r => setTimeout(r, 10))
+      await new Promise((r) => setTimeout(r, 10))
     }
     throw new Error('无法在宿主页面注入动态 import 助手（module script 未在预期时间内执行）')
   })()

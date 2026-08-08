@@ -12,6 +12,16 @@
 import { ref, onUnmounted } from 'vue'
 import { getHostWindow } from './hostEnv'
 
+/** 挂在拖拽函数对象上的临时状态（由 onPointerDown 写入，onPointerMove/onPointerUp 读取）。 */
+type ScrubFnState = ((e: PointerEvent) => void) & {
+  startX: number
+  startVal: number
+  step: number
+  pxPerStep: number
+  moved: boolean
+  target?: HTMLElement
+}
+
 export interface NumberDragScrubOptions {
   get: () => number | null
   set: (v: number) => void
@@ -37,12 +47,12 @@ export function useNumberDragScrub(opts: NumberDragScrubOptions) {
   function onPointerMove(e: PointerEvent) {
     if (!dragging.value || (pointerId !== null && e.pointerId !== pointerId)) return
     e.preventDefault()
-    
-    const startX = (onPointerMove as any).startX
-    const startVal = (onPointerMove as any).startVal
-    const step = (onPointerMove as any).step
-    const pxPerStep = (onPointerMove as any).pxPerStep
-    let moved = (onPointerMove as any).moved
+
+    const startX = (onPointerMove as ScrubFnState).startX
+    const startVal = (onPointerMove as ScrubFnState).startVal
+    const step = (onPointerMove as ScrubFnState).step
+    const pxPerStep = (onPointerMove as ScrubFnState).pxPerStep
+    let moved = (onPointerMove as ScrubFnState).moved
 
     const dx = e.clientX - startX
     if (Math.abs(dx) > 2) moved = true
@@ -53,13 +63,13 @@ export function useNumberDragScrub(opts: NumberDragScrubOptions) {
     const snapped = step >= 1 && Number.isInteger(step) ? Math.round(raw) : raw
     opts.set(clamp(snapped))
 
-    ;(onPointerMove as any).moved = moved
+    ;(onPointerMove as ScrubFnState).moved = moved
   }
 
   function onPointerUp(e: PointerEvent) {
     if (!dragging.value || (pointerId !== null && e.pointerId !== pointerId)) return
-    const moved = (onPointerMove as any).moved
-    const target = (onPointerUp as any).target as HTMLElement
+    const moved = (onPointerMove as ScrubFnState).moved
+    const target = (onPointerUp as ScrubFnState).target as HTMLElement
 
     dragging.value = false
     pointerId = null
@@ -70,7 +80,11 @@ export function useNumberDragScrub(opts: NumberDragScrubOptions) {
 
     // hasPointerCapture 是方法，用 typeof 判存在后再调，避免不支持的环境报错。
     if (target && typeof target.hasPointerCapture === 'function' && pointerId !== null) {
-      try { target.releasePointerCapture(pointerId) } catch {}
+      try {
+        target.releasePointerCapture(pointerId)
+      } catch {
+        // 元素可能已被移除，释放指针捕获失败可安全忽略
+      }
     }
 
     if (!moved) {
@@ -92,12 +106,12 @@ export function useNumberDragScrub(opts: NumberDragScrubOptions) {
 
     pointerId = e.pointerId
     const target = e.currentTarget as HTMLElement
-    ;(onPointerMove as any).startX = e.clientX
-    ;(onPointerMove as any).startVal = opts.get() ?? 0
-    ;(onPointerMove as any).step = opts.step ?? 1
-    ;(onPointerMove as any).pxPerStep = opts.pxPerStep ?? 4
-    ;(onPointerMove as any).moved = false
-    ;(onPointerUp as any).target = target
+    ;(onPointerMove as ScrubFnState).startX = e.clientX
+    ;(onPointerMove as ScrubFnState).startVal = opts.get() ?? 0
+    ;(onPointerMove as ScrubFnState).step = opts.step ?? 1
+    ;(onPointerMove as ScrubFnState).pxPerStep = opts.pxPerStep ?? 4
+    ;(onPointerMove as ScrubFnState).moved = false
+    ;(onPointerUp as ScrubFnState).target = target
 
     hostWin.document.body.classList.add('wb-no-select')
     dragging.value = true
@@ -105,7 +119,7 @@ export function useNumberDragScrub(opts: NumberDragScrubOptions) {
     // 设置指针捕获
     try {
       target.setPointerCapture(pointerId)
-    } catch (err) {
+    } catch {
       // 忽略指针捕获失败的情况
     }
 
