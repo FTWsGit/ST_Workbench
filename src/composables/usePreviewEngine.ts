@@ -1,8 +1,8 @@
-import { ref } from 'vue'
-import type { OrderNode, PresetBlock, PreviewBlockGroup } from '../types'
-import { isGroupNode } from './useGroupedList'
-import { macroAwareDiff } from '../utils'
-import * as ST from '../api/presetApi'
+import { ref } from 'vue';
+import type { OrderNode, PresetBlock, PreviewBlockGroup } from '../types';
+import { isGroupNode } from './useGroupedList';
+import { macroAwareDiff } from '../utils';
+import * as ST from '../api/presetApi';
 
 /**
  * 预览引擎 composable：把 presetStore 里 disjoint-state 的 Preview 段抽出来。
@@ -20,23 +20,23 @@ export function usePreviewEngine(
   getOrder: () => OrderNode[],
   getPrompts: () => PresetBlock[],
   options: {
-    showToast: (msg: string) => void
-    t: (key: string, params?: Record<string, string | number>) => string
+    showToast: (msg: string) => void;
+    t: (key: string, params?: Record<string, string | number>) => string;
   }
 ) {
-  const { showToast, t } = options
+  const { showToast, t } = options;
 
-  const previewMode = ref<'blocks' | 'raw'>('blocks')
-  const previewLoading = ref(false)
-  const previewError = ref('')
-  const previewCollapsed = ref<Record<string, boolean>>({})
-  const previewBlockGroups = ref<PreviewBlockGroup[]>([])
-  const previewRawText = ref('')
+  const previewMode = ref<'blocks' | 'raw'>('blocks');
+  const previewLoading = ref(false);
+  const previewError = ref('');
+  const previewCollapsed = ref<Record<string, boolean>>({});
+  const previewBlockGroups = ref<PreviewBlockGroup[]>([]);
+  const previewRawText = ref('');
 
   /** 无 raw 内容可对比（marker blocks 等）——无需高亮。 */
   function diffAgainstRaw(raw: string, rendered: string) {
-    if (!raw.trim()) return [{ text: rendered, added: false }]
-    return macroAwareDiff(raw, rendered)
+    if (!raw.trim()) return [{ text: rendered, added: false }];
+    return macroAwareDiff(raw, rendered);
   }
 
   /**
@@ -46,20 +46,20 @@ export function usePreviewEngine(
    * block 没有单一"raw content"可对比，按原文平铺显示。
    */
   async function generatePreviewBlocks() {
-    previewError.value = ''
-    previewLoading.value = true
+    previewError.value = '';
+    previewLoading.value = true;
     try {
-      const results = await ST.getPromptManagerMessages()
-      const groups: PreviewBlockGroup[] = []
-      const allItems = getOrder().flatMap((node) => (isGroupNode(node) ? node.children : [node]))
-      const prompts = getPrompts()
+      const results = await ST.getPromptManagerMessages();
+      const groups: PreviewBlockGroup[] = [];
+      const allItems = getOrder().flatMap((node) => (isGroupNode(node) ? node.children : [node]));
+      const prompts = getPrompts();
       for (const o of allItems) {
-        const msgs = results[o.identifier]
-        if (!msgs || !msgs.length) continue
-        const p = prompts.find((pp) => pp.identifier === o.identifier)
-        const isMarker = !!p?.marker
-        const rawContent = p?.content || ''
-        const diffable = !isMarker && msgs.length === 1
+        const msgs = results[o.identifier];
+        if (!msgs || !msgs.length) continue;
+        const p = prompts.find((pp) => pp.identifier === o.identifier);
+        const isMarker = !!p?.marker;
+        const rawContent = p?.content || '';
+        const diffable = !isMarker && msgs.length === 1;
         groups.push({
           id: o.identifier,
           name: p?.name || o.identifier,
@@ -72,16 +72,16 @@ export function usePreviewEngine(
               ? diffAgainstRaw(rawContent, m.content)
               : [{ text: m.content, added: false }],
           })),
-        })
+        });
       }
-      previewBlockGroups.value = groups
-      previewMode.value = 'blocks'
-      showToast(t('preset.toast.renderedBlocks', { count: groups.length }))
+      previewBlockGroups.value = groups;
+      previewMode.value = 'blocks';
+      showToast(t('preset.toast.renderedBlocks', { count: groups.length }));
     } catch (e: unknown) {
-      previewError.value = e instanceof Error ? e.message : String(e)
-      showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
+      previewError.value = e instanceof Error ? e.message : String(e);
+      showToast(t('preset.toast.previewFailed', { msg: previewError.value }));
     } finally {
-      previewLoading.value = false
+      previewLoading.value = false;
     }
   }
 
@@ -90,33 +90,33 @@ export function usePreviewEngine(
    * 事件在真实 generation 期间捕获。无 block 边界、无高亮——刻意呈现"API 实际看到的内容"。
    */
   async function generatePreviewRaw() {
-    previewError.value = ''
-    previewLoading.value = true
+    previewError.value = '';
+    previewLoading.value = true;
     try {
-      const msgs = await ST.getFinalRequestMessages()
+      const msgs = await ST.getFinalRequestMessages();
       previewRawText.value = msgs
         .map((m) => `[${(m.role || '?').toUpperCase()}]\n${m.content}`)
-        .join('\n\n')
-      previewMode.value = 'raw'
-      showToast(t('preset.toast.renderedFullPrompt'))
+        .join('\n\n');
+      previewMode.value = 'raw';
+      showToast(t('preset.toast.renderedFullPrompt'));
     } catch (e: unknown) {
-      previewError.value = e instanceof Error ? e.message : String(e)
-      showToast(t('preset.toast.previewFailed', { msg: previewError.value }))
+      previewError.value = e instanceof Error ? e.message : String(e);
+      showToast(t('preset.toast.previewFailed', { msg: previewError.value }));
     } finally {
-      previewLoading.value = false
+      previewLoading.value = false;
     }
   }
 
   function togglePreviewBlock(id: string) {
-    previewCollapsed.value[id] = !previewCollapsed.value[id]
+    previewCollapsed.value[id] = !previewCollapsed.value[id];
   }
 
   function toggleAllPreviewBlocks() {
-    if (!previewBlockGroups.value.length) return
-    const shouldCollapse = previewBlockGroups.value.some((b) => !previewCollapsed.value[b.id])
+    if (!previewBlockGroups.value.length) return;
+    const shouldCollapse = previewBlockGroups.value.some((b) => !previewCollapsed.value[b.id]);
     previewBlockGroups.value.forEach((b) => {
-      previewCollapsed.value[b.id] = shouldCollapse
-    })
+      previewCollapsed.value[b.id] = shouldCollapse;
+    });
   }
 
   return {
@@ -130,5 +130,5 @@ export function usePreviewEngine(
     generatePreviewRaw,
     togglePreviewBlock,
     toggleAllPreviewBlocks,
-  }
+  };
 }

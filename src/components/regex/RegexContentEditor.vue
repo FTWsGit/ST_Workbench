@@ -64,51 +64,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useTabsStore } from '../../stores/tabsStore'
-import { useUiStore } from '../../stores/uiStore'
-import { applyRegexScript, parseFindRegex } from '../../regexEngine'
-import HighlightedEditor from '../shared/HighlightedEditor.vue'
-import type { RegexContentEditorProps } from './regexProps'
+import { ref, computed, watch } from 'vue';
+import { useTabsStore } from '../../stores/tabsStore';
+import { useUiStore } from '../../stores/uiStore';
+import { applyRegexScript, parseFindRegex } from '../../regexEngine';
+import HighlightedEditor from '../shared/HighlightedEditor.vue';
+import type { RegexContentEditorProps } from './regexProps';
 
-const props = defineProps<RegexContentEditorProps>()
+const props = defineProps<RegexContentEditorProps>();
 
-const tabsStore = useTabsStore()
-const uiStore = useUiStore()
-const mode = ref<'edit' | 'preview'>('edit')
-const renderHtml = ref(false)
-const editorRef = ref<InstanceType<typeof HighlightedEditor>>()
+const tabsStore = useTabsStore();
+const uiStore = useUiStore();
+const mode = ref<'edit' | 'preview'>('edit');
+const renderHtml = ref(false);
+const editorRef = ref<InstanceType<typeof HighlightedEditor>>();
 /** 测试文本：当前为全局共享 ref，切换标签不各自保留；如有需要再升级为 Record<id,string>。 */
-const testInput = ref('')
+const testInput = ref('');
 
-const script = computed(() => props.scripts.find((r) => r.id === tabsStore.activeTab?.key) ?? null)
+const script = computed(() => props.scripts.find((r) => r.id === tabsStore.activeTab?.key) ?? null);
 const findValid = computed(
   () => !script.value || !script.value.findRegex || !!parseFindRegex(script.value.findRegex)
-)
+);
 const previewText = computed(() => {
-  if (!script.value || !testInput.value) return ''
+  if (!script.value || !testInput.value) return '';
   try {
-    return applyRegexScript(testInput.value, script.value)
+    return applyRegexScript(testInput.value, script.value);
   } catch (e: unknown) {
     return props.t('regex.editor.previewError', {
       msg: e instanceof Error ? e.message : String(e),
-    })
+    });
   }
-})
+});
 
 /** 当前选中脚本 replaceString 的 v-model 桥接；切换标签时 getter 返回值变化，编辑器会自动重渲染。 */
 const replaceStringModel = computed<string>({
   get: () => script.value?.replaceString ?? '',
   set: (v) => {
-    if (script.value) script.value.replaceString = v
+    if (script.value) script.value.replaceString = v;
   },
-})
+});
 
 /** 字号/字体变化不会改变 textarea 尺寸，ResizeObserver 捕捉不到，需主动 refresh。 */
 watch(
   () => [props.editorFontSize, props.editorFontFamily],
   () => {
-    editorRef.value?.refreshFont()
+    editorRef.value?.refreshFont();
   }
-)
+);
 </script>

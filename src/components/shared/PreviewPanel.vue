@@ -241,56 +241,56 @@
 </template>
 
 <script setup lang="ts">
-import { usePresetStore } from '../../stores/presetStore'
-import { useUiStore } from '../../stores/uiStore'
-import { esc, roleClass as roleClassOf } from '../../utils'
-import { usePanelResize } from '../../composables/usePanelResize'
-import { copyToHostClipboard } from '../../composables/hostEnv'
-import { watch, computed } from 'vue'
-import type { PreviewSegment, PanelMode } from '../../types'
-import FloatingPanelShell from './FloatingPanelShell.vue'
-import PanelModeSwitch from './PanelModeSwitch.vue'
+import { usePresetStore } from '../../stores/presetStore';
+import { useUiStore } from '../../stores/uiStore';
+import { esc, roleClass as roleClassOf } from '../../utils';
+import { usePanelResize } from '../../composables/usePanelResize';
+import { copyToHostClipboard } from '../../composables/hostEnv';
+import { watch, computed } from 'vue';
+import type { PreviewSegment, PanelMode } from '../../types';
+import FloatingPanelShell from './FloatingPanelShell.vue';
+import PanelModeSwitch from './PanelModeSwitch.vue';
 
-const presetStore = usePresetStore()
-const uiStore = useUiStore()
+const presetStore = usePresetStore();
+const uiStore = useUiStore();
 
 /** 当前形态（docked 挤开 / overlay 右侧悬浮 / float 完全悬浮），持久化到 settings.previewMode。 */
-const mode = computed<PanelMode>(() => uiStore.settings.previewMode)
+const mode = computed<PanelMode>(() => uiStore.settings.previewMode);
 function setMode(m: PanelMode) {
-  uiStore.settings.previewMode = m
-  uiStore.saveSettings()
+  uiStore.settings.previewMode = m;
+  uiStore.saveSettings();
 }
 
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.previewWidth,
   setWidth: (w) => {
-    uiStore.settings.previewWidth = w
+    uiStore.settings.previewWidth = w;
   },
   min: 350,
   max: 1100,
   dir: 'left',
-})
+});
 watch(
   () => resize.active.value,
   (v) => {
-    if (!v) uiStore.saveSettings()
+    if (!v) uiStore.saveSettings();
   }
-)
+);
 
 function roleClass(role: string) {
-  return roleClassOf(role, 'pb-')
+  return roleClassOf(role, 'pb-');
 }
 
 function renderSegments(segments: PreviewSegment[]) {
   return segments
     .map((s) => (s.added ? `<span class="wb-preset-phl">${esc(s.text)}</span>` : esc(s.text)))
-    .join('')
+    .join('');
 }
 
 function generate() {
-  presetStore.selectPresetByName(presetStore.presetName)
-  if (uiStore.previewMode === 'blocks') uiStore.generatePreviewBlocks()
-  else uiStore.generatePreviewRaw()
+  presetStore.selectPresetByName(presetStore.presetName);
+  if (uiStore.previewMode === 'blocks') uiStore.generatePreviewBlocks();
+  else uiStore.generatePreviewRaw();
 }
 
 async function copyPreview() {
@@ -299,12 +299,12 @@ async function copyPreview() {
       ? uiStore.previewBlockGroups
           .flatMap((g) => g.messages.map((m) => m.segments.map((s) => s.text).join('')))
           .join('\n\n')
-      : uiStore.previewRawText
+      : uiStore.previewRawText;
   if (!text.trim()) {
-    uiStore.showToast(uiStore.t('preset.toast.nothingToCopy'))
-    return
+    uiStore.showToast(uiStore.t('preset.toast.nothingToCopy'));
+    return;
   }
-  const ok = await copyToHostClipboard(text)
-  uiStore.showToast(ok ? uiStore.t('preset.toast.copied') : uiStore.t('preset.toast.copyFailed'))
+  const ok = await copyToHostClipboard(text);
+  uiStore.showToast(ok ? uiStore.t('preset.toast.copied') : uiStore.t('preset.toast.copyFailed'));
 }
 </script>

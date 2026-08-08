@@ -423,7 +423,7 @@
             :class="{ active: uiStore.metaPanelOpen }"
             @click="
               drawer.runTool(() => {
-                uiStore.metaPanelOpen = !uiStore.metaPanelOpen
+                uiStore.metaPanelOpen = !uiStore.metaPanelOpen;
               })
             "
           >
@@ -433,7 +433,7 @@
             class="wb-mobile-tools-item"
             @click="
               drawer.runTool(() => {
-                uiStore.settingsOpen = true
+                uiStore.settingsOpen = true;
               })
             "
           >
@@ -524,64 +524,64 @@
 </template>
 
 <script setup lang="ts">
-import { usePresetStore } from './stores/presetStore'
-import { useUiStore } from './stores/uiStore'
-import PresetSidebar from './components/preset/PresetSidebar.vue'
-import VarPanel from './components/shared/VarPanel.vue'
-import PreviewPanel from './components/shared/PreviewPanel.vue'
-import ToolBoxPanel from './components/toolbox/ToolBoxPanel.vue'
+import { usePresetStore } from './stores/presetStore';
+import { useUiStore } from './stores/uiStore';
+import PresetSidebar from './components/preset/PresetSidebar.vue';
+import VarPanel from './components/shared/VarPanel.vue';
+import PreviewPanel from './components/shared/PreviewPanel.vue';
+import ToolBoxPanel from './components/toolbox/ToolBoxPanel.vue';
 // side-effect import：触发 register.ts 把 Search/Batch 工具填进 TOOL_REGISTRY。
 // ToolBoxPanel 只查表不填表，不接这一行 TOOL_REGISTRY 永远空、工具箱显示"无可用工具"。
-import './components/toolbox/register'
-import VarPopup from './components/shared/VarPopup.vue'
-import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue'
-import MetaPanel from './components/shared/MetaPanel.vue'
-import AgentPanel from './components/shared/AgentPanel.vue'
-import { useAgentStore } from './agent/agentStore'
-import RegexSidebar from './components/regex/RegexSidebar.vue'
-import ScriptTreeSidebar from './components/tavern/ScriptTreeSidebar.vue'
-import WorldbookSidebar from './components/worldbook/WorldbookSidebar.vue'
-import { useWorldbookStore } from './stores/worldbookStore'
-import CharacterSidebar from './components/character/CharacterSidebar.vue'
-import { useCharacterStore } from './stores/characterStore'
-import Modals from './components/shared/Modals.vue'
-import TabBar from './components/shared/TabBar.vue'
-import EditorShell from './components/shared/EditorShell.vue'
-import SettingsDock from './components/shared/SettingsDock.vue'
-import WorkspaceSelect from './components/shared/WorkspaceSelect.vue'
-import { useTabsStore } from './stores/tabsStore'
-import { useConfirmStore } from './stores/confirmStore'
-import { esc } from './utils'
-import type { LocaleKey } from './i18n'
-import type { Workspace } from './types'
-import { computed, onMounted, onUnmounted } from 'vue'
-import { useIsMobile, getHostWindow } from './composables/hostEnv'
-import { useFabDrag } from './composables/useFabDrag'
-import { useMobileWorkspaceDrawer } from './composables/useMobileWorkspaceDrawer'
-import { createWorkspaceRegistry, type DocumentWorkspaceAdapter } from './stores/workspaceRegistry'
+import './components/toolbox/register';
+import VarPopup from './components/shared/VarPopup.vue';
+import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue';
+import MetaPanel from './components/shared/MetaPanel.vue';
+import AgentPanel from './components/shared/AgentPanel.vue';
+import { useAgentStore } from './agent/agentStore';
+import RegexSidebar from './components/regex/RegexSidebar.vue';
+import ScriptTreeSidebar from './components/tavern/ScriptTreeSidebar.vue';
+import WorldbookSidebar from './components/worldbook/WorldbookSidebar.vue';
+import { useWorldbookStore } from './stores/worldbookStore';
+import CharacterSidebar from './components/character/CharacterSidebar.vue';
+import { useCharacterStore } from './stores/characterStore';
+import Modals from './components/shared/Modals.vue';
+import TabBar from './components/shared/TabBar.vue';
+import EditorShell from './components/shared/EditorShell.vue';
+import SettingsDock from './components/shared/SettingsDock.vue';
+import WorkspaceSelect from './components/shared/WorkspaceSelect.vue';
+import { useTabsStore } from './stores/tabsStore';
+import { useConfirmStore } from './stores/confirmStore';
+import { esc } from './utils';
+import type { LocaleKey } from './i18n';
+import type { Workspace } from './types';
+import { computed, onMounted, onUnmounted } from 'vue';
+import { useIsMobile, getHostWindow } from './composables/hostEnv';
+import { useFabDrag } from './composables/useFabDrag';
+import { useMobileWorkspaceDrawer } from './composables/useMobileWorkspaceDrawer';
+import { createWorkspaceRegistry, type DocumentWorkspaceAdapter } from './stores/workspaceRegistry';
 
-const confirmStore = useConfirmStore()
-const tabsStore = useTabsStore()
-const presetStore = usePresetStore()
-const uiStore = useUiStore()
-const worldbookStore = useWorldbookStore()
-const characterStore = useCharacterStore()
-const agentStore = useAgentStore()
+const confirmStore = useConfirmStore();
+const tabsStore = useTabsStore();
+const presetStore = usePresetStore();
+const uiStore = useUiStore();
+const worldbookStore = useWorldbookStore();
+const characterStore = useCharacterStore();
+const agentStore = useAgentStore();
 /** 三个 domain store 的新建/删除/切换/重载/保存接口统一查表，下面 onSave/onReload/… 都基于此表写通用逻辑。 */
-const workspaceRegistry = createWorkspaceRegistry()
+const workspaceRegistry = createWorkspaceRegistry();
 
 /** 顶栏第一行工作区切换（preset/worldbook/character）。第二行"条目/正则"切换独立于 activeWorkspace，不经此函数。 */
 function switchWorkspace(workspace: Workspace) {
-  tabsStore.setActiveWorkspace(workspace)
-  if (workspace === 'character' && !characterStore.character) characterStore.loadSelectedOrFirst()
+  tabsStore.setActiveWorkspace(workspace);
+  if (workspace === 'character' && !characterStore.character) characterStore.loadSelectedOrFirst();
 }
 
 /** 切换 Agent 面板开关，首次打开时懒加载持久化数据。 */
 function toggleAgent() {
   if (!uiStore.agentPanelOpen) {
-    agentStore.loadAgentData()
+    agentStore.loadAgentData();
   }
-  uiStore.agentPanelOpen = !uiStore.agentPanelOpen
+  uiStore.agentPanelOpen = !uiStore.agentPanelOpen;
 }
 
 /**
@@ -590,7 +590,7 @@ function toggleAgent() {
  * 机制位于 useMobileWorkspaceDrawer.ts，领域无关，由 panels 表驱动。切换 workspace/集合时自动露出侧边栏；
  * 切换标签或触发 editorJump 时自动关闭当前浮层。
  */
-const isMobile = useIsMobile()
+const isMobile = useIsMobile();
 const drawer = useMobileWorkspaceDrawer({
   isMobile,
   panels: [
@@ -608,7 +608,7 @@ const drawer = useMobileWorkspaceDrawer({
       key: 'settingsDock',
       isOpen: () => uiStore.settingsDockOpen,
       setOpen: (open) => {
-        if (uiStore.settingsDockOpen !== open) uiStore.toggleSettingsDock()
+        if (uiStore.settingsDockOpen !== open) uiStore.toggleSettingsDock();
       },
     },
     {
@@ -616,8 +616,8 @@ const drawer = useMobileWorkspaceDrawer({
       isOpen: () => uiStore.agentPanelOpen,
       setOpen: (open) => {
         if (uiStore.agentPanelOpen !== open) {
-          if (open) agentStore.loadAgentData()
-          uiStore.agentPanelOpen = open
+          if (open) agentStore.loadAgentData();
+          uiStore.agentPanelOpen = open;
         }
       },
     },
@@ -626,52 +626,52 @@ const drawer = useMobileWorkspaceDrawer({
   revealSidebarOn: [() => tabsStore.activeWorkspace, () => tabsStore.sidebarCollection],
   /** 选中新标签或触发 editorJump（搜索/变量跳转）时，自动关闭当前浮层。 */
   closeOn: [() => tabsStore.activeId, () => tabsStore.editorJump],
-})
+});
 
 /** FAB 长按拖动（useFabDrag.ts），持久化到 uiStore.settings.fabPos；点击则打开面板。 */
 const fab = useFabDrag({
   getPos: () => uiStore.settings.fabPos,
   setPos: (pos) => {
-    uiStore.settings.fabPos = pos
+    uiStore.settings.fabPos = pos;
   },
   commit: () => uiStore.saveSettings(),
   onTap: () => openPanel(),
-})
+});
 
 function handleKeydown(e: KeyboardEvent) {
-  if (!uiStore.panelOpen) return
+  if (!uiStore.panelOpen) return;
 
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-    e.preventDefault()
-    onSave()
+    e.preventDefault();
+    onSave();
   }
 }
 
 onMounted(() => {
-  fab.onHostResize()
-  getHostWindow().addEventListener('resize', fab.onHostResize)
-  getHostWindow().addEventListener('keydown', handleKeydown)
-})
+  fab.onHostResize();
+  getHostWindow().addEventListener('resize', fab.onHostResize);
+  getHostWindow().addEventListener('keydown', handleKeydown);
+});
 onUnmounted(() => {
-  getHostWindow().removeEventListener('resize', fab.onHostResize)
-  getHostWindow().removeEventListener('keydown', handleKeydown)
-})
+  getHostWindow().removeEventListener('resize', fab.onHostResize);
+  getHostWindow().removeEventListener('keydown', handleKeydown);
+});
 
 function openPanel() {
-  uiStore.panelOpen = true
-  if (!presetStore.hasData) presetStore.loadFromContext()
+  uiStore.panelOpen = true;
+  if (!presetStore.hasData) presetStore.loadFromContext();
   // 世界书/角色卡列表较轻，打开面板时顺带拉一次，避免首次切到对应工作区才等待网络请求
-  worldbookStore.refreshWorldbookList()
-  characterStore.refreshCharacterList()
+  worldbookStore.refreshWorldbookList();
+  characterStore.refreshCharacterList();
 }
 
 /** Save / Ctrl+S 永远只作用于当前活跃工作区。 */
 function onSave() {
-  workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry]?.save()
+  workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry]?.save();
 }
 function onReload() {
-  const adapter = workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry]
-  if (!adapter) return
+  const adapter = workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry];
+  if (!adapter) return;
   if (adapter.dirty()) {
     confirmStore.ask({
       title: uiStore.t('shared.confirm.unsaved.title'),
@@ -679,15 +679,15 @@ function onReload() {
       confirmText: uiStore.t('common.confirm'),
       cancelText: uiStore.t('common.cancel'),
       onConfirm: () => adapter.reload(),
-    })
+    });
   } else {
-    adapter.reload()
+    adapter.reload();
   }
 }
 const saveLabel = computed(() => {
-  const adapter = workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry]
-  return uiStore.t('shared.header.save', { star: adapter?.dirty() ? ' *' : '' })
-})
+  const adapter = workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry];
+  return uiStore.t('shared.header.save', { star: adapter?.dirty() ? ' *' : '' });
+});
 
 /**
  * 各工作区是否有未保存改动的聚合（key 为 workspace 字符串）。
@@ -695,7 +695,7 @@ const saveLabel = computed(() => {
  */
 const dirtyWorkspaces = computed<Record<string, boolean>>(() =>
   Object.fromEntries(Object.entries(workspaceRegistry).map(([k, a]) => [k, a.dirty()]))
-)
+);
 
 /**
  * 面板右上角 ✕：若任一工作区有未保存改动，先汇总提示（仅提醒，数据仍在内存中不会丢失）；否则直接关闭。
@@ -704,17 +704,17 @@ function onClosePanel() {
   const items = Object.entries(dirtyWorkspaces.value)
     .filter(([, isDirty]) => isDirty)
     .map(([ws]) => {
-      const adapter = workspaceRegistry[ws as keyof typeof workspaceRegistry]
-      if (!adapter) return { label: ws }
+      const adapter = workspaceRegistry[ws as keyof typeof workspaceRegistry];
+      if (!adapter) return { label: ws };
       return {
         label: uiStore.t(workspaceKey(adapter, 'confirm.closePanel.item'), {
           name: adapter.currentLabel(),
         }),
-      }
-    })
+      };
+    });
   if (!items.length) {
-    uiStore.panelOpen = false
-    return
+    uiStore.panelOpen = false;
+    return;
   }
   confirmStore.askMulti({
     title: uiStore.t('shared.confirm.closePanel.title'),
@@ -724,27 +724,27 @@ function onClosePanel() {
     cancelText: uiStore.t('common.cancel'),
     danger: false,
     onConfirm: () => {
-      uiStore.panelOpen = false
+      uiStore.panelOpen = false;
     },
-  })
+  });
 }
 
 /** VarNav/Preview 是跨 workspace 通用工具，开关在 uiStore 全局（跟 agentPanelOpen 一样，切换 workspace 不关闭）。 */
 function toggleVarNav() {
-  uiStore.varNavOpen = !uiStore.varNavOpen
+  uiStore.varNavOpen = !uiStore.varNavOpen;
 }
 function togglePreview() {
-  uiStore.previewOpen = !uiStore.previewOpen
+  uiStore.previewOpen = !uiStore.previewOpen;
 }
 /** 工具箱是跨 workspace 通用的（preset/worldbook/character 都能开），按当前 activeWorkspace 分桶开关。 */
 function toggleToolBox() {
-  const ws = tabsStore.activeWorkspace
-  tabsStore.setToolBoxOpen(ws, !tabsStore.toolBoxOpen)
+  const ws = tabsStore.activeWorkspace;
+  tabsStore.setToolBoxOpen(ws, !tabsStore.toolBoxOpen);
 }
 
 /** 动态 i18n key 拼接统一入口：`${adapter.key}.${suffix}`，显式 cast 为 LocaleKey；新增 workspace 时需配齐对应 key 集。 */
 function workspaceKey(adapter: DocumentWorkspaceAdapter, suffix: string): LocaleKey {
-  return `${adapter.key}.${suffix}` as LocaleKey
+  return `${adapter.key}.${suffix}` as LocaleKey;
 }
 
 /**
@@ -761,9 +761,9 @@ function onNewWorkspace(adapter: DocumentWorkspaceAdapter) {
       confirmText: uiStore.t('common.create'),
       cancelText: uiStore.t('common.cancel'),
       onConfirm: (name) => {
-        adapter.create(name)
+        adapter.create(name);
       },
-    })
+    });
   if (adapter.confirmCreateIfDirty && adapter.dirty()) {
     confirmStore.ask({
       title: uiStore.t('shared.confirm.unsaved.title'),
@@ -771,14 +771,14 @@ function onNewWorkspace(adapter: DocumentWorkspaceAdapter) {
       confirmText: uiStore.t('common.confirm'),
       cancelText: uiStore.t('common.cancel'),
       onConfirm: openDialog,
-    })
+    });
   } else {
-    openDialog()
+    openDialog();
   }
 }
 
 function onDeleteWorkspace(adapter: DocumentWorkspaceAdapter) {
-  if (!adapter.currentId()) return
+  if (!adapter.currentId()) return;
   confirmStore.ask({
     title: uiStore.t(workspaceKey(adapter, 'confirm.delete.title')),
     message: uiStore.t(workspaceKey(adapter, 'confirm.delete.message'), {
@@ -787,7 +787,7 @@ function onDeleteWorkspace(adapter: DocumentWorkspaceAdapter) {
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => adapter.remove(),
-  })
+  });
 }
 
 /**
@@ -795,23 +795,25 @@ function onDeleteWorkspace(adapter: DocumentWorkspaceAdapter) {
  * character_book 位于 v2 数据 `oldRaw.data.character_book`（v1 顶层无此字段）。
  */
 const embeddedCharacterBook = computed<{
-  name?: string
-  entries?: unknown[]
+  name?: string;
+  entries?: unknown[];
 } | null>(
   () =>
-    (characterStore.oldRaw as {
-      data?: { character_book?: { name?: string; entries?: unknown[] } }
-    } | null)?.data?.character_book ?? null
-)
+    (
+      characterStore.oldRaw as {
+        data?: { character_book?: { name?: string; entries?: unknown[] } };
+      } | null
+    )?.data?.character_book ?? null
+);
 function onImportFromCharacterBook() {
-  const book = embeddedCharacterBook.value
+  const book = embeddedCharacterBook.value;
   if (!book) {
-    uiStore.showToast(uiStore.t('worldbook.toast.importNoBook'))
-    return
+    uiStore.showToast(uiStore.t('worldbook.toast.importNoBook'));
+    return;
   }
   const suggested =
     (typeof book.name === 'string' && book.name.trim()) ||
-    `${characterStore.character?.name || ''}${uiStore.t('worldbook.prompt.import.suffix')}`
+    `${characterStore.character?.name || ''}${uiStore.t('worldbook.prompt.import.suffix')}`;
   confirmStore.askInput({
     title: uiStore.t('worldbook.prompt.import.title'),
     placeholder: uiStore.t('worldbook.prompt.new.placeholder'),
@@ -824,8 +826,8 @@ function onImportFromCharacterBook() {
       worldbookStore.importFromCharacterBook(
         book as Parameters<typeof worldbookStore.importFromCharacterBook>[0],
         name
-      )
+      );
     },
-  })
+  });
 }
 </script>

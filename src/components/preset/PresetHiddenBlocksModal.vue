@@ -15,10 +15,7 @@
           v-for="p in presetStore.hiddenBlocks"
           :key="p.identifier"
           class="wb-modal-item"
-          @click="
-            presetStore.addHiddenBlock(p.identifier);
-            presetStore.hiddenOpen = false;
-          "
+          @click="(presetStore.addHiddenBlock(p.identifier), (presetStore.hiddenOpen = false))"
         >
           <span class="wb-tree-role" :class="roleClass(p.role)">{{ p.role }}</span>
           <span class="wb-flex1">{{ p.name || p.identifier }}</span>
@@ -34,10 +31,10 @@
 </template>
 
 <script setup lang="ts">
-import { usePresetStore } from '../../stores/presetStore'
-import { useUiStore } from '../../stores/uiStore'
-import { roleClass } from '../../utils'
+import { usePresetStore } from '../../stores/presetStore';
+import { useUiStore } from '../../stores/uiStore';
+import { roleClass } from '../../utils';
 
-const presetStore = usePresetStore()
-const uiStore = useUiStore()
+const presetStore = usePresetStore();
+const uiStore = useUiStore();
 </script>

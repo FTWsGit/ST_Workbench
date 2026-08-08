@@ -143,29 +143,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { usePresetStore } from '../../stores/presetStore'
-import { useUiStore } from '../../stores/uiStore'
-import type { OrderItem, OrderGroup, FlatNode } from '../../types'
-import { usePanelResize } from '../../composables/usePanelResize'
-import { roleClass as roleClassOf } from '../../utils'
-import { useTabsStore } from '../../stores/tabsStore'
-import { useListScrollSync } from '../../composables/useListScrollSync'
-import { useDragReorder } from '../../composables/useDragReorder'
-import { useInlineRename } from '../../composables/useInlineRename'
-import { useListSelection } from '../../composables/useListSelection'
-import ListToolbar from '../shared/ListToolbar.vue'
+import { ref, computed, watch } from 'vue';
+import { usePresetStore } from '../../stores/presetStore';
+import { useUiStore } from '../../stores/uiStore';
+import type { OrderItem, OrderGroup, FlatNode } from '../../types';
+import { usePanelResize } from '../../composables/usePanelResize';
+import { roleClass as roleClassOf } from '../../utils';
+import { useTabsStore } from '../../stores/tabsStore';
+import { useListScrollSync } from '../../composables/useListScrollSync';
+import { useDragReorder } from '../../composables/useDragReorder';
+import { useInlineRename } from '../../composables/useInlineRename';
+import { useListSelection } from '../../composables/useListSelection';
+import ListToolbar from '../shared/ListToolbar.vue';
 
 /**
  * 显式 prop：本组件模板是双根节点（<aside> + 同级 .wb-resize-handle），Vue 不会自动把父级 :class/attrs
  * 透传到多根组件的根元素上（会被静默丢弃），因此用 prop 显式接收移动端抽屉类名。
  */
-const props = defineProps<{ mobileDrawerOpen?: boolean }>()
+const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 
-const tabsStore = useTabsStore()
-const store = usePresetStore()
-const uiStore = useUiStore()
-const listRef = ref<HTMLElement>()
+const tabsStore = useTabsStore();
+const store = usePresetStore();
+const uiStore = useUiStore();
+const listRef = ref<HTMLElement>();
 
 /**
  * 拖拽重排机制（指针跟踪、近边自动滚动、节流的拖放位置计算、文本选择抑制）位于 useDragReorder。
@@ -179,41 +179,41 @@ const {
   setItemRef,
   onItemMouseDown: onDragPointerDown,
   consumeSuppressClick: consumeDragSuppressClick,
-} = useDragReorder<number>({ autoScrollContainer: () => listRef.value })
+} = useDragReorder<number>({ autoScrollContainer: () => listRef.value });
 
 const canBind = computed(() => {
   const topLevel = Array.from(store.selectedGi).filter(
     (gi) => store.flatNodes[gi]?.parent === store.order
-  )
-  return topLevel.length >= 2
-})
+  );
+  return topLevel.length >= 2;
+});
 const canUnbind = computed(() => {
   return Array.from(store.selectedGi).some((gi) => {
-    const node = store.flatNodes[gi]
-    return node?.isGroup ?? false
-  })
-})
+    const node = store.flatNodes[gi];
+    return node?.isGroup ?? false;
+  });
+});
 
 function getBlock(id: string) {
-  return store.prompts.find((p) => p.identifier === id)
+  return store.prompts.find((p) => p.identifier === id);
 }
 function roleClass(id: string) {
-  return roleClassOf(getBlock(id)?.role)
+  return roleClassOf(getBlock(id)?.role);
 }
 
 function nodeKey(node: FlatNode, gi: number) {
-  return node.isGroup ? (node.ref as OrderGroup).id : (node.ref as OrderItem).identifier + '_' + gi
+  return node.isGroup ? (node.ref as OrderGroup).id : (node.ref as OrderItem).identifier + '_' + gi;
 }
 function itemStyle(node: FlatNode) {
-  return node.depth > 0 ? { paddingLeft: 8 + node.depth * 16 + 'px' } : {}
+  return node.depth > 0 ? { paddingLeft: 8 + node.depth * 16 + 'px' } : {};
 }
 function unbindCurrent() {
   const groupGi = Array.from(store.selectedGi).find((gi) => {
-    const node = store.flatNodes[gi]
-    return node?.isGroup ?? false
-  })
-  if (groupGi === undefined) return
-  store.unbindGroup(groupGi)
+    const node = store.flatNodes[gi];
+    return node?.isGroup ?? false;
+  });
+  if (groupGi === undefined) return;
+  store.unbindGroup(groupGi);
 }
 
 /** 分组名就地编辑（useInlineRename）。 */
@@ -225,21 +225,21 @@ const {
   cancel: cancelEditGroupName,
 } = useInlineRename<number>({
   getCurrentName: (gi) => {
-    const node = store.flatNodes[gi]
-    return node && node.isGroup ? (node.ref as OrderGroup).name : ''
+    const node = store.flatNodes[gi];
+    return node && node.isGroup ? (node.ref as OrderGroup).name : '';
   },
   onCommit: (gi, newName) => {
-    const node = store.flatNodes[gi]
-    if (node && node.isGroup) (node.ref as OrderGroup).name = newName
+    const node = store.flatNodes[gi];
+    if (node && node.isGroup) (node.ref as OrderGroup).name = newName;
   },
-})
+});
 function setGroupNameInput(el: object | null, _gi: number) {
-  setGroupNameInputRaw(el)
+  setGroupNameInputRaw(el);
 }
 function startEditGroupName(gi: number) {
-  const node = store.flatNodes[gi]
-  if (!node || !node.isGroup) return
-  startEditGroupNameRaw(gi)
+  const node = store.flatNodes[gi];
+  if (!node || !node.isGroup) return;
+  startEditGroupNameRaw(gi);
 }
 
 /** block 名就地编辑。重命名需要同步 markDirty 并更新 tabsStore 标签名。 */
@@ -251,54 +251,54 @@ const {
   cancel: cancelEditBlockName,
 } = useInlineRename<number>({
   getCurrentName: (gi) => {
-    const node = store.flatNodes[gi]
-    if (!node || node.isGroup) return ''
-    const item = node.ref as OrderItem
-    return getBlock(item.identifier)?.name || item.identifier
+    const node = store.flatNodes[gi];
+    if (!node || node.isGroup) return '';
+    const item = node.ref as OrderItem;
+    return getBlock(item.identifier)?.name || item.identifier;
   },
   onCommit: (gi, newName) => {
-    const node = store.flatNodes[gi]
-    if (!node || node.isGroup) return
-    const item = node.ref as OrderItem
-    const p = store.prompts.find((pp) => pp.identifier === item.identifier)
-    if (!p) return
-    p.name = newName
-    store.markDirty() // 嵌套字段变更，浅层 prompts watch 捕获不到
-    tabsStore.renameTab('preset', item.identifier, newName || item.identifier)
+    const node = store.flatNodes[gi];
+    if (!node || node.isGroup) return;
+    const item = node.ref as OrderItem;
+    const p = store.prompts.find((pp) => pp.identifier === item.identifier);
+    if (!p) return;
+    p.name = newName;
+    store.markDirty(); // 嵌套字段变更，浅层 prompts watch 捕获不到
+    tabsStore.renameTab('preset', item.identifier, newName || item.identifier);
   },
-})
+});
 function setBlockNameInput(el: object | null, _gi: number) {
-  setBlockNameInputRaw(el)
+  setBlockNameInputRaw(el);
 }
 function startEditBlockName(gi: number) {
-  const node = store.flatNodes[gi]
-  if (!node || node.isGroup) return
-  startEditBlockNameRaw(gi)
+  const node = store.flatNodes[gi];
+  if (!node || node.isGroup) return;
+  startEditBlockNameRaw(gi);
 }
 
 function onGroupToggle(gi: number) {
-  store.toggleGroupCollapse(gi)
+  store.toggleGroupCollapse(gi);
 }
 
 /** 侧边栏宽度拖拽：实时改 ref，拖拽结束后持久化。 */
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
   setWidth: (w) => {
-    uiStore.settings.sidebarWidth = w
+    uiStore.settings.sidebarWidth = w;
   },
   min: 220,
   max: 600,
   dir: 'right',
-})
+});
 function onResizeStart(e: PointerEvent) {
-  resize.onPointerDown(e)
+  resize.onPointerDown(e);
 }
 watch(
   () => resize.active.value,
   (v) => {
-    if (!v) uiStore.saveSettings()
+    if (!v) uiStore.saveSettings();
   }
-)
+);
 
 /**
  * 跳转请求时把当前激活标签对应的行滚入视口。
@@ -308,16 +308,16 @@ useListScrollSync({
   domain: 'preset',
   itemEls,
   keyOf: () => {
-    const tab = tabsStore.activeTab
-    if (!tab) return null
-    const gi = store.identifierToGi(tab.key)
-    return gi >= 0 ? gi : null
+    const tab = tabsStore.activeTab;
+    if (!tab) return null;
+    const gi = store.identifierToGi(tab.key);
+    return gi >= 0 ? gi : null;
   },
-})
+});
 
 /** 拖放落点：直接交给 store.reorderBlock 处理分组插入语义。 */
 function onDragDrop(from: number, to: number, after: boolean) {
-  store.reorderBlock(from, to, after)
+  store.reorderBlock(from, to, after);
 }
 
 /**
@@ -329,39 +329,39 @@ function onDragDrop(from: number, to: number, after: boolean) {
 const listSelection = useListSelection<number>({
   onSelect: (mode, gi) => {
     if (mode !== 'single') {
-      store.selectBlock(gi, { ctrl: mode === 'ctrl', shift: mode === 'shift' })
-      return
+      store.selectBlock(gi, { ctrl: mode === 'ctrl', shift: mode === 'shift' });
+      return;
     }
-    const node = store.flatNodes[gi]
-    if (!node) return
+    const node = store.flatNodes[gi];
+    if (!node) return;
     // 本地直接维护 selectedGi/anchorGi：重复点击已激活 tab 也能重置高亮
-    store.selectedGi.clear()
-    store.selectedGi.add(gi)
-    store.anchorGi = gi
+    store.selectedGi.clear();
+    store.selectedGi.add(gi);
+    store.anchorGi = gi;
     if (node.isGroup) {
-      store.toggleGroupCollapse(gi)
+      store.toggleGroupCollapse(gi);
     } else {
-      const item = node.ref as OrderItem
-      const block = store.prompts.find((p) => p.identifier === item.identifier)
+      const item = node.ref as OrderItem;
+      const block = store.prompts.find((p) => p.identifier === item.identifier);
       tabsStore.open({
         domain: 'preset',
         key: item.identifier,
         label: block?.name || item.identifier,
         workspace: 'preset',
-      })
+      });
     }
   },
-})
+});
 
 function onItemMouseDown(i: number, e: PointerEvent) {
-  if (listSelection.onPointerDown(i, e)) return // 触摸在 drag handle 外：走长按选择，不启动拖拽
-  onDragPointerDown(i, e, onDragDrop)
+  if (listSelection.onPointerDown(i, e)) return; // 触摸在 drag handle 外：走长按选择，不启动拖拽
+  onDragPointerDown(i, e, onDragDrop);
 }
 
 function onItemClick(gi: number, e: MouseEvent) {
-  if (consumeDragSuppressClick()) return
-  if (listSelection.consumeSuppressClick()) return
-  if (!store.flatNodes[gi]) return
-  listSelection.onClick(gi, e)
+  if (consumeDragSuppressClick()) return;
+  if (listSelection.consumeSuppressClick()) return;
+  if (!store.flatNodes[gi]) return;
+  listSelection.onClick(gi, e);
 }
 </script>

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref } from 'vue';
 
 /**
  * 脏标记 flag composable：`dirty` ref + `markDirty` setter 的薄壳。
@@ -8,9 +8,9 @@ import { ref } from 'vue'
  * `prompts` 浅 watch 防打字卡顿），硬抽进泛型会丢上下文。
  */
 export function useDirtyFlag() {
-  const dirty = ref(false)
+  const dirty = ref(false);
   function markDirty() {
-    dirty.value = true
+    dirty.value = true;
   }
-  return { dirty, markDirty }
+  return { dirty, markDirty };
 }

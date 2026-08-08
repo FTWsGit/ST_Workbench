@@ -1,6 +1,6 @@
-import { usePresetStore } from './presetStore'
-import { useWorldbookStore } from './worldbookStore'
-import { useCharacterStore } from './characterStore'
+import { usePresetStore } from './presetStore';
+import { useWorldbookStore } from './worldbookStore';
+import { useCharacterStore } from './characterStore';
 
 /** 【2026-07 App.vue 瘦身第3步】preset/worldbook/character 三个 domain store 各自的
  *  新建/删除/切换/重载/保存方法，命名早就已经是同一套形状了（`switchXxx(id)`/`reloadXxx()`/
@@ -16,34 +16,34 @@ import { useCharacterStore } from './characterStore'
  *  PresetSidebar.vue 里也会调 presetStore 的方法），把内部实现名跟这张表的对外形状统一，
  *  只需要在这一层包一次转接，不需要牵动三个 store 文件和它们的既有调用点，风险小得多。 */
 export interface DocumentWorkspaceAdapter {
-  key: 'preset' | 'worldbook' | 'character'
-  dirty: () => boolean
+  key: 'preset' | 'worldbook' | 'character';
+  dirty: () => boolean;
   /** 确认弹窗/关闭面板提示里显示的"当前是哪一份"。 */
-  currentLabel: () => string
+  currentLabel: () => string;
   /** <select> 当前选中值应该等于的 id——preset/worldbook 直接用名字；character 用 avatar 文件名
    *  （角色卡允许重名，avatar 才是真正唯一标识）。 */
-  currentId: () => string
+  currentId: () => string;
   /** 把 <select> 里某个候选值的 id 转成人类可读的名字，用于切换确认弹窗——preset/worldbook 的
    *  id 本身就是名字，直接原样返回；character 的 id 是 avatar，要去 characterList 里反查一次。 */
-  labelForId: (id: string) => string
-  switchTo: (id: string) => void
-  reload: () => void
-  save: () => void
-  create: (name: string) => void
-  remove: () => void
+  labelForId: (id: string) => string;
+  switchTo: (id: string) => void;
+  reload: () => void;
+  save: () => void;
+  create: (name: string) => void;
+  remove: () => void;
   /** 只有 character 需要：新建前如果当前工作区脏，先弹一次"会丢弃当前改动"的二次确认，标题固定
    *  用 shared.confirm.unsaved.title，消息文案是 workspace 自己的 i18n key（因为不同 workspace
    *  丢弃的东西不一样，没法共用一句话）。 */
-  confirmCreateIfDirty?: { messageKey: string }
+  confirmCreateIfDirty?: { messageKey: string };
 }
 
 export function createWorkspaceRegistry(): Record<
   'preset' | 'worldbook' | 'character',
   DocumentWorkspaceAdapter
 > {
-  const preset = usePresetStore()
-  const worldbook = useWorldbookStore()
-  const character = useCharacterStore()
+  const preset = usePresetStore();
+  const worldbook = useWorldbookStore();
+  const character = useCharacterStore();
 
   return {
     preset: {
@@ -85,5 +85,5 @@ export function createWorkspaceRegistry(): Record<
         messageKey: 'character.confirm.newCharacter.message',
       },
     },
-  }
+  };
 }

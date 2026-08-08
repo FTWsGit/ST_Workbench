@@ -23,8 +23,8 @@
 </template>
 
 <script setup lang="ts">
-import { useTabsStore } from '../../stores/tabsStore'
-import { useUiStore } from '../../stores/uiStore'
-const tabsStore = useTabsStore()
-const uiStore = useUiStore()
+import { useTabsStore } from '../../stores/tabsStore';
+import { useUiStore } from '../../stores/uiStore';
+const tabsStore = useTabsStore();
+const uiStore = useUiStore();
 </script>

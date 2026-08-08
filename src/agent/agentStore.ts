@@ -1,29 +1,29 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
 import {
   loadAgentStore,
   saveAgentStore,
   resetAgentStore,
   AgentVersionMismatchError,
-} from '../api/agentApi'
-import { DEFAULT_AGENT_PERSISTED } from './defaultPersisted'
-import { callModelRaw, renderMessages, type ModelTurnResult } from './callModel'
-import { MAX_TOOL_ROUNDS } from './constants'
+} from '../api/agentApi';
+import { DEFAULT_AGENT_PERSISTED } from './defaultPersisted';
+import { callModelRaw, renderMessages, type ModelTurnResult } from './callModel';
+import { MAX_TOOL_ROUNDS } from './constants';
 import {
   listAgentToolsForWorkspace,
   getAgentTool,
   type AgentToolContext,
   type AgentToolDef,
   type AgentWorkspace,
-} from './toolRegistry'
+} from './toolRegistry';
 import {
   shouldCompact,
   compactMessages,
   truncateForStorage,
   overflowFallback,
-} from './contextManager'
+} from './contextManager';
 // side-effect import：触发只读工具注册到 AGENT_TOOL_REGISTRY。
-import './register'
+import './register';
 import type {
   AgentPersisted,
   AgentConfig,
@@ -31,13 +31,13 @@ import type {
   AgentRuntimeState,
   Message,
   ToolCall,
-} from './types'
-import { useUiStore } from '../stores/uiStore'
-import { useTabsStore } from '../stores/tabsStore'
-import { usePresetStore } from '../stores/presetStore'
-import { useWorldbookStore } from '../stores/worldbookStore'
-import { useCharacterStore } from '../stores/characterStore'
-import { useConfirmStore } from '../stores/confirmStore'
+} from './types';
+import { useUiStore } from '../stores/uiStore';
+import { useTabsStore } from '../stores/tabsStore';
+import { usePresetStore } from '../stores/presetStore';
+import { useWorldbookStore } from '../stores/worldbookStore';
+import { useCharacterStore } from '../stores/characterStore';
+import { useConfirmStore } from '../stores/confirmStore';
 
 /** 当前回合状态机的运行时态（纯内存，不持久化）。 */
 const initialRuntime: AgentRuntimeState = {
@@ -46,30 +46,30 @@ const initialRuntime: AgentRuntimeState = {
   toolRounds: 0,
   awaitingApproval: false,
   error: null,
-}
+};
 
 /** 生成一个会话 id（时间戳 + 随机后缀）。 */
 function genSessionId(): string {
-  return 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
+  return 'sess_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
 /** 生成一个 tool_call id（供本地兜底用，正常情况模型会自带 id）。 */
 function _genToolCallId(): string {
-  return 'call_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
+  return 'call_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
 /** 延迟拿 store 实例的工具函数（避免在模块顶层直接 useXxxStore 触发 Pinia 未初始化报错）。 */
 function usePresetStoreSafe() {
-  return usePresetStore()
+  return usePresetStore();
 }
 function useWorldbookStoreSafe() {
-  return useWorldbookStore()
+  return useWorldbookStore();
 }
 function useCharacterStoreSafe() {
-  return useCharacterStore()
+  return useCharacterStore();
 }
 function useConfirmStoreSafe() {
-  return useConfirmStore()
+  return useConfirmStore();
 }
 
 /**
@@ -86,86 +86,86 @@ function useConfirmStoreSafe() {
  * 做一个独立浮窗（AgentPanel.vue），开关状态放 uiStore.agentPanelOpen。
  */
 export const useAgentStore = defineStore('agent', () => {
-  const uiStore = useUiStore()
-  const tabsStore = useTabsStore()
+  const uiStore = useUiStore();
+  const tabsStore = useTabsStore();
 
   /* ====== Persisted state ====== */
-  const version = ref<number>(DEFAULT_AGENT_PERSISTED.version)
-  const config = ref<AgentConfig>({ ...DEFAULT_AGENT_PERSISTED.config })
-  const sessions = ref<AgentSessionMeta[]>([])
-  const activeSessionId = ref<string | null>(null)
+  const version = ref<number>(DEFAULT_AGENT_PERSISTED.version);
+  const config = ref<AgentConfig>({ ...DEFAULT_AGENT_PERSISTED.config });
+  const sessions = ref<AgentSessionMeta[]>([]);
+  const activeSessionId = ref<string | null>(null);
   /** 当前活跃会话的完整消息序列——唯一允许变大的字段，靠容量纪律控制。 */
-  const activeSessionMessages = ref<Message[]>([])
+  const activeSessionMessages = ref<Message[]>([]);
 
   /* ====== Runtime state（纯内存）====== */
-  const runtime = ref<AgentRuntimeState>({ ...initialRuntime })
+  const runtime = ref<AgentRuntimeState>({ ...initialRuntime });
   /** 加载时遇到的版本不匹配错误，UI 据此显示"重置 agent 数据"按钮。 */
-  const versionMismatch = ref<AgentVersionMismatchError | null>(null)
+  const versionMismatch = ref<AgentVersionMismatchError | null>(null);
   /** 当前回合的 AbortController（cancel 用）。 */
-  let abortController: AbortController | null = null
+  let abortController: AbortController | null = null;
   /** 异步加载标志：首次 loadAgentData 完成前置 true。 */
-  const loading = ref(false)
+  const loading = ref(false);
   /** 是否已成功加载过一次（避免重复 load）。 */
-  const loaded = ref(false)
+  const loaded = ref(false);
 
   /* ====== 审批门（内嵌卡片，不弹全局模态）====== */
   /** 当前等待审批的工具调用信息，null 表示无待审批。 */
   const pendingApproval = ref<{
-    toolName: string
-    title: string
-    message: string
-    danger: boolean
-  } | null>(null)
+    toolName: string;
+    title: string;
+    message: string;
+    danger: boolean;
+  } | null>(null);
   /** 审批 Promise 的 resolve 函数（resolveApproval 调用）。 */
-  let approvalResolve: ((approved: boolean) => void) | null = null
+  let approvalResolve: ((approved: boolean) => void) | null = null;
   /** 本会话自动放行的工具名集合（单 session 一键同意）。 */
-  const autoApprovedTools = ref<Set<string>>(new Set())
+  const autoApprovedTools = ref<Set<string>>(new Set());
 
   /* ====== 工具注册表（P1 填充）====== */
   // 占位：P1 阶段在此注册只读工具，P2 注册写类工具
-  const availableTools = ref<AgentToolDef[]>([])
+  const availableTools = ref<AgentToolDef[]>([]);
 
   /* ====== Computed ====== */
-  const turnState = computed(() => runtime.value.turnState)
-  const currentTool = computed(() => runtime.value.currentTool)
+  const turnState = computed(() => runtime.value.turnState);
+  const currentTool = computed(() => runtime.value.currentTool);
   const isBusy = computed(
     () =>
       runtime.value.turnState === 'thinking' ||
       runtime.value.turnState === 'tool_loop' ||
       runtime.value.turnState === 'pending_approval'
-  )
-  const hasActiveSession = computed(() => activeSessionId.value !== null)
-  const messageCount = computed(() => activeSessionMessages.value.length)
+  );
+  const hasActiveSession = computed(() => activeSessionId.value !== null);
+  const messageCount = computed(() => activeSessionMessages.value.length);
 
   /* ====== 持久化加载/保存 ====== */
 
   /** 首次加载 agent 持久化数据。幂等。 */
   async function loadAgentData(): Promise<void> {
-    if (loaded.value || loading.value) return
-    loading.value = true
+    if (loaded.value || loading.value) return;
+    loading.value = true;
     try {
-      const data = await loadAgentStore()
-      version.value = data.version
-      config.value = { ...DEFAULT_AGENT_PERSISTED.config, ...data.config }
-      sessions.value = data.sessions
-      activeSessionId.value = data.activeSessionId
-      activeSessionMessages.value = data.activeSessionMessages
-      loaded.value = true
+      const data = await loadAgentStore();
+      version.value = data.version;
+      config.value = { ...DEFAULT_AGENT_PERSISTED.config, ...data.config };
+      sessions.value = data.sessions;
+      activeSessionId.value = data.activeSessionId;
+      activeSessionMessages.value = data.activeSessionMessages;
+      loaded.value = true;
     } catch (e) {
       if (e instanceof AgentVersionMismatchError) {
-        versionMismatch.value = e
+        versionMismatch.value = e;
       } else {
         // 其它加载错误：记录但不阻塞 UI，用户可以重置
         versionMismatch.value = new AgentVersionMismatchError(
           'unknown',
           DEFAULT_AGENT_PERSISTED.version
-        )
+        );
         // 保留原 error 信息
-        if (e instanceof Error) versionMismatch.value.message = e.message
+        if (e instanceof Error) versionMismatch.value.message = e.message;
       }
-      loaded.value = true
+      loaded.value = true;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
@@ -177,20 +177,20 @@ export const useAgentStore = defineStore('agent', () => {
       sessions: sessions.value.map((s) => ({ ...s })),
       activeSessionId: activeSessionId.value,
       activeSessionMessages: activeSessionMessages.value.map((m) => ({ ...m })),
-    }
-    await saveAgentStore(patch)
+    };
+    await saveAgentStore(patch);
   }
 
   /** 重置 agent 数据为默认结构（用户在版本不匹配报错时点"重置"触发）。 */
   async function resetData(): Promise<void> {
-    const fresh = await resetAgentStore()
-    version.value = fresh.version
-    config.value = { ...fresh.config }
-    sessions.value = []
-    activeSessionId.value = null
-    activeSessionMessages.value = []
-    runtime.value = { ...initialRuntime }
-    versionMismatch.value = null
+    const fresh = await resetAgentStore();
+    version.value = fresh.version;
+    config.value = { ...fresh.config };
+    sessions.value = [];
+    activeSessionId.value = null;
+    activeSessionMessages.value = [];
+    runtime.value = { ...initialRuntime };
+    versionMismatch.value = null;
   }
 
   /* ====== 会话管理 ====== */
@@ -201,76 +201,76 @@ export const useAgentStore = defineStore('agent', () => {
   ): Promise<void> {
     // 若已有活跃会话且有消息，先持久化当前状态
     if (activeSessionId.value && activeSessionMessages.value.length > 0) {
-      await persist()
+      await persist();
     }
 
-    const id = genSessionId()
-    const now = Date.now()
+    const id = genSessionId();
+    const now = Date.now();
     const meta: AgentSessionMeta = {
       id,
       title: uiStore.t('agent.session.untitled'),
       createdAt: now,
       updatedAt: now,
       workspace,
-    }
+    };
 
     // 切换：清空旧活跃会话的消息（已 persist），建立新会话
-    activeSessionMessages.value = []
-    activeSessionId.value = id
-    sessions.value = [...sessions.value, meta]
+    activeSessionMessages.value = [];
+    activeSessionId.value = id;
+    sessions.value = [...sessions.value, meta];
     // 新会话清空自动放行集合（"本会话同意"不跨会话残留）
-    autoApprovedTools.value = new Set()
+    autoApprovedTools.value = new Set();
 
     // 触发容量纪律：sessions 超过 MAX_RETAINED_SESSIONS 时丢弃最旧的已归档会话
-    trimSessions()
+    trimSessions();
 
-    runtime.value = { ...initialRuntime }
-    await persist()
+    runtime.value = { ...initialRuntime };
+    await persist();
   }
 
   /** 切换到另一个会话。 */
   async function switchSession(id: string): Promise<void> {
-    if (id === activeSessionId.value) return
+    if (id === activeSessionId.value) return;
     // 持久化当前活跃会话状态
     if (activeSessionId.value) {
-      await persist()
+      await persist();
     }
     // 切换活跃会话 id，但消息正文只在内存里——这里简化处理：切换时清空消息，
     // 实际产品中会话切换由 P5 阶段的归档迁移机制处理
-    activeSessionId.value = id
-    activeSessionMessages.value = []
-    runtime.value = { ...initialRuntime }
+    activeSessionId.value = id;
+    activeSessionMessages.value = [];
+    runtime.value = { ...initialRuntime };
   }
 
   /** 删除一个会话索引。 */
   async function deleteSession(id: string): Promise<void> {
-    sessions.value = sessions.value.filter((s) => s.id !== id)
+    sessions.value = sessions.value.filter((s) => s.id !== id);
     if (activeSessionId.value === id) {
-      activeSessionId.value = null
-      activeSessionMessages.value = []
+      activeSessionId.value = null;
+      activeSessionMessages.value = [];
     }
-    await persist()
+    await persist();
   }
 
   /** 容量纪律：sessions 超过 MAX_RETAINED_SESSIONS 时丢弃最旧的已归档会话索引。 */
   function trimSessions(): void {
-    const max = 20 // MAX_RETAINED_SESSIONS，但 constants 还没导出这个值，直接用字面量
-    if (sessions.value.length <= max) return
+    const max = 20; // MAX_RETAINED_SESSIONS，但 constants 还没导出这个值，直接用字面量
+    if (sessions.value.length <= max) return;
     // 按 createdAt 升序排，丢最旧的
-    const sorted = [...sessions.value].sort((a, b) => a.createdAt - b.createdAt)
-    const toRemove = sorted.slice(0, sessions.value.length - max)
-    const removeIds = new Set(toRemove.map((s) => s.id))
-    sessions.value = sessions.value.filter((s) => !removeIds.has(s.id))
+    const sorted = [...sessions.value].sort((a, b) => a.createdAt - b.createdAt);
+    const toRemove = sorted.slice(0, sessions.value.length - max);
+    const removeIds = new Set(toRemove.map((s) => s.id));
+    sessions.value = sessions.value.filter((s) => !removeIds.has(s.id));
   }
 
   /** 更新当前活跃会话的 title。 */
   async function updateSessionTitle(title: string): Promise<void> {
-    if (!activeSessionId.value) return
-    const s = sessions.value.find((x) => x.id === activeSessionId.value)
+    if (!activeSessionId.value) return;
+    const s = sessions.value.find((x) => x.id === activeSessionId.value);
     if (s) {
-      s.title = title
-      s.updatedAt = Date.now()
-      await persist()
+      s.title = title;
+      s.updatedAt = Date.now();
+      await persist();
     }
   }
 
@@ -287,37 +287,37 @@ export const useAgentStore = defineStore('agent', () => {
    * runtime 块在每次调用前由 refreshRuntimePrompt 刷新（当前 workspace 打开了什么文档）。
    */
   function buildSystemMessages(): { role: 'system'; content: string }[] {
-    const p = config.value.prompts
-    const out: { role: 'system'; content: string }[] = []
-    if (p.system.trim()) out.push({ role: 'system', content: p.system.trim() })
-    if (p.project.trim()) out.push({ role: 'system', content: p.project.trim() })
-    if (p.workflow.trim()) out.push({ role: 'system', content: p.workflow.trim() })
+    const p = config.value.prompts;
+    const out: { role: 'system'; content: string }[] = [];
+    if (p.system.trim()) out.push({ role: 'system', content: p.system.trim() });
+    if (p.project.trim()) out.push({ role: 'system', content: p.project.trim() });
+    if (p.workflow.trim()) out.push({ role: 'system', content: p.workflow.trim() });
     for (const kb of p.knowledge) {
-      if (kb.enabled && kb.content.trim()) out.push({ role: 'system', content: kb.content.trim() })
+      if (kb.enabled && kb.content.trim()) out.push({ role: 'system', content: kb.content.trim() });
     }
-    if (p.runtime.trim()) out.push({ role: 'system', content: p.runtime.trim() })
-    return out
+    if (p.runtime.trim()) out.push({ role: 'system', content: p.runtime.trim() });
+    return out;
   }
 
   /** 根据 tabsStore/presetStore/worldbookStore/characterStore 当前状态刷新 runtime 块。 */
   function refreshRuntimePrompt(): void {
-    const p = config.value.prompts
-    const lines: string[] = []
-    const ws = tabsStore.activeWorkspace
+    const p = config.value.prompts;
+    const lines: string[] = [];
+    const ws = tabsStore.activeWorkspace;
     if (ws === 'preset') {
-      const name = usePresetStoreSafe().presetName
-      lines.push(`Current workspace: preset`)
-      if (name) lines.push(`Loaded preset: ${name}`)
+      const name = usePresetStoreSafe().presetName;
+      lines.push(`Current workspace: preset`);
+      if (name) lines.push(`Loaded preset: ${name}`);
     } else if (ws === 'worldbook') {
-      const name = useWorldbookStoreSafe().worldbookName
-      lines.push(`Current workspace: worldbook`)
-      if (name) lines.push(`Loaded worldbook: ${name}`)
+      const name = useWorldbookStoreSafe().worldbookName;
+      lines.push(`Current workspace: worldbook`);
+      if (name) lines.push(`Loaded worldbook: ${name}`);
     } else if (ws === 'character') {
-      const name = useCharacterStoreSafe().character?.name
-      lines.push(`Current workspace: character`)
-      if (name) lines.push(`Loaded character: ${name}`)
+      const name = useCharacterStoreSafe().character?.name;
+      lines.push(`Current workspace: character`);
+      if (name) lines.push(`Loaded character: ${name}`);
     }
-    p.runtime = lines.join('\n')
+    p.runtime = lines.join('\n');
   }
 
   function pushUserMessage(text: string): void {
@@ -325,7 +325,7 @@ export const useAgentStore = defineStore('agent', () => {
       role: 'user',
       text,
       meta: { timestamp: Date.now() },
-    })
+    });
   }
 
   function pushAssistantMessage(content: string, toolCalls?: ToolCall[]): void {
@@ -334,26 +334,26 @@ export const useAgentStore = defineStore('agent', () => {
       text: content,
       toolCalls,
       meta: { timestamp: Date.now() },
-    })
+    });
   }
 
   function pushToolResultMessage(toolCallId: string, text: string, isError = false): void {
     // 入库截断（模块 6.1）：tool_result 写入前过字节上限
-    const truncated = truncateForStorage(text)
+    const truncated = truncateForStorage(text);
     activeSessionMessages.value.push({
       role: 'tool',
       text: truncated,
       toolCallId,
       isError,
       meta: { timestamp: Date.now() },
-    })
+    });
   }
 
   /** 清空当前会话的消息（保留会话索引）。 */
   async function clearMessages(): Promise<void> {
-    activeSessionMessages.value = []
-    runtime.value = { ...initialRuntime }
-    await persist()
+    activeSessionMessages.value = [];
+    runtime.value = { ...initialRuntime };
+    await persist();
   }
 
   /* ====== 核心循环（P0 单轮无工具，P1+ 接工具调用循环 3.2）====== */
@@ -365,40 +365,40 @@ export const useAgentStore = defineStore('agent', () => {
    * P1 扩展：接入工具调用循环（3.2/3.3）。
    */
   async function submitUserMessage(text: string): Promise<void> {
-    if (isBusy.value) return
-    if (!text.trim()) return
+    if (isBusy.value) return;
+    if (!text.trim()) return;
 
     // 若没有活跃会话，自动新建一个（workspace 跟随当前 tabsStore.activeWorkspace）
     if (!activeSessionId.value) {
-      const ws = tabsStore.activeWorkspace
-      await newSession(ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character')
+      const ws = tabsStore.activeWorkspace;
+      await newSession(ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character');
     }
 
     // 追加用户消息
-    pushUserMessage(text)
+    pushUserMessage(text);
 
     // 若是首条真实 user 消息，把会话 title 设为消息摘要
-    const userMsgCount = activeSessionMessages.value.filter((m) => m.role === 'user').length
+    const userMsgCount = activeSessionMessages.value.filter((m) => m.role === 'user').length;
     if (userMsgCount === 1) {
-      await updateSessionTitle(text.slice(0, 40) || uiStore.t('agent.session.untitled'))
+      await updateSessionTitle(text.slice(0, 40) || uiStore.t('agent.session.untitled'));
     }
 
     // P1：工具调用循环（3.2/3.3）
-    await runAgentTurn()
+    await runAgentTurn();
   }
 
   /** P1 核心循环：工具调用循环（3.2/3.3）。 */
   async function runAgentTurn(): Promise<void> {
-    runtime.value = { ...initialRuntime, turnState: 'thinking' }
+    runtime.value = { ...initialRuntime, turnState: 'thinking' };
 
     try {
       // 当前会话 workspace，用于工具越界校验
-      const ws = tabsStore.activeWorkspace
+      const ws = tabsStore.activeWorkspace;
       const workspace: AgentWorkspace =
-        ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character'
+        ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character';
 
       // 按当前 workspace 过滤可用工具
-      const tools = listAgentToolsForWorkspace(workspace)
+      const tools = listAgentToolsForWorkspace(workspace);
 
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
         runtime.value = {
@@ -406,19 +406,19 @@ export const useAgentStore = defineStore('agent', () => {
           turnState: 'thinking',
           currentTool: null,
           toolRounds: round,
-        }
+        };
 
         // P3：每轮调用前触发摘要压缩（模块 6.2）
-        await maybeAutoCompact()
+        await maybeAutoCompact();
 
         // 刷新 runtime 块（当前 workspace 打开了什么文档），前置分块 system 消息
-        refreshRuntimePrompt()
-        const systemMessages = buildSystemMessages()
-        let messages = renderMessages(activeSessionMessages.value)
+        refreshRuntimePrompt();
+        const systemMessages = buildSystemMessages();
+        let messages = renderMessages(activeSessionMessages.value);
         if (systemMessages.length) {
-          messages = [...systemMessages, ...messages]
+          messages = [...systemMessages, ...messages];
         }
-        let result: ModelTurnResult
+        let result: ModelTurnResult;
         try {
           result = await callModelRaw(messages, tools, {
             temperature: config.value.temperature,
@@ -428,67 +428,67 @@ export const useAgentStore = defineStore('agent', () => {
             presencePenalty: config.value.presencePenalty,
             frequencyPenalty: config.value.frequencyPenalty,
             thinking: config.value.thinking,
-          })
+          });
         } catch (e) {
           // 溢出兜底（模块 6.2）：模型/API 直接拒绝请求（上下文超窗）→ 走 compact 而非干掉 history
-          const msg = e instanceof Error ? e.message : String(e)
+          const msg = e instanceof Error ? e.message : String(e);
           if (/context|too long|exceed|window|token/i.test(msg)) {
             activeSessionMessages.value = await overflowFallback(
               activeSessionMessages.value,
               generateSummary,
               config.value.maxContextTokens,
               config.value.compactThresholdRatio
-            )
-            await persist()
-            throw e
+            );
+            await persist();
+            throw e;
           }
-          throw e
+          throw e;
         }
-        messages = [] // 释放引用
-        void messages
+        messages = []; // 释放引用
+        void messages;
 
         // 没有工具调用 → 追加 assistant 消息，回合完成
         if (!result.toolCalls || result.toolCalls.length === 0) {
-          pushAssistantMessage(result.content)
-          await finalizeTurn('complete')
-          return
+          pushAssistantMessage(result.content);
+          await finalizeTurn('complete');
+          return;
         }
 
         // 有工具调用 → 追加 assistant 消息（含 tool_calls），进入 tool_loop
-        pushAssistantMessage(result.content, result.toolCalls)
-        runtime.value = { ...runtime.value, turnState: 'tool_loop' }
+        pushAssistantMessage(result.content, result.toolCalls);
+        runtime.value = { ...runtime.value, turnState: 'tool_loop' };
 
         // 串行执行工具（3.2：只读工具可并行，写类串行；P1 全是只读，简化为串行）
-        let stoppedByApproval = false
+        let stoppedByApproval = false;
         for (const call of result.toolCalls) {
-          runtime.value = { ...runtime.value, currentTool: call.name }
-          const outcome = await executeTool(call, workspace)
-          pushToolResultMessage(call.id, outcome.text, outcome.isError)
+          runtime.value = { ...runtime.value, currentTool: call.name };
+          const outcome = await executeTool(call, workspace);
+          pushToolResultMessage(call.id, outcome.text, outcome.isError);
           // 用户拒绝审批 → 直接停本轮，不再让模型续跑工具/续答
           if (outcome.stopTurn) {
-            stoppedByApproval = true
-            break
+            stoppedByApproval = true;
+            break;
           }
         }
 
         // 持久化（每轮工具调用后存一次）
-        await persist()
+        await persist();
 
         // 审批拒绝：finalize 成 canceled，跳出工具循环
         if (stoppedByApproval) {
-          await finalizeTurn('canceled')
-          return
+          await finalizeTurn('canceled');
+          return;
         }
       }
 
       // 熔断：MAX_TOOL_ROUNDS 轮还没结束
-      pushToolResultMessage('max_rounds', `[max rounds exceeded: ${MAX_TOOL_ROUNDS}]`, true)
-      await finalizeTurn('error')
+      pushToolResultMessage('max_rounds', `[max rounds exceeded: ${MAX_TOOL_ROUNDS}]`, true);
+      await finalizeTurn('error');
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e)
-      pushToolResultMessage('error', `[ERROR] ${errMsg}`, true)
-      runtime.value = { ...initialRuntime, turnState: 'error', error: errMsg }
-      await persist()
+      const errMsg = e instanceof Error ? e.message : String(e);
+      pushToolResultMessage('error', `[ERROR] ${errMsg}`, true);
+      runtime.value = { ...initialRuntime, turnState: 'error', error: errMsg };
+      await persist();
     }
   }
 
@@ -497,27 +497,27 @@ export const useAgentStore = defineStore('agent', () => {
     call: ToolCall,
     workspace: AgentWorkspace
   ): Promise<{ text: string; isError?: boolean; stopTurn?: boolean }> {
-    const def = getAgentTool(call.name)
+    const def = getAgentTool(call.name);
     if (!def) {
-      return { text: `unknown tool: ${call.name}`, isError: true }
+      return { text: `unknown tool: ${call.name}`, isError: true };
     }
     // 越界校验（7.3）
     if (!def.availableIn.includes(workspace)) {
       return {
         text: `tool "${call.name}" not available in workspace "${workspace}"`,
         isError: true,
-      }
+      };
     }
 
     // 解析参数（弱模型容错：arguments 可能不是合法 JSON）
-    let args: Record<string, unknown>
+    let args: Record<string, unknown>;
     try {
-      args = call.arguments ? JSON.parse(call.arguments) : {}
+      args = call.arguments ? JSON.parse(call.arguments) : {};
     } catch {
       return {
         text: `invalid JSON arguments: ${call.arguments}`,
         isError: true,
-      }
+      };
     }
 
     // 构造工具执行上下文
@@ -528,25 +528,25 @@ export const useAgentStore = defineStore('agent', () => {
       confirmStore: useConfirmStoreSafe(),
       uiStore,
       workspace,
-    }
+    };
 
     try {
-      return await def.execute(args, ctx)
+      return await def.execute(args, ctx);
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e)
-      return { text: `tool execution error: ${errMsg}`, isError: true }
+      const errMsg = e instanceof Error ? e.message : String(e);
+      return { text: `tool execution error: ${errMsg}`, isError: true };
     }
   }
 
   /** finalizeTurn：回合结束，持久化，短暂展示后回 idle。 */
   async function finalizeTurn(state: 'complete' | 'error' | 'canceled'): Promise<void> {
-    runtime.value = { ...initialRuntime, turnState: state }
-    await persist()
+    runtime.value = { ...initialRuntime, turnState: state };
+    await persist();
     setTimeout(() => {
       if (runtime.value.turnState === state) {
-        runtime.value = { ...initialRuntime }
+        runtime.value = { ...initialRuntime };
       }
-    }, 500)
+    }, 500);
   }
 
   /**
@@ -558,7 +558,7 @@ export const useAgentStore = defineStore('agent', () => {
    * 若已有上一次摘要，叠加而非蒸馏。
    */
   async function maybeAutoCompact(): Promise<void> {
-    const messages = activeSessionMessages.value
+    const messages = activeSessionMessages.value;
     // compact 阈值：配置了 maxContextTokens 就按百分比算，否则回落常数
     if (
       !(await shouldCompact(
@@ -567,17 +567,17 @@ export const useAgentStore = defineStore('agent', () => {
         config.value.compactThresholdRatio
       ))
     )
-      return
+      return;
 
     const compacted = await compactMessages(
       messages,
       generateSummary,
       config.value.maxContextTokens,
       config.value.compactThresholdRatio
-    )
+    );
     if (compacted !== messages) {
-      activeSessionMessages.value = compacted
-      await persist()
+      activeSessionMessages.value = compacted;
+      await persist();
     }
   }
 
@@ -596,17 +596,17 @@ export const useAgentStore = defineStore('agent', () => {
         content:
           '你是一个对话摘要助手。请把下面的早期对话内容压缩成一份简洁的摘要，保留关键事实、用户意图和已执行的操作。用与原文相同的语言输出摘要，不要添加任何评论或解释。若提供了已有摘要，请在它基础上叠加新内容，保留更远历史的关键事实，不要丢弃。',
       },
-    ]
+    ];
     if (prevSummary) {
       summaryPrompt.push({
         role: 'user',
         content: `<previous_summary>\n${prevSummary}\n</previous_summary>`,
-      })
+      });
     }
     summaryPrompt.push({
       role: 'user',
       content: toSummarize.map((m) => `[${m.role}] ${m.text}`).join('\n\n---\n\n'),
-    })
+    });
 
     const result = await callModelRaw(summaryPrompt, [], {
       temperature: 0.3, // 摘要用低温度保持事实性
@@ -616,34 +616,38 @@ export const useAgentStore = defineStore('agent', () => {
       presencePenalty: null,
       frequencyPenalty: null,
       thinking: { type: 'enabled' },
-    })
-    return result.content || '[摘要生成失败]'
+    });
+    return result.content || '[摘要生成失败]';
   }
 
   /** 取消当前回合。 */
   function cancelTurn(): void {
     if (abortController) {
       try {
-        abortController.abort()
-      } catch { /* abort 失败无需处理 */ }
-      abortController = null
+        abortController.abort();
+      } catch {
+        /* abort 失败无需处理 */
+      }
+      abortController = null;
     }
     // 尝试中断 ST 的生成
     try {
       const ctx = (
         window.top as unknown as {
-          SillyTavern?: { getContext?: () => { stopGeneration?: () => void } | null }
+          SillyTavern?: { getContext?: () => { stopGeneration?: () => void } | null };
         }
-      )?.SillyTavern?.getContext?.()
-      ctx?.stopGeneration?.()
-    } catch { /* stopGeneration 失败无需处理 */ }
-    runtime.value = { ...initialRuntime, turnState: 'idle' }
+      )?.SillyTavern?.getContext?.();
+      ctx?.stopGeneration?.();
+    } catch {
+      /* stopGeneration 失败无需处理 */
+    }
+    runtime.value = { ...initialRuntime, turnState: 'idle' };
   }
 
   /** 更新 config（用户在设置里改 agent 配置时触发）。 */
   async function updateConfig(patch: Partial<AgentConfig>): Promise<void> {
-    config.value = { ...config.value, ...patch }
-    await persist()
+    config.value = { ...config.value, ...patch };
+    await persist();
   }
 
   /* ====== 审批门 actions ====== */
@@ -657,36 +661,36 @@ export const useAgentStore = defineStore('agent', () => {
    *  3. resolveApproval(true) 时可选把 toolName 加入 autoApprovedTools（"本会话自动同意"）。
    */
   function requestApproval(opts: {
-    toolName: string
-    title: string
-    message: string
-    danger?: boolean
+    toolName: string;
+    title: string;
+    message: string;
+    danger?: boolean;
   }): Promise<boolean> {
     // 本会话已自动放行
     if (autoApprovedTools.value.has(opts.toolName)) {
-      return Promise.resolve(true)
+      return Promise.resolve(true);
     }
     pendingApproval.value = {
       toolName: opts.toolName,
       title: opts.title,
       message: opts.message,
       danger: opts.danger ?? true,
-    }
+    };
     return new Promise<boolean>((resolve) => {
-      approvalResolve = resolve
-    })
+      approvalResolve = resolve;
+    });
   }
 
   /** 用户在审批卡片上点同意/拒绝。 */
   function resolveApproval(approved: boolean, autoApproveThisSession = false): void {
-    const info = pendingApproval.value
+    const info = pendingApproval.value;
     if (approved && autoApproveThisSession && info) {
-      autoApprovedTools.value = new Set(autoApprovedTools.value).add(info.toolName)
+      autoApprovedTools.value = new Set(autoApprovedTools.value).add(info.toolName);
     }
-    pendingApproval.value = null
-    const fn = approvalResolve
-    approvalResolve = null
-    fn?.(approved)
+    pendingApproval.value = null;
+    const fn = approvalResolve;
+    approvalResolve = null;
+    fn?.(approved);
   }
 
   return {
@@ -725,7 +729,7 @@ export const useAgentStore = defineStore('agent', () => {
     cancelTurn,
     clearMessages,
     updateConfig,
-  }
-})
+  };
+});
 
-export type AgentStore = ReturnType<typeof useAgentStore>
+export type AgentStore = ReturnType<typeof useAgentStore>;

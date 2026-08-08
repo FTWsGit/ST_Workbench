@@ -18,10 +18,10 @@
 withDefaults(
   defineProps<{
     /** 字段标签文字；不传则不渲染 label（如"启用"这类控件自带语义的场景）。 */
-    label?: string
+    label?: string;
     /** true 同行横排，false（默认）竖排。 */
-    inline?: boolean
+    inline?: boolean;
   }>(),
   { inline: false, label: '' }
-)
+);
 </script>

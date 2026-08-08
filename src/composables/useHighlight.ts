@@ -1,6 +1,6 @@
-import { esc, span } from '../utils'
-import Prism from 'prismjs'
-import 'prismjs/components/prism-javascript.js'
+import { esc, span } from '../utils';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-javascript.js';
 
 // 优先级，从高到低：{{}} 宏（始终优先，无条件检查）> <...> > [...] > "..." / '...'
 // （引号共享最低层级，彼此不嵌套）。
@@ -19,33 +19,33 @@ import 'prismjs/components/prism-javascript.js'
 // 不可区分——没有 border/background 会让结构差异显现。不要添加结构性的 hl-* CSS 属性
 // （border, background, box-shadow），否则需重新检验这个假设。
 
-type Tier = 1 | 2 | 3
+type Tier = 1 | 2 | 3;
 
 export interface Token {
-  text: string
-  cls: string | null
+  text: string;
+  cls: string | null;
 }
 
 function findMacroEnd(text: string, start: number): number {
   let depth = 1,
-    j = start + 2
+    j = start + 2;
   while (j < text.length && depth > 0) {
     if (j + 1 < text.length && text[j] === '{' && text[j + 1] === '{') {
-      depth++
-      j += 2
+      depth++;
+      j += 2;
     } else if (j + 1 < text.length && text[j] === '}' && text[j + 1] === '}') {
-      depth--
-      j += 2
-    } else j++
+      depth--;
+      j += 2;
+    } else j++;
   }
-  return depth === 0 ? j : -1
+  return depth === 0 ? j : -1;
 }
 
 // 将一个 {{...}} 的内容（含花括号）的 token 推入 `out`。
 function pushMacroTokens(out: Token[], inner: string): void {
-  out.push({ text: '{{', cls: 'hl-b' })
+  out.push({ text: '{{', cls: 'hl-b' });
   if (inner.startsWith('//')) {
-    out.push({ text: inner, cls: 'hl-cm' })
+    out.push({ text: inner, cls: 'hl-cm' });
   } else {
     // 13 种变量宏：name 用 hl-v，宏名用 hl-k，:: 用 hl-s，值（仅 set/add）走 hl-val 递归高亮。
     // 排序让多字符前缀先匹配——setglobalvar 先于 setvar，避免 setvar::foo 被误吞 setglobalvar::foo。
@@ -63,37 +63,37 @@ function pushMacroTokens(out: Token[], inner: string): void {
       { prefix: 'hasvar::', hasValue: false },
       { prefix: 'hasglobalvar::', hasValue: false },
       { prefix: 'deletevar::', hasValue: false },
-    ]
-    let matched = false
+    ];
+    let matched = false;
     for (const def of VAR_HL) {
-      if (!inner.startsWith(def.prefix)) continue
-      const macroName = def.prefix.slice(0, -2) // 去 '::'
-      const after = def.prefix.length
+      if (!inner.startsWith(def.prefix)) continue;
+      const macroName = def.prefix.slice(0, -2); // 去 '::'
+      const after = def.prefix.length;
       if (def.hasValue) {
-        const sep = inner.indexOf('::', after)
-        if (sep === -1) break
-        const varName = inner.slice(after, sep)
-        const valuePart = inner.slice(sep + 2)
+        const sep = inner.indexOf('::', after);
+        if (sep === -1) break;
+        const varName = inner.slice(after, sep);
+        const valuePart = inner.slice(sep + 2);
         out.push(
           { text: macroName, cls: 'hl-k' },
           { text: '::', cls: 'hl-s' },
           { text: varName, cls: 'hl-v' },
           { text: '::', cls: 'hl-s' }
-        )
-        out.push(...scan(valuePart, 0, 1, null, 'hl-val').tokens)
+        );
+        out.push(...scan(valuePart, 0, 1, null, 'hl-val').tokens);
       } else {
-        const varName = inner.slice(after)
-        out.push({ text: macroName, cls: 'hl-k' }, { text: '::', cls: 'hl-s' })
-        out.push(...scan(varName, 0, 1, null, 'hl-v').tokens)
+        const varName = inner.slice(after);
+        out.push({ text: macroName, cls: 'hl-k' }, { text: '::', cls: 'hl-s' });
+        out.push(...scan(varName, 0, 1, null, 'hl-v').tokens);
       }
-      matched = true
-      break
+      matched = true;
+      break;
     }
     if (!matched) {
-      out.push(...scan(inner, 0, 1, null, 'hl-m').tokens)
+      out.push(...scan(inner, 0, 1, null, 'hl-m').tokens);
     }
   }
-  out.push({ text: '}}', cls: 'hl-b' })
+  out.push({ text: '}}', cls: 'hl-b' });
 }
 
 /**
@@ -119,41 +119,41 @@ function scan(
   // 完整重跑一遍 scan(p_k+1)、scan(p_k+2)……而这些子调用又各自重跑一遍它们自己之后的），
   // 几十个未匹配定界符就能卡死几秒到几分钟。记忆化后每个 (start, minTier, stopChar) 只真正
   // 计算一次，后续命中直接复用，指数级砍成线性。
-  const key = start + '\u0000' + minTier + '\u0000' + (stopChar ?? '')
-  const cached = memo.get(key)
-  if (cached) return cached
+  const key = start + '\u0000' + minTier + '\u0000' + (stopChar ?? '');
+  const cached = memo.get(key);
+  if (cached) return cached;
 
-  const out: Token[] = []
+  const out: Token[] = [];
   let i = start,
-    plainStart = start
+    plainStart = start;
   const flushPlain = (upTo: number) => {
-    if (upTo > plainStart) out.push({ text: text.substring(plainStart, upTo), cls: baseCls })
-  }
+    if (upTo > plainStart) out.push({ text: text.substring(plainStart, upTo), cls: baseCls });
+  };
   const finish = (result: { tokens: Token[]; endIndex: number }) => {
-    memo.set(key, result)
-    return result
-  }
+    memo.set(key, result);
+    return result;
+  };
 
   while (i < text.length) {
     if (stopChar !== null && text[i] === stopChar) {
       // 闭合单引号的 word-boundary 检查，模拟原 regex 的 (?!\w)
       if ((stopChar === "'" || stopChar === '\u2019') && /\w/.test(text[i + 1] || '')) {
-        i++
-        continue
+        i++;
+        continue;
       }
-      flushPlain(i)
-      return finish({ tokens: out, endIndex: i })
+      flushPlain(i);
+      return finish({ tokens: out, endIndex: i });
     }
 
     // 每个嵌套层级无条件检查：{{ macro }} 始终优先。
     if (i + 1 < text.length && text[i] === '{' && text[i + 1] === '{') {
-      const end = findMacroEnd(text, i)
+      const end = findMacroEnd(text, i);
       if (end !== -1) {
-        flushPlain(i)
-        pushMacroTokens(out, text.substring(i + 2, end - 2))
-        i = end
-        plainStart = i
-        continue
+        flushPlain(i);
+        pushMacroTokens(out, text.substring(i + 2, end - 2));
+        i = end;
+        plainStart = i;
+        continue;
       }
     }
 
@@ -161,115 +161,115 @@ function scan(
     // 内部 minTier 保持在 3（不是 4），这样双重的 "<<>>" 能递归着色两层，
     // 而不是外层 span 遇到第一个 ">" 就停下，剩下内容变纯文本。
     if (minTier <= 3 && text[i] === '<') {
-      const inner = scan(text, i + 1, 3, '>', 'hl-ab', memo)
+      const inner = scan(text, i + 1, 3, '>', 'hl-ab', memo);
       if (inner.endIndex < text.length && text[inner.endIndex] === '>') {
-        flushPlain(i)
+        flushPlain(i);
         out.push({ text: '<', cls: 'hl-ab' }, ...inner.tokens, {
           text: '>',
           cls: 'hl-ab',
-        })
-        i = inner.endIndex + 1
-        plainStart = i
-        continue
+        });
+        i = inner.endIndex + 1;
+        plainStart = i;
+        continue;
       }
     }
 
     // Tier 2：[...] — 更高优先级的 <...> 可以在内部打开，另一个嵌套 [...] 也可以
     // （内部 minTier 保持在 2，和 <> 同理，支持 "[[]]"）。
     if (minTier <= 2 && text[i] === '[') {
-      const inner = scan(text, i + 1, 2, ']', 'hl-sb', memo)
+      const inner = scan(text, i + 1, 2, ']', 'hl-sb', memo);
       if (inner.endIndex < text.length && text[inner.endIndex] === ']') {
-        flushPlain(i)
+        flushPlain(i);
         out.push({ text: '[', cls: 'hl-sb' }, ...inner.tokens, {
           text: ']',
           cls: 'hl-sb',
-        })
-        i = inner.endIndex + 1
-        plainStart = i
-        continue
+        });
+        i = inner.endIndex + 1;
+        plainStart = i;
+        continue;
       }
     }
 
     // Tier 1: 中文双引号 “...” — 颜色同英文双引号
     if (minTier <= 1 && text[i] === '\u201C') {
       // U+201C = “
-      const cls = 'hl-dq'
-      const inner = scan(text, i + 1, 2, '\u201D', cls, memo) // stopChar = ” (U+201D)
+      const cls = 'hl-dq';
+      const inner = scan(text, i + 1, 2, '\u201D', cls, memo); // stopChar = ” (U+201D)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u201D') {
-        flushPlain(i)
+        flushPlain(i);
         out.push({ text: '\u201C', cls }, ...inner.tokens, {
           text: '\u201D',
           cls,
-        })
-        i = inner.endIndex + 1
-        plainStart = i
-        continue
+        });
+        i = inner.endIndex + 1;
+        plainStart = i;
+        continue;
       }
     }
 
     // Tier 1: 中文单引号 ‘...’ — 颜色同英文单引号
     if (minTier <= 1 && text[i] === '\u2018') {
       // U+2018 = ‘
-      const cls = 'hl-sq'
-      const inner = scan(text, i + 1, 2, '\u2019', cls, memo) // stopChar = ’ (U+2019)
+      const cls = 'hl-sq';
+      const inner = scan(text, i + 1, 2, '\u2019', cls, memo); // stopChar = ’ (U+2019)
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u2019') {
-        flushPlain(i)
+        flushPlain(i);
         out.push({ text: '\u2018', cls }, ...inner.tokens, {
           text: '\u2019',
           cls,
-        })
-        i = inner.endIndex + 1
-        plainStart = i
-        continue
+        });
+        i = inner.endIndex + 1;
+        plainStart = i;
+        continue;
       }
     }
 
     if (minTier <= 1 && text[i] === '\u300C') {
-      const cls = 'hl-dq'
-      const inner = scan(text, i + 1, 2, '\u300D', cls, memo)
+      const cls = 'hl-dq';
+      const inner = scan(text, i + 1, 2, '\u300D', cls, memo);
       if (inner.endIndex < text.length && text[inner.endIndex] === '\u300D') {
-        flushPlain(i)
+        flushPlain(i);
         out.push({ text: '\u300C', cls }, ...inner.tokens, {
           text: '\u300D',
           cls,
-        })
-        i = inner.endIndex + 1
-        plainStart = i
-        continue
+        });
+        i = inner.endIndex + 1;
+        plainStart = i;
+        continue;
       }
     }
 
     // Tier 1："..." 或 '...'（同一层级，彼此不嵌套）—— <...> 和 [...] 都能在引号内
     // 打开并高亮，因为两者优先级高于引号。
     if (minTier <= 1 && (text[i] === '"' || text[i] === "'")) {
-      const qc = text[i]
+      const qc = text[i];
       // 对起始引号也做 word-boundary 防护，例如 "it's" 不会把撇号当作引号起始符
       // （它实际是缩写的一部分）。
-      const prevOk = qc === "'" ? !/\w/.test(text[i - 1] || '') : true
+      const prevOk = qc === "'" ? !/\w/.test(text[i - 1] || '') : true;
       if (prevOk) {
-        const cls = qc === '"' ? 'hl-dq' : 'hl-sq'
-        const inner = scan(text, i + 1, 2, qc, cls, memo)
+        const cls = qc === '"' ? 'hl-dq' : 'hl-sq';
+        const inner = scan(text, i + 1, 2, qc, cls, memo);
         if (inner.endIndex < text.length && text[inner.endIndex] === qc) {
-          flushPlain(i)
-          out.push({ text: qc, cls }, ...inner.tokens, { text: qc, cls })
-          i = inner.endIndex + 1
-          plainStart = i
-          continue
+          flushPlain(i);
+          out.push({ text: qc, cls }, ...inner.tokens, { text: qc, cls });
+          i = inner.endIndex + 1;
+          plainStart = i;
+          continue;
         }
       }
     }
 
-    i++
+    i++;
   }
-  flushPlain(text.length)
-  return finish({ tokens: out, endIndex: text.length })
+  flushPlain(text.length);
+  return finish({ tokens: out, endIndex: text.length });
 }
 
 function tokenize(text: string): Token[] {
-  return scan(text, 0, 1, null, null).tokens
+  return scan(text, 0, 1, null, null).tokens;
 }
 
-export type HighlightLanguage = 'macro' | 'js'
+export type HighlightLanguage = 'macro' | 'js';
 
 // Prism.tokenize() 返回值是 (string | Prism.Token)[]，Token.content 又可以是
 // string | Prism.Token | (string | Prism.Token)[]（同类型递归嵌套）——这里把它拍平成
@@ -281,27 +281,27 @@ export type HighlightLanguage = 'macro' | 'js'
 function flattenPrismTokens(tokens: (string | Prism.Token)[], out: Token[] = []): Token[] {
   for (const t of tokens) {
     if (typeof t === 'string') {
-      if (t) out.push({ text: t, cls: null })
-      continue
+      if (t) out.push({ text: t, cls: null });
+      continue;
     }
-    const content = Array.isArray(t.content) ? t.content : [t.content]
-    const before = out.length
-    flattenPrismTokens(content, out)
+    const content = Array.isArray(t.content) ? t.content : [t.content];
+    const before = out.length;
+    flattenPrismTokens(content, out);
     // t.content 也可能直接是字符串（不是数组/嵌套 Token），上面已经统一转成数组处理；
     // 这里把这次递归新产出的 token 全部打上当前 token.type 的 class——因为 Prism 的
     // token.content 里嵌套的字符串没有自己的 cls，需要从外层继承。
     for (let i = before; i < out.length; i++)
-      if (out[i].cls === null) out[i].cls = `hl-js-${t.type}`
+      if (out[i].cls === null) out[i].cls = `hl-js-${t.type}`;
   }
-  return out
+  return out;
 }
 
 function tokenizeJs(text: string): Token[] {
-  return flattenPrismTokens(Prism.tokenize(text, Prism.languages.javascript))
+  return flattenPrismTokens(Prism.tokenize(text, Prism.languages.javascript));
 }
 
 function tokenizeFor(language: HighlightLanguage, text: string): Token[] {
-  return language === 'js' ? tokenizeJs(text) : tokenize(text)
+  return language === 'js' ? tokenizeJs(text) : tokenize(text);
 }
 
 /** 将全文高亮为一个 HTML 字符串（macro/引号内容会递归进去），供复制导出等场景使用。
@@ -309,12 +309,12 @@ function tokenizeFor(language: HighlightLanguage, text: string): Token[] {
  *  走 Prism 的真正 JS 语法高亮——脚本内容是纯 JS，不会混 ST 宏，所以两套 tokenizer
  *  互不需要感知对方，按 language 分流即可，不用合并。 */
 export function highlightContent(text: string, language: HighlightLanguage = 'macro'): string {
-  let out = ''
+  let out = '';
   for (const t of tokenizeFor(language, text)) {
-    const e = esc(t.text)
-    out += t.cls ? span(t.cls, e) : e
+    const e = esc(t.text);
+    out += t.cls ? span(t.cls, e) : e;
   }
-  return out
+  return out;
 }
 
 /**
@@ -325,16 +325,16 @@ export function highlightContent(text: string, language: HighlightLanguage = 'ma
  * textarea 行高不同步。
  */
 export function highlightLines(text: string, language: HighlightLanguage = 'macro'): string[] {
-  const lines: string[] = ['']
+  const lines: string[] = [''];
   for (const t of tokenizeFor(language, text)) {
-    const parts = t.text.split('\n')
+    const parts = t.text.split('\n');
     for (let p = 0; p < parts.length; p++) {
-      if (p > 0) lines.push('')
-      if (!parts[p]) continue
-      const e = esc(parts[p])
-      lines[lines.length - 1] += t.cls ? span(t.cls, e) : e
+      if (p > 0) lines.push('');
+      if (!parts[p]) continue;
+      const e = esc(parts[p]);
+      lines[lines.length - 1] += t.cls ? span(t.cls, e) : e;
     }
   }
-  for (let i = 0; i < lines.length; i++) if (!lines[i]) lines[i] = '\u00A0'
-  return lines
+  for (let i = 0; i < lines.length; i++) if (!lines[i]) lines[i] = '\u00A0';
+  return lines;
 }

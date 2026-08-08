@@ -14,9 +14,9 @@
             class="wb-select-wide"
             :value="uiStore.settings.language"
             @change="
-              uiStore.settings.language = ($event.target as HTMLSelectElement).value as
-                'zh-CN' | 'en';
-              uiStore.saveSettings();
+              ((uiStore.settings.language = ($event.target as HTMLSelectElement).value as
+                'zh-CN' | 'en'),
+              uiStore.saveSettings())
             "
           >
             <option value="zh-CN">中文</option>
@@ -44,8 +44,8 @@
             class="wb-select-wide"
             :value="uiStore.settings.editorFontFamily"
             @change="
-              uiStore.settings.editorFontFamily = ($event.target as HTMLSelectElement).value;
-              uiStore.saveSettings();
+              ((uiStore.settings.editorFontFamily = ($event.target as HTMLSelectElement).value),
+              uiStore.saveSettings())
             "
           >
             <option v-for="f in FONT_OPTIONS" :key="f.name" :value="f.name">
@@ -171,64 +171,64 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, nextTick } from 'vue'
-import { usePresetStore } from '../../stores/presetStore'
-import { useUiStore } from '../../stores/uiStore'
-import { FONT_OPTIONS, SYNTAX_LABEL_KEYS } from '../../types'
-import type { SyntaxColors } from '../../types'
-import { useConfirmStore } from '../../stores/confirmStore'
+import { ref, reactive, watch, nextTick } from 'vue';
+import { usePresetStore } from '../../stores/presetStore';
+import { useUiStore } from '../../stores/uiStore';
+import { FONT_OPTIONS, SYNTAX_LABEL_KEYS } from '../../types';
+import type { SyntaxColors } from '../../types';
+import { useConfirmStore } from '../../stores/confirmStore';
 
-const confirmStore = useConfirmStore()
-const _presetStore = usePresetStore()
-const uiStore = useUiStore()
+const confirmStore = useConfirmStore();
+const _presetStore = usePresetStore();
+const uiStore = useUiStore();
 
 /** 字号滑块/颜色选择器的本地草稿：拖拽过程中只更新本地状态，避免每 tick 触发 cssVars 重算 + localStorage 写入；release 时才 commit。 */
-const draftFontSize = ref(uiStore.settings.editorFontSize)
-const draftColors = reactive<SyntaxColors>({ ...uiStore.settings.syntaxColors })
+const draftFontSize = ref(uiStore.settings.editorFontSize);
+const draftColors = reactive<SyntaxColors>({ ...uiStore.settings.syntaxColors });
 
 watch(
   () => uiStore.settingsOpen,
   (open) => {
     if (open) {
       // 每次打开重新同步，防止外部（如重置默认值）改动
-      draftFontSize.value = uiStore.settings.editorFontSize
-      Object.assign(draftColors, uiStore.settings.syntaxColors)
+      draftFontSize.value = uiStore.settings.editorFontSize;
+      Object.assign(draftColors, uiStore.settings.syntaxColors);
     }
   }
-)
+);
 watch(
   () => uiStore.settings.editorFontSize,
   (v) => {
-    draftFontSize.value = v
+    draftFontSize.value = v;
   }
-)
+);
 watch(
   () => uiStore.settings.syntaxColors,
   (v) => {
-    Object.assign(draftColors, v)
+    Object.assign(draftColors, v);
   },
   { deep: true }
-)
+);
 
 function commitFontSize() {
-  uiStore.settings.editorFontSize = draftFontSize.value
-  uiStore.saveSettings()
+  uiStore.settings.editorFontSize = draftFontSize.value;
+  uiStore.saveSettings();
 }
 function commitColor(key: keyof SyntaxColors) {
-  uiStore.settings.syntaxColors[key] = draftColors[key]
-  uiStore.saveSettings()
+  uiStore.settings.syntaxColors[key] = draftColors[key];
+  uiStore.saveSettings();
 }
 
 /** Prompt 弹窗打开时自动聚焦并全选，对齐 window.prompt() 行为。 */
-const promptInputRef = ref<HTMLInputElement>()
+const promptInputRef = ref<HTMLInputElement>();
 watch(
   () => confirmStore.promptOpen,
   (open) => {
     if (open)
       nextTick(() => {
-        promptInputRef.value?.focus()
-        promptInputRef.value?.select()
-      })
+        promptInputRef.value?.focus();
+        promptInputRef.value?.select();
+      });
   }
-)
+);
 </script>

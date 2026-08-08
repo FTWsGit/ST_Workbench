@@ -571,42 +571,42 @@
  * 设置区可配置 system prompt、temperature、maxTokens（写入 agentStore.config 并持久化）。
  * 不进 tabsStore 的 domain 路由——agent 不编辑"一份文档"，开关状态放 uiStore.agentPanelOpen。
  */
-import { ref, computed, watch, nextTick } from 'vue'
-import { useUiStore } from '../../stores/uiStore'
-import { useAgentStore } from '../../agent/agentStore'
-import type { AgentConfig } from '../../agent/types'
-import { usePanelResize } from '../../composables/usePanelResize'
-import FloatingPanelShell from './FloatingPanelShell.vue'
-import PanelModeSwitch from './PanelModeSwitch.vue'
-import NumberInput from './NumberInput.vue'
-import type { PanelMode } from '../../types'
-import type { LocaleKey } from '../../i18n'
+import { ref, computed, watch, nextTick } from 'vue';
+import { useUiStore } from '../../stores/uiStore';
+import { useAgentStore } from '../../agent/agentStore';
+import type { AgentConfig } from '../../agent/types';
+import { usePanelResize } from '../../composables/usePanelResize';
+import FloatingPanelShell from './FloatingPanelShell.vue';
+import PanelModeSwitch from './PanelModeSwitch.vue';
+import NumberInput from './NumberInput.vue';
+import type { PanelMode } from '../../types';
+import type { LocaleKey } from '../../i18n';
 
-const uiStore = useUiStore()
-const agentStore = useAgentStore()
+const uiStore = useUiStore();
+const agentStore = useAgentStore();
 
 /** 当前形态（docked 挤开 / overlay 右侧悬浮 / float 完全悬浮），持久化到 settings.agentMode。 */
-const mode = computed<PanelMode>(() => uiStore.settings.agentMode)
+const mode = computed<PanelMode>(() => uiStore.settings.agentMode);
 function setMode(m: PanelMode) {
-  uiStore.settings.agentMode = m
-  uiStore.saveSettings()
+  uiStore.settings.agentMode = m;
+  uiStore.saveSettings();
 }
 
 /** 设置区展开/收起（局部 UI 状态，不持久化）。 */
-const settingsOpen = ref(false)
+const settingsOpen = ref(false);
 
-const inputText = ref('')
-const inputEl = ref<HTMLTextAreaElement | null>(null)
-const messagesContainer = ref<HTMLDivElement | null>(null)
+const inputText = ref('');
+const inputEl = ref<HTMLTextAreaElement | null>(null);
+const messagesContainer = ref<HTMLDivElement | null>(null);
 /** 审批卡片上的"本会话自动同意"复选状态。 */
-const autoApproveThisSession = ref(false)
+const autoApproveThisSession = ref(false);
 
 const activeSessionTitle = computed(() => {
-  const id = agentStore.activeSessionId
-  if (!id) return ''
-  const s = agentStore.sessions.find((x) => x.id === id)
-  return s?.title || uiStore.t('agent.session.untitled')
-})
+  const id = agentStore.activeSessionId;
+  if (!id) return '';
+  const s = agentStore.sessions.find((x) => x.id === id);
+  return s?.title || uiStore.t('agent.session.untitled');
+});
 
 const stateLabel = computed(() => {
   const map: Record<string, LocaleKey> = {
@@ -616,119 +616,119 @@ const stateLabel = computed(() => {
     pending_approval: 'agent.state.pending_approval',
     error: 'agent.state.error',
     complete: 'agent.state.complete',
-  }
-  const key = map[agentStore.turnState] || 'agent.state.idle'
-  return uiStore.t(key)
-})
+  };
+  const key = map[agentStore.turnState] || 'agent.state.idle';
+  return uiStore.t(key);
+});
 
 function roleLabel(role: string): string {
-  if (role === 'user') return '🧑'
-  if (role === 'assistant') return '🤖'
-  if (role === 'tool') return '⚙'
-  if (role === 'system') return '📋'
-  return role
+  if (role === 'user') return '🧑';
+  if (role === 'assistant') return '🤖';
+  if (role === 'tool') return '⚙';
+  if (role === 'system') return '📋';
+  return role;
 }
 
 /** 嵌入/悬浮态右边缘拖拽改宽，拖完持久化（settings.agentWidth）。 */
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.agentWidth,
   setWidth: (w) => {
-    uiStore.settings.agentWidth = w
+    uiStore.settings.agentWidth = w;
   },
   min: 320,
   max: 900,
   dir: 'left',
-})
+});
 watch(
   () => resize.active.value,
   (v) => {
-    if (!v) uiStore.saveSettings()
+    if (!v) uiStore.saveSettings();
   }
-)
+);
 
 function onInput(e: Event) {
-  inputText.value = (e.target as HTMLTextAreaElement).value
+  inputText.value = (e.target as HTMLTextAreaElement).value;
 }
 
 function onKeydown(e: KeyboardEvent) {
   // 回车提交，Shift+Enter 换行
   if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    onSend()
+    e.preventDefault();
+    onSend();
   }
 }
 
 async function onSend() {
-  const text = inputText.value.trim()
-  if (!text || agentStore.isBusy) return
-  inputText.value = ''
-  await agentStore.submitUserMessage(text)
-  scrollToBottom()
+  const text = inputText.value.trim();
+  if (!text || agentStore.isBusy) return;
+  inputText.value = '';
+  await agentStore.submitUserMessage(text);
+  scrollToBottom();
 }
 
 /** 审批卡片同意/拒绝。autoApproveThisSession 勾选时把该工具加入本会话自动放行集合。 */
 function onApproval(approved: boolean) {
-  const auto = approved && autoApproveThisSession.value
-  agentStore.resolveApproval(approved, auto)
-  autoApproveThisSession.value = false
+  const auto = approved && autoApproveThisSession.value;
+  agentStore.resolveApproval(approved, auto);
+  autoApproveThisSession.value = false;
 }
 
 async function onNewSession() {
-  await agentStore.newSession()
-  inputText.value = ''
+  await agentStore.newSession();
+  inputText.value = '';
 }
 
 async function onResetVersion() {
-  await agentStore.resetData()
-  uiStore.showToast(uiStore.t('agent.toast.versionReset'))
+  await agentStore.resetData();
+  uiStore.showToast(uiStore.t('agent.toast.versionReset'));
 }
 
 function scrollToBottom() {
   nextTick(() => {
-    const el = messagesContainer.value
-    if (el) el.scrollTop = el.scrollHeight
-  })
+    const el = messagesContainer.value;
+    if (el) el.scrollTop = el.scrollHeight;
+  });
 }
 
 /** 设置区变更统一走 agentStore.updateConfig（含持久化）。 */
 function onPromptChange(e: Event) {
-  const prompts = agentStore.config.prompts
-  prompts.system = (e.target as HTMLTextAreaElement).value
-  agentStore.updateConfig({ prompts: { ...prompts } })
+  const prompts = agentStore.config.prompts;
+  prompts.system = (e.target as HTMLTextAreaElement).value;
+  agentStore.updateConfig({ prompts: { ...prompts } });
 }
 function onTemperatureChange(v: number | null) {
-  if (v != null) agentStore.updateConfig({ temperature: v })
+  if (v != null) agentStore.updateConfig({ temperature: v });
 }
 function onMaxTokensChange(v: number | null) {
-  if (v != null) agentStore.updateConfig({ maxTokens: v })
+  if (v != null) agentStore.updateConfig({ maxTokens: v });
 }
 /** 可空数值字段统一入口：null 表示"不注入该采样参数"。 */
 function onNullableChange(
   key: 'topP' | 'topK' | 'presencePenalty' | 'frequencyPenalty',
   v: number | null
 ) {
-  agentStore.updateConfig({ [key]: v } as Partial<AgentConfig>)
+  agentStore.updateConfig({ [key]: v } as Partial<AgentConfig>);
 }
 function onThinkingChange(e: Event) {
-  const checked = (e.target as HTMLInputElement).checked
-  agentStore.updateConfig({ thinking: checked ? { type: 'enabled' } : null })
+  const checked = (e.target as HTMLInputElement).checked;
+  agentStore.updateConfig({ thinking: checked ? { type: 'enabled' } : null });
 }
 function onMaxContextTokensChange(v: number | null) {
-  agentStore.updateConfig({ maxContextTokens: v ?? 0 })
+  agentStore.updateConfig({ maxContextTokens: v ?? 0 });
 }
 function onCompactRatioChange(v: number | null) {
-  agentStore.updateConfig({ compactThresholdRatio: v ?? 0 })
+  agentStore.updateConfig({ compactThresholdRatio: v ?? 0 });
 }
 
 function close() {
-  uiStore.agentPanelOpen = false
+  uiStore.agentPanelOpen = false;
 }
 
 // 消息列表变化时滚到底
 watch(
   () => agentStore.activeSessionMessages.length,
   () => {
-    scrollToBottom()
+    scrollToBottom();
   }
-)
+);
 </script>

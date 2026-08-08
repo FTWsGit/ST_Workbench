@@ -77,62 +77,62 @@
 /** 角色卡侧边栏：固定字段（CHARACTER_FIELDS，不可拖拽）+ greetings（可拖拽排序，复用 useDragReorder 按下标用法）。
  *  不接多选（useListSelection），两类列表均无批量操作语义。
  *  fields|regex 子切换已上移到 App.vue 顶栏（wb-collection-switch），由 sidebarCollection 决定挂载本组件还是 RegexSidebar（workspace='character'）。 */
-import { ref, watch } from 'vue'
-import { useCharacterStore } from '../../stores/characterStore'
-import { useUiStore } from '../../stores/uiStore'
-import { useTabsStore } from '../../stores/tabsStore'
-import { CHARACTER_FIELDS } from '../../types'
-import { useDragReorder } from '../../composables/useDragReorder'
-import { usePanelResize } from '../../composables/usePanelResize'
+import { ref, watch } from 'vue';
+import { useCharacterStore } from '../../stores/characterStore';
+import { useUiStore } from '../../stores/uiStore';
+import { useTabsStore } from '../../stores/tabsStore';
+import { CHARACTER_FIELDS } from '../../types';
+import { useDragReorder } from '../../composables/useDragReorder';
+import { usePanelResize } from '../../composables/usePanelResize';
 
-const props = defineProps<{ mobileDrawerOpen?: boolean }>()
+const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 
-const store = useCharacterStore()
-const uiStore = useUiStore()
-const tabsStore = useTabsStore()
-const listRef = ref<HTMLElement>()
+const store = useCharacterStore();
+const uiStore = useUiStore();
+const tabsStore = useTabsStore();
+const listRef = ref<HTMLElement>();
 
 function openField(key: string) {
-  const field = CHARACTER_FIELDS.find((f) => f.key === key)
+  const field = CHARACTER_FIELDS.find((f) => f.key === key);
   tabsStore.open({
     domain: 'character',
     key: 'field:' + key,
     label: field ? uiStore.t(field.labelKey) : key,
     workspace: 'character',
-  })
+  });
 }
 
 const { dragIdx, dragOverIdx, dragOverPos, setItemRef, onItemMouseDown, consumeSuppressClick } =
-  useDragReorder<number>({ autoScrollContainer: () => listRef.value })
+  useDragReorder<number>({ autoScrollContainer: () => listRef.value });
 
 function onDragStart(i: number, e: PointerEvent) {
-  onItemMouseDown(i, e, (from, to, after) => store.reorderGreeting(from, to, after))
+  onItemMouseDown(i, e, (from, to, after) => store.reorderGreeting(from, to, after));
 }
 function onGreetingClick(i: number) {
-  if (consumeSuppressClick()) return
-  const id = store.greetingIds[i]
-  if (!id) return
+  if (consumeSuppressClick()) return;
+  const id = store.greetingIds[i];
+  if (!id) return;
   tabsStore.open({
     domain: 'character',
     key: 'field:greeting:' + id,
     label: uiStore.t('character.sidebar.greetingLabel', { n: i + 1 }),
     workspace: 'character',
-  })
+  });
 }
 
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
   setWidth: (w) => {
-    uiStore.settings.sidebarWidth = w
+    uiStore.settings.sidebarWidth = w;
   },
   min: 220,
   max: 600,
   dir: 'right',
-})
+});
 watch(
   () => resize.active.value,
   (v) => {
-    if (!v) uiStore.saveSettings()
+    if (!v) uiStore.saveSettings();
   }
-)
+);
 </script>

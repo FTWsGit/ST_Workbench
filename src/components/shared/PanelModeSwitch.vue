@@ -29,23 +29,23 @@
 /** 面板三态切换：挤开（docked）/ 右侧悬浮（overlay）/ 完全悬浮（float）。
  *  三个图标共用一个胶囊容器，无文字；tooltip 给完整语义。
  *  docked=嵌入布局流挤开编辑区；overlay=盖在右侧不挤开；float=FloatingPanelShell 接管。 */
-import { useUiStore } from '../../stores/uiStore'
-import type { PanelMode } from '../../types'
-import type { LocaleKey } from '../../i18n'
+import { useUiStore } from '../../stores/uiStore';
+import type { PanelMode } from '../../types';
+import type { LocaleKey } from '../../i18n';
 
 defineProps<{
-  modelValue: PanelMode
-}>()
+  modelValue: PanelMode;
+}>();
 
-defineEmits<{ 'update:modelValue': [v: PanelMode] }>()
+defineEmits<{ 'update:modelValue': [v: PanelMode] }>();
 
-const uiStore = useUiStore()
+const uiStore = useUiStore();
 
 const options: {
-  value: PanelMode
-  tooltip: LocaleKey
-  icon: string
-  iconFill?: string
+  value: PanelMode;
+  tooltip: LocaleKey;
+  icon: string;
+  iconFill?: string;
 }[] = [
   {
     value: 'docked',
@@ -68,5 +68,5 @@ const options: {
     icon: 'M3 5.5h8a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z',
     iconFill: 'M2.4 5.5h9.2v1.6H2.4z',
   },
-]
+];
 </script>

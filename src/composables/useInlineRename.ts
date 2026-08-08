@@ -1,4 +1,4 @@
-import { ref, nextTick } from 'vue'
+import { ref, nextTick } from 'vue';
 
 /**
  * 双击重命名：双击进入编辑模式，<input> 替换标签，blur/Enter 提交，Esc 取消。
@@ -6,42 +6,42 @@ import { ref, nextTick } from 'vue'
  * `getCurrentName`/`onCommit` 为回调，保持域无关性。
  */
 export function useInlineRename<T>(opts: {
-  getCurrentName: (id: T) => string
-  onCommit: (id: T, newName: string) => void
+  getCurrentName: (id: T) => string;
+  onCommit: (id: T, newName: string) => void;
 }) {
-  const editingId = ref<T | null>(null)
-  const inputRef = ref<HTMLInputElement | null>(null)
+  const editingId = ref<T | null>(null);
+  const inputRef = ref<HTMLInputElement | null>(null);
 
   /** 绑定编辑模式 <input> 的 :ref。挂载后自动聚焦并全选文本。 */
   function setInputRef(el: object | null) {
     if (el) {
-      inputRef.value = el as HTMLInputElement
+      inputRef.value = el as HTMLInputElement;
       nextTick(() => {
-        const input = inputRef.value
+        const input = inputRef.value;
         if (input) {
-          input.focus()
-          input.select()
+          input.focus();
+          input.select();
         }
-      })
+      });
     }
   }
 
   function start(id: T) {
-    editingId.value = id
+    editingId.value = id;
   }
 
   /** blur/Enter 提交。空输入（仅空白字符）视为取消重命名。 */
   function finish(id: T, e: Event) {
-    const input = e.target as HTMLInputElement
-    const newName = input.value.trim()
-    if (newName) opts.onCommit(id, newName)
-    editingId.value = null
-    inputRef.value = null
+    const input = e.target as HTMLInputElement;
+    const newName = input.value.trim();
+    if (newName) opts.onCommit(id, newName);
+    editingId.value = null;
+    inputRef.value = null;
   }
 
   function cancel() {
-    editingId.value = null
-    inputRef.value = null
+    editingId.value = null;
+    inputRef.value = null;
   }
 
   return {
@@ -51,5 +51,5 @@ export function useInlineRename<T>(opts: {
     start,
     finish,
     cancel,
-  }
+  };
 }

@@ -1,4 +1,4 @@
-import zhCN from './zh-CN'
+import zhCN from './zh-CN';
 // en.ts 必须覆盖 zh-CN.ts 里的每一个 key——i18n/index.ts 用 `Record<keyof typeof zhCN, string>`
 // 强制类型约束，漏一个 key 编译直接报错。新增文案永远先加 zh-CN.ts，再回来补这里。
 //
@@ -704,4 +704,4 @@ export default {
   'agent.approval.presetPreviewRaw':
     'Trigger a real generation request to preview full messages (consumes an API call)',
   'agent.approval.autoThisSession': 'Auto-approve this tool this session',
-} satisfies Record<keyof typeof zhCN, string>
+} satisfies Record<keyof typeof zhCN, string>;

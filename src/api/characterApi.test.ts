@@ -1,0 +1,265 @@
+import { describe, it, expect } from 'vitest';
+import { fromRaw, buildFormData, depthPromptRoleToNum, depthPromptRoleToStr } from './characterApi';
+import type { Character } from '../types';
+
+/* ---------- fixture ---------- */
+
+function makeCharacter(overrides: Partial<Character> = {}): Character {
+  return {
+    avatar: 'a.png',
+    name: 'Hero',
+    description: '',
+    scenario: '',
+    mesExample: '',
+    personality: '',
+    systemPrompt: '',
+    postHistoryInstructions: '',
+    depthPrompt: { prompt: '', depth: 4, role: 0 },
+    greetings: ['hi'],
+    creator: '',
+    creatorNotes: '',
+    version: '',
+    tags: [],
+    talkativeness: 0.5,
+    fav: false,
+    worldbook: null,
+    extensions: {
+      regex_scripts: [],
+      tavern_helper: { type: 'helper', variables: {}, variales: {} },
+    } as unknown as Character['extensions'],
+    ...overrides,
+  };
+}
+
+describe('characterApi - depthPromptRoleToNum', () => {
+  it('字符串枚举 → 数字', () => {
+    expect(depthPromptRoleToNum('system')).toBe(0);
+    expect(depthPromptRoleToNum('user')).toBe(1);
+    expect(depthPromptRoleToNum('assistant')).toBe(2);
+  });
+
+  it('兼容历史数字值 1/2 直接返回', () => {
+    expect(depthPromptRoleToNum(1)).toBe(1);
+    expect(depthPromptRoleToNum(2)).toBe(2);
+  });
+
+  it('0 走映射表亦为 0', () => {
+    expect(depthPromptRoleToNum(0)).toBe(0);
+  });
+
+  it('未知值默认 0', () => {
+    expect(depthPromptRoleToNum('unknown')).toBe(0);
+    expect(depthPromptRoleToNum(null)).toBe(0);
+    expect(depthPromptRoleToNum(undefined)).toBe(0);
+    expect(depthPromptRoleToNum(99)).toBe(0);
+  });
+});
+
+describe('characterApi - depthPromptRoleToStr', () => {
+  it('数字 → 字符串', () => {
+    expect(depthPromptRoleToStr(0)).toBe('system');
+    expect(depthPromptRoleToStr(1)).toBe('user');
+    expect(depthPromptRoleToStr(2)).toBe('assistant');
+  });
+
+  it('越界 index 返回 system', () => {
+    // TS 类型上不允许传越界值，但运行时容错用 ?['system']
+    // 这里仅测合法路径
+    expect(depthPromptRoleToStr(0)).toBe('system');
+  });
+});
+
+describe('characterApi - fromRaw', () => {
+  it('v2 优先 v1 兜底：name/description/scenario/mes_example/personality', () => {
+    const c = fromRaw({
+      avatar: 'a.png',
+      name: 'v1Name',
+      description: 'v1Desc',
+      data: { name: 'v2Name', description: 'v2Desc' },
+    });
+    expect(c.name).toBe('v2Name');
+    expect(c.description).toBe('v2Desc');
+  });
+
+  it('v2 为空时用 v1 兜底', () => {
+    const c = fromRaw({
+      avatar: 'a.png',
+      name: 'v1Name',
+      data: {},
+    });
+    expect(c.name).toBe('v1Name');
+  });
+
+  it('avatar 缺失 → ""', () => {
+    const c = fromRaw({});
+    expect(c.avatar).toBe('');
+  });
+
+  it('systemPrompt 只有 v2，无 v1 兜底', () => {
+    const c = fromRaw({ system_prompt: 'v1sp', data: { system_prompt: 'v2sp' } });
+    expect(c.systemPrompt).toBe('v2sp');
+    const c2 = fromRaw({ system_prompt: 'v1sp', data: {} });
+    expect(c2.systemPrompt).toBe('');
+  });
+
+  it('creatorNotes ← v2.creator_notes ?? v1.creatorcomment', () => {
+    const c = fromRaw({ creatorcomment: 'v1cn', data: {} });
+    expect(c.creatorNotes).toBe('v1cn');
+    const c2 = fromRaw({ creatorcomment: 'v1cn', data: { creator_notes: 'v2cn' } });
+    expect(c2.creatorNotes).toBe('v2cn');
+  });
+
+  it('greetings = [first_mes, ...alternate_greetings]', () => {
+    const c = fromRaw({ first_mes: 'f', data: { alternate_greetings: ['g1', 'g2'] } });
+    expect(c.greetings).toEqual(['f', 'g1', 'g2']);
+    const c2 = fromRaw({ first_mes: 'f1', data: {} });
+    expect(c2.greetings).toEqual(['f1']);
+  });
+
+  it('depthPrompt：prompt/depth/role 映射，depth 非数 → 4', () => {
+    const c = fromRaw({
+      data: { extensions: { depth_prompt: { prompt: 'p', depth: 7, role: 'assistant' } } },
+    });
+    expect(c.depthPrompt.prompt).toBe('p');
+    expect(c.depthPrompt.depth).toBe(7);
+    expect(c.depthPrompt.role).toBe(2);
+    const c2 = fromRaw({ data: { extensions: { depth_prompt: { prompt: 'p' } } } });
+    expect(c2.depthPrompt.depth).toBe(4);
+    expect(c2.depthPrompt.role).toBe(0);
+  });
+
+  it('talkativeness：v2 extensions 优先，v1 兜底，可能是字符串用 Number(...)||0.5', () => {
+    const c = fromRaw({ talkativeness: '0.8', data: {} });
+    expect(c.talkativeness).toBe(0.8);
+    const c2 = fromRaw({ talkativeness: 'abc', data: {} });
+    expect(c2.talkativeness).toBe(0.5);
+    const c3 = fromRaw({ data: { extensions: { talkativeness: 0.3 } } });
+    expect(c3.talkativeness).toBe(0.3);
+  });
+
+  it('tags：v2.tags 优先，否则 v1.tags，否则 []', () => {
+    expect(fromRaw({ tags: ['v1'], data: {} }).tags).toEqual(['v1']);
+    expect(fromRaw({ tags: ['v1'], data: { tags: ['v2'] } }).tags).toEqual(['v2']);
+    expect(fromRaw({}).tags).toEqual([]);
+  });
+
+  it('worldbook ← extensions.world 字符串，无则 null', () => {
+    expect(fromRaw({ data: { extensions: { world: 'MyWB' } } }).worldbook).toBe('MyWB');
+    expect(fromRaw({ data: { extensions: { world: '' } } }).worldbook).toBeNull();
+    expect(fromRaw({}).worldbook).toBeNull();
+  });
+
+  it('fav ← extensions.fav ?? raw.fav', () => {
+    expect(fromRaw({ fav: true, data: {} }).fav).toBe(true);
+    expect(fromRaw({ data: { extensions: { fav: true } } }).fav).toBe(true);
+    expect(fromRaw({}).fav).toBe(false);
+  });
+
+  it('extensions 用 {...ext} 打底 + 覆盖 regex_scripts', () => {
+    const c = fromRaw({ data: { extensions: { customField: 'x', regex_scripts: [{ id: 'r' }] } } });
+    expect((c.extensions as Record<string, unknown>).customField).toBe('x');
+    expect((c.extensions as Record<string, unknown>).regex_scripts).toEqual([{ id: 'r' }]);
+  });
+
+  it('regex_scripts 非数组时 []', () => {
+    const c = fromRaw({ data: { extensions: { regex_scripts: 'no' } } });
+    expect((c.extensions as Record<string, unknown>).regex_scripts).toEqual([]);
+  });
+});
+
+describe('characterApi - buildFormData', () => {
+  it('基本字段写入 FormData', () => {
+    const data = makeCharacter({ name: 'Bob', description: 'desc' });
+    const fd = buildFormData(data, null);
+    expect(fd.get('ch_name')).toBe('Bob');
+    expect(fd.get('description')).toBe('desc');
+    expect(fd.get('first_mes')).toBe('hi');
+    expect(fd.get('creator')).toBe('');
+    expect(fd.get('talkativeness')).toBe('0.5');
+    expect(fd.get('fav')).toBe('false');
+  });
+
+  it('新建路径（oldRaw=null）不写 avatar_url/chat/create_date', () => {
+    const fd = buildFormData(makeCharacter(), null);
+    expect(fd.get('avatar_url')).toBeNull();
+    expect(fd.get('chat')).toBeNull();
+    expect(fd.get('create_date')).toBeNull();
+  });
+
+  it('编辑路径（有 oldRaw）写 avatar_url/chat/create_date', () => {
+    const oldRaw = { avatar: 'old.png', chat: 'c1', create_date: 'd1', data: {} };
+    const data = makeCharacter({ avatar: 'new.png' });
+    const fd = buildFormData(data, oldRaw as Record<string, unknown>);
+    expect(fd.get('avatar_url')).toBe('new.png');
+    expect(fd.get('chat')).toBe('c1');
+    expect(fd.get('create_date')).toBe('d1');
+  });
+
+  it('ch_name 三级回退：data.name → oldData.name → oldRaw.name → ""', () => {
+    expect(buildFormData(makeCharacter({ name: '' }), null).get('ch_name')).toBe('');
+    expect(
+      buildFormData(makeCharacter({ name: '' }), { data: { name: 'old2' } }).get('ch_name')
+    ).toBe('old2');
+    expect(
+      buildFormData(makeCharacter({ name: '' }), { name: 'old1', data: {} }).get('ch_name')
+    ).toBe('old1');
+  });
+
+  it('alternate_greetings 从 greetings[1] 开始逐个 append', () => {
+    const data = makeCharacter({ greetings: ['g0', 'g1', 'g2'] });
+    const fd = buildFormData(data, null);
+    expect(fd.get('first_mes')).toBe('g0');
+    expect(fd.getAll('alternate_greetings')).toEqual(['g1', 'g2']);
+  });
+
+  it('tags 逐个 append', () => {
+    const data = makeCharacter({ tags: ['t1', 't2'] });
+    const fd = buildFormData(data, null);
+    expect(fd.getAll('tags')).toEqual(['t1', 't2']);
+  });
+
+  it('worldbook 为真时 append world', () => {
+    const data = makeCharacter({ worldbook: 'MyWB' });
+    expect(buildFormData(data, null).get('world')).toBe('MyWB');
+    expect(buildFormData(makeCharacter(), null).get('world')).toBeNull();
+  });
+
+  it('extensions 打包：oldExt 打底 → data.extensions 覆盖 → 已知字段强制重写', () => {
+    const data = makeCharacter({ talkativeness: 0.9, fav: true });
+    const oldRaw = { data: { extensions: { customField: 'x', talkativeness: 0.1 } } };
+    const fd = buildFormData(data, oldRaw as Record<string, unknown>);
+    const ext = JSON.parse(fd.get('extensions') as string) as Record<string, unknown>;
+    expect(ext.customField).toBe('x'); // oldExt 打底
+    expect(ext.talkativeness).toBe(0.9); // data 覆盖
+    expect(ext.fav).toBe(true);
+    expect(ext.world).toBeUndefined(); // worldbook null → undefined
+    expect(ext.depth_prompt).toEqual({ prompt: '', depth: 4, role: 'system' });
+    expect(ext.regex_scripts).toEqual([]);
+  });
+
+  it('depth_prompt.role 经 depthPromptRoleToStr 转字符串', () => {
+    const data = makeCharacter({ depthPrompt: { prompt: 'p', depth: 6, role: 2 } });
+    const fd = buildFormData(data, null);
+    const ext = JSON.parse(fd.get('extensions') as string) as Record<string, unknown>;
+    expect((ext.depth_prompt as Record<string, unknown>).role).toBe('assistant');
+  });
+
+  it('avatar 文件：传 File 时直接 append', () => {
+    const file = new File(['data'], 'avatar.png', { type: 'image/png' });
+    const fd = buildFormData(makeCharacter(), null, file);
+    expect(fd.get('avatar')).toBe(file);
+  });
+
+  it('avatar Blob 包装成带文件名 .png 的 File', () => {
+    const blob = new Blob(['data'], { type: 'image/jpeg' });
+    const fd = buildFormData(makeCharacter({ name: 'N' }), null, blob);
+    const avatar = fd.get('avatar') as File;
+    expect(avatar).toBeTruthy();
+    expect(avatar.name).toBe('N.png');
+    expect(avatar.type).toBe('image/jpeg');
+  });
+
+  it('无 avatarFile 时完全不传 avatar 字段', () => {
+    expect(buildFormData(makeCharacter(), null).get('avatar')).toBeNull();
+  });
+});

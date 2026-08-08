@@ -179,48 +179,48 @@
  * markDirty 由 .wb-form 根节点 @change/@input 事件委托兜底；SegmentedControl/NumberInput
  * 通过各自 computed setter 手动 markDirty（按钮点击/拖拽不触发原生 change/input，NumberInput 内部在拖拽结束时派发 input 事件）。
  */
-import { computed, watch } from 'vue'
-import { useTabsStore } from '../../stores/tabsStore'
-import { useWorldbookStore } from '../../stores/worldbookStore'
-import { useUiStore } from '../../stores/uiStore'
+import { computed, watch } from 'vue';
+import { useTabsStore } from '../../stores/tabsStore';
+import { useWorldbookStore } from '../../stores/worldbookStore';
+import { useUiStore } from '../../stores/uiStore';
 import {
   WORLDBOOK_POSITION_OPTIONS as POSITION_OPTIONS,
   WORLDBOOK_LOGIC_OPTIONS as LOGIC_OPTIONS,
   WORLDBOOK_ROLE_OPTIONS as ROLE_OPTIONS,
-} from '../../types'
-import AdvancedGroup from '../shared/AdvancedGroup.vue'
-import SegmentedControl from '../shared/SegmentedControl.vue'
-import NumberInput from '../shared/NumberInput.vue'
-import FormField from '../shared/FormField.vue'
+} from '../../types';
+import AdvancedGroup from '../shared/AdvancedGroup.vue';
+import SegmentedControl from '../shared/SegmentedControl.vue';
+import NumberInput from '../shared/NumberInput.vue';
+import FormField from '../shared/FormField.vue';
 
-const tabsStore = useTabsStore()
-const store = useWorldbookStore()
-const uiStore = useUiStore()
+const tabsStore = useTabsStore();
+const store = useWorldbookStore();
+const uiStore = useUiStore();
 
-const entry = computed(() => store.currentEntry)
+const entry = computed(() => store.currentEntry);
 
 const enabled = computed({
   get: () => !entry.value?.disabled,
   set: (v: boolean) => {
     if (entry.value) {
-      entry.value.disabled = !v
-      store.markDirty()
+      entry.value.disabled = !v;
+      store.markDirty();
     }
   },
-})
+});
 
 const activationMode = computed(() => {
-  if (!entry.value) return 'keyWord'
-  if (entry.value.constant) return 'constant'
-  if (entry.value.vectorized) return 'vectorized'
-  return 'keyWord'
-})
+  if (!entry.value) return 'keyWord';
+  if (entry.value.constant) return 'constant';
+  if (entry.value.vectorized) return 'vectorized';
+  return 'keyWord';
+});
 function setActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
-  if (!entry.value) return
-  entry.value.constant = mode === 'constant'
-  entry.value.vectorized = mode === 'vectorized'
-  entry.value.keyWord = mode === 'keyWord'
-  store.markDirty()
+  if (!entry.value) return;
+  entry.value.constant = mode === 'constant';
+  entry.value.vectorized = mode === 'vectorized';
+  entry.value.keyWord = mode === 'keyWord';
+  store.markDirty();
 }
 
 const keysText = computed({
@@ -231,11 +231,11 @@ const keysText = computed({
         .replace(/[\n\t]/g, ',')
         .split(',')
         .map((s) => s.trim())
-        .filter(Boolean)
-      store.markDirty()
+        .filter(Boolean);
+      store.markDirty();
     }
   },
-})
+});
 const keysSecondaryText = computed({
   get: () => (entry.value?.keysecondary || []).join(', '),
   set: (v: string) => {
@@ -244,89 +244,93 @@ const keysSecondaryText = computed({
         .replace(/[\n\t]/g, ',')
         .split(',')
         .map((s) => s.trim())
-        .filter(Boolean)
-      store.markDirty()
+        .filter(Boolean);
+      store.markDirty();
     }
   },
-})
+});
 
 const roleModel = computed({
   get: () => entry.value?.role ?? null,
   set: (v: unknown) => {
     if (entry.value) {
-      entry.value.role = v === '' ? null : (Number(v) as 0 | 1 | 2)
-      store.markDirty()
+      entry.value.role = v === '' ? null : (Number(v) as 0 | 1 | 2);
+      store.markDirty();
     }
   },
-})
+});
 
 const delayUntilRecursionModel = computed({
   get: () => !!entry.value?.delayUntilRecursion,
   set: (v: boolean) => {
     if (entry.value) {
-      entry.value.delayUntilRecursion = v
-      store.markDirty()
+      entry.value.delayUntilRecursion = v;
+      store.markDirty();
     }
   },
-})
+});
 const scanDepthModel = computed({
   get: () => entry.value?.scanDepth ?? null,
   set: (v: number | null) => {
     if (entry.value) {
-      entry.value.scanDepth = v === null || Number.isNaN(v) ? null : v
-      store.markDirty()
+      entry.value.scanDepth = v === null || Number.isNaN(v) ? null : v;
+      store.markDirty();
     }
   },
-})
+});
 
 /** caseSensitive/matchWholeWords 共用：跟随全局(null)/开(true)/关(false) 三态，喂给 SegmentedControl（string modelValue）。 */
 const tristateOptions = computed(() => [
   { value: 'same', label: uiStore.t('worldbook.settings.sameAsGlobal') },
   { value: 'true', label: uiStore.t('common.on') },
   { value: 'false', label: uiStore.t('common.off') },
-])
+]);
 function tristateModel(field: 'caseSensitive' | 'matchWholeWords') {
   return computed<string>({
     get: () => {
-      const v = entry.value?.[field]
-      if (v === true) return 'true'
-      if (v === false) return 'false'
-      return 'same'
+      const v = entry.value?.[field];
+      if (v === true) return 'true';
+      if (v === false) return 'false';
+      return 'same';
     },
     set: (v: string) => {
-      if (!entry.value) return
-      entry.value[field] = v === 'same' ? null : v === 'true'
-      store.markDirty()
+      if (!entry.value) return;
+      entry.value[field] = v === 'same' ? null : v === 'true';
+      store.markDirty();
     },
-  })
+  });
 }
-const caseSensitiveModel = tristateModel('caseSensitive')
-const matchWholeWordsModel = tristateModel('matchWholeWords')
+const caseSensitiveModel = tristateModel('caseSensitive');
+const matchWholeWordsModel = tristateModel('matchWholeWords');
 
 function nullableNumberModel(field: 'sticky' | 'cooldown' | 'delay') {
   return computed({
     get: () => entry.value?.[field] ?? null,
     set: (v: number | null) => {
       if (entry.value) {
-        entry.value[field] = v === null || Number.isNaN(v) ? null : v
-        store.markDirty()
+        entry.value[field] = v === null || Number.isNaN(v) ? null : v;
+        store.markDirty();
       }
     },
-  })
+  });
 }
-const stickyModel = nullableNumberModel('sticky')
-const cooldownModel = nullableNumberModel('cooldown')
-const delayModel = nullableNumberModel('delay')
+const stickyModel = nullableNumberModel('sticky');
+const cooldownModel = nullableNumberModel('cooldown');
+const delayModel = nullableNumberModel('delay');
 
 /** comment 改动同步标签栏文字，不调用 open() 以避免逐字触发 sidebar scrollIntoView。 */
 function onCommentInput() {
-  store.markDirty()
+  store.markDirty();
 }
 watch(
   () => entry.value?.comment,
   (name) => {
     if (entry.value)
-      tabsStore.renameTab('worldbook', String(entry.value.uid), name || uiStore.t('common.unnamed'))
+      tabsStore.renameTab(
+        'worldbook',
+        String(entry.value.uid),
+        name || uiStore.t('common.unnamed')
+      );
   }
-)
+);
 </script>

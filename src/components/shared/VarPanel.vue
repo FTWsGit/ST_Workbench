@@ -103,31 +103,31 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
-import { useUiStore } from '../../stores/uiStore'
-import { usePanelResize } from '../../composables/usePanelResize'
-import { varOpBadge } from '../../utils'
+import { watch } from 'vue';
+import { useUiStore } from '../../stores/uiStore';
+import { usePanelResize } from '../../composables/usePanelResize';
+import { varOpBadge } from '../../utils';
 
-const uiStore = useUiStore()
+const uiStore = useUiStore();
 
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.varPanelWidth,
   setWidth: (w) => {
-    uiStore.settings.varPanelWidth = w
+    uiStore.settings.varPanelWidth = w;
   },
   min: 240,
   max: 800,
   dir: 'left',
-})
+});
 watch(
   () => resize.active.value,
   (v) => {
-    if (!v) uiStore.saveSettings()
+    if (!v) uiStore.saveSettings();
   }
-)
+);
 
 function toggleFloat() {
-  uiStore.settings.varPanelFloat = !uiStore.settings.varPanelFloat
-  uiStore.saveSettings()
+  uiStore.settings.varPanelFloat = !uiStore.settings.varPanelFloat;
+  uiStore.saveSettings();
 }
 </script>

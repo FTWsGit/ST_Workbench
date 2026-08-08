@@ -5,5 +5,5 @@
  *  响应式对象——structuredClone 过不了 Vue Proxy，且 ST 可能在克隆前将引用赋值进自身状态
  *  导致 Proxy 残留。 */
 export function deepClonePlain<T>(data: T): T {
-  return JSON.parse(JSON.stringify(data)) as T
+  return JSON.parse(JSON.stringify(data)) as T;
 }

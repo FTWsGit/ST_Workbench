@@ -1,4 +1,4 @@
-import type { LocaleTable } from '../types'
+import type { LocaleTable } from '../types';
 // zh-CN 是这份 locale 表的"参照表"——index.ts 用 `keyof typeof zhCN` 反推出 LocaleKey 联合类型，
 // en.ts 漏翻译某个 key 会在编译期直接报错（见 i18n/index.ts 顶部注释）。所以新增文案时，
 // 永远先加在这份表里，再去 en.ts 补对应英文，顺序反过来 TS 不会帮你查漏。
@@ -688,4 +688,4 @@ export default {
   'agent.approval.charSave': '保存角色卡「{name}」到服务端',
   'agent.approval.presetPreviewRaw': '触发一次真实生成请求预览完整 messages（会占用 API 调用）',
   'agent.approval.autoThisSession': '本会话自动同意该工具',
-} satisfies LocaleTable
+} satisfies LocaleTable;

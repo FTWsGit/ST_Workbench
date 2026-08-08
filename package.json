@@ -10,7 +10,6 @@
     "format": "prettier --write src",
     "docs:get_always": "node .atomcode/skills/ws-doc-read/scripts/print_always.mjs",
     "docs:list": "node .atomcode/skills/ws-doc-read/scripts/list_docs.mjs",
-    "docs:sync_agent": "node .atomcode/skills/ws-doc-read/scripts/sync_project_doc.mjs",
     "docs:create": "node .atomcode/skills/ws-doc-read/scripts/create_docs.mjs"
   },
   "dependencies": {
@@ -31,6 +30,7 @@
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.66.0",
     "vite": "^5.2.8",
+    "vitest": "^4.1.10",
     "vue-tsc": "^2.0.7"
   },
   "allowScripts": {

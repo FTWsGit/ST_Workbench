@@ -85,38 +85,38 @@
 /** 预设 Meta 表单：管理模型采样参数（整份文档级别，放悬浮窗而非 SettingsDock）。仅服务预设 domain，不参数化，直接 usePresetStore()。
  *  field() 是按 key 生成 computed(get/set+markDirty) 的小工厂，避免 14 个数值字段重复样板；
  *  `store.rawData!` 断言由模板顶层 v-if="store.rawData" 保证安全。 */
-import { computed } from 'vue'
-import { usePresetStore } from '../../stores/presetStore'
-import { useUiStore } from '../../stores/uiStore'
-import type { PresetData } from '../../types'
-import AdvancedGroup from '../shared/AdvancedGroup.vue'
-import FormField from '../shared/FormField.vue'
+import { computed } from 'vue';
+import { usePresetStore } from '../../stores/presetStore';
+import { useUiStore } from '../../stores/uiStore';
+import type { PresetData } from '../../types';
+import AdvancedGroup from '../shared/AdvancedGroup.vue';
+import FormField from '../shared/FormField.vue';
 
-const store = usePresetStore()
-const uiStore = useUiStore()
+const store = usePresetStore();
+const uiStore = useUiStore();
 
 function field<K extends keyof PresetData>(key: K) {
   return computed<PresetData[K]>({
     get: () => store.rawData![key],
     set: (v) => {
-      store.rawData![key] = v
-      store.markDirty()
+      store.rawData![key] = v;
+      store.markDirty();
     },
-  })
+  });
 }
 
-const maxContext = field('openai_max_context')
-const maxTokens = field('openai_max_tokens')
-const n = field('n')
-const streamOpenai = field('stream_openai')
-const squashSystemMessages = field('squash_system_messages')
-const temperature = field('temperature')
-const topP = field('top_p')
-const frequencyPenalty = field('frequency_penalty')
-const presencePenalty = field('presence_penalty')
-const repetitionPenalty = field('repetition_penalty')
-const minP = field('min_p')
-const topK = field('top_k')
-const topA = field('top_a')
-const seed = field('seed')
+const maxContext = field('openai_max_context');
+const maxTokens = field('openai_max_tokens');
+const n = field('n');
+const streamOpenai = field('stream_openai');
+const squashSystemMessages = field('squash_system_messages');
+const temperature = field('temperature');
+const topP = field('top_p');
+const frequencyPenalty = field('frequency_penalty');
+const presencePenalty = field('presence_penalty');
+const repetitionPenalty = field('repetition_penalty');
+const minP = field('min_p');
+const topK = field('top_k');
+const topA = field('top_a');
+const seed = field('seed');
 </script>

@@ -33,72 +33,72 @@
 <script setup lang="ts">
 /** 角色卡虚拟字段内容编辑区：activeTab.key 为 `field:xxx` / `field:greeting:<id>` 形式的虚拟 key，
  *  非数组真实记录，解析逻辑全部在 characterStore.currentField/setCurrentFieldValue 中，本组件只管 v-model 桥接。 */
-import { ref, computed, watch } from 'vue'
-import { useCharacterStore } from '../../stores/characterStore'
-import { useUiStore } from '../../stores/uiStore'
-import { useTabsStore } from '../../stores/tabsStore'
-import { CHARACTER_FIELDS, CHARACTER_DEPTH_ROLE_OPTIONS } from '../../types'
-import HighlightedEditor from '../shared/HighlightedEditor.vue'
+import { ref, computed, watch } from 'vue';
+import { useCharacterStore } from '../../stores/characterStore';
+import { useUiStore } from '../../stores/uiStore';
+import { useTabsStore } from '../../stores/tabsStore';
+import { CHARACTER_FIELDS, CHARACTER_DEPTH_ROLE_OPTIONS } from '../../types';
+import HighlightedEditor from '../shared/HighlightedEditor.vue';
 
-const store = useCharacterStore()
-const uiStore = useUiStore()
-const tabsStore = useTabsStore()
-const editorRef = ref<InstanceType<typeof HighlightedEditor>>()
+const store = useCharacterStore();
+const uiStore = useUiStore();
+const tabsStore = useTabsStore();
+const editorRef = ref<InstanceType<typeof HighlightedEditor>>();
 
-const field = computed(() => store.currentField)
+const field = computed(() => store.currentField);
 
-const isDepthPrompt = computed(() => field.value?.key === 'field:depthPrompt')
+const isDepthPrompt = computed(() => field.value?.key === 'field:depthPrompt');
 
 const fieldLabel = computed(() => {
-  const key = field.value?.key
-  if (!key) return ''
+  const key = field.value?.key;
+  if (!key) return '';
   if (key.startsWith('field:greeting:')) {
-    const idx = store.greetingIds.indexOf(key.slice('field:greeting:'.length))
-    return uiStore.t('character.sidebar.greetingLabel', { n: idx + 1 })
+    const idx = store.greetingIds.indexOf(key.slice('field:greeting:'.length));
+    return uiStore.t('character.sidebar.greetingLabel', { n: idx + 1 });
   }
-  const found = CHARACTER_FIELDS.find((f) => 'field:' + f.key === key)
-  return found ? uiStore.t(found.labelKey) : key
-})
+  const found = CHARACTER_FIELDS.find((f) => 'field:' + f.key === key);
+  return found ? uiStore.t(found.labelKey) : key;
+});
 
 const contentModel = computed<string>({
   get: () => field.value?.value ?? '',
   set: (v) => store.setCurrentFieldValue(v),
-})
+});
 
 const depthPromptDepth = computed<number>({
   get: () => store.character?.depthPrompt.depth ?? 4,
   set: (v) => {
     if (store.character) {
-      store.character.depthPrompt.depth = v
-      store.markDirty()
+      store.character.depthPrompt.depth = v;
+      store.markDirty();
     }
   },
-})
+});
 const depthPromptRole = computed<0 | 1 | 2>({
   get: () => store.character?.depthPrompt.role ?? 0,
   set: (v) => {
     if (store.character) {
-      store.character.depthPrompt.role = v
-      store.markDirty()
+      store.character.depthPrompt.role = v;
+      store.markDirty();
     }
   },
-})
+});
 
 /** 切换字段时关闭可能残留的 var-popup（避免指向旧字段的变量上下文错误）。 */
 watch(
   () => tabsStore.activeTab?.key,
   () => {
-    uiStore.hideVarPopup()
+    uiStore.hideVarPopup();
   },
   { immediate: true }
-)
+);
 
 /** var-click 路由到 uiStore 的跨域 useVarNav——showVarPopup/jumpToPopupVar 都挂在那（跨域扫描+跳转）。 */
 function onVarClick(payload: {
-  varName: string
-  scope: 'local' | 'global'
-  cursorPos: number
-  pos: { top: number; left: number }
+  varName: string;
+  scope: 'local' | 'global';
+  cursorPos: number;
+  pos: { top: number; left: number };
 }) {
   uiStore.showVarPopup(
     payload.varName,
@@ -107,13 +107,13 @@ function onVarClick(payload: {
     field.value?.key ?? null,
     payload.cursorPos,
     payload.pos
-  )
+  );
 }
 
 watch(
   () => [uiStore.settings.editorFontSize, uiStore.settings.editorFontFamily],
   () => {
-    editorRef.value?.refreshFont()
+    editorRef.value?.refreshFont();
   }
-)
+);
 </script>

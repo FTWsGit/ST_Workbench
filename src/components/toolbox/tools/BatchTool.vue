@@ -115,14 +115,14 @@
  *  - worldbook/items：批量启用/禁用 + 批量改激活方式（三态互斥）+ 批量删除
  *  - character/fields：无批量工具，显示占位提示
  *  删除统一 confirmStore.ask 确认一次，然后按各 store 的删除逻辑原位执行 + markDirty + requestListScroll。 */
-import { computed } from 'vue'
-import { useTabsStore } from '../../../stores/tabsStore'
-import { useUiStore } from '../../../stores/uiStore'
-import { useConfirmStore } from '../../../stores/confirmStore'
-import { usePresetStore } from '../../../stores/presetStore'
-import { useWorldbookStore } from '../../../stores/worldbookStore'
-import { useCharacterStore } from '../../../stores/characterStore'
-import { isGroupNode } from '../../../composables/useGroupedList'
+import { computed } from 'vue';
+import { useTabsStore } from '../../../stores/tabsStore';
+import { useUiStore } from '../../../stores/uiStore';
+import { useConfirmStore } from '../../../stores/confirmStore';
+import { usePresetStore } from '../../../stores/presetStore';
+import { useWorldbookStore } from '../../../stores/worldbookStore';
+import { useCharacterStore } from '../../../stores/characterStore';
+import { isGroupNode } from '../../../composables/useGroupedList';
 import type {
   OrderItem,
   OrderGroup,
@@ -130,58 +130,58 @@ import type {
   FlatNode,
   PresetBlock,
   RegexScript,
-} from '../../../types'
-import FormField from '../../shared/FormField.vue'
+} from '../../../types';
+import FormField from '../../shared/FormField.vue';
 
-const ROLES = ['system', 'user', 'assistant'] as const
+const ROLES = ['system', 'user', 'assistant'] as const;
 
 const props = defineProps<{
-  workspace?: string
-  collection?: string
-  scene?: { workspace: string; collection: string }
-}>()
+  workspace?: string;
+  collection?: string;
+  scene?: { workspace: string; collection: string };
+}>();
 
-const tabsStore = useTabsStore()
-const uiStore = useUiStore()
-const confirmStore = useConfirmStore()
-const presetStore = usePresetStore()
-const worldbookStore = useWorldbookStore()
-const characterStore = useCharacterStore()
+const tabsStore = useTabsStore();
+const uiStore = useUiStore();
+const confirmStore = useConfirmStore();
+const presetStore = usePresetStore();
+const worldbookStore = useWorldbookStore();
+const characterStore = useCharacterStore();
 
 const workspace = computed(
   () => props.scene?.workspace ?? props.workspace ?? tabsStore.activeWorkspace
-)
+);
 const collection = computed(
   () => props.scene?.collection ?? props.collection ?? tabsStore.sidebarCollection
-)
+);
 
 const isNoBatchScene = computed(
   () => workspace.value === 'character' && collection.value === 'fields'
-)
-const isPresetItems = computed(() => workspace.value === 'preset' && collection.value === 'items')
+);
+const isPresetItems = computed(() => workspace.value === 'preset' && collection.value === 'items');
 const isWorldbookItems = computed(
   () => workspace.value === 'worldbook' && collection.value === 'items'
-)
-const isRegex = computed(() => collection.value === 'regex')
+);
+const isRegex = computed(() => collection.value === 'regex');
 
 /** useGroupedList 选中态：组展开为子叶子 identifier。 */
 function selectedLeafIds(selectedGi: Set<number>, flatNodes: FlatNode[]): string[] {
-  const ids = new Set<string>()
+  const ids = new Set<string>();
   for (const gi of selectedGi) {
-    const node = flatNodes[gi]
-    if (!node) continue
-    if (node.isGroup) (node.ref as OrderGroup).children.forEach((c) => ids.add(c.identifier))
-    else ids.add((node.ref as OrderItem).identifier)
+    const node = flatNodes[gi];
+    if (!node) continue;
+    if (node.isGroup) (node.ref as OrderGroup).children.forEach((c) => ids.add(c.identifier));
+    else ids.add((node.ref as OrderItem).identifier);
   }
-  return Array.from(ids)
+  return Array.from(ids);
 }
 
 const presetSelectedIds = computed<string[]>(() =>
   selectedLeafIds(presetStore.selectedGi, presetStore.flatNodes)
-)
+);
 const worldbookSelectedIds = computed<string[]>(() =>
   selectedLeafIds(worldbookStore.selectedGi, worldbookStore.flatNodes)
-)
+);
 
 /* ====== regex scene 的选中态：读 store.regexSelectedGi（SearchTool.selectSide 同步过来） ======
  *  regex sidebar 已接 useGroupedList，选中态回路跟 preset/worldbook 那套同——SearchTool.selectSide
@@ -191,188 +191,188 @@ const worldbookSelectedIds = computed<string[]>(() =>
  *  改字段直接生效、删也能 splice 掉真对象。 */
 const regexScripts = computed(() =>
   workspace.value === 'preset' ? presetStore.regexScripts : characterStore.regexScripts
-)
-const regexStore = computed(() => (workspace.value === 'character' ? characterStore : presetStore))
+);
+const regexStore = computed(() => (workspace.value === 'character' ? characterStore : presetStore));
 /** 选中 script 对象引用集合：组展开为子叶子（跟 selectedLeafIds 同模式，但拿的是对象引用不是 id）。 */
 function getSelectedRegexScripts(): RegexScript[] {
-  const s = regexStore.value
-  const out: RegexScript[] = []
-  const scripts = regexScripts.value
+  const s = regexStore.value;
+  const out: RegexScript[] = [];
+  const scripts = regexScripts.value;
   for (const gi of s.regexSelectedGi) {
-    const node = s.regexFlatNodes[gi]
-    if (!node) continue
+    const node = s.regexFlatNodes[gi];
+    if (!node) continue;
     const ids = node.isGroup
       ? (node.ref as OrderGroup).children.map((c) => c.identifier)
-      : [(node.ref as OrderItem).identifier]
+      : [(node.ref as OrderItem).identifier];
     for (const id of ids) {
-      const sc = scripts.find((x) => x.id === id)
-      if (sc) out.push(sc)
+      const sc = scripts.find((x) => x.id === id);
+      if (sc) out.push(sc);
     }
   }
-  return out
+  return out;
 }
-const regexSelectedIds = computed<string[]>(() => getSelectedRegexScripts().map((s) => s.id))
+const regexSelectedIds = computed<string[]>(() => getSelectedRegexScripts().map((s) => s.id));
 
 const selectedCount = computed(() => {
-  if (isNoBatchScene.value) return 0
-  if (isRegex.value) return regexSelectedIds.value.length
-  if (workspace.value === 'preset') return presetSelectedIds.value.length
-  return worldbookSelectedIds.value.length
-})
+  if (isNoBatchScene.value) return 0;
+  if (isRegex.value) return regexSelectedIds.value.length;
+  if (workspace.value === 'preset') return presetSelectedIds.value.length;
+  return worldbookSelectedIds.value.length;
+});
 
 function toastApplied(count: number) {
-  uiStore.showToast(uiStore.t('toolbox.batch.applied', { count }))
+  uiStore.showToast(uiStore.t('toolbox.batch.applied', { count }));
 }
 
 /* ====== preset/items ====== */
 function walkOrderItems(nodes: OrderNode[], fn: (item: OrderItem) => void) {
   for (const n of nodes) {
-    if (isGroupNode(n)) walkOrderItems(n.children, fn)
-    else fn(n)
+    if (isGroupNode(n)) walkOrderItems(n.children, fn);
+    else fn(n);
   }
 }
 
 function presetSetEnabled(enabled: boolean) {
-  const ids = new Set(presetSelectedIds.value)
-  if (!ids.size) return
+  const ids = new Set(presetSelectedIds.value);
+  if (!ids.size) return;
   walkOrderItems(presetStore.order, (item) => {
-    if (ids.has(item.identifier)) item.enabled = enabled
-  })
-  presetStore.markDirty()
-  toastApplied(ids.size)
+    if (ids.has(item.identifier)) item.enabled = enabled;
+  });
+  presetStore.markDirty();
+  toastApplied(ids.size);
 }
 
 function presetSetRole(role: string) {
-  const ids = new Set(presetSelectedIds.value)
-  if (!ids.size) return
+  const ids = new Set(presetSelectedIds.value);
+  if (!ids.size) return;
   for (const id of ids) {
-    const b = presetStore.prompts.find((p) => p.identifier === id)
-    if (b) b.role = role as PresetBlock['role']
+    const b = presetStore.prompts.find((p) => p.identifier === id);
+    if (b) b.role = role as PresetBlock['role'];
   }
-  presetStore.markDirty()
-  toastApplied(ids.size)
+  presetStore.markDirty();
+  toastApplied(ids.size);
 }
 
 /* ====== regex ====== */
 function regexSetDisabled(disabled: boolean) {
-  const scripts = getSelectedRegexScripts()
-  if (!scripts.length) return
+  const scripts = getSelectedRegexScripts();
+  if (!scripts.length) return;
   scripts.forEach((s) => {
-    s.disabled = disabled
-  })
+    s.disabled = disabled;
+  });
   // regex 有双状态（regexScripts 裸数组 + regexOrder 树），浅 watch 永不触发 rebuild——
   // 改完数据显式调 rebuild 让树同步，否则侧边栏开关视觉不变（"改了不生效"）。
-  regexStore.value.rebuildRegexOrder()
-  if (workspace.value === 'preset') presetStore.markDirty()
-  else characterStore.markDirty()
-  toastApplied(scripts.length)
+  regexStore.value.rebuildRegexOrder();
+  if (workspace.value === 'preset') presetStore.markDirty();
+  else characterStore.markDirty();
+  toastApplied(scripts.length);
 }
 
 /* ====== worldbook/items ====== */
 function wbSelectedEntries() {
-  const ids = new Set(worldbookSelectedIds.value)
-  return worldbookStore.entries.filter((e) => ids.has(String(e.uid)))
+  const ids = new Set(worldbookSelectedIds.value);
+  return worldbookStore.entries.filter((e) => ids.has(String(e.uid)));
 }
 function wbSetDisabled(disabled: boolean) {
-  if (!worldbookSelectedIds.value.length) return
+  if (!worldbookSelectedIds.value.length) return;
   wbSelectedEntries().forEach((e) => {
-    e.disabled = disabled
-  })
-  worldbookStore.markDirty()
-  toastApplied(worldbookSelectedIds.value.length)
+    e.disabled = disabled;
+  });
+  worldbookStore.markDirty();
+  toastApplied(worldbookSelectedIds.value.length);
 }
 /** 三态互斥：keyWord / constant / vectorized，设一个时另两个清零。 */
 function wbSetActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
-  if (!worldbookSelectedIds.value.length) return
+  if (!worldbookSelectedIds.value.length) return;
   wbSelectedEntries().forEach((e) => {
-    e.constant = mode === 'constant'
-    e.vectorized = mode === 'vectorized'
-    e.keyWord = mode === 'keyWord'
-  })
-  worldbookStore.markDirty()
-  toastApplied(worldbookSelectedIds.value.length)
+    e.constant = mode === 'constant';
+    e.vectorized = mode === 'vectorized';
+    e.keyWord = mode === 'keyWord';
+  });
+  worldbookStore.markDirty();
+  toastApplied(worldbookSelectedIds.value.length);
 }
 
 /* ====== 批量删除 ====== */
 function removeLeafFromTree(nodes: OrderNode[], identifier: string): boolean {
   for (let i = 0; i < nodes.length; i++) {
-    const n = nodes[i]
+    const n = nodes[i];
     if (isGroupNode(n)) {
-      if (removeLeafFromTree(n.children, identifier)) return true
+      if (removeLeafFromTree(n.children, identifier)) return true;
     } else if (n.identifier === identifier) {
-      nodes.splice(i, 1)
-      return true
+      nodes.splice(i, 1);
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 function deleteSelected() {
-  const count = selectedCount.value
-  if (!count) return
+  const count = selectedCount.value;
+  if (!count) return;
   confirmStore.ask({
     title: uiStore.t('toolbox.batch.deleteConfirm.title'),
     message: uiStore.t('toolbox.batch.deleteConfirm.message', { count }),
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
     onConfirm: doDelete,
-  })
+  });
 }
 
 function doDelete() {
   if (isRegex.value) {
-    const scripts = getSelectedRegexScripts()
+    const scripts = getSelectedRegexScripts();
     for (const sc of scripts) {
-      if (workspace.value === 'preset') presetStore.deleteRegexScript(sc.id)
-      else characterStore.deleteRegexScript(sc.id)
-      tabsStore.close('regex', sc.id) // 删了的东西对应 tab 也关掉（同 preset 删段行为）
+      if (workspace.value === 'preset') presetStore.deleteRegexScript(sc.id);
+      else characterStore.deleteRegexScript(sc.id);
+      tabsStore.close('regex', sc.id); // 删了的东西对应 tab 也关掉（同 preset 删段行为）
     }
     // regex 双状态：删数据后树里还留着已删 id 的幽灵节点 → 渲染时 getScript 找不到显示 (未命名)。
     // 显式调 rebuild 让树同步删掉幽灵节点。
-    regexStore.value.rebuildRegexOrder()
-    regexStore.value.regexClearSelection()
-    tabsStore.requestListScroll('regex')
-    toastApplied(scripts.length)
-    return
+    regexStore.value.rebuildRegexOrder();
+    regexStore.value.regexClearSelection();
+    tabsStore.requestListScroll('regex');
+    toastApplied(scripts.length);
+    return;
   }
   if (workspace.value === 'preset') {
     // marker 块受保护（同 presetStore.deleteBlock），批量删除跳过
     const ids = presetSelectedIds.value.filter(
       (id) => !presetStore.prompts.find((p) => p.identifier === id)?.marker
-    )
-    const removed: string[] = []
+    );
+    const removed: string[] = [];
     for (const id of ids) {
       if (removeLeafFromTree(presetStore.order, id)) {
-        removed.push(id)
-        tabsStore.close('preset', id)
-        const pi = presetStore.prompts.findIndex((p) => p.identifier === id)
-        if (pi >= 0) presetStore.prompts.splice(pi, 1)
+        removed.push(id);
+        tabsStore.close('preset', id);
+        const pi = presetStore.prompts.findIndex((p) => p.identifier === id);
+        if (pi >= 0) presetStore.prompts.splice(pi, 1);
       }
     }
     if (removed.length) {
-      presetStore.markDirty()
-      uiStore.rebuildVarIndex()
+      presetStore.markDirty();
+      uiStore.rebuildVarIndex();
     }
-    presetStore.selectedGi = new Set()
-    presetStore.anchorGi = -1
-    tabsStore.requestListScroll('preset')
-    toastApplied(removed.length)
-    return
+    presetStore.selectedGi = new Set();
+    presetStore.anchorGi = -1;
+    tabsStore.requestListScroll('preset');
+    toastApplied(removed.length);
+    return;
   }
-  const ids = worldbookSelectedIds.value
-  const removed: string[] = []
+  const ids = worldbookSelectedIds.value;
+  const removed: string[] = [];
   for (const id of ids) {
     if (removeLeafFromTree(worldbookStore.order, id)) {
-      removed.push(id)
-      tabsStore.close('worldbook', id)
-      const ei = worldbookStore.entries.findIndex((e) => String(e.uid) === id)
-      if (ei >= 0) worldbookStore.entries.splice(ei, 1)
+      removed.push(id);
+      tabsStore.close('worldbook', id);
+      const ei = worldbookStore.entries.findIndex((e) => String(e.uid) === id);
+      if (ei >= 0) worldbookStore.entries.splice(ei, 1);
     }
   }
-  if (removed.length) worldbookStore.markDirty()
-  worldbookStore.selectedGi = new Set()
-  worldbookStore.anchorGi = -1
-  tabsStore.requestListScroll('worldbook')
-  toastApplied(removed.length)
+  if (removed.length) worldbookStore.markDirty();
+  worldbookStore.selectedGi = new Set();
+  worldbookStore.anchorGi = -1;
+  tabsStore.requestListScroll('worldbook');
+  toastApplied(removed.length);
 }
 </script>

@@ -1,7 +1,7 @@
-import { registerTool } from './registry'
-import SearchTool from './tools/SearchTool.vue'
-import BatchTool from './tools/BatchTool.vue'
-import CopyPanel from '../preset/CopyPanel.vue'
+import { registerTool } from './registry';
+import SearchTool from './tools/SearchTool.vue';
+import BatchTool from './tools/BatchTool.vue';
+import CopyPanel from '../preset/CopyPanel.vue';
 
 /** 工具箱工具注册（启动期 side-effect）：把 Search/Batch/Copy 等工具注册到各自适用的 (workspace, collection)
  *  scene。模块被 import 一次即生效，不要 import 后不调用——本文件顶层就在填表。
@@ -13,57 +13,57 @@ registerTool('preset', 'items', {
   id: 'search',
   labelKey: 'toolbox.tool.search',
   component: SearchTool,
-})
+});
 registerTool('preset', 'items', {
   id: 'batch',
   labelKey: 'toolbox.tool.batch',
   component: BatchTool,
-})
+});
 registerTool('preset', 'items', {
   id: 'copy',
   labelKey: 'toolbox.tool.copy',
   component: CopyPanel,
-})
+});
 
 // preset 工作区的正则集合：Search + Batch
 registerTool('preset', 'regex', {
   id: 'search',
   labelKey: 'toolbox.tool.search',
   component: SearchTool,
-})
+});
 registerTool('preset', 'regex', {
   id: 'batch',
   labelKey: 'toolbox.tool.batch',
   component: BatchTool,
-})
+});
 
 // worldbook/items：Search + Batch
 registerTool('worldbook', 'items', {
   id: 'search',
   labelKey: 'toolbox.tool.search',
   component: SearchTool,
-})
+});
 registerTool('worldbook', 'items', {
   id: 'batch',
   labelKey: 'toolbox.tool.batch',
   component: BatchTool,
-})
+});
 
 // character/fields：只有 Search（character 无批量工具）
 registerTool('character', 'fields', {
   id: 'search',
   labelKey: 'toolbox.tool.search',
   component: SearchTool,
-})
+});
 
 // character 工作区的正则集合：Search + Batch
 registerTool('character', 'regex', {
   id: 'search',
   labelKey: 'toolbox.tool.search',
   component: SearchTool,
-})
+});
 registerTool('character', 'regex', {
   id: 'batch',
   labelKey: 'toolbox.tool.batch',
   component: BatchTool,
-})
+});

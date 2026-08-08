@@ -19,40 +19,40 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useUiStore } from '../../stores/uiStore'
-import { useTabsStore } from '../../stores/tabsStore'
-import { usePresetStore } from '../../stores/presetStore'
-import { useWorldbookStore } from '../../stores/worldbookStore'
-import { useCharacterStore } from '../../stores/characterStore'
-import { createWorkspaceRegistry } from '../../stores/workspaceRegistry'
-import { useConfirmStore } from '../../stores/confirmStore'
-import { esc } from '../../utils'
-import type { LocaleKey } from '../../i18n'
+import { computed } from 'vue';
+import { useUiStore } from '../../stores/uiStore';
+import { useTabsStore } from '../../stores/tabsStore';
+import { usePresetStore } from '../../stores/presetStore';
+import { useWorldbookStore } from '../../stores/worldbookStore';
+import { useCharacterStore } from '../../stores/characterStore';
+import { createWorkspaceRegistry } from '../../stores/workspaceRegistry';
+import { useConfirmStore } from '../../stores/confirmStore';
+import { esc } from '../../utils';
+import type { LocaleKey } from '../../i18n';
 
-const uiStore = useUiStore()
-const tabsStore = useTabsStore()
-const presetStore = usePresetStore()
-const worldbookStore = useWorldbookStore()
-const characterStore = useCharacterStore()
-const confirmStore = useConfirmStore()
-const workspaceRegistry = createWorkspaceRegistry()
+const uiStore = useUiStore();
+const tabsStore = useTabsStore();
+const presetStore = usePresetStore();
+const worldbookStore = useWorldbookStore();
+const characterStore = useCharacterStore();
+const confirmStore = useConfirmStore();
+const workspaceRegistry = createWorkspaceRegistry();
 
 interface SelItem {
-  id: string
-  label: string
+  id: string;
+  label: string;
 }
 interface Sel {
-  items: SelItem[]
-  currentId: string
-  hasList: boolean
-  switchTitleKey: LocaleKey
-  noneLoadedKey: LocaleKey
-  fallbackText: string
+  items: SelItem[];
+  currentId: string;
+  hasList: boolean;
+  switchTitleKey: LocaleKey;
+  noneLoadedKey: LocaleKey;
+  fallbackText: string;
 }
 
 const sel = computed<Sel>(() => {
-  const ws = tabsStore.activeWorkspace
+  const ws = tabsStore.activeWorkspace;
   if (ws === 'preset')
     return {
       items: presetStore.presetList.map((p) => ({ id: p.name, label: p.name })),
@@ -61,7 +61,7 @@ const sel = computed<Sel>(() => {
       switchTitleKey: 'preset.header.switch' as LocaleKey,
       noneLoadedKey: 'preset.header.noneLoaded' as LocaleKey,
       fallbackText: presetStore.presetName,
-    }
+    };
   if (ws === 'worldbook')
     return {
       items: worldbookStore.worldbookList.map((n) => ({ id: n, label: n })),
@@ -70,7 +70,7 @@ const sel = computed<Sel>(() => {
       switchTitleKey: 'worldbook.header.switch' as LocaleKey,
       noneLoadedKey: 'worldbook.header.noneLoaded' as LocaleKey,
       fallbackText: worldbookStore.worldbookName,
-    }
+    };
   return {
     items: characterStore.characterList.map((c) => ({
       id: c.avatar,
@@ -81,27 +81,27 @@ const sel = computed<Sel>(() => {
     switchTitleKey: 'character.header.switch' as LocaleKey,
     noneLoadedKey: 'character.header.noneLoaded' as LocaleKey,
     fallbackText: characterStore.character?.name || '',
-  }
-})
+  };
+});
 
 /** 当前 select 里"选中项不在列表"时显示的 disabled 占位（列表已删除但 store 仍指向旧 id）。 */
 const orphan = computed(() => {
-  const s = sel.value
-  if (!s.currentId) return null
-  const inList = s.items.some((it) => it.id === s.currentId)
-  if (inList) return null
+  const s = sel.value;
+  if (!s.currentId) return null;
+  const inList = s.items.some((it) => it.id === s.currentId);
+  if (inList) return null;
   return {
     id: s.currentId,
     label: s.fallbackText || uiStore.t(s.noneLoadedKey),
-  }
-})
+  };
+});
 
 function onSelect(e: Event) {
-  const select = e.target as HTMLSelectElement
-  const id = select.value
-  const adapter = workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry]
-  if (!id || id === adapter.currentId()) return
-  const doSwitch = () => adapter.switchTo(id)
+  const select = e.target as HTMLSelectElement;
+  const id = select.value;
+  const adapter = workspaceRegistry[tabsStore.activeWorkspace as keyof typeof workspaceRegistry];
+  if (!id || id === adapter.currentId()) return;
+  const doSwitch = () => adapter.switchTo(id);
   if (adapter.dirty()) {
     confirmStore.ask({
       title: uiStore.t(`${adapter.key}.confirm.switch.title` as LocaleKey),
@@ -113,11 +113,11 @@ function onSelect(e: Event) {
       danger: false,
       onConfirm: doSwitch,
       onCancel: () => {
-        select.value = adapter.currentId()
+        select.value = adapter.currentId();
       },
-    })
+    });
   } else {
-    doSwitch()
+    doSwitch();
   }
 }
 </script>

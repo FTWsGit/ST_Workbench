@@ -21,19 +21,19 @@
 
 <script setup lang="ts">
 /** 元信息悬浮窗：描述"整份文档"的元信息（不嵌右侧栏），按 activeWorkspace 选择表单（preset/character），worldbook 无条目则整个面板不渲染。 */
-import { computed, type Component } from 'vue'
-import { useUiStore } from '../../stores/uiStore'
-import { useTabsStore } from '../../stores/tabsStore'
-import FloatingPanelShell from './FloatingPanelShell.vue'
-import PresetMetaForm from '../preset/PresetMetaForm.vue'
-import CharacterMetaForm from '../character/CharacterMetaForm.vue'
+import { computed, type Component } from 'vue';
+import { useUiStore } from '../../stores/uiStore';
+import { useTabsStore } from '../../stores/tabsStore';
+import FloatingPanelShell from './FloatingPanelShell.vue';
+import PresetMetaForm from '../preset/PresetMetaForm.vue';
+import CharacterMetaForm from '../character/CharacterMetaForm.vue';
 
-const uiStore = useUiStore()
-const tabsStore = useTabsStore()
+const uiStore = useUiStore();
+const tabsStore = useTabsStore();
 
 const META_FORMS: Record<string, Component> = {
   preset: PresetMetaForm,
   character: CharacterMetaForm,
-}
-const formComponent = computed(() => META_FORMS[tabsStore.activeWorkspace])
+};
+const formComponent = computed(() => META_FORMS[tabsStore.activeWorkspace]);
 </script>

@@ -144,24 +144,24 @@
 /** 世界书侧边栏：分组+条目两级列表，支持拖拽排序/多选/内联重命名/折叠分组/绑定解绑。
  *  不参数化，直接 useWorldbookStore()（只有一个 worldbookStore，无复用需求）。
  *  组件有两个根节点（<aside> + .wb-resize-handle），mobileDrawerOpen 显式绑到 <aside>，不依赖单根自动 class 透传。 */
-import { ref, computed, watch } from 'vue'
-import { useWorldbookStore } from '../../stores/worldbookStore'
-import { useUiStore } from '../../stores/uiStore'
-import type { OrderItem, OrderGroup, FlatNode, WorldbookEntry } from '../../types'
-import { usePanelResize } from '../../composables/usePanelResize'
-import { useTabsStore } from '../../stores/tabsStore'
-import { useListScrollSync } from '../../composables/useListScrollSync'
-import { useDragReorder } from '../../composables/useDragReorder'
-import { useInlineRename } from '../../composables/useInlineRename'
-import { useListSelection } from '../../composables/useListSelection'
-import ListToolbar from '../shared/ListToolbar.vue'
+import { ref, computed, watch } from 'vue';
+import { useWorldbookStore } from '../../stores/worldbookStore';
+import { useUiStore } from '../../stores/uiStore';
+import type { OrderItem, OrderGroup, FlatNode, WorldbookEntry } from '../../types';
+import { usePanelResize } from '../../composables/usePanelResize';
+import { useTabsStore } from '../../stores/tabsStore';
+import { useListScrollSync } from '../../composables/useListScrollSync';
+import { useDragReorder } from '../../composables/useDragReorder';
+import { useInlineRename } from '../../composables/useInlineRename';
+import { useListSelection } from '../../composables/useListSelection';
+import ListToolbar from '../shared/ListToolbar.vue';
 
-const props = defineProps<{ mobileDrawerOpen?: boolean }>()
+const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 
-const tabsStore = useTabsStore()
-const store = useWorldbookStore()
-const uiStore = useUiStore()
-const listRef = ref<HTMLElement>()
+const tabsStore = useTabsStore();
+const store = useWorldbookStore();
+const uiStore = useUiStore();
+const listRef = ref<HTMLElement>();
 
 const {
   dragIdx,
@@ -171,42 +171,42 @@ const {
   setItemRef,
   onItemMouseDown: onDragPointerDown,
   consumeSuppressClick: consumeDragSuppressClick,
-} = useDragReorder<number>({ autoScrollContainer: () => listRef.value })
+} = useDragReorder<number>({ autoScrollContainer: () => listRef.value });
 
 const canBind = computed(() => {
   const topLevel = Array.from(store.selectedGi).filter(
     (gi) => store.flatNodes[gi]?.parent === store.order
-  )
-  return topLevel.length >= 2
-})
+  );
+  return topLevel.length >= 2;
+});
 const canUnbind = computed(() =>
   Array.from(store.selectedGi).some((gi) => store.flatNodes[gi]?.isGroup ?? false)
-)
+);
 
 function getEntry(id: string): WorldbookEntry | undefined {
-  return store.entries.find((e) => String(e.uid) === id)
+  return store.entries.find((e) => String(e.uid) === id);
 }
 function activationLabel(entry: WorldbookEntry | undefined) {
-  if (!entry) return ''
-  if (entry.constant) return uiStore.t('worldbook.activation.constant')
-  if (entry.vectorized) return uiStore.t('worldbook.activation.vectorized')
-  return uiStore.t('worldbook.activation.keyWord')
+  if (!entry) return '';
+  if (entry.constant) return uiStore.t('worldbook.activation.constant');
+  if (entry.vectorized) return uiStore.t('worldbook.activation.vectorized');
+  return uiStore.t('worldbook.activation.keyWord');
 }
 function onToggleEntry(id: string) {
-  const e = getEntry(id)
-  if (e) store.toggleEntryDisabled(e)
+  const e = getEntry(id);
+  if (e) store.toggleEntryDisabled(e);
 }
 
 function nodeKey(node: FlatNode, gi: number) {
-  return node.isGroup ? (node.ref as OrderGroup).id : (node.ref as OrderItem).identifier + '_' + gi
+  return node.isGroup ? (node.ref as OrderGroup).id : (node.ref as OrderItem).identifier + '_' + gi;
 }
 function itemStyle(node: FlatNode) {
-  return node.depth > 0 ? { paddingLeft: 8 + node.depth * 16 + 'px' } : {}
+  return node.depth > 0 ? { paddingLeft: 8 + node.depth * 16 + 'px' } : {};
 }
 function unbindCurrent() {
-  const groupGi = Array.from(store.selectedGi).find((gi) => store.flatNodes[gi]?.isGroup ?? false)
-  if (groupGi === undefined) return
-  store.unbindGroup(groupGi)
+  const groupGi = Array.from(store.selectedGi).find((gi) => store.flatNodes[gi]?.isGroup ?? false);
+  if (groupGi === undefined) return;
+  store.unbindGroup(groupGi);
 }
 
 /** 内联重命名——分组名 */
@@ -218,20 +218,20 @@ const {
   cancel: cancelEditGroupName,
 } = useInlineRename<number>({
   getCurrentName: (gi) => {
-    const node = store.flatNodes[gi]
-    return node && node.isGroup ? (node.ref as OrderGroup).name : ''
+    const node = store.flatNodes[gi];
+    return node && node.isGroup ? (node.ref as OrderGroup).name : '';
   },
   onCommit: (gi, newName) => {
-    const node = store.flatNodes[gi]
-    if (node && node.isGroup) (node.ref as OrderGroup).name = newName
+    const node = store.flatNodes[gi];
+    if (node && node.isGroup) (node.ref as OrderGroup).name = newName;
   },
-})
+});
 function setGroupNameInput(el: object | null, _gi: number) {
-  setGroupNameInputRaw(el)
+  setGroupNameInputRaw(el);
 }
 function startEditGroupName(gi: number) {
-  const node = store.flatNodes[gi]
-  if (node && node.isGroup) startEditGroupNameRaw(gi)
+  const node = store.flatNodes[gi];
+  if (node && node.isGroup) startEditGroupNameRaw(gi);
 }
 
 /** 内联重命名——条目名（entry.comment，提交时同步 renameTab） */
@@ -243,97 +243,97 @@ const {
   cancel: cancelEditBlockName,
 } = useInlineRename<number>({
   getCurrentName: (gi) => {
-    const node = store.flatNodes[gi]
-    if (!node || node.isGroup) return ''
-    return getEntry((node.ref as OrderItem).identifier)?.comment || ''
+    const node = store.flatNodes[gi];
+    if (!node || node.isGroup) return '';
+    return getEntry((node.ref as OrderItem).identifier)?.comment || '';
   },
   onCommit: (gi, newName) => {
-    const node = store.flatNodes[gi]
-    if (!node || node.isGroup) return
-    const e = getEntry((node.ref as OrderItem).identifier)
-    if (!e) return
-    e.comment = newName
-    store.markDirty()
-    tabsStore.renameTab('worldbook', e.uid + '', newName)
+    const node = store.flatNodes[gi];
+    if (!node || node.isGroup) return;
+    const e = getEntry((node.ref as OrderItem).identifier);
+    if (!e) return;
+    e.comment = newName;
+    store.markDirty();
+    tabsStore.renameTab('worldbook', e.uid + '', newName);
   },
-})
+});
 function setBlockNameInput(el: object | null, _gi: number) {
-  setBlockNameInputRaw(el)
+  setBlockNameInputRaw(el);
 }
 function startEditBlockName(gi: number) {
-  const node = store.flatNodes[gi]
-  if (node && !node.isGroup) startEditBlockNameRaw(gi)
+  const node = store.flatNodes[gi];
+  if (node && !node.isGroup) startEditBlockNameRaw(gi);
 }
 
 const resize = usePanelResize({
   getWidth: () => uiStore.settings.sidebarWidth,
   setWidth: (w) => {
-    uiStore.settings.sidebarWidth = w
+    uiStore.settings.sidebarWidth = w;
   },
   min: 220,
   max: 600,
   dir: 'right',
-})
+});
 function onResizeStart(e: PointerEvent) {
-  resize.onPointerDown(e)
+  resize.onPointerDown(e);
 }
 watch(
   () => resize.active.value,
   (v) => {
-    if (!v) uiStore.saveSettings()
+    if (!v) uiStore.saveSettings();
   }
-)
+);
 
 /** 激活条目滚动同步（按 identifier 解析 gi）。 */
 useListScrollSync({
   domain: 'worldbook',
   itemEls,
   keyOf: () => {
-    const tab = tabsStore.activeTab
-    if (!tab) return null
-    const gi = store.identifierToGi(tab.key)
-    return gi >= 0 ? gi : null
+    const tab = tabsStore.activeTab;
+    if (!tab) return null;
+    const gi = store.identifierToGi(tab.key);
+    return gi >= 0 ? gi : null;
   },
-})
+});
 
 function onDragDrop(from: number, to: number, after: boolean) {
-  store.reorderBlock(from, to, after)
+  store.reorderBlock(from, to, after);
 }
 
 const listSelection = useListSelection<number>({
   onSelect: (mode, gi) => {
     if (mode !== 'single') {
-      store.selectBlock(gi, { ctrl: mode === 'ctrl', shift: mode === 'shift' })
-      return
+      store.selectBlock(gi, { ctrl: mode === 'ctrl', shift: mode === 'shift' });
+      return;
     }
-    const node = store.flatNodes[gi]
-    if (!node) return
-    store.selectedGi.clear()
-    store.selectedGi.add(gi)
-    store.anchorGi = gi
+    const node = store.flatNodes[gi];
+    if (!node) return;
+    store.selectedGi.clear();
+    store.selectedGi.add(gi);
+    store.anchorGi = gi;
     if (node.isGroup) {
-      store.toggleGroupCollapse(gi)
+      store.toggleGroupCollapse(gi);
     } else {
-      const item = node.ref as OrderItem
-      const entry = getEntry(item.identifier)
+      const item = node.ref as OrderItem;
+      const entry = getEntry(item.identifier);
       tabsStore.open({
         domain: 'worldbook',
         key: item.identifier,
         label: entry?.comment || uiStore.t('common.unnamed'),
         workspace: 'worldbook',
-      })
+      });
     }
   },
-})
+});
 
 function onItemMouseDown(i: number, e: PointerEvent) {
-  if (listSelection.onPointerDown(i, e)) return
-  onDragPointerDown(i, e, onDragDrop)
+  if (listSelection.onPointerDown(i, e)) return;
+  onDragPointerDown(i, e, onDragDrop);
 }
 function onItemClick(gi: number, e: MouseEvent) {
-  if (consumeDragSuppressClick()) return
-  if (listSelection.consumeSuppressClick()) return
-  if (!store.flatNodes[gi]) return
-  listSelection.onClick(gi, e)
+  if (consumeDragSuppressClick()) return;
+  if (listSelection.consumeSuppressClick()) return;
+  if (!store.flatNodes[gi]) return;
+  listSelection.onClick(gi, e);
 }
 </script>

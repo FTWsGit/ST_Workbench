@@ -57,54 +57,54 @@
 /** 角色卡 Meta 表单：角色卡自身属性（fav/creator/creatorNotes/version/tags/talkativeness）+ 世界书换绑下拉。
  *  仅服务角色卡 domain，不参数化；世界书列表只读跨 domain 取 worldbookStore.worldbookList（App.vue 打开面板时已 refreshWorldbookList）。
  *  worldbook 字段最终写入 v2CharData.extensions.world 由 characterApi.ts 保存时处理。 */
-import { computed } from 'vue'
-import type { Character } from '../../types'
-import { useCharacterStore } from '../../stores/characterStore'
-import { useWorldbookStore } from '../../stores/worldbookStore'
-import { useUiStore } from '../../stores/uiStore'
-import AdvancedGroup from '../shared/AdvancedGroup.vue'
-import FormField from '../shared/FormField.vue'
+import { computed } from 'vue';
+import type { Character } from '../../types';
+import { useCharacterStore } from '../../stores/characterStore';
+import { useWorldbookStore } from '../../stores/worldbookStore';
+import { useUiStore } from '../../stores/uiStore';
+import AdvancedGroup from '../shared/AdvancedGroup.vue';
+import FormField from '../shared/FormField.vue';
 
-const store = useCharacterStore()
-const worldbookStore = useWorldbookStore()
-const uiStore = useUiStore()
+const store = useCharacterStore();
+const worldbookStore = useWorldbookStore();
+const uiStore = useUiStore();
 
 function field<K extends 'creator' | 'creatorNotes' | 'version' | 'talkativeness' | 'fav'>(key: K) {
   return computed({
     get: () => store.character![key],
     set: (v: string | number | boolean) => {
-      store.character![key] = v as Character[K]
-      store.markDirty()
+      store.character![key] = v as Character[K];
+      store.markDirty();
     },
-  })
+  });
 }
 
-const fav = field('fav')
-const creator = field('creator')
-const version = field('version')
-const creatorNotes = field('creatorNotes')
-const talkativeness = field('talkativeness')
+const fav = field('fav');
+const creator = field('creator');
+const version = field('version');
+const creatorNotes = field('creatorNotes');
+const talkativeness = field('talkativeness');
 
 /** tags（string[]）用逗号分隔单行输入（适合短标签直觉），不同于 trimStrings 的按行分割。 */
 const tagsText = computed({
   get: () => (store.character?.tags || []).join(', '),
   set: (v: string) => {
-    if (!store.character) return
+    if (!store.character) return;
     store.character.tags = v
       .split(',')
       .map((s) => s.trim())
-      .filter(Boolean)
-    store.markDirty()
+      .filter(Boolean);
+    store.markDirty();
   },
-})
+});
 
 const worldbookModel = computed<string | null>({
   get: () => store.character?.worldbook ?? null,
   set: (v) => {
     if (store.character) {
-      store.character.worldbook = v
-      store.markDirty()
+      store.character.worldbook = v;
+      store.markDirty();
     }
   },
-})
+});
 </script>

@@ -95,81 +95,81 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
-import { useTabsStore } from '../../stores/tabsStore'
+import { computed, watch } from 'vue';
+import { useTabsStore } from '../../stores/tabsStore';
 import {
   REGEX_PLACEMENT_OPTIONS as PLACEMENT_OPTIONS,
   REGEX_SUBSTITUTE_OPTIONS as SUBSTITUTE_OPTIONS,
-} from '../../types'
-import { parseFindRegex } from '../../regexEngine'
-import type { RegexSettingsFormProps } from './regexProps'
-import AdvancedGroup from '../shared/AdvancedGroup.vue'
-import SegmentedControl from '../shared/SegmentedControl.vue'
-import NumberInput from '../shared/NumberInput.vue'
-import FormField from '../shared/FormField.vue'
+} from '../../types';
+import { parseFindRegex } from '../../regexEngine';
+import type { RegexSettingsFormProps } from './regexProps';
+import AdvancedGroup from '../shared/AdvancedGroup.vue';
+import SegmentedControl from '../shared/SegmentedControl.vue';
+import NumberInput from '../shared/NumberInput.vue';
+import FormField from '../shared/FormField.vue';
 
-const props = defineProps<RegexSettingsFormProps>()
+const props = defineProps<RegexSettingsFormProps>();
 
-const tabsStore = useTabsStore()
+const tabsStore = useTabsStore();
 
-const script = computed(() => props.scripts.find((r) => r.id === tabsStore.activeTab?.key) ?? null)
+const script = computed(() => props.scripts.find((r) => r.id === tabsStore.activeTab?.key) ?? null);
 const findValid = computed(
   () => !script.value || !script.value.findRegex || !!parseFindRegex(script.value.findRegex)
-)
+);
 const enabled = computed({
   get: () => !script.value?.disabled,
   set: (v: boolean) => {
-    if (script.value) script.value.disabled = !v
+    if (script.value) script.value.disabled = !v;
   },
-})
+});
 const trimStringsText = computed({
   get: () => (script.value?.trimStrings || []).join('\n'),
   set: (v: string) => {
-    if (script.value) script.value.trimStrings = v.split('\n')
+    if (script.value) script.value.trimStrings = v.split('\n');
   },
-})
+});
 const minDepthModel = computed({
   get: () => script.value?.minDepth ?? null,
   set: (v: number | null) => {
-    if (script.value) script.value.minDepth = v === null || Number.isNaN(v) ? null : v
+    if (script.value) script.value.minDepth = v === null || Number.isNaN(v) ? null : v;
   },
-})
+});
 const maxDepthModel = computed({
   get: () => script.value?.maxDepth ?? null,
   set: (v: number | null) => {
-    if (script.value) script.value.maxDepth = v === null || Number.isNaN(v) ? null : v
+    if (script.value) script.value.maxDepth = v === null || Number.isNaN(v) ? null : v;
   },
-})
+});
 const substituteOptions = computed(() =>
   SUBSTITUTE_OPTIONS.map((o) => ({
     value: o.value,
     label: props.t(o.labelKey),
   }))
-)
+);
 const substituteModel = computed({
   get: () => script.value?.substituteRegex ?? 0,
   set: (v: unknown) => {
-    if (script.value) script.value.substituteRegex = Number(v)
+    if (script.value) script.value.substituteRegex = Number(v);
   },
-})
+});
 function togglePlacement(v: number) {
-  if (!script.value) return
-  const p = script.value.placement
-  const i = p.indexOf(v)
-  if (i >= 0) p.splice(i, 1)
-  else p.push(v)
+  if (!script.value) return;
+  const p = script.value.placement;
+  const i = p.indexOf(v);
+  if (i >= 0) p.splice(i, 1);
+  else p.push(v);
 }
 function setSurfaceMode(mode: 'display' | 'prompt' | 'both') {
-  if (!script.value) return
-  script.value.markdownOnly = mode === 'display' || mode === 'both'
-  script.value.promptOnly = mode === 'prompt' || mode === 'both'
+  if (!script.value) return;
+  script.value.markdownOnly = mode === 'display' || mode === 'both';
+  script.value.promptOnly = mode === 'prompt' || mode === 'both';
 }
 /** 同步标签名。用 renameTab() 而非 open()：open() 会触发侧边栏 scrollIntoView，每字输入会卡顿。 */
 watch(
   () => script.value?.scriptName,
   (name) => {
     if (script.value && name !== undefined)
-      tabsStore.renameTab('regex', script.value.id, name || props.t('common.unnamed'))
+      tabsStore.renameTab('regex', script.value.id, name || props.t('common.unnamed'));
   }
-)
+);
 </script>

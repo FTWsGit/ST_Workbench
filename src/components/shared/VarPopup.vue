@@ -53,32 +53,32 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import { useUiStore } from '../../stores/uiStore'
-import { getHostDocument } from '../../composables/hostEnv'
-import { varOpBadge } from '../../utils'
+import { onMounted, onUnmounted } from 'vue';
+import { useUiStore } from '../../stores/uiStore';
+import { getHostDocument } from '../../composables/hostEnv';
+import { varOpBadge } from '../../utils';
 
-const uiStore = useUiStore()
+const uiStore = useUiStore();
 
 /** 点击弹窗外或编辑器内另一个 {{var}} 时关闭弹窗：排除 .wb-preset-var-popup 本身与 .wb-editor-ta（让点别的 var 重新定位弹窗正常工作）。ESC 也关闭。 */
 function onDocClick(e: MouseEvent) {
-  if (!uiStore.varPopupOpen) return
-  const target = e.target as HTMLElement
-  if (target.closest('.wb-preset-var-popup') || target.closest('.wb-editor-ta')) return
-  uiStore.hideVarPopup()
+  if (!uiStore.varPopupOpen) return;
+  const target = e.target as HTMLElement;
+  if (target.closest('.wb-preset-var-popup') || target.closest('.wb-editor-ta')) return;
+  uiStore.hideVarPopup();
 }
 function onKeydown(e: KeyboardEvent) {
-  if (uiStore.varPopupOpen && e.key === 'Escape') uiStore.hideVarPopup()
+  if (uiStore.varPopupOpen && e.key === 'Escape') uiStore.hideVarPopup();
 }
 
-let hostDoc: Document
+let hostDoc: Document;
 onMounted(() => {
-  hostDoc = getHostDocument()
-  hostDoc.addEventListener('mousedown', onDocClick)
-  hostDoc.addEventListener('keydown', onKeydown)
-})
+  hostDoc = getHostDocument();
+  hostDoc.addEventListener('mousedown', onDocClick);
+  hostDoc.addEventListener('keydown', onKeydown);
+});
 onUnmounted(() => {
-  hostDoc.removeEventListener('mousedown', onDocClick)
-  hostDoc.removeEventListener('keydown', onKeydown)
-})
+  hostDoc.removeEventListener('mousedown', onDocClick);
+  hostDoc.removeEventListener('keydown', onKeydown);
+});
 </script>

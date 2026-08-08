@@ -1,6 +1,6 @@
-import type { Worldbook, WorldbookEntry } from '../types'
-import { ensureTopImporter } from './hostContext'
-import { deepClonePlain } from './apiUtils'
+import type { Worldbook, WorldbookEntry } from '../types';
+import { ensureTopImporter } from './hostContext';
+import { deepClonePlain } from './apiUtils';
 
 /* ====== 世界书 API ======
  * 通过 ensureTopImporter() import ST 的 /scripts/world-info.js 模块获取世界书操作函数
@@ -9,14 +9,14 @@ import { deepClonePlain } from './apiUtils'
  * mod.world_names 是 ESM live binding。 */
 
 async function getWorldInfoModule() {
-  const importer = await ensureTopImporter()
-  const mod = await importer('/scripts/world-info.js')
+  const importer = await ensureTopImporter();
+  const mod = await importer('/scripts/world-info.js');
   if (!mod || typeof mod.loadWorldInfo !== 'function') {
     throw new Error(
       'SillyTavern 世界书模块不可用（/scripts/world-info.js 结构异常，或当前 ST 版本已更新）'
-    )
+    );
   }
-  return mod
+  return mod;
 }
 
 /* ====== ST 原生世界书格式 ⇄ 工作层 Worldbook 双向转换 ======
@@ -28,9 +28,9 @@ async function getWorldInfoModule() {
  *   - caseSensitive / matchWholeWords：boolean | null，透传。
  * 其余字段（scanDepth/position/role/sticky/cooldown/delay/group/groupWeight/probability 等）
  * 字段名完全一致，用 `{ ...raw }` 打底再覆盖不一致字段，保留未建模进接口的字段。 */
-function fromSTEntry(uidKey: string, raw: Record<string, unknown>): WorldbookEntry {
-  const constant = !!raw?.constant
-  const vectorized = !!raw?.vectorized
+export function fromSTEntry(uidKey: string, raw: Record<string, unknown>): WorldbookEntry {
+  const constant = !!raw?.constant;
+  const vectorized = !!raw?.vectorized;
   return {
     ...raw,
     uid: Number(raw?.uid ?? uidKey),
@@ -42,105 +42,108 @@ function fromSTEntry(uidKey: string, raw: Record<string, unknown>): WorldbookEnt
     disabled: !!raw?.disable,
     groupPrioritized: !!raw?.groupOverride,
     displayIndex: typeof raw?.displayIndex === 'number' ? raw.displayIndex : 0,
-  } as WorldbookEntry
+  } as WorldbookEntry;
 }
 
-function toSTEntry(entry: WorldbookEntry) {
-  const { keys, keyWord: _keyWord, disabled, groupPrioritized, ...rest } = entry
+export function toSTEntry(entry: WorldbookEntry) {
+  const { keys, keyWord: _keyWord, disabled, groupPrioritized, ...rest } = entry;
   return {
     ...rest,
     key: keys,
     disable: disabled,
     groupOverride: groupPrioritized,
-  }
+  };
 }
 
-function fromSTWorldbook(name: string, data: Record<string, unknown>): Worldbook {
-  const rec = data?.entries
+export function fromSTWorldbook(name: string, data: Record<string, unknown>): Worldbook {
+  const rec = data?.entries;
   const list: WorldbookEntry[] =
     rec && typeof rec === 'object'
       ? Object.entries(rec).map(([uidKey, raw]) => fromSTEntry(uidKey, raw))
-      : []
-  list.sort((a, b) => (a.displayIndex ?? 0) - (b.displayIndex ?? 0))
-  return { name, entries: list }
+      : [];
+  list.sort((a, b) => (a.displayIndex ?? 0) - (b.displayIndex ?? 0));
+  return { name, entries: list };
 }
 
 /** entries 的 displayIndex 字段由调用方（worldbookStore）在保存前根据当前的 order 树（含展开
  *  折叠组）重新算好写入每个 entry，这里只管原样按 uid 打包成 Record，不重新计算顺序。 */
-function toSTEntries(wb: Worldbook): Record<string, unknown> {
-  const entries: Record<string, unknown> = {}
+export function toSTEntries(wb: Worldbook): Record<string, unknown> {
+  const entries: Record<string, unknown> = {};
   wb.entries.forEach((e) => {
-    entries[String(e.uid)] = toSTEntry(e)
-  })
-  return entries
+    entries[String(e.uid)] = toSTEntry(e);
+  });
+  return entries;
 }
 
 /** 列出全部世界书名字（不含内容）。返回的是普通数组的拷贝，不是 ST 内部 world_names 的活引用。 */
 export async function listWorldbooks(): Promise<string[]> {
-  const mod = await getWorldInfoModule()
-  return Array.isArray(mod.world_names) ? [...mod.world_names] : []
+  const mod = await getWorldInfoModule();
+  return Array.isArray(mod.world_names) ? [...mod.world_names] : [];
 }
 
 /** 按名字读取一份世界书的完整内容。ST 这边名字不存在时 loadWorldInfo 通常返回一个对象，entries为空，
  *  返回 null。 */
 export async function getWorldbookByName(name: string): Promise<Worldbook | null> {
-  const mod = await getWorldInfoModule()
-  const data = await mod.loadWorldInfo(name)
-  if (!data || typeof data !== 'object') return null
-  return fromSTWorldbook(name, data)
+  const mod = await getWorldInfoModule();
+  const data = await mod.loadWorldInfo(name);
+  if (!data || typeof data !== 'object') return null;
+  return fromSTWorldbook(name, data);
 }
 
 /** 新建一份空世界书——只负责在 ST 里注册这个名字，不负责把它加载进 store，调用方自己决定
  *  创建完是否紧接着 loadWorldbookByName()/getWorldbookByName()。 */
 export async function createWorldbook(name: string): Promise<void> {
-  const mod = await getWorldInfoModule()
+  const mod = await getWorldInfoModule();
   if (typeof mod.createNewWorldInfo !== 'function') {
-    throw new Error('SillyTavern 世界书模块不可用（createNewWorldInfo 缺失）')
+    throw new Error('SillyTavern 世界书模块不可用（createNewWorldInfo 缺失）');
   }
-  await mod.createNewWorldInfo(name, { interactive: false })
+  await mod.createNewWorldInfo(name, { interactive: false });
 }
 
 /** 保存（覆盖写）到指定名字。`data` 必须是纯对象，不能是 Pinia/Vue 响应式引用——
  *  structuredClone 过不了 Vue Proxy，用 deepClonePlain() 兜底。 */
 export async function saveWorldbook(data: Worldbook): Promise<void> {
-  const mod = await getWorldInfoModule()
+  const mod = await getWorldInfoModule();
   if (typeof mod.saveWorldInfo !== 'function') {
-    throw new Error('SillyTavern 世界书模块不可用（saveWorldInfo 缺失）')
+    throw new Error('SillyTavern 世界书模块不可用（saveWorldInfo 缺失）');
   }
-  const plain = deepClonePlain(data)
-  await mod.saveWorldInfo(plain.name, { entries: toSTEntries(plain) })
+  const plain = deepClonePlain(data);
+  await mod.saveWorldInfo(plain.name, { entries: toSTEntries(plain) });
 }
 
 export async function deleteWorldbook(name: string): Promise<void> {
-  const mod = await getWorldInfoModule()
+  const mod = await getWorldInfoModule();
   if (typeof mod.deleteWorldInfo !== 'function') {
-    throw new Error('SillyTavern 世界书模块不可用（deleteWorldInfo 缺失）')
+    throw new Error('SillyTavern 世界书模块不可用（deleteWorldInfo 缺失）');
   }
-  await mod.deleteWorldInfo(name)
+  await mod.deleteWorldInfo(name);
 }
 
 interface CharacterBookEntryLike {
-  id?: number
-  keys?: string[]
-  secondary_keys?: string[]
-  comment?: string
-  content?: string
-  constant?: boolean
-  selective?: boolean
-  insertion_order?: number
-  enabled?: boolean
-  position?: string // 'before_char' | 'after_char'，规范字段，只有两档
-  extensions?: Record<string, unknown>
-  [k: string]: unknown
+  id?: number;
+  keys?: string[];
+  secondary_keys?: string[];
+  comment?: string;
+  content?: string;
+  constant?: boolean;
+  selective?: boolean;
+  insertion_order?: number;
+  enabled?: boolean;
+  position?: string; // 'before_char' | 'after_char'，规范字段，只有两档
+  extensions?: Record<string, unknown>;
+  [k: string]: unknown;
 }
 
-function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number): WorldbookEntry {
-  const ext = raw.extensions ?? {}
-  const constant = !!(ext.constant ?? raw.constant)
-  const vectorized = !!ext.vectorized
+export function fromCharacterBookEntry(
+  raw: CharacterBookEntryLike,
+  fallbackUid: number
+): WorldbookEntry {
+  const ext = raw.extensions ?? {};
+  const constant = !!(ext.constant ?? raw.constant);
+  const vectorized = !!ext.vectorized;
   // 规范 position 只有 before_char(0)/after_char(1) 两档，extensions.position 有 ST 精确数值
   // （0~7，见 types.ts WORLDBOOK_POSITION_OPTIONS）时优先用它。
-  const specPosition = raw.position === 'after_char' ? 1 : 0
+  const specPosition = raw.position === 'after_char' ? 1 : 0;
   return {
     // 未建模进 WorldbookEntry 的字段（addMemo/ignoreBudget/outletName/match*/useGroupScoring/
     // automationId/triggers/characterFilter 等）原样透传，已知字段在下面覆盖——跟 fromSTEntry 的
@@ -184,7 +187,7 @@ function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number
     sticky: typeof ext.sticky === 'number' ? ext.sticky : null,
     cooldown: typeof ext.cooldown === 'number' ? ext.cooldown : null,
     delay: typeof ext.delay === 'number' ? ext.delay : null,
-  }
+  };
 }
 
 /** 纯转换，不碰 ST——单独导出方便脱离 Vue 用 `npx tsx` 写测试用例。
@@ -192,7 +195,7 @@ function fromCharacterBookEntry(raw: CharacterBookEntryLike, fallbackUid: number
 export function importCharacterBookEntries(
   entries: CharacterBookEntryLike[] | undefined | null
 ): WorldbookEntry[] {
-  return (entries ?? []).map((raw, idx) => fromCharacterBookEntry(raw, idx))
+  return (entries ?? []).map((raw, idx) => fromCharacterBookEntry(raw, idx));
 }
 
 /** 把角色卡内嵌世界书导入成一份新的独立世界书文件。只负责 ST 端注册 + 写入，不负责加载进
@@ -201,7 +204,7 @@ export async function importCharacterBook(
   name: string,
   book: { entries?: CharacterBookEntryLike[] } | null | undefined
 ): Promise<void> {
-  await createWorldbook(name)
-  const entries = importCharacterBookEntries(book?.entries)
-  await saveWorldbook({ name, entries })
+  await createWorldbook(name);
+  const entries = importCharacterBookEntries(book?.entries);
+  await saveWorldbook({ name, entries });
 }

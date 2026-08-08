@@ -40,24 +40,24 @@
 /** 悬浮窗 Shell：可拖拽定位、可 resize、多开自动置顶，移动端变 bottom sheet。
  *  机制在 useFloatingPanel.ts 中，本组件只负责渲染 header/body/resize 手柄与移动端遮罩。
  *  桌面端无遮罩（非模态，可与主编辑区并存）；关闭前如需确认由调用方在 @close 自行判断。 */
-import { useFloatingPanel, type UseFloatingPanelOptions } from '../../composables/useFloatingPanel'
+import { useFloatingPanel, type UseFloatingPanelOptions } from '../../composables/useFloatingPanel';
 
 const props = withDefaults(
   defineProps<
     {
-      title?: string
+      title?: string;
       /** 关闭按钮 title 提示，调用方传入 i18n 文案（组件不内置语言）。 */
-      closeTitle?: string
+      closeTitle?: string;
     } & UseFloatingPanelOptions
   >(),
   {
     title: '',
     closeTitle: 'Close',
   }
-)
+);
 
-defineEmits<{ close: [] }>()
+defineEmits<{ close: [] }>();
 
 const { isMobile, style, dragging, bringToFront, onDragStart, onResizeStart } =
-  useFloatingPanel(props)
+  useFloatingPanel(props);
 </script>

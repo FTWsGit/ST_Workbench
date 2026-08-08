@@ -1,5 +1,5 @@
-import type { RegexScript } from '../types'
-import { useScriptList } from './useScriptList'
+import type { RegexScript } from '../types';
+import { useScriptList } from './useScriptList';
 
 /**
  * 正则脚本 CRUD 的薄包装，委托给泛型 useScriptList。
@@ -8,14 +8,14 @@ import { useScriptList } from './useScriptList'
 export function useRegexScripts(
   getScripts: () => RegexScript[] | null | undefined,
   options: {
-    markDirty?: () => void
-    showToast: (msg: string) => void
-    t: (key: string, params?: Record<string, string | number>) => string
-    loadFirstMessageKey?: string
-    defaultPlacement?: number[]
+    markDirty?: () => void;
+    showToast: (msg: string) => void;
+    t: (key: string, params?: Record<string, string | number>) => string;
+    loadFirstMessageKey?: string;
+    defaultPlacement?: number[];
   }
 ) {
-  const defaultPlacement = options.defaultPlacement || [2]
+  const defaultPlacement = options.defaultPlacement || [2];
 
   const list = useScriptList<RegexScript>(getScripts, {
     idPrefix: 'regex_',
@@ -38,11 +38,11 @@ export function useRegexScripts(
     showToast: options.showToast,
     t: options.t,
     loadFirstMessageKey: options.loadFirstMessageKey,
-  })
+  });
 
   return {
     addRegexScript: list.add,
     deleteRegexScript: list.remove,
     reorderRegexScript: list.reorder,
-  }
+  };
 }

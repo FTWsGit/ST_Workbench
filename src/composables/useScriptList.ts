@@ -15,53 +15,53 @@
 export function useScriptList<T extends { id: string }>(
   getScripts: () => T[] | null | undefined,
   options: {
-    idPrefix: string
-    createScript: (id: string) => T
-    markDirty?: () => void
-    showToast: (msg: string) => void
-    t: (key: string, params?: Record<string, string | number>) => string
-    loadFirstMessageKey?: string
+    idPrefix: string;
+    createScript: (id: string) => T;
+    markDirty?: () => void;
+    showToast: (msg: string) => void;
+    t: (key: string, params?: Record<string, string | number>) => string;
+    loadFirstMessageKey?: string;
   }
 ) {
-  const { idPrefix, createScript, markDirty, showToast, t } = options
-  const loadFirstKey = options.loadFirstMessageKey || 'preset.toast.loadFirst'
+  const { idPrefix, createScript, markDirty, showToast, t } = options;
+  const loadFirstKey = options.loadFirstMessageKey || 'preset.toast.loadFirst';
 
   function genId(): string {
-    return idPrefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+    return idPrefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
   function add(): string | null {
-    const scripts = getScripts()
+    const scripts = getScripts();
     if (!scripts) {
-      showToast(t(loadFirstKey))
-      return null
+      showToast(t(loadFirstKey));
+      return null;
     }
 
-    const id = genId()
-    scripts.push(createScript(id))
-    markDirty?.()
-    return id
+    const id = genId();
+    scripts.push(createScript(id));
+    markDirty?.();
+    return id;
   }
 
   function remove(id: string) {
-    const scripts = getScripts()
-    if (!scripts) return
-    const i = scripts.findIndex((s) => s.id === id)
+    const scripts = getScripts();
+    if (!scripts) return;
+    const i = scripts.findIndex((s) => s.id === id);
     if (i >= 0) {
-      scripts.splice(i, 1)
-      markDirty?.()
+      scripts.splice(i, 1);
+      markDirty?.();
     }
   }
 
   function reorder(fromIdx: number, toIdx: number, after: boolean) {
-    const scripts = getScripts()
-    if (!scripts) return
-    if (fromIdx < 0 || toIdx < 0 || fromIdx >= scripts.length || toIdx >= scripts.length) return
-    const item = scripts.splice(fromIdx, 1)[0]
-    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : after ? toIdx + 1 : toIdx
-    scripts.splice(ni, 0, item)
-    markDirty?.()
+    const scripts = getScripts();
+    if (!scripts) return;
+    if (fromIdx < 0 || toIdx < 0 || fromIdx >= scripts.length || toIdx >= scripts.length) return;
+    const item = scripts.splice(fromIdx, 1)[0];
+    const ni = fromIdx < toIdx ? (after ? toIdx : toIdx - 1) : after ? toIdx + 1 : toIdx;
+    scripts.splice(ni, 0, item);
+    markDirty?.();
   }
 
-  return { add, remove, reorder }
+  return { add, remove, reorder };
 }

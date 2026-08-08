@@ -6,19 +6,19 @@
  *
  * 上层接口：callModel(store) → Promise<ModelTurnResult>，工具循环代码不关心走 A 还是 B。
  */
-import { getCtx } from '../api/hostContext'
-import { extractToolCalls, type RawModelResponse } from './toolCallCompat'
-import type { ToolCall } from './types'
-import type { AgentToolDef } from './toolRegistry'
+import { getCtx } from '../api/hostContext';
+import { extractToolCalls, type RawModelResponse } from './toolCallCompat';
+import type { ToolCall } from './types';
+import type { AgentToolDef } from './toolRegistry';
 
 /** 单次模型调用的归一化结果。 */
 export interface ModelTurnResult {
   /** assistant 消息内容（可能为空，纯 tool call 场景）。 */
-  content: string
+  content: string;
   /** 解析出的 tool_calls，没有则 null。 */
-  toolCalls: ToolCall[] | null
+  toolCalls: ToolCall[] | null;
   /** 原始响应对象（调试/扩展用）。 */
-  raw?: unknown
+  raw?: unknown;
 }
 
 /** 判断是否 OpenAI 系（与 toolCallCompat 保持同一清单）。 */
@@ -35,16 +35,16 @@ function isOpenAIFamilyInternal(source: string): boolean {
     'cohere',
     'perplexity',
     'google',
-  ].includes(source)
+  ].includes(source);
 }
 
 /** 把内部 Message[] 渲染成发给 provider 的请求消息数组（OpenAI wire format）。 */
 export function renderMessages(
   messages: Array<{
-    role: string
-    text: string
-    toolCallId?: string
-    toolCalls?: ToolCall[]
+    role: string;
+    text: string;
+    toolCallId?: string;
+    toolCalls?: ToolCall[];
   }>
 ): unknown[] {
   return messages.map((m) => {
@@ -53,7 +53,7 @@ export function renderMessages(
         role: 'tool',
         tool_call_id: m.toolCallId,
         content: m.text,
-      }
+      };
     }
     if (m.role === 'assistant' && m.toolCalls && m.toolCalls.length > 0) {
       return {
@@ -64,10 +64,10 @@ export function renderMessages(
           type: 'function',
           function: { name: tc.name, arguments: tc.arguments },
         })),
-      }
+      };
     }
-    return { role: m.role, content: m.text }
-  })
+    return { role: m.role, content: m.text };
+  });
 }
 
 /** 把 AgentToolDef[] 转成 OpenAI tools wire format。 */
@@ -79,18 +79,18 @@ function buildToolsWire(tools: AgentToolDef[]): unknown[] {
       description: t.description,
       parameters: t.parameters,
     },
-  }))
+  }));
 }
 
 /** callModelRaw 接受的 agent 配置（注入到 generate_data）。system persona 走 messages 数组前置多条 system 消息，不走 generateRawData 的 systemPrompt 参数。 */
 export interface CallModelConfig {
-  temperature: number
-  maxTokens: number
-  topP: number | null
-  topK: number | null
-  presencePenalty: number | null
-  frequencyPenalty: number | null
-  thinking: { type: 'enabled' } | null
+  temperature: number;
+  maxTokens: number;
+  topP: number | null;
+  topK: number | null;
+  presencePenalty: number | null;
+  frequencyPenalty: number | null;
+  thinking: { type: 'enabled' } | null;
 }
 
 /**
@@ -109,97 +109,96 @@ export async function callModelRaw(
   tools: AgentToolDef[],
   config: CallModelConfig
 ): Promise<ModelTurnResult> {
-  const ctx = getCtx()
-  if (!ctx) throw new Error('SillyTavern context 不可用（getContext 缺失）')
+  const ctx = getCtx();
+  if (!ctx) throw new Error('SillyTavern context 不可用（getContext 缺失）');
 
-  const eventTypes = ctx.event_types
-  const eventSource = ctx.eventSource
+  const eventTypes = ctx.event_types;
+  const eventSource = ctx.eventSource;
   if (!eventTypes || !eventSource) {
-    throw new Error('SillyTavern eventSource 不可用')
+    throw new Error('SillyTavern eventSource 不可用');
   }
 
-  const CHAT_COMPLETION_SETTINGS_READY = eventTypes.CHAT_COMPLETION_SETTINGS_READY
+  const CHAT_COMPLETION_SETTINGS_READY = eventTypes.CHAT_COMPLETION_SETTINGS_READY;
   if (!CHAT_COMPLETION_SETTINGS_READY) {
-    throw new Error('SillyTavern 不支持 CHAT_COMPLETION_SETTINGS_READY 事件')
+    throw new Error('SillyTavern 不支持 CHAT_COMPLETION_SETTINGS_READY 事件');
   }
 
-  const prompt = messages
+  const prompt = messages;
 
   // 准备 tools 注入（方案 A：在 CHAT_COMPLETION_SETTINGS_READY 回调里 mutate generate_data）
-  const toolsWire = tools.length > 0 ? buildToolsWire(tools) : null
+  const toolsWire = tools.length > 0 ? buildToolsWire(tools) : null;
 
   const handler = (generateData: Record<string, unknown>) => {
-    if (!generateData || typeof generateData !== 'object') return
+    if (!generateData || typeof generateData !== 'object') return;
     if (toolsWire) {
-      generateData.tools = toolsWire
-      generateData.tool_choice = 'auto'
+      generateData.tools = toolsWire;
+      generateData.tool_choice = 'auto';
     }
-    if (config.temperature != null) generateData.temperature = config.temperature
-    if (config.maxTokens != null) generateData.max_tokens = config.maxTokens
-    if (config.topP != null) generateData.top_p = config.topP
-    if (config.topK != null) generateData.top_k = config.topK
-    if (config.presencePenalty != null) generateData.presence_penalty = config.presencePenalty
-    if (config.frequencyPenalty != null) generateData.frequency_penalty = config.frequencyPenalty
-    if (config.thinking) generateData.thinking = config.thinking
-  }
+    if (config.temperature != null) generateData.temperature = config.temperature;
+    if (config.maxTokens != null) generateData.max_tokens = config.maxTokens;
+    if (config.topP != null) generateData.top_p = config.topP;
+    if (config.topK != null) generateData.top_k = config.topK;
+    if (config.presencePenalty != null) generateData.presence_penalty = config.presencePenalty;
+    if (config.frequencyPenalty != null) generateData.frequency_penalty = config.frequencyPenalty;
+    if (config.thinking) generateData.thinking = config.thinking;
+  };
 
   // 注册 once 监听器（在请求发出前一刻触发）
-  const useOnce = typeof eventSource.once === 'function'
+  const useOnce = typeof eventSource.once === 'function';
   if (useOnce) {
-    eventSource.once(CHAT_COMPLETION_SETTINGS_READY, handler)
+    eventSource.once(CHAT_COMPLETION_SETTINGS_READY, handler);
   } else {
-    eventSource.on(CHAT_COMPLETION_SETTINGS_READY, handler)
+    eventSource.on(CHAT_COMPLETION_SETTINGS_READY, handler);
   }
 
-  let response: RawModelResponse
+  let response: RawModelResponse;
   try {
     // generateRawData 返回原始 response object（含 choices/message/tool_calls）
     if (typeof ctx.generateRawData === 'function') {
-      response = await ctx.generateRawData({ prompt: prompt })
+      response = await ctx.generateRawData({ prompt: prompt });
     } else if (typeof ctx.generateRaw === 'function') {
       // 兜底：generateRaw 只返回抽取后的字符串，会丢 tool_calls
-      const text = await ctx.generateRaw({ prompt: prompt })
-      response = { choices: [{ message: { content: text } }] }
+      const text = await ctx.generateRaw({ prompt: prompt });
+      response = { choices: [{ message: { content: text } }] };
     } else {
-      throw new Error('SillyTavern context 不可用（generateRawData/generateRaw 缺失）')
+      throw new Error('SillyTavern context 不可用（generateRawData/generateRaw 缺失）');
     }
   } finally {
     if (!useOnce) {
       try {
-        eventSource.removeListener?.(CHAT_COMPLETION_SETTINGS_READY, handler)
-      } catch { /* 移除监听失败无需处理 */ }
+        eventSource.removeListener?.(CHAT_COMPLETION_SETTINGS_READY, handler);
+      } catch {
+        /* 移除监听失败无需处理 */
+      }
     }
   }
 
-  const source = ctx.chatCompletionSource || ctx.chat_completion_source || 'openai'
-  const toolCalls = extractToolCallsInternal(response, source)
+  const source = ctx.chatCompletionSource || ctx.chat_completion_source || 'openai';
+  const toolCalls = extractToolCallsInternal(response, source);
 
-  let content: string
+  let content: string;
   if (isOpenAIFamilyInternal(source)) {
-    content = String(response?.choices?.[0]?.message?.content ?? '')
+    content = String(response?.choices?.[0]?.message?.content ?? '');
   } else if (source === 'claude') {
     const textBlocks = Array.isArray(response?.content)
       ? response.content.filter((b) => b && b.type === 'text')
-      : []
-    content = textBlocks.map((b) => String(b.text ?? '')).join('\n')
+      : [];
+    content = textBlocks.map((b) => String(b.text ?? '')).join('\n');
   } else if (source === 'cohere') {
-    content = String(response?.text ?? response?.message?.content ?? '')
+    content = String(response?.text ?? response?.message?.content ?? '');
   } else {
-    content = String(response?.choices?.[0]?.message?.content ?? response?.content ?? '')
+    content = String(response?.choices?.[0]?.message?.content ?? response?.content ?? '');
   }
 
-  return { content, toolCalls, raw: response }
+  return { content, toolCalls, raw: response };
 }
 
-function extractToolCallsInternal(
-  response: RawModelResponse,
-  source: string
-): ToolCall[] | null {
-  const raw = extractToolCalls(response, source)
-  if (!raw || raw.length === 0) return null
+function extractToolCallsInternal(response: RawModelResponse, source: string): ToolCall[] | null {
+  const raw = extractToolCalls(response, source);
+  if (!raw || raw.length === 0) return null;
   return raw.map((r) => ({
     id: r.id,
     name: r.name,
     arguments: r.arguments,
-  }))
+  }));
 }
