@@ -1,0 +1,72 @@
+---
+name: "ui样式与组件字典"
+kind: "contract"
+description: "查 UI 样式 class、共享组件、面板三态形态、UI 数值常量时读"
+alwaysApply: false
+---
+
+# UI 样式与组件字典
+
+跨全应用的 CSS class、共享组件、面板三态形态、UI 数值常量查表用，镜像 `components/shared/` + `styles/`（main.css）+ `types.ts`。
+
+## CSS class 字典
+
+class 前缀约定：`pr` -> preset 专用；`rx` -> regex 专用；`wb` -> workbench 全局专用。想复用某个 domain 专用 CSS，那有可能需要改名。
+
+### 按钮
+
+`.wb-btn`（默认）/ `.wb-btn.accent`（强调色）/ `.wb-btn.active`（激活态）/ `.wb-btn.sm`（小号）/ `.wb-btn.close-btn`（✕关闭）/ `.wb-btn.close-btn.compact`（面板头部用）/ `.wb-btn.icon-btn`（纯图标按钮，📌 float 切换那种）。
+
+### 弹窗
+
+`.wb-modal-overlay` + `.wb-modal`（+ `.lg`/`.sm` 尺寸修饰）+ `.wb-modal-footer`；滚动内容加 `.wb-modal-scroll`。移动端断点内 `.wb-modal` 自动改用 `92vw` 宽度、去掉桌面端的高度上限假设，不用另写响应式规则。
+
+### 可选中的列表行
+
+`.pr-block-item` + `.selected` + `.pr-block-name` + `.pr-block-role`/`.sys`/`.user`/`.asst` + `.pr-block-act`/`.del`。`PresetSidebar`/`CopyPanel`/`RegexSidebar` 共用同一套。
+
+### 徽标
+
+- 角色徽标 class：`utils.ts` 的 `roleClass(role, prefix?)`，不要手写三元表达式。
+- `{{setvar}}`/`{{addvar}}`/`{{getvar}}` 徽标：`utils.ts` 的 `varOpBadge(type)`。
+
+### 布局工具类
+
+`.wb-row`/`.wb-row-tight`/`.wb-row-mt`/`.wb-flex1`/`.wb-range-wide`/`.wb-select-wide`/`.wb-value-label`——一次性 flex 行/宽度值优先用这些。
+
+### 正则表单（.rx-*）
+
+`.rx-form` 内的输入框要用 `.rx-input`/`textarea`/`select` 才会 `width:100%`。
+
+## 三态面板形态
+
+右侧面板支持三种形态，切换 UI 是共享组件 `PanelModeSwitch.vue`：
+
+- **docked** = 右侧挤开：`.wb-right-panel`/`.wb-toolbox-panel`/`.wb-preset-preview-panel` 默认态（嵌入布局挤开编辑区）。
+- **overlay** = 右侧悬浮：加 `.float` 修饰（absolute 盖右侧不挤开，`.wb-toolbox-panel.float` 同理）。
+- **float** = 完全悬浮：借 `FloatingPanelShell`（见「复用组件速查」）。
+
+形态持久化到 `settings.xxxMode: PanelMode`。支持三态的面板：`PreviewPanel`/`ToolBoxPanel`/`AgentPanel`。`VarPanel`/`SettingsDock` 仍是两态布尔（`xxxFloat`，只有 docked/overlay）。
+
+移动端断点内这套面板自动变成底部弹出 sheet（`.wb-mobile-drawer-open` 触发滑入），`.float` 修饰在断点内被同优先级的移动端规则覆盖，不用单独处理。
+
+agent 侧：`AgentPanel.vue` 同支持三态，形态存 `settings.agentMode`，切换 UI 是共享的 `PanelModeSwitch.vue`，不进标签页路由；开关状态放 `uiStore.agentPanelOpen`，跟 `activeWorkspace` 无关。
+
+## 复用组件速查
+
+- **`ListToolbar.vue`**：侧边栏列表顶部工具条（新建按钮 slot + 计数），`PresetSidebar.vue`/`WorldbookSidebar.vue`/`RegexSidebar.vue` 三个共用（`CharacterSidebar.vue` 没有走这个，固定字段列表没有"新建"语义、greetings 的"+"按钮就地放在自己的分区标题行里）。
+- **`NumberInput.vue`**：原生 `<input type="number">` + 右侧 ⠿ 拖拽手柄，按住拖拽的数值微调由 `useNumberDragScrub` 提供。
+- **`FloatingPanelShell.vue`**：薄壳，只渲染 header（标题+拖拽发起区+✕ 关闭）/body（`v-slot`）/右下角 resize 手柄，业务内容整个通过默认 slot 塞进去；props（`title`/`close-title`/`width`/`height`/`min-width`/`min-height`）+ `@close` 事件签名。
+- **`PanelModeSwitch.vue`**：三态面板切换 UI（docked/overlay/float），见「三态面板形态」。
+
+## 数值常量
+
+| 常量 | 值 | 说明 / 唯一来源 |
+|---|---|---|
+| `SEARCH_MAX` | 展示上限 | 搜索结果展示上限，唯一来源 `types.ts`（`searchFields()` 纯函数收集是全量的，只限制 DOM 渲染行数，工具箱 `SearchTool.vue` 复用） |
+| `DRAG_THRESHOLD` | 4 px | `useDragReorder.ts` 拖拽/长按判定的移动阈值（防止滑动列表时意外拖拽或误触发长按）；也是 `useFabDrag` 默认 `dragThreshold=4` |
+| `LONG_PRESS_MS` | 200 ms | `useListSelection.ts` 移动端触屏长按多选的延迟（`pointerType !== 'mouse'` 且落点不在 `.wb-drag-handle` 上时启动计时器） |
+| tap target | ~40px | 移动端触摸目标舒适下限：桌面 20~24px 的小图标按钮用 padding 撑大可点击区域、内容居中，视觉尺寸不变、命中区域变大 |
+| FAB 默认位置 | `bottom:24px;right:24px` | `.wb-fab` 悬浮球默认位置（带安全区适配 `env(safe-area-inset-*)`），唯一来源 `main.css`；`size` 需跟 `.wb-fab` 的 width/height 保持一致 |
+| 数字拖拽 Shift 步进 | 0.1× step | 按住 Shift 精细调整时每像素位移映射为 0.1×step |
+| z-index 序列 | 100000→100003 | 唯一来源 `main.css`：`.wb-panel` 100000 / `.wb-modal-overlay` 100001 / `.wb-toast` 100002 / `.wb-preset-var-popup` 100003；悬浮窗模块级递增计数器初始值 100010 卡在序列上方 |

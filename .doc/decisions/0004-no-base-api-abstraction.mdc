@@ -1,0 +1,33 @@
+---
+name: "0004-no-base-api-abstraction"
+kind: "decision"
+description: "为什么 presetApi/worldbookApi/characterApi 不抽 BaseApi<T> 基类。想给三个 API 文件提取公共基类，或新增 domain 时纠结要不要仿造已有 API 结构时读。"
+alwaysApply: false
+status: "accepted"
+supersedes: ""
+---
+
+# 0004. `api/` 下不抽 `BaseApi<T>` 基类
+
+## 背景
+
+`presetApi.ts`/`worldbookApi.ts`/`characterApi.ts` 都是"跟 ST 本体交互的读写层"，
+表面上像是可以抽一个公共基类统一 `list/get/create/edit/delete` 接口。
+
+## 决策
+
+不抽。三个 domain 的 API 形状差异太大：preset 走 `PresetManager` 单例读取、
+worldbook 走 `/scripts/world-info.js` 的模块函数、character 走 `/script.js` 的
+`characters` 数组 + multipart 表单读写。真正 domain-agnostic 的东西只有
+`deepClonePlain()`（传给 ST 前必须深拷贝成纯数据，不能是 Vue Proxy）这一类纪律性
+工具函数，放进 `api/apiUtils.ts`。
+
+## 后果
+
+- 新增一个 domain 的 API 文件时，参照现有三个文件的写法（哪个更像就抄哪个），
+  只导入自己真正需要的东西，不要强行去满足一个假想的公共接口。
+- 强行抽基类的代价是催生一堆 `never`/`unknown` 类型断言去兼容三种不同形状的
+  底层调用——这个决策把"看起来该统一"的直觉，让位给了"统一的成本大于收益"的
+  判断。如果未来出现第四个 domain 且它的 API 形状恰好和某个现有 domain 高度
+  相似（不是"看起来都是读写层"这种表面相似，是真的共享调用模式），可以考虑
+  只在那两者之间抽一个窄接口，而不是回来重新论证整体基类。

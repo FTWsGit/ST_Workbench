@@ -1,0 +1,60 @@
+---
+name: "新增功能套路表"
+kind: "guide"
+description: "查表型文档：常见'加一个 XXX 功能'该抄哪个现成模式，一行任务对一行答案。新加一类功能前先来这查有没有现成模式可抄。"
+alwaysApply: false
+---
+
+# 新增功能时的套路
+
+## 常见套路查表
+
+| 要做什么 | 抄哪个模式 |
+| --- | --- |
+| 加一个新的设置项 | 只改 `types.ts`（`Settings` + `DEFAULT_SETTINGS`） |
+| 加一个确认弹窗 | `confirmStore.ask({title, message, onConfirm, ...})`——**不要**用原生 `confirm()` |
+| 加一个要用户输入一行文本的弹窗 | `confirmStore.askInput(...)`（空值自动挡住）——**不要**用原生 `prompt()` |
+| 加一个 domain 专属的信息类弹窗 | 在对应 `components/<domain>/` 下开 `.vue`（如 `PresetHiddenBlocksModal.vue`），App.vue 按 `activeWorkspace` 挂载 + 内部 `v-if`；通用 confirm/prompt/multi 仍走 `Modals.vue` |
+| 加一个复杂度较高、自成一体的工具（像 CopyPanel 这种双栏数据工具） | 收进工具箱：在 `components/toolbox/register.ts` 注册到适用 scene，组件只渲染内容体（不自己包 FloatingPanelShell/弹窗） |
+| 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `PreviewPanel`/`ToolBoxPanel`/`AgentPanel` 的三态写法：`settings.xxxMode: PanelMode` + 共享 `PanelModeSwitch.vue`，float 形态借 `FloatingPanelShell` |
+| 加一个跨 workspace 通用的工具（按 scene 派工具） | 新增工具只在自己的 `register.ts` 调一次 `registerTool(workspace, collection, def)`，不用改容器 |
+| 加一个新的可编辑 domain | 按下方「新增一个 domain 的完整流程」9 步执行 |
+| 加一个"列表 + 点击选中"交互 | `utils.ts` 的 `applyMultiSelect()` |
+| 加一个"列表 + 拖拽排序"交互（支持触屏） | `composables/useDragReorder.ts`（Pointer Events），自己只写 `onDrop` 回调里的排序逻辑，把手元素记得加 `touch-action: none` |
+| 加一个"按 role/type 出徽标 class 名"的地方 | `utils.ts` 的 `roleClass()`/`varOpBadge()` |
+| 加一个新的 locale key | 先加 `i18n/locales/zh-CN.ts`，再在 `en.ts` 对应位置加英文翻译（两文件顺序保持一致）；key 归属哪个域见「i18n-key命名规范」；如果 key 属于 `types.ts` 选项表，把 `label` 改成 `labelKey: LocaleKey` 并在 locale 文件里补文案 |
+| 加一个设置弹窗里"拖动时连续触发"的控件（滑块/色盘） | 抄 `Modals.vue` 的 draft 模式：拖动中只改组件本地 draft，松手（`@change`）才 commit 进 store + localStorage——**不要**直接绑 store |
+| 加一个"按住左右拖改数值"的输入框 | `components/shared/NumberInput.vue` + `composables/useNumberDragScrub.ts`，原数 number input + 拖拽手柄共存，数字拖拽微调机制走 useNumberDragScrub.ts |
+| 加一个对三个 domain store 的"新建/删除/切换/重载/保存"统一入口 | 走 `stores/workspaceRegistry.ts` 的 `DocumentWorkspaceAdapter` 表，App.vue 顶栏/Save/Reload/关面板/移动端工具抽屉都查这张表写通用逻辑，不要各自 `if (workspace === 'preset')` 硬编码 |
+| 加一份正则脚本的 add/delete/reorder CRUD | 走 `composables/useRegexScripts.ts`，presetStore 和 characterStore 都从这拿同一份实现，调用方只喂"怎么拿当前 scripts 数组 getter"和三个 domain 无关的依赖 |
+| 要往 SillyTavern 读/存数据 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现成的函数（domain 各自的读写层）；传给 ST 自己 API 的对象**必须**先深拷贝，与 ST API 的数据契约要深拷贝 |
+| 改动 `utils.ts`/`regexEngine.ts` 里的纯函数算法 | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
+| 判断当前是不是移动端布局 | `composables/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |
+| 新增一个"工作区内部还有子集合"的 domain 时 | 不要在某个 Sidebar 组件内部再发明一个本地 `localMode`，直接调 `tabsStore.setSidebarCollection(activeWorkspace, collection)` |
+
+## 新增一个 domain 的完整流程
+
+比如以后的世界书导入角色卡内嵌世界书，或者别的什么。假设读者已熟悉六个 store 边界与多 domain 路由模式。
+
+1. `types.ts` 加数据类型。
+2. 数据如果本来就活在已有的宿主对象里（像 regex 活在 preset/character 里），对应 store 加一个 live computed + CRUD 方法；如果是全新的持久化目标，仿照 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现有函数的模式在 `api/` 下加一个新文件，`deepClonePlain()` 这类真正 domain-agnostic 的纪律放 `api/apiUtils.ts`，新文件只导入它真正需要的东西，不要去满足一个公共基类接口。
+3. 在 `stores/` 下加一个新 store（如果跟已有的共享模式就照 worldbookStore/characterStore 抄）。
+4. `tabsStore` 的 `domain`/`workspace` 联合类型加新值。
+5. `EditorShell.vue` 的 `EDITOR_COMPONENTS` 路由表加一条 `xxx: XxxContentEditor`（`<component :is>` 挂载，不再写 `<XxxContentEditor v-if="domain === 'xxx'">` 模板分支）；`SettingsDock.vue` 的 `FORMS` 表加一条 `xxx: XxxSettingsForm`；如果新 domain 有"整份文档级别"的元信息字段，`MetaPanel.vue` 的 `META_FORMS` 表加一条，并在顶栏/工具栏加触发 `uiStore.metaPanelOpen = true` 的按钮（参考 `PresetSidebar`/`CharacterSidebar` 的 toolbar）。
+6. 新增 `XxxSidebar.vue`（参考 `PresetSidebar`/`WorldbookSidebar` 的模式：`useGroupedList`/`useDragReorder`/`useListScrollSync`/`useInlineRename`/`useListSelection`），在 App.vue 挂载点按 `activeWorkspace`/`sidebarCollection` 分派。
+7. watcher 幂等 + 按 id 预索引：`watch(() => tabsStore.activeTab, ...)` 这类 watcher 抄 `presetStore` 的幂等守卫——`if (anchorGi === gi && selectedGi.size === 1 && selectedGi.has(gi)) return`，gi 没变就不换新 Set 引用；模板按 id 查节点的辅助函数用 `Map<id, ScriptTree>` 预索引 computed 做成 O(1) 查表，不要每次渲染都线性扫全数组（`scriptsById` computed 依赖数据源数组，数组变时自动重建 Map）。
+8. 若数据源是 computed 返回同一数组引用（regex/tavern 的数据就是），重建树不能只靠 shallow watch，必须显式 rebuild + deep watch——按现有 regex/tavern 段模式实现（纪律见下方「改既有 store/持久化代码的现状与坑」）。
+9. i18n：`zh-CN.ts` 加键，`en.ts` 跟着加，`LocaleKey` 类型会自动收进去，`npm run typecheck` 卡得住漏译。
+
+## 改既有 store/持久化代码的坑（查表，不含设计理由）
+
+改 store/持久化相关代码前先扫一遍——这是这类改动纪律的唯一 how-to 单源。为什么会有这些坑见 decision 0007（shadow tree 双轨 rebuild）与「状态与持久化」的 dirty 追踪一节，这里只收"要做什么"。
+
+| 要做什么 | 怎么做 |
+| --- | --- |
+| CRUD（add/delete/load）改了 regex/tavern 段的裸数组 | 之后必须显式调 `rebuildRegexOrder()`/`rebuildScriptTreeOrder()`——deep watch 只兜字段级变异，不能替代显式 rebuild |
+| 侧边栏改 regex/tavern 树上的字段（如 toggle enabled） | 走写回包装函数（如 `regexToggleBlock`），不要只改树——不写回 raw 数据，保存时会被树覆盖丢改动 |
+| 在 computed getter 里处理宽松类型转严格类型（如 `tavernHelper` 的 coerce） | 放 load 段一次性做，不要放进 getter——getter 里原地 mutate 触发响应式重算，会死循环卡死 |
+| 改 `prompts`/`entries` 里嵌套字段（content/name/role 这类） | 改动入口必须显式调 `markDirty()`——这两个 ref 是浅监听（防打字卡顿），字段级变异浅 watch 捕获不到 |
+| 读/存预设、世界书、角色卡 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts`，不要绕开它们直接摸 ST 的 `ctx` |
+| 传对象给 ST 自己的 API | 先深拷贝（`JSON.parse(JSON.stringify(...))`——`structuredClone()` 克隆不了 Vue 的 Proxy 会直接抛错） |

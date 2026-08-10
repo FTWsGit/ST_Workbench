@@ -1,0 +1,40 @@
+---
+name: "0002-regex-crud-shared-composable"
+kind: "decision"
+description: "为什么 preset/character 的 regex CRUD 抽成 useScriptList/useRegexScripts 复用，以及 store 层为什么要手动 rebuild。改正则脚本增删排序逻辑，或排查'改了字段但列表没刷新'时读。"
+alwaysApply: false
+status: "accepted"
+supersedes: ""
+---
+
+# 0002. regex CRUD 跨 domain 复用
+
+## 背景
+
+`preset.extensions.regex_scripts` 和 character 自带的 regex_scripts 是同一个数据
+概念，最初 `addRegexScript`/`deleteRegexScript`/`reorderRegexScript` 在 presetStore
+和 characterStore 里各写了一份，逻辑完全一样，只有"怎么拿到当前 scripts 数组"不同。
+
+## 决策
+
+抽出泛型底座 `composables/useScriptList.ts`：`useScriptList<T>(getScripts, {
+idPrefix, createScript, markDirty, showToast, t, loadFirstMessageKey? })`，管
+`add`/`remove`/`reorder` 三件事，`T` 是脚本元素类型。`useRegexScripts`（id 前缀
+`regex_`）和 `useScriptTree`（id 前缀 `th_`，tavern_helper 脚本树用）都只是给它
+填一个 `createScript` 工厂的薄包装，对外保留各自原有的接口名不变。调用方只需要
+喂"怎么拿当前 scripts 数组的 getter"和几个 domain 无关的依赖。
+
+`getScripts` 返回的是可变数组引用（preset 指向 `rawData.extensions.regex_scripts`、
+character 指向自己那份），CRUD 直接改这个引用，落进对应 store 已有的 dirty 追踪，
+不需要为 regex 单独做一套 setter/持久化。
+
+## 后果
+
+- computed ref 的 getter 如果返回的是同一个数组引用，`push`/`splice`/改字段不会
+  触发 computed 重新求值——shallow watch 依赖的 rebuild 链路会断。修法是双轨：
+  `addRegexScript`/`deleteRegexScript`/`addScriptTree`/`deleteScriptTree` 以及
+  load 之后都要显式调 `rebuildRegexOrder()`/`rebuildScriptTreeOrder()`，并配
+  `{ deep: true }` 的 watch 兜字段级变异。**这是复用这层带来的已知代价，不是
+  bug**——新增一个同样走 `useScriptList` 的场景时，这条 rebuild 纪律要一起抄。
+- 好处是以后任何新的"某种脚本挂在多个宿主上"的场景，只要形状类似（数组、id
+  前缀、增删排序），可以直接复用这层底座，不需要重新写一遍 CRUD。

@@ -1,0 +1,33 @@
+---
+name: "0008-var-nav-preview-cross-domain-shared"
+kind: "decision"
+description: "为什么 VarPanel/VarPopup/PreviewPanel 从 components/preset/ 迁到 components/shared/，varnav/preview 状态机从 presetStore 迁到 uiStore（跨 workspace 工具，切换 workspace 不关闭，跟 AgentPanel 对齐）。改这几个组件归属、或判断新组件该放 preset/ 还是 shared/ 时读。"
+alwaysApply: false
+status: "accepted"
+supersedes: "0003-preset-owned-shared-components"
+---
+
+# 0008. VarPanel/VarPopup/PreviewPanel 迁到 shared/，varnav/preview 跨 workspace 化
+
+## 背景
+
+当初把 VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 留在
+`components/preset/`，理由是它们"纯 preset 专属"。后来变量追踪升级为跨三域扫描
+（preset/character/worldbook），var-click 浮层协议也接到 char/wb 编辑器；预览在
+char/wb 工作区同样可用。两个工具不再属于 preset 一个域——状态机宿主从 presetStore
+迁到 uiStore，开关（varNavOpen/previewOpen）跟 agentPanelOpen 一样放 uiStore 全局，
+切换 workspace 不关闭面板。
+
+## 决策
+
+- VarPanel/VarPopup/PreviewPanel 迁到 `components/shared/`：它们服务的是跨 workspace
+  工具，不再硬编码 preset 概念（三域数据经 uiStore 的惰性 getter 注入）。
+- CopyPanel/PresetMetaForm 仍留 `components/preset/`：CopyPanel 只复制预设提示词块，
+  PresetMetaForm 只认预设模型参数字段，仍是纯 preset 专属。
+
+## 后果
+
+- shared/ 目录的判据从"domain-agnostic（不认识任何 domain 概念）"扩展为
+  "domain-agnostic 或跨 workspace 工具组件"，两者都不硬编码单个 domain。
+- 新组件归属：只服务单个 domain 的放 `components/<domain>/`；跨 workspace 通用工具
+  的状态机放 uiStore、组件放 shared/（或收进工具箱按 scene 派发）。

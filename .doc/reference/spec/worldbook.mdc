@@ -1,0 +1,102 @@
+---
+name: "worldbook"
+description: "查 ST 世界书条目原生形状、list/get/create/edit/delete 读写签名时读"
+kind: "spec"
+alwaysApply: false
+---
+
+# worldbook
+
+## 数据结构
+
+世界书以 `<名字>.json` 落盘，**按文件名引用**（顶层 `name` 可选，服务端读取时兜底）。结构是 uid → 条目 的字典，**uid 既是 Record 的键，也内嵌在每条 entry 的 `uid` 字段里**（双份）。
+
+```ts
+type Worldbook = {
+  entries: Record<number, WorldbookEntry>;   // uid → 条目（新建空书就是 { entries: {} }）
+  // 可选：name / extensions / originalData（一般不存在）
+};
+
+type WorldbookEntry = {
+  uid: number;                 // entries 的键，数字
+  key: string[];               // 触发词
+  keysecondary: string[];
+  comment: string;
+  content: string;             // 命中后注入的正文
+  constant: boolean;           // 常驻注入
+  vectorized: boolean;
+  selective: boolean;
+  selectiveLogic: 0 | 1 | 2 | 3;   // AND_ANY / NOT_ALL / NOT_ANY / AND_ALL
+  addMemo: boolean;
+  order: number;               // 排序值
+  position: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+                               // before / after / ANTop / ANBottom / atDepth / EMTop / EMBottom / outlet
+  disable: boolean;            // 禁用
+  ignoreBudget: boolean;
+  excludeRecursion: boolean;
+  preventRecursion: boolean;
+  matchPersonaDescription: boolean;   // 以下为选择性命中条件
+  matchCharacterDescription: boolean;
+  matchCharacterPersonality: boolean;
+  matchCharacterDepthPrompt: boolean;
+  matchScenario: boolean;
+  matchCreatorNotes: boolean;
+  delayUntilRecursion: number | boolean;   // 0（默认）或编辑器写出的 true/false
+  probability: number;         // 0-100
+  useProbability: boolean;
+  depth: number;               // atDepth 时的深度
+  outletName: string;
+  group: string;
+  groupOverride: boolean;      // 覆盖分组优先级
+  groupWeight: number;
+  scanDepth: number | null;
+  caseSensitive: boolean | null;
+  matchWholeWords: boolean | null;
+  useGroupScoring: boolean | null;
+  automationId: string;
+  role: 0 | 1 | 2 | null;      // system / user / assistant；position 非 atDepth 时为 null
+  sticky: number | null;
+  cooldown: number | null;
+  delay: number | null;
+  triggers: string[];          // 生成类型触发的关键词（模板默认 []）
+  extensions?: Record<string, any>;   // 扩展数据槽位；角色卡转世界书时保留的 snake_case 镜像副本
+  [k: string]: any;            // 顶层宽松槽位：未列出的原生 ST 字段也经此透传
+};
+```
+
+> 注意：Tavern Helper **不**向世界书/条目注入 `tavern_helper` 字段（只有 preset 和 character 有）。世界书条目的扩展数据槽位是 `extensions`（原样透传）。权威字段一律是顶层扁平字段（扫描/渲染/编辑器都读顶层）；`extensions.*` 只是角色卡转世界书时保留的 snake_case 镜像副本，ST 不会在读取时从 extensions.* 回填顶层字段。
+
+## 工作层派生字段
+
+以下字段不在 ST 原生 `WorldbookEntry` 上，由工作层（`api/worldbookApi.ts`）在读写转换时经顶层宽松槽位 `[k: string]: any` 附加/回填，ST 原样忽略、下次加载时由工作层读回重建：
+
+| 字段 | 类型 | 语义 |
+| --- | --- | --- |
+| `characterFilter` | `{ isExclude: boolean; names: string[]; tags: string[] } \| undefined` | 加载时给每条回填 |
+| `displayIndex` | `number` | 渲染排序用，工作层总填好（必填） |
+| `keyWord` | `boolean` | `constant` 与 `vectorized` 都 false 时为 true（"关键词"激活模式） |
+| `_gid` / `_gname` | `string` | 文件夹式分组持久化：组 id / 组名 |
+| `_gcollapsed` / `_genabled` | `boolean` | 文件夹式分组持久化：折叠态 / 启用态 |
+| `_gidx` | `number` | 文件夹式分组持久化：组内序号 |
+
+## 读写
+
+以下接口都来自 ST 前端自身导出的模块，用标准动态 import 按路径加载即可（路径即文件在 `public/` 下的位置）。
+
+### 读取
+
+| 函数 | 参数 | 返回 | 语义 |
+| --- | --- | --- | --- |
+| `world_names`（`/scripts/world-info.js`） | 无（模块级变量） | `string[]` | 所有世界书名 |
+| `loadWorldInfo`（`/scripts/world-info.js`） | `name: string` | `{ entries }` | 读取一本（带缓存） |
+| `getWorldInfoSettings`（`/scripts/world-info.js`） | 无 | 设置对象 | 全局世界书设置（启用列表、扫描深度、预算等） |
+| `getContext`（`/scripts/extensions.js`） | 无 | `{ eventSource, event_types }` | 取事件总线；`eventSource.on(event_types.WORLDINFO_UPDATED, cb)` 订阅世界书保存事件 |
+
+### 写入
+
+| 函数 | 参数 | 返回 | 语义 |
+| --- | --- | --- | --- |
+| `saveWorldInfo`（`/scripts/world-info.js`） | `name: string`, `book: { entries }` | `Promise` | 保存一本：同步更新缓存 + 防抖 POST 落盘 |
+| `createWorldInfoEntry`（`/scripts/world-info.js`） | `name: string`, `book: { entries }` | `entry` | 新增条目：自动分配空闲 uid，内部写回 `entries`，模板默认值齐全 |
+| `createNewWorldInfo`（`/scripts/world-info.js`） | `name: string`, `options?: { interactive: boolean }` | `Promise` | 新建空书 |
+| `deleteWorldInfo`（`/scripts/world-info.js`） | `name: string` | `Promise` | 删除整本 |

@@ -1,0 +1,93 @@
+---
+name: "数据结构与持久化"
+kind: "architecture"
+description: "各 store 的内部数据结构、dirty/settings 持久化机制。"
+alwaysApply: false
+---
+
+# 持久化
+
+## 各 store 内部数据结构
+
+### 核心架构：flatNodes + gi 坐标系
+
+放弃直接用 `order` 数组下标做选中/拖拽/跳转坐标，每次渲染动态构建 `flatNodes`。`gi` 和 `order` 下标没有 group 时碰巧相等，一有 group 就完全不一样。要点：
+
+- `bindSelected()` 里 `items`（要绑成组的块）和 `indices`（从后往前删除用）必须分开排序。
+- `reorderBlock` 目前只移动第一个选中项到目标位置，"多选项保持相对顺序一起移动"还没做。
+- **`flatNodes` 故意跳过 collapsed group 的子节点**（`walk()` 里 `if (g && !ref.collapsed)` 才递归——这是它给侧边栏做折叠渲染用的语义，组收起了子节点当然不该出现在可视列表里）。但这个"可视列表"语义会连累两类看起来不相关的代码，各是各的坑，改对一类不代表另一类也对：
+  - **"扫全部 preset 找东西"的函数**（`rebuildVarIndex`/`generatePreviewBlocks`）：不能拿 `flatNodes` 当"所有 block 的列表"去遍历，会漏掉折叠组里的内容。要从 `prompts.value`（不关心 order/group，`rebuildVarIndex` 用的这个）或 `order.value.flatMap(node => isGroup(node) ? node.children : [node])`（展开一层 group、不管折叠状态，`generatePreviewBlocks` 用的这个）取数据源。`rebuildVarIndex` 在 `composables/useVarNav.ts`，`generatePreviewBlocks` 在 `composables/usePreviewEngine.ts`。**变量追踪跨三域**：`rebuildVarIndex`（`composables/useVarNav.ts`）调 `scanPreset`/`scanCharacter`/`scanWorldbook` 三扫描器——不再涉及"flatNodes 漏折叠组"那个坑。**注**：搜索走工具箱通用版（`searchFields.ts` adapter + `utils.searchFields` 纯函数），preset 域不再有 `doSearch` 那套扫 prompts 的本地实现。
+  - **"根据 identifier 反查 gi 然后跳过去"的函数**（`jumpToVarOp`/`jumpToPopupVar`）：如果目标 block 所在的组当前是折叠的，`flatNodes.value.findIndex(...)` 直接找不到、返回 -1。统一走 `revealAndFindGi(identifier)`（先把目标所在的 collapsed group 展开，再查 gi），不要自己裸写 `flatNodes.value.findIndex`。这两个（会真正切换标签的）不直接调用 `revealAndFindGi()`——`tabsStore.open(...)` 触发 `activeTab` 变化后，由 `presetStore.ts` 那个统一的 `watch(() => tabsStore.activeTab, ...)` 代劳。工具箱 SearchTool 的 `selectSide()` 在多选同步路径里直接调 `revealAndFindGi`，是当前唯一"自己手动调 revealAndFindGi"的调用点。`jumpToVarOp`/`jumpToPopupVar` 在 `composables/useVarNav.ts`。**跨域跳转**（`onJump`→`jumpAcrossDomain` 按 `VarOp.source.domain` 三域分派）。
+
+### presetStore
+
+- **`prompts` / `order`**：`prompts` 是所有提示词块（含禁用/隐藏）。`order` 是当前生效的顺序+启用状态，元素是 `OrderItem` 或 `OrderGroup`。
+- **`selectedGi` / `anchorGi`**：多选集合（gi 的 Set）和多选锚点（Shift+范围选的起点）。侧边栏所有高亮完全对应 `selectedGi`，表面和逻辑 100% 统一，没有两套系统打架。**没有 `selIdx` 这个字段**——"编辑器现在显示哪个块"完全由 `tabsStore.activeTab.key` 决定，跟侧边栏的选中/高亮状态本来是两件独立的事，只通过 `identifierToGi()` 单向换算；但两者**不能真的完全脱钩**——见下面 `revealAndFindGi` 条目里那段 `watch(() => tabsStore.activeTab, ...)`，"active tab 变了"这件事需要单向驱动"高亮跟着变"，否则会出现"点了 tab 但侧边栏没高亮/没展开折叠组"这个 bug（细节见下面两条）。
+- **`currentBlock`**：computed，直接从 `tabsStore.activeTab.key`（block identifier，仅当 `activeTab.domain === 'preset'` 时）→ `prompts` 解出的活引用，完全不依赖任何数组下标。`PresetContentEditor`/`PresetSettingsForm` 直接改它的字段就同步进 `prompts`/dirty 追踪，不需要维护本地 ref（name/role 不是高频输入的热路径，没那个必要）。
+- **`identifierToGi(identifier)`**：辅助函数，把 block identifier 反查成 flatNodes 里的 gi，供侧边栏高亮/滚动/`addBlock()` 决定插入位置这类场景使用——是 `currentBlock` 那条主链路的补充，不是它的依赖。
+- **`regexScripts`**：live computed，指向 `rawData.extensions.regex_scripts`，`push`/`splice` 直接生效并落进 dirty 追踪，不需要单独 setter。CRUD（add/delete/reorder）走 `useRegexScripts`——presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`reorderRegexScript` 都从 `useRegexScripts(getScripts, { markDirty, showToast, t, ... })` 拿同一份实现，调用方只喂"怎么拿当前 scripts 数组的 getter"和几个 domain 无关的依赖，底层垫着泛型底座 `composables/useScriptList.ts`（`useRegexScripts`/`useScriptTree` 都是它的薄包装）；改码纪律/坑（可变数组引用/显式 rebuild/deep watch）。
+- **`flatNodes`**：computed，`order` 或 group 的 `collapsed` 变化时重建，preset 域所有选中/跳转/拖拽都基于这个数组的索引。
+- **`selectPresetByName(name)`**：见上面"为什么需要切换 ST 主菜单选中项"，只被 `PreviewPanel.vue` 生成前调用，不是通用的预设切换入口——那是 `switchPreset()` 的事，两者不要混。
+- **`revealAndFindGi(identifier)`**：跳转专用，先自动展开目标所在的折叠组，再查 gi，避免折叠组里的块跳不过去。**不由各跳转函数各自手动调用**——紧挨着它下面有一个 `watch(() => tabsStore.activeTab, (tab) => {...}, { immediate: true, flush: 'sync' })`，是"标签驱动侧边栏"这件事**唯一**的实现：只要 `activeTab` 变成了某个 block（不管是变量导航点击、TabBar 点击、还是侧边栏自己点击触发的），这个 watcher 就会 `revealAndFindGi()` 展开折叠组、然后把 `selectedGi`/`anchorGi` 重置成只选中这一行。`jumpToVarOp`/`jumpToPopupVar` 只需要 `tabsStore.open({domain:'preset', key, label})` + `requestEditorJump(...)`——`flush: 'sync'` 是为了保证这个 watcher 先于 `useListScrollSync.ts` 那个监听同一个 token 的 watcher 跑完，否则会有"组还没展开就去 `scrollIntoView`，滚到一个还不存在的行"的竞态。工具箱 SearchTool 的 `selectSide()` 把命中同步到 `selectedGi` 时也调 `revealAndFindGi` 展开每个命中所在组，但**不**走那个 watcher——它要的是多选态，watcher 会把 `selectedGi` 重置成单行，所以 `selectSide` 先脉冲 `selectBlock(anchor)` 触发 `requestListScroll` 滚到 anchor，再覆写 `selectedGi` 为完整命中集合。`jumpToVarOp`/`jumpToPopupVar` 和变量弹窗整套（`showVarPopup`/`hideVarPopup`/`rebuildVarIndex` 等）已抽到 `composables/useVarNav.ts`——uiStore setup 时解构调用、store return 继续导出（状态机宿主已从 presetStore 迁到 uiStore，跨 workspace 通用），UI 不变。**变量追踪已升级为跨三域扫描**（preset/character/worldbook 三域 + 13 种宏 + 装配序排序 + `VarOp.source.domain` 跨域跳转分派 + var-click 协议）。
+  - **这个 watcher 监听的是 `activeTab` 引用本身，不是 `tabsStore.listScrollToken['preset']`**。代价是"重新点击已经是 active 的那个 tab"这种情况 watcher 不重新触发，`PresetSidebar.vue` 的普通点击处理函数仍在本地做一次同样的 `selectedGi`/`anchorGi` 重置兜底。
+- **Preset IO 原语**：`loadPresetByName()` 是唯一真正的 load，其它都是薄包装——`loadFromContext()`（首次打开面板，加载 ST 当前选中的那份）、`switchPreset(name)`（明确切到另一份预设，丢弃未保存改动，UI 层负责先 confirm）、`reloadPreset()`（重新加载**本工具当前打开的这份**（`presetName.value`），不是 ST 当前选中的——两者可以不同）、`refreshPresetList()`（同步预设下拉列表）。
+- **`generatePreviewBlocks()`/`generatePreviewRaw()`**：真实调用 SillyTavern 自身渲染管线，不是本地模拟。整段已抽到 `composables/usePreviewEngine.ts`——uiStore setup 时解构调用、store return 继续导出（状态机宿主已从 presetStore 迁到 uiStore，跨 workspace 通用），UI 不变。
+- **`jumpToFieldHit(...)`**：工具箱通用 Search 的"跳到命中"出口，三个 store 都各自实现一份（preset/worldbook/character）。preset 的还兼任正则脚本宿主——`itemId` 是 script id 时按正则跳转。worldbook `revealAndFindGi` + `tabsStore.open`。character 按 `field:xxx`/`field:greeting:<id>` 虚拟 tab key 直接 `tabsStore.open`，没有 groupedList 也就没有 revealAndFindGi。**editorJump 跨域共享在 tabsStore**：三个域的 ContentEditor 都接 `:jump=tabsStore.editorJump`，跨域跳转时光标 select 高亮都生效（`watch(props.jump)` → `moveCursorTo(line, col, len)` 这个协议）。
+
+### worldbookStore
+
+模式跟 presetStore 一致——`entries`（所有条目）+ `order`（顺序+启用状态）；`currentEntry` 从 `tabsStore.activeTab.key`（`String(entry.uid)`）解析，跟 preset 域的 `currentBlock` 同一个模式。故意**不接** MetaPanel（没有整份文档级的元信息需要单独编辑）。
+
+### characterStore
+
+虚拟字段路由是核心区别——`currentField`/`setCurrentFieldValue` 是唯一解析入口，`activeTab.key` 是 `field:xxx`/`field:greeting:<id>` 这种字符串前缀，`CharacterContentEditor.vue` 自己不解析 key。七个创作字段（description/scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt）+ greetings 可拖拽排序。`depthPrompt` 字段额外带一条 depth/role 的 meta 栏（角色卡故意不接 SettingsDock，这两个数值/枚举字段没有别的地方能编辑）。**切到 character workspace 时自动加载一个角色**：`App.vue` 的 `switchWorkspace('character')` 在 `character.value` 为 null 时调 `loadSelectedOrFirst()`——优先 ST 当前选中（`characterApi.getSelectedCharacterAvatar()` 拿 `this_chid` 索引 `characters` 那项的 avatar），兜底角色列表第一项。这让 varNav/Preview 切到 character 域就有数据可用，不必用户先手动选一个角色。已加载且 avatar 一致时跳过，零无谓网络请求。**var-click 已接到 char/wb 域**：`CharacterContentEditor.vue`/`WorldbookContentEditor.vue` 给 `HighlightedEditor` 加 `enable-var-click`+`@var-click="onVarClick"`，`onVarClick` 路由到 `uiStore.showVarPopup`（跨域 `useVarNav` 整套只挂在 uiStore，char/wb ContentEditor 直接 import uiStore 复用）。`var-click` 的事件协议与 `clickDomain`/`clickBlockId` payload 形状。
+
+### 分组与多选
+
+导出时把 group 展开回扁平数组，每个子块携带 `_gid`/`_gname`/`_gcollapsed`/`_genabled`/`_gidx`；导入时扫描 `_gid` 还原结构。SillyTavern 会忽略这些未知字段，不破坏兼容性。
+
+
+### uiStore
+
+全局 UI 单例（id `'ui'`，导出 `useUiStore()`）。字段：`settings`（字体/颜色/面板宽度/语言/FAB 位置）、`cssVars`（计算出的 CSS 变量）、`panelOpen`（整个 ST_Workbench 浮动面板的主开关）、`settingsOpen`（设置弹窗开关）、`metaPanelOpen`（元信息悬浮窗开关）、`agentPanelOpen`/`varNavOpen`/`previewOpen`（Agent/VarNav/Preview 三个跨 workspace 工具面板的开关，切换 workspace 不关闭）、`toastMsg`/`toastVisible`/`showToast`（通知系统）、`t`/`currentLocale`（i18n）。
+
+**Var Nav/Preview 的状态机宿主在 uiStore**：`useVarNav`/`usePreviewEngine` 在 uiStore setup 实例化（三域数据经惰性 getter 注入），跨 workspace 通用。所有组件直接 `useUiStore()` 拿全局 UI 状态，不经过任何 domain store 转发；presetStore/worldbookStore/characterStore 内部也 `useUiStore()` 解构 `t`/`showToast` 供自己的 IO 函数用，但不再对外 return 这些字段。
+
+### tabsStore
+
+标签页 `tabs`（`{domain, key, label, workspace}`）、`activeWorkspace`（当前活跃工作区，`preset`/`worldbook`/`character` 三态，顶栏第一行，Save/Reload 按钮和"未保存"红点只对它生效）、`sidebarCollection`（工作区内部当前在看哪个集合，顶栏第二行，只有 `preset`/`character` 有得选）、`settingsDockOpen`、`listScrollToken`（按 domain 的"请把当前项滚动进视野"信号）。这些是"UI 现在长什么样"，跟"预设/角色卡里存了什么数据"是两码事，故意分开。
+
+### confirmStore
+
+三条流——`ask()`/`askInput()`/`askMulti()`，App.vue 关面板时用 `askMulti` 聚合各工作区 dirty 提示。三流的具体接口形状、并发闸门与"全项目禁止原生 `window.confirm/prompt`"铁律。
+
+### workspaceRegistry
+
+不是 Pinia store，是普通工厂函数 `createWorkspaceRegistry()`：三个 domain store 新建/删除/切换/重载/保存的**对外统一表**——`preset`/`worldbook`/`character` 三个 `DocumentWorkspaceAdapter`（成员形状对齐）。顶栏的 + 按钮/🗑 按钮、Save/Ctrl+S、Reload、✕关面板聚合 dirty、移动端工具抽屉里的新建/删除，全部查这张表写通用逻辑，不再各自 `if (workspace === 'preset')` 硬编码。三个 store 内部的函数名没有跟着改，这一层只包一次转接。新建/删除/重载/保存的统一逻辑接的是 App.vue 的 `onNewWorkspace`/`onDeleteWorkspace`/`onSave`/`onReload`；顶栏 `<select>` 的切换逻辑在 `components/shared/WorkspaceSelect.vue`（自己持一份 `workspaceSelect` computed 按 `activeWorkspace` 取 list/当前 id/i18n key，dirty 时调 `confirmStore.ask` 走 `workspaceRegistry` 的 `switchTo`）。
+
+## 持久化与 dirty 追踪
+
+### SillyTavern 数据持久化：preset/character/worldbook
+
+通过api/* 保存回SillyTavern
+
+### settings 持久化
+
+`settings` 整体存 `localStorage`（`st-wb-settings`），加载时 `{ ...DEFAULT_SETTINGS, ...存的内容 }` 合并（`syntaxColors` 再单独深合并一层）。新增设置项只需要在 `types.ts` 的 `Settings` interface 和 `DEFAULT_SETTINGS` 加一行——比如 `fabPos: { x: number; y: number } | null`（FAB 被长按拖拽后的显式坐标，`null` 表示还没拖过、继续用 CSS 默认的 `bottom/right` 定位）。右侧面板/工具箱的形态是 `PanelMode` 枚举（`'docked'` 右侧挤开 / `'overlay'` 右侧悬浮 / `'float'` 完全悬浮），`previewMode`/`toolBoxMode`/`agentMode` 三个字段 + 共享的 `PanelModeSwitch.vue` 切换 UI。面板宽度：`previewWidth`/`toolBoxWidth`/`agentWidth`（resize 手柄改完 `uiStore.saveSettings()` 持久化），工具箱默认 `420`/docked。开关本身不存 settings——`toolBoxOpen` 按 workspace 分桶存 `tabsStore`（沿用 `previewOpen` 同款，不另起状态），`agentPanelOpen`/`metaPanelOpen` 在 `uiStore`（跨 workspace 全局）。
+
+regex/tavern 段维护裸数组 + 影子树两份状态，靠显式 rebuild + deep watch 双轨桥接——为什么要两份状态、改码时的坑，见 decision 0007，改代码的具体纪律见「新增功能套路表」。
+
+字体/颜色是通过 `uiStore.cssVars` 挂在 `.st-wb` 根节点上的 CSS 变量（`--wb-fs`/`--wb-ff`/`--hl-*`），所有后代自然继承——所以设置弹窗改字体对所有域的编辑器同时生效，不需要逐组件接线（唯一要手动做的是触发重新测量）。
+
+### "未保存"标记：三个 store 的 dirty 机制不一样
+
+`dirty` + `markDirty` 已抽成 `composables/useDirtyFlag.ts`，三个 store 共用同一对 `{ dirty, markDirty }`；watch 列表（哪些 ref 触发脏、deep 还是 shallow）仍各 store 自己写，因为每域的浅/深 watch 选择背后是性能权衡（如 presetStore 的 `prompts` 浅监听防打字卡顿）。
+
+presetStore 的 `dirty` 是四条 watch 打出来的：`watch([order, regexScripts], markDirty, {deep:true})` + `watch(prompts, markDirty)`（**浅**）+ `watch(regexOrder, markDirty, {deep:true})` + `watch(scriptTreeOrder, markDirty, {deep:true})`。`prompts` 特意浅监听（内容高频编辑，深监听每字遍历打字卡顿）——所以 `prompts` 里的嵌套字段改动（content/name/role 这种字段级变异）浅 watch 捕获不到，改动入口必须**显式 `markDirty()`**（`PresetContentEditor.vue` 的 content v-model setter、`PresetSettingsForm.vue` 的字段 setter、`PresetSidebar.vue` 的重命名 commit 都已这么做）；`order`/`regexOrder`/`scriptTreeOrder` 走深监听自动覆盖。代价是"加载新预设"本身也会触发，所以 `applyLoadedPreset()` 加载完之后用 `nextTick()` 把它拨回 `false`。同时 `applyLoadedPreset()` 会调用 `tabsStore.closeWorkspace('preset')`——`regex_scripts` 也活在同一份被替换掉的 `rawData` 里，所有旧标签都是悬空的，切预设/重新加载时一起清。模型参数等 `PresetMetaForm.vue` 直接改的字段不在这些 watch 的监听范围内（它们是 `rawData` 上的散字段，不是 `prompts`/`order`/`regexScripts` 这几个专门的 ref），所以 `PresetMetaForm.vue` 每个字段的 setter 里都手动调一次 `store.markDirty()`。
+
+worldbookStore 的 `dirty` 同理：`watch([order, entries], ...)`，order 深监听（量小），entries 浅监听（高频编辑热路径，跟 presetStore 的 prompts 同一个理由），加载完用 `nextTick()` 拨回 `false`。
+
+characterStore 的 `dirty` 主字段编辑**不是** watch 出来的，是每个改动函数（`setCurrentFieldValue`/`addGreeting`/`deleteGreeting`/`reorderGreeting`/`CharacterMetaForm.vue` 每个字段的 setter）显式调用 `markDirty()`——角色卡的字段结构比预设/世界书松散得多（七个大文本框 + greetings 数组 + regex_scripts + 一堆 meta 散字段），没有一两个能覆盖所有改动入口的顶层 ref 可以整体 watch，跟 CopyPanel 的 `dirty` 是同一个理由。例外是 regex/tavern 树：`watch(regexOrder, markDirty, {deep:true})` + `watch(scriptTreeOrder, markDirty, {deep:true})` 两条 deep watch 捕获这两个树的脏改（`rebuildRegexOrder`/`rebuildScriptTreeOrder` 更新树视图时自动标脏），对应 CRUD 不用手动打标。
+
+
+

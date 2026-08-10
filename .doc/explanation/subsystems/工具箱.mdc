@@ -1,0 +1,28 @@
+---
+name: "工具箱"
+kind: "subsystem"
+description: "ToolBox：跨 workspace 的工具面板，按 (workspace, sidebarCollection) scene 派工具（Search/Batch/Copy）。改 components/toolbox/ 下任何文件、加新工具、改 registry 注册机制时读。"
+alwaysApply: false
+---
+
+# 工具箱（ToolBox）：跨 workspace 的工具面板，按 scene 派工具
+
+工具箱是**按 (workspace, sidebarCollection) scene 派工具**的容器——同一个面板壳，preset/items 下挂搜索+批量+Copy（跨预设复制）、character/regex 下挂另一套，scene 切了工具清单自动换。每个 scene 一份工具清单 = tool definition 的 availableWhen 谓词，工具的输入输出形状镜像 LLM 调用形状。
+
+## 关键文件
+
+- `src/components/toolbox/registry.ts`：注册表脚手架，暴露 `registerTool` / `getToolsForScene`。`registerTool` 是唯一填表入口（禁止直接 mutate `TOOL_REGISTRY`）。**表本身是空的**，靠工具各自的 `register.ts` 启动期 side-effect import 命填。
+- `src/components/toolbox/register.ts`：把 SearchTool/BatchTool/CopyPanel 注册到各适用 scene 的 side-effect 模块。**必须在启动链路里被 import 一次才会填表**——当前由 `App.vue` 顶层 `import './components/toolbox/register'` 触发（幂等）。漏这行则工具箱显示"无可用工具"。
+- `src/components/toolbox/ToolBoxPanel.vue`：容器壳。三种形态（`settings.toolBoxMode: PanelMode`，切换 UI 是共享的 `PanelModeSwitch.vue`）：docked 嵌入态抄 `.wb-right-panel` 套路（`.wb-toolbox-panel` + `.wb-right-resize-handle` + `usePanelResize` 挂 `settings.toolBoxWidth`），overlay 加 `.wb-toolbox-panel.float` 盖右侧不挤开，float 形态借 `FloatingPanelShell`（同 MetaPanel）。顶栏 segmented control 列 `getToolsForScene` 命中工具，`<component :is>` 挂载（外层 KeepAlive + `toolKey` 按 scene 分实例，保 tool 切换时 CopyPanel 的左右两侧加载状态）；按 `(activeWorkspace, sidebarCollection)` scene 派发契约与工具统一接收的 `scene/workspace/collection` 三个 props。开关按 workspace 分桶存 `tabsStore.toolBoxOpen`（沿用 preview 雨格，不另起状态）。
+- `src/components/toolbox/searchFields.ts`：scene 适配器。`getSearchScene(workspace, collection)` 的返回形状（`items + SearchField[] + getItemMeta`）——preset/items 喂 `presetStore.prompts`、regex scene 喂对应 store 的 `regexScripts`、worldbook/items 喂 `entries`、character/fields 把 `CHARACTER_FIELDS` + greetings 展平成 items。`jumpToFieldHit`/`applyReplace` 是按 scene 派到对应 store 的修改出口。
+- `src/components/toolbox/tools/SearchTool.vue` / `BatchTool.vue` / `preset/CopyPanel.vue`：三个具体工具。Search 是 `utils.searchFields` 纯函数的人机壳——字段下拉选 + text/list 走字符串 query/replace、enum 字段走候选 toggle（禁止字符串替换避免把布尔/数值改坏，候选清单来自 `searchFields.ts` 的 `getEnumChoices`），"modify what matched"回路把搜索命中同步到 sidebar 自己那份 useGroupedList 选中态（preset/worldbook 走 `store.selectedGi`，regex 走 `store.regexSelectedGi`——regex sidebar 已接 useGroupedList 同模式），再切到 BatchTool 直接批改选中块——Search 不自己另搞勾选/批改 UI；BatchTool 按 scene 给批量操作（preset/items 批量开关+改 role、regex 读 `store.regexSelectedGi` 拿选中 script 对象引用批量开关+删除、worldbook/items 批量开关+改激活方式+删除、character/fields 无批量工具占位提示）。regex 批量直接从 store 拿真对象引用改字段/splice 删（regexOrder 是 watch regexScripts 触发 rebuild 的，gi 会 stale 指错 node）。CopyPanel 是 preset/items 场景的跨预设复制 tool（状态模型见下方 `## CopyPanel`）。
+
+## Search 的 LLM-friendly 形状
+
+`utils.ts` 抽出的 `searchFields(items, fields, query, getItemMeta)` 是纯函数，不碰 Vue 响应式（签名、`SearchField.kind` 三态与返回 `SearchHit[]`）
+
+## BatchTool：批量操作与影子树双状态
+
+批量操作读 SearchTool 同步进 sidebar 自己那份 useGroupedList 选中态批改（"modify what matched"回路见上方 tools 条目）。**批量操作不清选中态**（开关/改 role/改激活方式只改字段不删 item，选中态保留下来才能连续批改——比如先 enabled 再改 role）；只有**批量删除**清选中态（删了的东西没 gi 了，`doDelete` 里 regex 走 `regexClearSelection`、preset/worldbook 走 `selectedGi = new Set()`）。
+
+regex/tavern 段是**裸数组 + 影子树的双状态**：`regexScripts`/`tavernHelper.scripts` 是真数据，`regexOrder`/`scriptTreeOrder` 是侧边栏渲染树，桥接靠"显式 rebuild + deep watch"双轨。

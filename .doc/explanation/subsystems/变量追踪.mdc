@@ -1,0 +1,75 @@
+---
+name: "变量追踪"
+kind: "subsystem"
+description: "变量追踪：跨 preset/character/worldbook 三域扫描变量宏，建索引按 ST 装配顺序排序，VarPanel/VarPopup 展示、点击 {{var}} 弹浮层、跨域跳转。改扫描器/索引/重扫/UI 集成时读。"
+alwaysApply: false
+---
+
+# 变量追踪：跨三域扫描变量宏
+
+扫描 13 种变量宏在预设/角色卡/世界书里的分布，建索引、按 ST 装配顺序排序、展示（VarPanel/VarPopup）并支持跨域跳转。纯静态扫描，不模拟 ST 运行时（激活确定性用 `certain` 布尔近似）。
+
+## 扫描器：scanVariableMacros
+
+`scanVariableMacros`（`utils.ts` L124，旧名 `findVarOps` 保留为别名；返回 `VarOpMatch[]`）是字符级扫描器，不是单一正则：
+
+1. 找 `{{`，用 `findMacroEnd`（深度计数 `{{`/`}}`）找到真正的闭合 `}}`，正确处理嵌套花括号。
+2. inner 与 13 个前缀逐条 `startsWith` 比对。
+3. 带值宏：第二个 `::` 切出 `varName`（trim）与 `varValue`，然后**递归扫值内的嵌套变量宏**（如 `{{addvar::a::{{getvar::b}}}}`）。
+4. 非带值宏：剩余部分全当变量名。
+5. 前缀都不匹配的宏当作外层容器递归穿过，继续找嵌套的变量宏。
+
+返回 `VarOpMatch` 数组（`{ kind, scope, varName, varValue, pos, end, line, col }`）。
+
+## 索引与三域扫描：useVarNav
+
+`composables/useVarNav.ts` 是变量追踪的唯一核心。全项目只有 `uiStore.ts` 一处实例化，character/worldbook 的数据通过 **sources 参数注入**（composable 不 import 任何 store，载体无关）。宿主放 uiStore 而不是某个 domain store——变量追踪是跨 workspace 通用工具，跟 agentPanelOpen 一样切换 workspace 不关闭。
+
+三个扫描器：
+
+| 扫描器 | 遍历方式 | intraOrder | certain 语义 |
+|---|---|---|---|
+| `scanPreset()` | `order` 树递归 walk（`isGroupNode` 展开折叠组 children，不丢内容）；`enabled=false` 的块跳过 | 用 `marker+order` 合成，每访问一个非折叠子节点 `intra++` | `node.enabled !== false`（折叠组收起态/禁用块 → false） |
+| `scanCharacter()` | 按 `fieldOrder`（`CHARACTER_FIELDS` 定序）逐字段遍历（字段清单见「扫描范围」） | 每字段 `intra++` | 恒 true（character 域无 enabled 概念，字段恒注入） |
+| `scanWorldbook()` | entries 按 `entry.order`（insertion_order）**降序**排（order 大先注入） | 排序后下标 | `!!entry.constant`（关键词/概率/向量化激活皆非必定） |
+
+`certain` 是项目自加的近似：世界书只有 `constant`（常驻）条目视为必定装配。
+
+索引排序：`VarAssemblyLayer`（`types.ts`）三态硬编码 **worldbook < character < preset**（对应 ST 装配管线先执行世界书、再角色卡字段、最后预设 prompts），`sortByAssembly` 按 `layerRank` + `intraOrder` 排序。
+
+## UI
+
+### 组件行为（VarPanel/VarPopup 机制）
+
+- **VarPanel.vue**（`components/shared/`）：右侧变量导航面板，**零 props 直连 uiStore**。全局挂载 `v-if="uiStore.varNavOpen"`，顶栏按钮跨 workspace 通用（preset/character/worldbook 都能开，切换 workspace 不关闭，跟 agentPanelOpen 对齐）。功能：过滤 + 🔄 重扫 + 上下翻 + local/global 分组列表。可切换悬浮/嵌入（两态布尔，无三态）。
+- **VarPopup.vue**（`components/shared/`）：点击 `{{var}}` 弹出的全局浮层，App.vue 根挂载。读 uiStore 的 `varPopupOpen` / `varPopupOps`，从全量索引按 `varName + scope` 过滤（不重扫）。ESC / 点外关闭。
+
+### var-click 协议（指针）
+
+点击 `{{var}}` 的检测由 `HighlightedEditor.vue` 的 `enableVarClick` prop（默认关）承担：命中/未命中分别发 `var-click` / `var-click-miss`，三域编辑器统一 `onVarClick` 路由到 `uiStore.showVarPopup(...)`。
+
+### 集成设计理由
+
+preset/character/worldbook 三个内容编辑器都接 `enable-var-click` + `@var-click`：跨域 `useVarNav` 整套（扫描+索引+跳转）只挂 uiStore，char/wb 编辑器直接 import uiStore 复用，不在各自 store 复制 var popup 逻辑；浮层和 VarNav 侧栏面板都跨域可用。变量宏语法高亮同属跨域共享体系，由 `useHighlight.ts` 的 `VAR_HL` 提供。
+
+## 跨域跳转
+
+`useVarNav.onJump` 由 uiStore 注入的 `jumpAcrossDomain`（L127-164）实现，按 `VarOp.source.domain` 分派：
+
+- **preset** → `tabsStore.open({domain:'preset', ...})` + `requestEditorJump`（activeTab watcher 代劳 revealAndFindGi）
+- **character** → `characterStore.jumpToFieldHit`（虚拟字段 tab key，无分组故无 revealAndFindGi）
+- **worldbook** → `worldbookStore.jumpToFieldHit`
+
+## 扫描范围
+
+扫所有最终会被 ST 展开的字符串来源：
+
+| 载体 | 扫描字段 | 不扫 |
+|---|---|---|
+| 预设 | `prompts[].content` | — |
+| 角色卡 | 七固定字段 + greetings（`CHARACTER_FIELDS` + `greetingKey(id)`） | `creator_notes`（仅 UI） |
+| 世界书 | entries `content` | `comment` / `keys` / `secondary_keys` |
+
+## 重扫触发
+
+`rebuildVarIndex()` 触发点全部在 uiStore：四条 watch（preset `order` 深 / `prompts` 浅 / character 深 / worldbook entries 深）自动重扫，外加预设加载/删除 block（presetStore 里调 `uiStore.rebuildVarIndex()`）、BatchTool 批量删除、VarPanel 的 🔄 按钮。uiStore 通过 return 重新导出 useVarNav 的索引态与方法，供 VarPanel/VarPopup 与各编辑器读取。

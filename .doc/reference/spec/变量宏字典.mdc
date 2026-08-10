@@ -1,0 +1,26 @@
+---
+name: "变量宏字典"
+kind: "spec"
+description: "查 ST 变量宏（13 种）的前缀/语法/带值规则时读"
+alwaysApply: false
+---
+
+# 变量宏字典
+
+## 宏前缀字典
+
+`utils.ts` 的 `VAR_MACRO_PREFIXES`（L106-120）逐条前缀匹配，分隔符统一 `::`：
+
+| 宏前缀 | kind | scope | 带值 |
+|---|---|---|---|
+| `setvar::` / `getvar::` / `addvar::` / `incvar::` / `decvar::` | set/get/add/inc/dec | local | set/add 带值 |
+| `setglobalvar::` / `getglobalvar::` / `addglobalvar::` / `incglobalvar::` / `decglobalvar::` | 同上 | global | set/add 带值 |
+| `hasvar::` / `hasglobalvar::` | has | local/global | 不带 |
+| `deletevar::` | delete | local | 不带 |
+
+## 语法细节
+
+- **分隔符**：统一 `::`。带值宏以第二个 `::` 切出 `varName`（trim）与 `varValue`，非带值宏剩余部分全当变量名。
+- **无 `deleteglobalvar`**：delete 只有 local 一种。
+- **`addvar` 语义多态**：当前值是数组则 push、数值则相加、字符串则拼接；静态扫描只能标注 "add 语义"，无法确定运行时分支。
+- **嵌套**：带值宏的值内可嵌套其他变量宏，如 `{{addvar::a::{{getvar::b}}}}`。

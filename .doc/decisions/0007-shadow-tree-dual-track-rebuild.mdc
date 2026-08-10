@@ -1,0 +1,52 @@
+---
+name: "0007-shadow-tree-dual-track-rebuild"
+kind: "decision"
+description: "为什么 regex/tavern 段要维护裸数组+树两份状态、为什么桥接靠显式 rebuild + deep watch 双轨而不是单一机制。改 regexOrder/scriptTreeOrder 相关代码，或排查'改了字段但列表没刷新/勾选生效但保存后丢'时读。"
+alwaysApply: false
+status: "accepted"
+supersedes: ""
+---
+
+# 0007. regex/tavern 段的影子树 + 双轨 rebuild
+
+## 背景
+
+regex 段有两份状态：`regexScripts` 裸数组（真数据，`useRegexScripts`/BatchTool
+改的就是这份）+ `regexOrder` 树（侧边栏渲染源，分组/折叠态/开关副本都在这）。
+`regexScripts` 是 computed 返回同一个数组引用，`push`/`splice`/字段赋值这类原地
+变异不改变引用本身，所以浅层的 `watch(regexScripts, ...)` 永远不会触发——
+`regexOrder` 树会永久落后于真数据（表现为"改了字段但列表没刷新"）。
+
+## 决策
+
+修复用双轨制：`watch(regexScripts, () => rebuildRegexOrder(), { deep: true,
+immediate: true })` 兜底所有变异（含字段级），同时在 add/delete 这类 CRUD 路径
+显式调 `rebuildRegexOrder()`（同步立即生效，不等 watch 的下一个 tick）。
+`useScriptTree`（tavern_helper 脚本树）复用同一套模式：
+`watch(() => tavernHelper.value.scripts, () => rebuildScriptTreeOrder(), { deep:
+true, immediate: true })` + CRUD 路径显式 rebuild。presetStore 和 characterStore
+都各自维护一份，模式完全一致。
+
+同一个 seam 还牵出一个镜像 bug：侧边栏单条 toggle（`regexToggleBlock`）如果只翻
+树上的 `enabled` 不写回 `script.disabled`，保存时
+`syncRegexScriptsFromOrder()` 会把陈旧的树状态覆盖回去，改动就丢了。修法是把
+`regexToggleBlock` 包成先改 raw 数据、再显式 `syncRegexScriptsFromOrder()` +
+`markDirty()`，导出这个包装版给侧边栏用，而不是让侧边栏直接改树。
+
+`tavern` 段多一处 preset 独有的 coerce：`preset.tavern_helper.scripts` 落地时是
+宽松的 `Record<string, any>[]`，load 时一次性 coerce 成严格 `ScriptTree[]`
+（缺 type 补 `'script'`，缺 id 补 `'th_...'`）；character 域已经是严格类型，不用
+coerce。**coerce 必须放在 load 段做一次性处理，不能放进 computed getter 里**——
+`tavernHelper` 是个只读 computed，如果 getter 内部 `th.scripts = th.scripts.map(...)`
+原地 mutate，会触发响应式依赖变化 → computed 重算 → coerce 又跑一次 → 死循环卡死
+（点开脚本树面板的瞬间首次求值就会卡死）。
+
+## 后果
+
+- 这套"裸数组 + 影子树 + 双轨 watch"模式一旦复制，代价是每次改动入口都要记得
+  两件事：会不会漏 `rebuildXxxOrder()`、会不会漏把 UI 层的改动写回 raw 数据。
+  新增类似的"扁平数据 + 树形渲染视图"场景时，先确认是否真的需要两份状态——
+  如果能做成树本身就是唯一数据源（像 preset 域的 `order`/`prompts` 那样，
+  没有这层 seam），优先选那种，不要默认照抄这个双轨模式。
+- 如果发现某处改动"看起来生效但保存后又丢"，先怀疑是不是这个 seam 的镜像 bug
+  重演——UI 层改了树没同步回 raw。

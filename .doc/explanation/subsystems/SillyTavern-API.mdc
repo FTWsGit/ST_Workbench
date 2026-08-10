@@ -1,0 +1,51 @@
+---
+name: "SillyTavern-API"
+kind: "subsystem"
+description: "查工作层 api 层与 ST 原生模块/端点的契约、字段重命名与转换时读"
+alwaysApply: false
+---
+
+# 工作层 api 契约
+
+`src/api/` 三个文件是对 ST 原生模块的封装层。函数签名直接读 `.ts` 源码即可——本篇只记录类型表达不了的 boundary gotcha 与字段重命名表。
+
+## characterApi.ts
+
+- 写侧是 HTTP multipart 表单 POST `/api/characters/create|edit`，用顶层窗口 `fetch()` 发起——iframe 自己的 fetch 会按假 origin 解析相对路径。
+- 读侧经顶层窗口 import `/script.js` 拿 `characters` 活引用（ESM live binding）。
+- `buildFormData` 的 `oldRaw` 必须是 `getCharacterByAvatar()` 返回的那份 raw，不能凭空构造——编辑时（`oldRaw` 非 null）回传 `oldRaw.chat`/`oldRaw.create_date`；新建时（`oldRaw=null`）不传。
+- `avatar` 字段只在头像真的更换时携带。
+- `extensions` 以 `oldRaw.extensions` 打底、工作层已知字段覆盖写入。
+- 删除角色：参数 `avatar` 是文件名而非角色名。
+
+## presetApi.ts
+
+- 统一走 ST 的 `PresetManager`，显式请求 `'openai'`——ST 按 API 类型维护独立的 PresetManager，无参版本解析到当前 UI 主 API，可能不是 chat-completion。
+- 读取具名预设的正确入口是 `getCompletionPresetByName`（ST 原生 `getPresetSettings` 对 openai 返回空对象）。
+- `getPresetByName` 返回纯对象深拷贝，不持有 ST 的 Vue 响应式引用。
+- `savePresetAs` 的 `data` 须为纯对象，不能是 Pinia/Vue 响应式引用。
+
+## worldbookApi.ts
+
+- 经顶层窗口 import `/scripts/world-info.js`，状态在模块实例内部，不发 HTTP 请求。
+- 字段转换全部在边界发生：读时 `fromSTEntry` 改名 + 派生 `keyWord`，写时 `toSTEntry` 还原原生名 + 丢弃派生字段；store/组件只认工作层名字。
+- `listWorldbooks` 返回普通数组拷贝，不是 ST 内部 `world_names` 的活引用。
+- 按名字读完整书：ST 名字不存在时 `loadWorldInfo` 通常返回对象、entries 为空，封装层返回 null。
+
+## 工作层字段重命名与转换
+
+工作层与 ST 原生之间的字段名差异只在 `src/api/` 边界转换，store/组件只认工作层名字。
+
+| 工作层 | ST 原生 | 说明 |
+| --- | --- | --- |
+| `keys` | `key` | 触发词（string[]） |
+| `disabled` | `disable` | 语义相同 |
+| `groupPrioritized` | `groupOverride` | 组内优先 |
+| `keyWord` | （无对应字段） | 工作层派生：`constant` 与 `vectorized` 都 false 时为 true（"关键词"激活模式）；写回 ST 时丢弃 |
+| `depthPrompt.role` | `depth_prompt.role` | ST 字符串 `'system'\|'user'\|'assistant'` ⇄ 工作层数字 `0/1/2`（与 WORLDBOOK_ROLE_OPTIONS 同序），转换在 `api/characterApi.ts` |
+
+其余字段（`scanDepth`/`position`/`role`/`sticky`/`cooldown`/`delay`/`group`/`groupWeight`/`probability` 等）字段名完全一致，用 `{ ...raw }`（读）/ `{ ...rest }`（写）打底再覆盖不一致字段——未建模进接口的字段原样透传，不丢。
+
+世界书工作层附加字段：`displayIndex`（渲染排序用，工作层必填；原生加载默认 0，角色卡内嵌书导入从 `extensions.display_index` 回填兜底下标，保存前由 worldbookStore 重算）；`keyWord` 与分组持久化字段（`_gid`/`_gname`/`_gcollapsed`/`_genabled`/`_gidx`，跟 RegexScript/Script 同模式）经 `[k: string]: any` 透传槽位承载。
+
+角色卡内嵌书条目转换（`fromCharacterBookEntry`）同纪律：`keys` ← `keys`，`disabled` ← `enabled === false` 或 `extensions.disable`，`groupPrioritized` ← `extensions.groupOverride`；`position` 规范字段只有 `before_char`/`after_char` 两档，`extensions.position` 有 ST 精确数值 0~7 时优先。

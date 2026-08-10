@@ -1,0 +1,26 @@
+---
+name: "精确预览"
+kind: "subsystem"
+description: "Precise Preview：真实调用 SillyTavern 自身渲染管线生成prompt预览。改 PreviewPanel、macroAwareDiff/wordDiff 高亮算法、或排查'预览不准/预览不自动同步'类症状时读。跟正则脚本的本地模拟预览是两套不相关的机制。"
+alwaysApply: false
+---
+
+# Precise Preview：真实渲染而不是本地模拟
+
+两种预览模式都真实调用 ST 自己的渲染管线，而不是本地模拟：本地模拟（正则脚本的 `applyRegexScript()`）只做查找/替换/修剪，模拟不了宏替换与 ST 上下文的真实展开，迟早跟实际输出对不上；直接调真实管线，预览就等于真正会发给 API 的内容。跟「正则本地模拟」是两套不相关的机制——那一套给正则测试栏用、能力边界有限，这一套给预设/世界书编辑用、走真实 ST 渲染；想确认最终发给 API 的文本用本篇。
+
+## 按块精确预览
+
+`getPromptManagerMessages()`：往顶层文档注入 `<script type="module">`，让 `import('/scripts/openai.js')` 在顶层文档作用域执行，拿到真实的 `promptManager` 单例，跑一次 dry-run 填充它的 `.messages.collection`。每张卡片显示该 block 经宏/正则/其它扩展全部展开后的真实渲染文本。
+
+## 整体原文精确预览
+
+`getFinalRequestMessages()`：走监听 `CHAT_COMPLETION_SETTINGS_READY` 事件 + 跑一次**真实的** `ctx.generate('normal')`，拿到 `completion.messages` 后立刻 `ctx.stopGeneration()` 中断。刻意呈现"API 实际看到的内容"——无 block 边界、无高亮。
+
+## 同步时机
+
+预览不自动同步：预览是点"生成"那一刻的快照，编辑器里的后续改动不会自动触发重算。唯一的同步点是点"生成"前先调用一次 `store.selectPresetByName(store.presetName)`，把 ST 主菜单选中的预设对齐到当前工具正在编辑的这份——因为 `ST.generate()` 不认工具里编辑的是哪份，只认主菜单选中项，不先对齐预览就会生成主菜单那份的内容。函数内部先判 `ST.getSelectedPresetName() === name`，相等则跳过，已经一致时这一步是零开销的空操作。刻意不做成实时同步的 watcher：`selectPresetByName` 在 ST 里很慢，只在真正需要（点生成）时付这一次代价。
+
+## 结果呈现与高亮
+
+拿块的原始 `content` 和渲染后文本比较，标出"相对原文新增/被替换"的部分。核心思路：原文按宏边界切成字面量片段，按顺序用只会前进的游标去渲染文本里找每段的原样子串——局部顺序查找，不依赖全局唯一性，天然不会串位。`wordDiff()` 系列是"块里完全没有宏"或"某个片段找不到原样子串"时的兜底。改动这两个函数的流程：先看 `utils.ts` 里的多行注释、脱离 Vue 用 `npx tsx` 单独跑回归。

@@ -1,0 +1,38 @@
+---
+name: "0003-preset-owned-shared-components"
+kind: "decision"
+description: "已废弃的决策：当初为什么 VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 放在 components/preset/ 而不是 components/shared/。现状：VarPanel/VarPopup/PreviewPanel 已迁到 shared/（跨 workspace 工具），CopyPanel/PresetMetaForm 仍留 preset/。判断新组件该放 preset/ 还是 shared/ 时读。"
+alwaysApply: false
+status: "superseded"
+supersedes: ""
+---
+
+# 0003. VarPanel/PreviewPanel/CopyPanel/PresetMetaForm 放 `preset/` 不放 `shared/`
+
+## 背景
+
+`components/shared/` 目录本该只装 domain-agnostic 的组件（靠 props 或
+`domain`/`workspace` 字符串路由，自己不认识任何具体业务概念）。VarPanel/VarPopup/
+PreviewPanel/CopyPanel/PresetMetaForm 这几个组件的实际功能却是纯 preset 专属的：
+VarNav 整套挂在 presetStore、Preview 只渲染 preset、CopyPanel 只复制预设提示词块、
+PresetMetaForm 只认预设的模型参数字段——代码里全是硬编码的 preset 概念。
+
+## 决策
+
+放进 `components/preset/`，不放 `components/shared/`。`shared/` 目录名意味着
+"domain-agnostic"，把这几个组件放进去会造成误导，让人以为改的时候不用管 domain
+差异。
+
+`Modals.vue`/`MetaPanel.vue`/`FloatingPanelShell.vue` 留在 `shared/`，因为它们的
+主体逻辑确实是通用宿主/路由容器——比如 `MetaPanel.vue` 自己不认识"温度"或
+"talkativeness"是什么，只是照着 `activeWorkspace` 查 `META_FORMS` 表挂载
+`PresetMetaForm`/`CharacterMetaForm`，跟 `EditorShell.vue`/`SettingsDock.vue` 是
+同一种"路由容器不持有 domain 知识"的模式。
+
+## 后果
+
+- 目录位置诚实反映现状："放在 `preset/` 意味着改的时候要考虑 preset 概念"，比
+  放进 `shared/` 却处处硬编码 preset 更不容易踩坑。
+- 如果以后 regex 域要加类似的搜索/预览功能，意味着这几个组件需要重构成按
+  domain 分派（比如 `PreviewPanel` 改成查一张 `Record<domain, ...>` 表），而不是
+  简单地把文件挪进 `shared/`——挪目录不能替代真正的重构。

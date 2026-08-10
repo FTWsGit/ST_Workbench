@@ -1,0 +1,41 @@
+---
+name: "0001-domain-workspace-two-axis-routing"
+kind: "decision"
+description: "为什么用 domain/workspace 两个正交轴做标签路由，regex/tavern 为什么不是顶层工作区。改路由机制前，或想合并/拆分这两个轴时读。"
+alwaysApply: false
+status: "accepted"
+supersedes: ""
+---
+
+# 0001. domain/workspace 两个正交轴路由
+
+## 背景
+
+早期版本按单一维度分支：`if (workspace === 'preset') ... else if (workspace === 'character') ...`。
+正则脚本（regex_scripts）能同时挂在 preset 和 character 两种宿主上，用同一套
+UI 组件编辑——这打破了"一个维度决定一切"的假设：同一个"用什么组件编辑"的答案
+（regex 三件套），在"这份数据归谁所有"这件事上却对应两个不同的宿主。
+
+## 决策
+
+拆成两个正交维度，互不隐含：
+
+- `workspace`：这个标签归哪份文档所有（`preset`/`worldbook`/`character`），决定
+  Save/Reload/dirty 红点这些"文档级"操作作用在谁身上。
+- `domain`：用哪个组件编辑这个标签（`preset`/`regex`/`worldbook`/`character`/`tavern`），
+  决定 `EditorShell`/`SettingsDock` 挂载哪个组件。
+
+`regex`/`tavern` 不是顶层 workspace，而是 `preset`/`character` 两个 workspace 各自
+`sidebarCollection` 的取值之一。数据源经 `tabsStore.getDomainAdapter(domain, workspace)`
+按 `` `${domain}:${workspace}` `` 这对复合 key 查，不是只看 `domain`。
+
+## 后果
+
+- 新增一个 host-dependent domain（数据挂在别的 workspace 身上）时，照抄 `regex`/`tavern`
+  的模式：组件走 props 驱动（不直接 `useXxxStore()`），host store 在 setup 时调
+  `tabsStore.registerDomainAdapter(domain, workspace, adapter)` 注册，容器只查表，不知道
+  具体 domain 是什么。
+- 代价是新读这段代码的人要先建立"两个轴"的 mental model 才看得懂为什么同一个
+  `domain: 'regex'` 会有两份不同的数据源——这是故意的复杂度，不是不小心引入的。
+- 如果以后出现"一份数据同时挂在三个以上宿主上"的场景，这套 `${domain}:${workspace}`
+  的复合 key 设计需要重新评估是否还够用，届时应该开一篇新的决策记录，而不是回来改这篇。

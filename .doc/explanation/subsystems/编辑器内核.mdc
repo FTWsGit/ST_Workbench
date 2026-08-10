@@ -1,0 +1,51 @@
+---
+name: "编辑器内核"
+description: "HighlightedEditor.vue 四个域共用的宏语法 textarea 内核与 useHighlight.ts 高亮算法。改编辑器、useHighlight/highlightLines/highlightContent、打字调度、行号测量、光标追踪、refreshFont 接口时读。"
+kind: "subsystem"
+alwaysApply: false
+---
+
+# HighlightedEditor：四个域共用的编辑器内核
+
+`components/shared/HighlightedEditor.vue` 是一个 **domain-agnostic 的宏语法 textarea**：行号、语法高亮覆盖层（`useHighlight.ts`）、真实 DOM 换行测量、括号/引号自动配对、滚动同步、光标追踪、状态栏，外加可选的跳转请求和变量点击检测。它**完全不碰任何 Pinia store**——不知道"block"/"regex script"/"world entry"/"角色卡字段"是什么概念，只认 ST 的宏语法（`{{...}}`，这是几个域真正共享的语法，不是耦合）。
+
+## 接口契约
+
+这里保留机制说明：
+
+- `v-model` 是纯字符串。打字时每次击键都同步 emit + 同步刷新高亮/行号/光标——不是"先跳过、等 idle 再补"，而是刷新本身足够便宜（见下面"打字调度"）。外部改 `modelValue`（切块、Replace All、切 regex 标签、切角色卡虚拟字段）通过与组件自己最后已知值比对检测，同样立即刷新。
+- `disabled` 时 textarea 设为 `readonly`，`onInput` 直接短路不 emit——供 `PresetContentEditor.vue` 在当前块是 marker 块时使用，marker 块受保护；`readonly` 而不是 `disabled` 是为了保留原生文本选择/复制能力，只是禁止编辑。
+- 不需要的功能不传对应 prop 即可，组件内部天然是 no-op。
+- 设置弹窗改字体后 textarea 元素本身不 resize，`ResizeObserver` 感知不到——各个父组件各自 watch `uiStore.settings.editorFontSize/editorFontFamily`，变了就调 `editorRef.value?.refreshFont()` 让它重新测量。
+
+## 三层结构
+
+1. **底层 `<textarea>`**：承载真实文本、光标、选区、原生 IME 输入。打字直接走 `onInput`，不需要任何 `contenteditable` 或隐藏 textarea 的复杂手段。
+2. **`updateLineNums()`**：真实 DOM 布局测量每行换行后的高度，不是用 canvas `measureText()` 估算宽度换算换行数——让浏览器自己排版：每个逻辑行单独扔进一个隐藏容器（`.wb-lh-measure`，跟 textarea 共享字体/white-space/tab-size/宽度 + **同一 `--wb-editor-pad` 内边距令牌**——textarea/highlight `<pre>`/mirror/measure 四个容器都引用这一个变量，是行号测量正确性的硬契约，改 padding 必须改它一处而非四处），量它的真实高度，一次 append 全部未缓存的行、再一次性读取（一次 layout，不是每行一次强制重排）。结果按 `(容器宽度, 行文本)` 缓存（`lineHeightCache: Map`，上限 5000 条），稳态下打字只会重测正在编辑的那一行。**缓存是 LRU 不是 FIFO**：命中时 `delete+set` 把条目挪到 Map 末尾（最新），超上限时淘汰 Map 头部最旧条目——避免大文件编辑时频繁访问的旧行被误淘汰导致每次 miss 重测。上限写死在 `updateLineNums()` 里没抽成常量，因为 LRU 后这个上限基本不会真打满，没必要暴露成可调参数。
+
+   **测量精度：优先 `getBoundingClientRect()`，不要用 `offsetHeight`/`clientHeight` 这类会被隐式转成整数的属性**——`offsetHeight` 的 IDL 类型是 `long`，会把行高的小数部分截掉。项目实际用的 `--wb-fs`(14.5px) × `--wb-lh`(1.65) 真实单行高度是 23.925px，不是整数。每个逻辑行独立用 `offsetHeight` 测量再堆叠成行号格子，每一行都吃一次取整误差，而真实 `<textarea>` 内部是连续排版、不会逐行独立取整。内容越长、行数越多，行号跟实际文字的错位越明显。
+
+   有 memoization。**改字体设置时要同时让这两个缓存失效**——`refreshFont()` 干的就是这个。测量用的隐藏容器必须用 `getHostDocument()` 创建：字体只加载在宿主文档里。
+3. **`getCaretCoords(pos)`**：给"点击变量弹出悬浮窗"用，允许强制重排（不在热路径上）。
+
+## 打字调度：按行 diff patch，不是"整体替换 + 延后"
+
+可视层的刷新代价，取决于"改了多少就重绘多少"，不取决于"算得快不快"：`useHighlight.ts` 的 `scan()` 本身是纯字符串扫描，算全文一般不贵；真正卡的是把结果灌进 DOM 这一步——整篇 `innerHTML` 替换是 O(全文长度) 的强制重排/重绘，跟内容算得多快无关（参考 CodeMirror 5 的做法）。所以高亮覆盖层（`hlRef` 那个 `<pre>`）**不是**一次 `innerHTML` 塞进整篇高亮 HTML，而是按逻辑行拆成一个个持久化的 `<div>` 子节点（`refreshHighlight()`）：每次刷新用 `useHighlight.ts` 的 `highlightLines()` 拿到新的"每行一段 HTML"数组，跟上一次的结果逐行比较，**只有内容真的变了的那几行**才会被 `.innerHTML` 重写，没变的行 DOM 节点原地不动，浏览器不需要重新 layout/paint 它们。
+
+这样一次按键的 DOM 写入代价是 O(改动了几行)，不是 O(全文长度)。**高亮/行号/光标这些衍生视觉更新不需要 idle 调度，只要是按行 diff patch 的就可以同步做**——`onInput` 直接同步调用它们（没有 `requestIdleCallback`/`scheduleRenderUpdate` 这层）。能这样做的前提正是刷新代价已经被压到 O(改动行数) 而不是 O(全文长度)；如果哪天改成整体替换，这条同步调度的前提就不成立了，得先恢复按行 diff 再考虑同步。
+
+## 表层能力：自动配对、滚动同步与状态栏
+
+- **括号/引号自动配对**：`onKeydown` 拦截 Tab / 括号引号输入 / 退格三条路径，直接改 `ta.value` 再走 `emitContent()`——这条路径没有原生 input 事件，所以不走 `onInput`。配对表 `BRACKET_PAIR_MAP` 1:1 对齐行为：输入 `{` 特判构造 `{{}}` 宏括号、选中内容时输入括号是包住选区、在已有闭括号前输入同名闭括号是跳过而非重复插入、退格落在相邻配对中间时两侧一起删。纯文本编辑行为，与领域模型无关。
+- **滚动同步**：textarea 的 `@scroll="syncScroll"` 把高亮层 `<pre>`（`hlRef`）和行号层（`lnRef`）的 scrollTop/scrollLeft 对齐到 textarea。大文件（>200 行）下滚动过程中不重算高亮——新滚入的行先用纯文本占位，滚动停下 `SCROLL_SETTLE_MS`(120ms) 才把可视区行升级成彩色（视口上下各预留 `VIEWPORT_BUFFER_LINES` 60 行缓冲），避免每个 scroll 事件都触发 DOM 写入。
+- **状态栏**：`showStatusbar` 开关 + 三条 i18n 可覆盖的格式化标签 prop（`statusCursorLabel`/`statusCharsLabel`/`statusLinesLabel`），分别用 `{line}`/`{col}`、`{count}` 占位符替换成光标行/列、字符数、逻辑行数；默认形如 `Ln {line}, Col {col}` / `{count} chars` / `{count} lines`。
+- **跳转请求与变量点击检测**（可选）：`jump` prop 承载"外部请把光标移到此处"请求（搜索结果、变量导航），`enableVarClick` 开启对 `{{setvar/addvar/getvar::name}}` 的点击命中检测并 emit `var-click`/`var-click-miss`。
+
+## useHighlight.ts：递归优先级扫描器
+
+不是简单正则替换，是**递归优先级扫描器**：
+
+- 分隔符按优先级分层（`<<>>`、`[[]]`、`{{}}` 等），同类型分隔符允许递归嵌套（`<<>>`、`[[]]` 内外两层都染色）。
+- 用 `minTier` 参数表示"当前层级还允许打开的最低优先级"。
+
+输出形态：`scan()` 内部现在产出的是**扁平 token 流**（不是直接拼 HTML 字符串），`HighlightedEditor.vue` 按行 diff patch 用 `highlightLines`（见上面「打字调度」）。**改这块要小心的坑**：宏/尖括号/引号允许合法跨越 `\n`（这是整个递归扫描器存在的原因，见文件头注释），所以 `highlightLines()` 不能拿 `highlightContent()` 拼出来的整块 HTML 字符串直接按 `\n` 切——那会把一个跨行的 `<span>` 从中间切断。正确做法是在 token 流这一层切（一个 token 的 `text` 里如果有 `\n`，按 `\n` 拆成几段，每段都用同一个 `cls` 重新起一个 span），`highlightLines()` 就是这么做的。空逻辑行会被替换成 `\u00A0`（不是空字符串）——纯空的 `<div>` 在部分浏览器里会直接塌缩成 0 高度，导致这一行跟行号槽/真实 textarea 对不齐（`measureSingleLineHeight()` 用同一个 trick）。

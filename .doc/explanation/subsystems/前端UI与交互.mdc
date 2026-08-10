@@ -1,0 +1,43 @@
+---
+name: "前端UI与交互"
+kind: "subsystem"
+description: "平台无关的交互原语：Pointer Events 拖拽/resize/悬浮窗定位。改任何UI有关的部分都先看这篇。"
+alwaysApply: false
+---
+
+# 前端 UI 与交互
+
+## UI长相
+
+**顶栏是两行，对应两个正交的轴**：第一行 `activeWorkspace`（`preset`/`worldbook`/`character` 三态）决定"现在编辑哪份文档"；第二行 `sidebarCollection` 决定"这份文档内部在看哪个集合"，只有 `preset`/`character` 两个工作区有得选（各自的 items/fields 集合 vs 各自绑定的正则脚本集合 vs 各自的 tavern_helper 脚本树集合——三个 sidebarMode），`worldbook` 没有第二个集合，顶栏第二行对它不渲染。两者都决定侧边栏渲染哪个 `XxxSidebar.vue`——这一层跟标签页是分开的，切换这两个状态只影响"侧边栏现在给你选什么"，不影响已经打开的标签（可以同时开着 preset 标签和 worldbook 标签，随时点标签互相切换）。
+
+
+## 交互层：Pointer Events
+
+所有拖拽/resize 相关的事件监听（`useDragReorder.ts`、`usePanelResize.ts`、`PresetSidebar.vue` 自己那份拖拽实现、FAB 长按拖拽）都从 `pointerdown`/`pointermove`/`pointerup`/`pointercancel`——一套事件同时覆盖鼠标、触屏、触控笔，不用分别写两套逻辑。**必须**用 `pointerId` 过滤后续的 move/up，多点触控下不会串扰。触屏专属规则：把手类元素（`.wb-drag-handle`、`.wb-resize-handle`、`.wb-right-resize-handle`）都要有 `touch-action: none`，否则触摸拖拽会被浏览器同时当成滚动手势。
+
+**触屏拖拽 vs 原生滚动的冲突**：如果让触屏拖拽跟鼠标一样"点在行上任意位置就能拖"，会跟"上下滑动这个列表"的原生滚动手势正面冲突——真实的滚动手势在最初几个 touch 采样点里，位移同样会超过拖拽阈值（`DRAG_THRESHOLD = 4px`），几乎每次滚动都会被误判成"开始拖拽"，跟浏览器自己的原生滚动抢同一路 touch。业界对可排序列表的标准解法是**触屏拖拽只能从一个专门的小把手发起**：鼠标用户保留"点行内任意位置就能拖"的桌面习惯（鼠标拖拽天然不会跟滚动手势冲突，没有歧义要消解），但触屏/触控笔的 `pointerdown` 只有落在 `.wb-drag-handle`（那个 `⠿` 图标）上才会真正启动拖拽流程，行内其它地方完全不拦截，交给浏览器原生滚动处理。`.wb-drag-handle` 在 CSS 里加了 `touch-action: none`，防止落在把手上的触摸还被顺手当成滚动手势，但把手之外的区域不受影响，列表滚动照常顺滑。
+
+## 数字拖拽微调：`composables/useNumberDragScrub.ts`
+
+`components/shared/NumberInput.vue` = 原生 `<input type="number">` + 右侧一个 ⠿ 拖拽手柄。手柄的"按住左右拖、横向位移映射成数值增量"由 `useNumberDragScrub` 提供，跟原生输入共存（键盘/上下箭头/滚轮照常），按住 Shift 精细调整（0.1× step）。Pointer Events + `setPointerCapture`，监听器绑在 `getHostWindow()` 解决 iframe 拖出界事件丢失。整数 step 时结果也 snap 到整数，避免浮点尾巴。`NumberInput.vue` 的 `set` 故意写 `inputEl.value.value` 再 `dispatchEvent('input')`，让拖拽改值走跟手输一样的冒泡路径，父容器的 `@change`/`@input` 委托照常触发，不用单独接一份逻辑。
+
+## FAB 长按拖拽：`composables/useFabDrag.ts`
+
+FAB 长按拖拽整套机制抽成了 domain-agnostic 的 `useFabDrag(opts)` composable——只管"自由两轴悬浮元素的长按拖动 + 跟点击区分 + resize 后 clamp 回视口"，不知道 FAB 长什么样也不知道点开会发生什么。`App.vue` 喂四个回调就接完了（`getPos`/`setPos`/`commit`/`onTap`），不自己管 `pointermove` 监听、`suppressClick`、`onHostResize` 这些机制。
+
+悬浮球默认位置由 CSS 决定（`bottom:24px;right:24px`）。**拖与点的区分只用空间维度**：`pointerdown` 只记录起点，不启计时器、不 `preventDefault`；`pointermove` 时指针移动超过 `dragThreshold` 才立即进入拖拽模式，把当前渲染位置冻结成显式 `left/top` 写进 `opts.setPos`（App.vue 路由到 `uiStore.settings.fabPos`），此后跟随指针移动，松手时一次性 `opts.commit()`（App.vue 路由到 `uiStore.saveSettings()`）落盘（拖拽过程中只改内存里的 draft，不逐帧写 `localStorage`，和设置弹窗里拖动滑块/色盘的"draft-until-release"规则一致）。**没有时间维度**——慢按快松、快按快松都是纯点击，只有真把指针挪了超过阈值才算拖，因此既"随意拖拽不用长按"又"短按即开绝不会被误判成拖拽"。
+
+判定"这是一次点击"还是"这是一次拖拽"时**不延迟点击本身**：普通的 `pointerdown → pointerup`（指针没挪过阈值）从头到尾没有调用 `preventDefault()`，浏览器该发的 `click` 照发不误，所以快速点击跟原生 click 一样快；只有指针真的挪了超过阈值进入拖拽模式，才设 `suppressClick` 吞掉紧随其后的那次 `click`（`onClick` 里检查并清零），防止松手时被误认成"点击打开面板"。
+
+位置在宿主窗口 resize 时会被重新 clamp 进可视区域（`onHostResize`）——最常见的触发场景是手机横竖屏切换，或者桌面浏览器窗口在拖拽后被缩窄，防止 FAB 卡在一个再也够不着的角落。`App.vue` 的 `onMounted` 把它绑到 `getHostWindow().addEventListener('resize', fab.onHostResize)`。
+
+`longPressMs` 比 `useListSelection` 的 `LONG_PRESS_MS` 短，因为 FAB 是独立悬浮元素，不用跟滚动手势区分。
+
+## 悬浮窗 Shell：`FloatingPanelShell.vue` + `useFloatingPanel.ts`
+
+`MetaPanel` 这类"不占用主面板布局、独立浮在上面"的窗口，以及 `ToolBoxPanel`/`PreviewPanel`/`AgentPanel` 的完全悬浮（float）形态，共用同一套 domain-agnostic 的拖拽定位/resize/多开置顶机制——`useFloatingPanel.ts` 只管"这个矩形框在哪、多大、盖在最上面与否"，不知道自己里面装的是元信息表单还是预览内容；`FloatingPanelShell.vue` 是薄壳，只渲染 header（标题+拖拽发起区+✕ 关闭）/body（`v-slot`）/右下角 resize 手柄，业务内容整个通过默认 slot 塞进去。
+
+- **坐标系**：`x`/`y` 是面板左上角相对于 `.wb-panel`（`inset:0` 铺满整个宿主视口）的像素偏移，跟 pointer 事件的 `clientX`/`clientY` 直接可比，不需要额外换算——前提是 `.wb-panel` 本身相对宿主视口没有偏移，这个前提目前成立。跟 `usePanelResize.ts`/FAB 拖拽一样，所有 pointer 监听挂在 `getHostWindow()` 上而不是裸 `window`。
+- **多开叠放**：所有悬浮窗实例共享**同一个模块级递增计数器**（不是数组/Set）做"点哪个哪个到最上层"，初始值 `100010`，卡在 `main.css` 已有的 z-index 序列上方——所以悬浮窗永远盖在主面板和这些提示类 UI 之上，新加一个悬浮窗不需要去核对现有 z-index 数字，直接复用这套机制即可。
+- **调用方只需要**：`useFloatingPanel({...})` 的参数/返回形状与 `FloatingPanelShell.vue` 的 props（`title`/`close-title`/`width`/`height`/`min-width`/`min-height`）+ `@close` 事件，壳包办剩下的接线——`MetaPanel.vue` 就是这么接的，没有自己碰任何拖拽/resize 逻辑。

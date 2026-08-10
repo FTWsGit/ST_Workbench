@@ -1,0 +1,25 @@
+---
+name: "i18n-key命名规范"
+description: "加新 locale key、命名 key、判断 key 归属哪个域时读"
+kind: "contract"
+alwaysApply: false
+---
+
+# i18n-key命名规范
+
+## 域划分
+
+- `common.*`：跨域原子词，所有域通用、文字不随上下文变化的按钮/标签（保存/取消/删除/关闭/确认/创建/切换/新建/加载等）
+- `shared.*`：跨域复用的通用组件/逻辑文案，按组件分块：header、mobile、settings、toast、confirm、floatingPanel、listToolbar、highlightedEditor、syntax
+- `preset.*`：预设域专属文案
+- `regex.*`：正则域专属文案
+- `worldbook.*`：世界书域专属文案
+- `character.*`：角色卡域专属文案
+
+## 命名格式
+
+`域.组件/场景.用途`，最多四级结构，不要用中文原文当 key。例如：
+- `preset.toast.loaded`：预设域-提示-加载成功
+- `character.confirm.switch.title`：角色域-确认弹窗-切换-标题
+- `shared.syntax.hl-b`：共享域-语法高亮-大括号标签
+- `shared.mobile.sidebar` / `shared.mobile.tools`：移动端专属文案走 `shared.mobile.*`（分别对应 ☰ 和 ⋯ 两个按钮的 tooltip）；移动端工具抽屉里其它项复用已有的 `shared.header.*` key，不开另一套

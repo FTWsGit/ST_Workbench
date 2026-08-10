@@ -1,0 +1,52 @@
+---
+name: "架构总览"
+kind: "architecture"
+description: "数据怎么流动、store 职责、domain路由规律和Meta的数据处理"
+alwaysApply: true
+---
+
+# 架构总览：状态怎么流动
+
+**先看这个，再看任何具体组件。**
+
+## 数据流全景
+
+从 `api/*` 层读取到内存(preset/character/worldbook) -> `sidebar` 点击 -> `tabsStore.open(...)` -> `EditorShell.vue`（`<component :is>` + `EDITOR_COMPONENTS` 路由表）/`SettingsDock.vue`（`FORMS` 表）按 `tabsStore.activeTab.domain` 挂载对应组件（host-dependent 的 regex/tavern 经 `tabsStore.getDomainAdapter(tab.domain, tab.workspace)` -> 组件从对应 domain store 拿数据 -> 改字段/改顺序触发对应 store 的 dirty 追踪 -> 保存经 `api/*` 层写回 SillyTavern
+
+## store 职责一览
+
+| store | 职责 |
+|---|---|
+| `uiStore`（id `'ui'`） | 全局 UI 单例：settings/cssVars/各面板开关/toast/i18n；只放UI有关的store，与产品逻辑无关 |
+| `presetStore`（id `'main'`） | 当前正在编辑的这份预设的全部数据与业务逻辑 |
+| `worldbookStore`（`'worldbook'`） | 世界书条目的全部状态和业务逻辑，独立于 presetStore |
+| `characterStore`（`'character'`） | 当前正在编辑的这张角色卡的全部状态和业务逻辑，独立文档 store |
+| `tabsStore`（`'tabs'`） | 标签页 + `activeWorkspace`/`sidebarCollection` + `settingsDockOpen` + `listScrollToken`——"UI 现在长什么样" |
+| `confirmStore`（`'confirm'`） | 三条流 `ask()`/`askInput()`/`askMulti()`（App.vue 关面板时用 `askMulti` 聚合各工作区 dirty 提示）|
+| `workspaceRegistry`（非 Pinia store，`createWorkspaceRegistry()` 工厂） | 三个 domain store 新建/删除/切换/重载/保存的对外统一表 |
+
+`CopyPanel.vue` 是例外：它不用上面任何一个 store 的数据，自己维护左右两份独立状态直接调 `api/presetApi.ts`
+
+## 多 domain 路由：标签页决定编辑区和设置区显示什么
+
+核心概念是 `OpenTab`——一条标签的完整形状（`domain`/`key`/`label`/`workspace`）
+
+点击sidebar某一项 → `tabsStore.open(...)` → 标签栏出现/聚焦对应标签 → `EditorShell.vue`（`<component :is>` + `EDITOR_COMPONENTS` 路由表）/`SettingsDock.vue`（`FORMS` 表）各自拿 `tabsStore.activeTab.domain` 。**这两个容器组件完全不知道每个 domain 具体有什么字段**——host-dependent domain（regex/tavern）的数据切片由 host store 在 setup 时调 `tabsStore.registerDomainAdapter(...)` 暴露，容器通过 `tabsStore.getDomainAdapter(...)` 拿
+
+`domain` 和 `workspace` 是两个不同维度，别混着用：`domain` 决定"用哪个组件编辑这个标签"（`preset`/`regex`/`worldbook`/`character`/`tavern`），`workspace` 决定"这个标签归哪份文档所有"（`preset`/`worldbook`/`character`）。二者在大多数情况下能对上号，但 `regex`/`tavern` 是例外——同一个 `domain: 'regex'` 的标签，`workspace` 可能是 `'preset'` 也可能是 `'character'`。`EditorShell.vue`/`SettingsDock.vue` 挂载时查一次 `tabsStore.getDomainAdapter(tab.domain, tab.workspace)` 拿数据源——同一 domain 在不同 workspace 下由注册表 key 区分，容器不能只看 `domain`（注册表 key、adapter 成员与"没有 CRUD 回调"这些形状）
+
+目前接进这套路由的有五个 domain，**全部完全原生接入标签系统，没有任何桥接层**：
+
+| domain | 一句话（组件 / 数据源 / 设计注） |
+|---|---|
+| `preset` | `PresetContentEditor` + `PresetSettingsForm`（FORMS 表）+ `PresetMetaForm`（整份文档级字段走悬浮窗）；`currentBlock` 直接从 `activeTab.key` 解析，侧边栏展开/高亮/滚动统一由 `presetStore` 一个 `watch(activeTab)` |
+| `regex` | 完全参数化三件套（`components/regex/regexProps.ts`），组件不自己 `usePresetStore()`；数据源是调用方喂的 `store.regexScripts` live computed（preset/character 两工作区各指一份，改字段落宿主文档自己的 dirty 追踪，不需要单独持久化） |
+| `worldbook` | 独立工作区 + 自己的 store；`WorldbookContentEditor`/`WorldbookSettingsForm`/`WorldbookSidebar`；批量操作在工具箱 BatchTool 的 worldbook/items scene；**故意不接 MetaPanel**（没有整份文档级的元信息需要单独编辑） |
+| `character` | 独立工作区 + 自己的 store；`CharacterContentEditor` 走虚拟字段 key 路由（`field:xxx`/`field:greeting:<id>`）；整份卡级字段走 `CharacterMetaForm`（悬浮窗） |
+| `tavern` | 同 regex 属 host-dependent domain；预设/角色卡各自的 tavern_helper 脚本树（ScriptTree/ScriptFolder）复用同一套三件套；数据源经 `tabsStore.getDomainAdapter('tavern', tab.workspace)` 拿 |
+
+
+## MetaPanel：整份文档级别的元信息悬浮窗
+
+`preset`/`character` 各自的模型参数、creator/tags 这类"描述整份文档而不是某个 block/entry"的字段，复用 `FloatingPanelShell.vue` 另开一个 `MetaPanel.vue`，按 `tabsStore.activeWorkspace`（不是 `activeTab`——同一时刻只有一个工作区在显示，不需要按 tab 精确解析）查一张 `META_FORMS` 路由表：**worldbook 没有条目**（查不到时 `formComponent` 是 `undefined`，`MetaPanel.vue` 直接不渲染整个悬浮窗；触发这个面板的顶栏按钮在 worldbook 工作区本身也不会渲染，双重保险）。开关状态是 `uiStore.metaPanelOpen`——放在 `uiStore` 而不是某个 domain store，是因为它横跨 preset/character 两个工作区，不属于任何一个 domain 的数据。
+

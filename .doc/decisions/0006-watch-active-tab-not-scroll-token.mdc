@@ -1,0 +1,34 @@
+---
+name: "0006-watch-active-tab-not-scroll-token"
+kind: "decision"
+description: "为什么标签驱动侧边栏高亮的 watcher 监听 activeTab 引用本身，不能改成监听 listScrollToken。改这段 watcher 逻辑，或排查'多选点了 Ctrl/Shift 反而被重置成单选'时读。"
+alwaysApply: false
+status: "accepted"
+supersedes: ""
+---
+
+# 0006. "标签驱动侧边栏"的 watcher 监听 `activeTab` 引用，不监听 `listScrollToken`
+
+## 背景
+
+`presetStore.ts` 里有一个 `watch(() => tabsStore.activeTab, ...)`，负责"active tab
+变了就展开对应折叠组、把 `selectedGi`/`anchorGi` 重置成只选中这一行"。曾经考虑过
+让它监听 `tabsStore.listScrollToken['preset']`（跟 `useListScrollSync.ts` 用的是
+同一个信号），这样"跳转"和"滚动"能共用一次触发。
+
+## 决策
+
+不能改成监听 `listScrollToken`。`store.selectBlock()`（Ctrl/Shift 多选路径）内部
+也会调 `tabsStore.requestListScroll('preset')` 去触发滚动——如果 watcher 监听的是
+同一个 token，会在多选算完的同一 tick 里，立刻被这个 watcher 用"当前 active tab
+对应的单个 gi"覆盖回单选，表现是 **Ctrl/Shift 多选完全失效**。改成监听
+`activeTab` 引用本身就没这个问题，因为 Ctrl/Shift 多选从不改 `activeId`。
+
+## 后果
+
+- 代价是"重新点击已经是 active 的那个 tab"这种情况，`activeTab` 引用不变、
+  watcher 不会重新触发，所以 `PresetSidebar.vue` 的普通点击处理函数仍要在本地
+  做一次同样的 `selectedGi`/`anchorGi` 重置，覆盖这个 watcher 抓不到的 edge case。
+- 以后任何"标签变化驱动 UI"的新 watcher，如果同一个信号还会被多选这类"不换
+  active tab 但要触发滚动"的操作复用，都要先检查会不会重演这次的覆盖问题，
+  不要凭直觉复用同一个 token。

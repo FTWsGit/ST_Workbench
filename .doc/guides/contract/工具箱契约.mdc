@@ -1,0 +1,20 @@
+---
+name: "工具箱契约"
+kind: "contract"
+description: "工具箱 SearchField kind 语义、TOOL_REGISTRY表纪律"
+alwaysApply: false
+---
+
+# 工具箱契约
+
+## SearchField kind 语义
+
+`SearchField.kind` 决定搜索纯函数 `searchFields` 怎么处理一个字段：
+
+- **`text`**：按行 IndexOf 裁窗 ±30。
+- **`list`**：数组逐元素按行搜（`line` = 元素下标）。
+- **`enum`**：`String(item[field]) === query` 整值匹配（`line`/`col` = -1）。
+
+## TOOL_REGISTRY 表填充纪律
+
+`TOOL_REGISTRY` 表本身是空的，靠各工具 `register.ts` 启动期 side-effect import 命填。禁止直接 mutate `TOOL_REGISTRY`——只能走 `registerTool`。

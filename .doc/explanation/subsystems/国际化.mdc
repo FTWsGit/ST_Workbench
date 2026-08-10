@@ -1,0 +1,18 @@
+---
+name: "国际化"
+description: "useI18n 的基本逻辑。"
+kind: "subsystem"
+alwaysApply: false
+---
+
+# 国际化（i18n）
+
+项目的 i18n 走自研的 `useI18n.ts` composable。
+
+- **单一数据源**：`Settings.language` 是 `types.ts`/`DEFAULT_SETTINGS` 里的一个普通设置项，和其它设置项一起存 `localStorage`（`st-wb-settings`）。
+- **调用方式**：`uiStore` 内部调用 `useI18n(settings)` 并把 `t` 暴露出来，所以组件/store 里通过 `uiStore.t(key, params?)` 调用，和 `uiStore.showToast(...)` 同风格。
+- **选项表**：`types.ts` 里的 `REGEX_PLACEMENT_OPTIONS`/`REGEX_SUBSTITUTE_OPTIONS`/`SYNTAX_LABEL_KEYS` 等业务选项表，字段是 `labelKey: LocaleKey`，渲染时 `t(opt.labelKey)`。`types.ts` 继续是"有哪些选项"的事实来源，locale 文件只提供文案。
+- **动态拼接**：toast / error 文案用 `{msg}` 具名占位符，例如 `t('shared.toast.saveFailed', { msg: e.message })`。
+- **加新语言**：扩展 `Settings.language` 联合类型 + 新增 `i18n/locales/<lang>.ts` + 在 `i18n/index.ts` 注册。目前只有 `zh-CN` 和 `en`。
+- **验证**：`npm run typecheck` 能通过 `LocaleKey` 类型在编译期抓出 key 拼写错误。
+
