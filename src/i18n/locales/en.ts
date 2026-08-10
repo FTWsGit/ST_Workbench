@@ -42,6 +42,8 @@ export default {
   'shared.header.mode.character': 'Character',
   'shared.header.mode.tavern': 'Scripts',
   'shared.header.toolBox': '🔧 Toolbox',
+  'shared.header.collectionCollapse': 'Collapse collection switch',
+  'shared.header.collectionExpand': 'Expand collection switch',
 
   // ---- Sidebar ListTools ----
   'shared.sidebar.bind': '🔗 Bind',
@@ -154,6 +156,8 @@ export default {
   'preset.confirm.delete.title': 'Delete preset?',
   'preset.confirm.delete.message':
     'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
+  'preset.confirm.newPreset.message':
+    'Creating a new preset will discard current unsaved changes. Are you sure you want to continue?',
   'preset.confirm.deleteBlock.title': 'Delete prompt block?',
   'preset.confirm.deleteBlock.message':
     'This will permanently remove <strong>{name}</strong> from the preset.',
@@ -417,6 +421,8 @@ export default {
   'worldbook.confirm.delete.title': 'Delete worldbook?',
   'worldbook.confirm.delete.message':
     'This will permanently remove <strong>{name}</strong>. This cannot be undone.',
+  'worldbook.confirm.newWorldbook.message':
+    'Creating a new worldbook will discard current unsaved changes. Are you sure you want to continue?',
   'worldbook.confirm.deleteEntry.title': 'Delete entry?',
   'worldbook.confirm.deleteEntry.message':
     'This will permanently remove <strong>{name}</strong> from the worldbook.',
@@ -539,6 +545,9 @@ export default {
   'character.toast.createFailed': 'Failed to create character: {msg}',
   'character.toast.deleted': 'Deleted character {name}',
   'character.toast.deleteFailed': 'Failed to delete character: {msg}',
+  'character.toast.selectCharFailed':
+    'Failed to switch ST main menu character, preview may be inaccurate',
+  'character.toast.avatarNotImage': 'Please select an image file',
   'character.toast.loadFirst': 'Load or create a character first',
   'character.toast.greetingDeleted': 'Greeting deleted',
   'character.toast.needAtLeastOneGreeting': 'At least one greeting must remain',
@@ -598,6 +607,9 @@ export default {
   'character.metaForm.creatorToggle': 'Creator Meta',
   'character.metaForm.worldbookLabel': 'Bound Worldbook',
   'character.metaForm.worldbookNone': '(None bound)',
+  'character.metaForm.avatarUpload': 'Upload Avatar',
+  'character.metaForm.avatarReset': 'Reset',
+  'character.metaForm.avatarPending': 'New avatar pending save',
 
   // ---- 编辑区空状态 ----
   'character.editorShell.empty': 'No character loaded yet. Create or select one',

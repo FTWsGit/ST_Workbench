@@ -69,8 +69,8 @@ export const useCharacterStore = defineStore('character', () => {
   const tabsStore = useTabsStore();
   const confirmStore = useConfirmStore();
   const uiStore = useUiStore();
-  const t: (key: string, params?: Record<string, string | number>) => string = (key, params) =>
-    uiStore.t(key as LocaleKey, params);
+  const t: (key: string, params?: unknown) => string = (key, params) =>
+    uiStore.t(key as LocaleKey, params as Record<string, string | number>);
   const showToast = uiStore.showToast;
 
   /* ====== Core State ====== */
@@ -733,15 +733,23 @@ export const useCharacterStore = defineStore('character', () => {
     loadCharacterByAvatar(character.value.avatar, { silent: true });
   }
 
-  /** 切到 character workspace 时自动加载一个角色，让 varNav/Preview 拿得到数据：
-   *  优先 ST 当前选中（this_chid 对应 avatar），兜底角色列表第一项。都没有就放弃——store 保持 null，
-   *  WorkspaceSelect 顶上只显示"未选中"，用户手动选或新建。已加载且 avatar 一致时跳过，避免无谓网络请求。 */
+  /** 切到 character workspace 时，如果不曾加载过任何角色，仅刷新角色列表，
+   *  不自动选中 ST 当前角色或列表第一项——跟 worldbook 启动不自动选一份书是同一个道理：
+   *  用户多半只想新建/挑一份编辑，自动加载反而会无谓占用 ST 主菜单选中项、并触发一次网络请求。
+   *  Preview 真正需要 ST 选中项对齐时，由 usePreviewEngine 在生成前惰性 select char。 */
   async function loadSelectedOrFirst() {
     if (character.value?.avatar) return;
     if (characterList.value.length === 0) await refreshCharacterList();
-    let avatar = await CH.getSelectedCharacterAvatar().catch(() => null);
-    if (!avatar && characterList.value.length > 0) avatar = characterList.value[0].avatar;
-    if (avatar) await loadCharacterByAvatar(avatar, { silent: true });
+  }
+
+  /** Preview 生成前惰性调用：把 ST 主菜单选中角色切到当前编辑的这张卡。
+   *  跟 presetStore.selectPresetByName 是同一套"只在 Preview 生成前付一次代价"的设计——
+   *  ST.generate 不认工具里编辑的是哪份角色，只认主菜单选中项。失败时只 toast 提示，不中断生成。 */
+  async function selectCharacterForPreview() {
+    const avatar = character.value?.avatar;
+    if (!avatar) return;
+    const ok = await CH.selectCharacterByAvatar(avatar).catch(() => false);
+    if (!ok) showToast(t('character.toast.selectCharFailed'));
   }
 
   async function createNewCharacter(name: string) {
@@ -793,6 +801,17 @@ export const useCharacterStore = defineStore('character', () => {
     }
   }
 
+  /** 用户在 CharacterMetaForm 里选好的新头像文件，暂存等保存时一并 POST。
+   *  传 null 表示放弃刚换的头像（回到 ST 端原头像）。 */
+  function setPendingAvatar(file: File | Blob | null) {
+    pendingAvatarFile.value = file;
+    if (file) markDirty();
+    else {
+      // 放弃换头：只在原本就脏时清 dirty 才安全——但 dirty 可能由其它字段引起，
+      // 这里不动 dirty，让用户自己判断要不要保存。
+    }
+  }
+
   async function doSaveCharacter() {
     if (!character.value) {
       showToast(t('character.toast.noDataToSave'));
@@ -829,6 +848,7 @@ export const useCharacterStore = defineStore('character', () => {
     oldRaw,
     characterList,
     pendingAvatarFile,
+    setPendingAvatar,
     dirty,
     markDirty,
     hasData,
@@ -885,6 +905,7 @@ export const useCharacterStore = defineStore('character', () => {
     switchCharacter,
     reloadCharacter,
     loadSelectedOrFirst,
+    selectCharacterForPreview,
     createNewCharacter,
     removeCurrentCharacter,
     doSaveCharacter,

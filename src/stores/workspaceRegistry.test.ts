@@ -96,8 +96,11 @@ describe('workspaceRegistry - createWorkspaceRegistry', () => {
       expect(presetStub.removeCurrentPreset).toHaveBeenCalledOnce();
     });
 
-    it('无 confirmCreateIfDirty', () => {
-      expect(createWorkspaceRegistry().preset.confirmCreateIfDirty).toBeUndefined();
+    it('有 confirmCreateIfDirty 且 messageKey 正确', () => {
+      const r = createWorkspaceRegistry();
+      expect(r.preset.confirmCreateIfDirty).toEqual({
+        messageKey: 'preset.confirm.newPreset.message',
+      });
     });
   });
 
@@ -126,8 +129,11 @@ describe('workspaceRegistry - createWorkspaceRegistry', () => {
       expect(worldbookStub.removeCurrentWorldbook).toHaveBeenCalledOnce();
     });
 
-    it('无 confirmCreateIfDirty', () => {
-      expect(createWorkspaceRegistry().worldbook.confirmCreateIfDirty).toBeUndefined();
+    it('有 confirmCreateIfDirty 且 messageKey 正确', () => {
+      const r = createWorkspaceRegistry();
+      expect(r.worldbook.confirmCreateIfDirty).toEqual({
+        messageKey: 'worldbook.confirm.newWorldbook.message',
+      });
     });
   });
 

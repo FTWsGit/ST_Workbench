@@ -46,6 +46,8 @@ export default {
   'shared.header.mode.character': '角色卡',
   'shared.header.mode.tavern': '脚本',
   'shared.header.toolBox': '🔧 工具箱',
+  'shared.header.collectionCollapse': '收起切换栏',
+  'shared.header.collectionExpand': '展开切换栏',
 
   // ---- 侧边栏 ----
   'shared.sidebar.bind': '🔗 绑定',
@@ -154,6 +156,7 @@ export default {
     '切换到预设 <strong>{name}</strong>？当前预设的未保存更改将丢失。',
   'preset.confirm.delete.title': '删除预设？',
   'preset.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
+  'preset.confirm.newPreset.message': '创建新预设将丢弃当前未保存的更改，确定要继续吗？',
   'preset.confirm.deleteBlock.title': '删除提示词块？',
   'preset.confirm.deleteBlock.message': '这将从预设中永久移除 <strong>{name}</strong>。',
   'preset.confirm.reload.title': '重新加载预设？',
@@ -412,6 +415,7 @@ export default {
     '切换到世界书 <strong>{name}</strong>？当前世界书的未保存更改将丢失。',
   'worldbook.confirm.delete.title': '删除世界书？',
   'worldbook.confirm.delete.message': '这将永久移除 <strong>{name}</strong>，无法撤销。',
+  'worldbook.confirm.newWorldbook.message': '创建新世界书将丢弃当前未保存的更改，确定要继续吗？',
   'worldbook.confirm.deleteEntry.title': '删除条目？',
   'worldbook.confirm.deleteEntry.message': '这将从世界书中永久移除 <strong>{name}</strong>。',
   'worldbook.confirm.closePanel.item': '世界书：{name}',
@@ -530,6 +534,8 @@ export default {
   'character.toast.createFailed': '创建角色失败：{msg}',
   'character.toast.deleted': '已删除角色 {name}',
   'character.toast.deleteFailed': '删除角色失败：{msg}',
+  'character.toast.selectCharFailed': '切换ST主菜单角色失败，预览可能不准确',
+  'character.toast.avatarNotImage': '请选择图片文件',
   'character.toast.loadFirst': '请先加载或新建一个角色',
   'character.toast.greetingDeleted': '已删除开场白',
   'character.toast.needAtLeastOneGreeting': '至少要保留一条开场白',
@@ -586,6 +592,9 @@ export default {
   'character.metaForm.creatorToggle': '创作者元数据',
   'character.metaForm.worldbookLabel': '绑定世界书',
   'character.metaForm.worldbookNone': '（未绑定）',
+  'character.metaForm.avatarUpload': '上传头像',
+  'character.metaForm.avatarReset': '重置',
+  'character.metaForm.avatarPending': '新头像待保存',
 
   // ---- 编辑区空状态 ----
   'character.editorShell.empty': '还没有加载任何角色，新建或选择一个',

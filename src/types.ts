@@ -179,6 +179,7 @@ export interface Settings {
   agentWidth: number;
   settingsDockWidth: number;
   settingsDockFloat: boolean;
+  collectionSwitchOpen: boolean;
   language: 'zh-CN' | 'en';
   /** FAB 的显式左上角位置（px，视口坐标——见 App.vue 的 onFabPointerDown），
    *  用户首次长按拖拽时设置。`null` 表示"使用 CSS 默认值"
@@ -214,6 +215,7 @@ export const DEFAULT_SETTINGS: Settings = {
   agentWidth: 380,
   settingsDockWidth: 320,
   settingsDockFloat: true,
+  collectionSwitchOpen: true,
   language: 'zh-CN',
   fabPos: null,
 };

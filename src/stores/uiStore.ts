@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import type { Settings, VarOp } from '../types';
 import { DEFAULT_SETTINGS, FONT_OPTIONS, CHARACTER_FIELDS } from '../types';
 import { useI18n } from '../composables/useI18n';
@@ -197,27 +197,12 @@ export const useUiStore = defineStore('ui', () => {
     },
     { onJump: jumpAcrossDomain }
   );
-  /* 自动重扫：order 深 watch 捕获 block 增删/启用切换/重排序；prompts 浅 watch 兜底（content 改字不触发，避打字卡顿）；
-   * character/worldbook 域数据变化各自 deep watch 触发（跨域扫描器读的是三域当前数据）。 */
-  watch(
-    () => usePresetStore().order,
-    () => rebuildVarIndex(),
-    { deep: true }
-  );
-  watch(
-    () => usePresetStore().prompts,
-    () => rebuildVarIndex()
-  );
-  watch(
-    () => useCharacterStore().character,
-    () => rebuildVarIndex(),
-    { deep: true }
-  );
-  watch(
-    () => useWorldbookStore().entries,
-    () => rebuildVarIndex(),
-    { deep: true }
-  );
+  /* 跨域重扫 watch 刻意不放这里：`watch(getter, cb)` 注册时立即求值 getter 收集依赖，
+   * 若 getter 调 `useCharacterStore()/useWorldbookStore()`，会把这两个 store 在 uiStore.setup
+   * 尚未 return 的时候就实例化——Pinia setup store 在 return 之前 proxy 上没有任何属性，
+   * 那两个 store 顶部 `const showToast = uiStore.showToast` 会捕获到 undefined，
+   * 运行时报 `showToast is not a function`。这四个 watch 已迁到 presetStore（它的 setup
+   * 在 uiStore 完成之后才调 useCharacterStore/useWorldbookStore），见 presetStore.ts。 */
 
   const {
     previewMode,

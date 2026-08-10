@@ -31,9 +31,10 @@ export interface DocumentWorkspaceAdapter {
   save: () => void;
   create: (name: string) => void;
   remove: () => void;
-  /** 只有 character 需要：新建前如果当前工作区脏，先弹一次"会丢弃当前改动"的二次确认，标题固定
+  /** 新建前如果当前工作区脏，先弹一次"会丢弃当前改动"的二次确认，标题固定
    *  用 shared.confirm.unsaved.title，消息文案是 workspace 自己的 i18n key（因为不同 workspace
-   *  丢弃的东西不一样，没法共用一句话）。 */
+   *  丢弃的东西不一样，没法共用一句话）。三个 workspace 都有——新建后紧接着的 load/switch
+   *  会覆盖当前那份未保存改动，破坏面一致。 */
   confirmCreateIfDirty?: { messageKey: string };
 }
 
@@ -57,6 +58,9 @@ export function createWorkspaceRegistry(): Record<
       save: () => preset.doSavePreset(),
       create: (name) => preset.createPreset(name),
       remove: () => preset.removeCurrentPreset(),
+      confirmCreateIfDirty: {
+        messageKey: 'preset.confirm.newPreset.message',
+      },
     },
     worldbook: {
       key: 'worldbook',
@@ -69,6 +73,9 @@ export function createWorkspaceRegistry(): Record<
       save: () => worldbook.doSaveWorldbook(),
       create: (name) => worldbook.createNewWorldbook(name),
       remove: () => worldbook.removeCurrentWorldbook(),
+      confirmCreateIfDirty: {
+        messageKey: 'worldbook.confirm.newWorldbook.message',
+      },
     },
     character: {
       key: 'character',

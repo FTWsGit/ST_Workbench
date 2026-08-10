@@ -242,6 +242,7 @@
 
 <script setup lang="ts">
 import { usePresetStore } from '../../stores/presetStore';
+import { useCharacterStore } from '../../stores/characterStore';
 import { useUiStore } from '../../stores/uiStore';
 import { esc, roleClass as roleClassOf } from '../../utils';
 import { usePanelResize } from '../../composables/usePanelResize';
@@ -252,6 +253,7 @@ import FloatingPanelShell from './FloatingPanelShell.vue';
 import PanelModeSwitch from './PanelModeSwitch.vue';
 
 const presetStore = usePresetStore();
+const characterStore = useCharacterStore();
 const uiStore = useUiStore();
 
 /** 当前形态（docked 挤开 / overlay 右侧悬浮 / float 完全悬浮），持久化到 settings.previewMode。 */
@@ -287,8 +289,9 @@ function renderSegments(segments: PreviewSegment[]) {
     .join('');
 }
 
-function generate() {
+async function generate() {
   presetStore.selectPresetByName(presetStore.presetName);
+  await characterStore.selectCharacterForPreview();
   if (uiStore.previewMode === 'blocks') uiStore.generatePreviewBlocks();
   else uiStore.generatePreviewRaw();
 }

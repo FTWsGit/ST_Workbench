@@ -22,6 +22,8 @@ import { useScriptTree } from '../composables/useScriptTree';
 import { useDirtyFlag } from '../composables/useDirtyFlag';
 import { useTabsStore } from './tabsStore';
 import { useConfirmStore } from './confirmStore';
+import { useCharacterStore } from './characterStore';
+import { useWorldbookStore } from './worldbookStore';
 import { DEFAULT_PRESET } from '../types';
 
 // 类型守卫，判断 OrderNode 是否为组
@@ -35,6 +37,35 @@ export const usePresetStore = defineStore('main', () => {
   const t: (key: string, params?: unknown) => string = (key, params) =>
     uiStore.t(key as LocaleKey, params as Record<string, string | number>);
   const showToast = uiStore.showToast;
+
+  /* 跨域变量重扫 watch：origin 深扫捕捉 block 增删/启用切换/重排序；prompts 浅扫兜底（content 改字不触发，避打字卡顿）；
+   * character/worldbook 域数据变化各自 deep watch 触发（跨域扫描器读的是三域当前数据）。
+   * 刻意放在 presetStore 而非 uiStore：`watch(getter, cb)` 注册时立即求值 getter，会触发 useCharacterStore()/
+   * useWorldbookStore() 实例化——若放在 uiStore.setup，那两个 store 顶部 `const showToast = uiStore.showToast`
+   * 会在 uiStore 尚未 return（proxy 上无任何属性）时求值，捕获 undefined，运行时报 is not a function。
+   * presetStore 的 setup 触发 uiStore.setup 完成（顶 const uiStore = useUiStore()），此后才调下面两个域 store，
+   * 它们顶部的 showToast/t 绑定都拿到的是已完成的 uiStore。 */
+  const characterStore = useCharacterStore();
+  const worldbookStore = useWorldbookStore();
+  watch(
+    () => order.value,
+    () => uiStore.rebuildVarIndex(),
+    { deep: true }
+  );
+  watch(
+    () => prompts.value,
+    () => uiStore.rebuildVarIndex()
+  );
+  watch(
+    () => characterStore.character,
+    () => uiStore.rebuildVarIndex(),
+    { deep: true }
+  );
+  watch(
+    () => worldbookStore.entries,
+    () => uiStore.rebuildVarIndex(),
+    { deep: true }
+  );
 
   /* ====== Core State ====== */
   const rawData = ref<PresetData | null>(null);

@@ -35,6 +35,7 @@ describe('DEFAULT_SETTINGS 与 Settings 字段对齐', () => {
       'agentWidth',
       'settingsDockWidth',
       'settingsDockFloat',
+      'collectionSwitchOpen',
       'language',
       'fabPos',
     ];
@@ -61,6 +62,7 @@ describe('DEFAULT_SETTINGS 与 Settings 字段对齐', () => {
       'agentWidth',
       'settingsDockWidth',
       'settingsDockFloat',
+      'collectionSwitchOpen',
       'language',
       'fabPos',
     ]);

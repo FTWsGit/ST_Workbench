@@ -200,44 +200,62 @@
           </template>
         </div>
 
-        <!-- 顶栏第二行：仅 preset/character 工作区需要"条目 vs 正则"二级切换；worldbook 没有独立于条目之外的集合，不渲染此行。 -->
+        <!-- 顶栏第二行：仅 preset/character 工作区需要"条目 vs 正则"二级切换；worldbook 没有独立于条目之外的集合，不渲染此行。可收起。 -->
         <div
           v-if="tabsStore.activeWorkspace === 'preset' || tabsStore.activeWorkspace === 'character'"
           class="wb-collection-switch"
+          :class="{ collapsed: !uiStore.settings.collectionSwitchOpen }"
         >
           <button
-            class="wb-btn sm"
-            :class="{
-              active:
-                tabsStore.sidebarCollection !== 'regex' && tabsStore.sidebarCollection !== 'tavern',
-            }"
-            @click="
-              tabsStore.setSidebarCollection(
-                tabsStore.activeWorkspace,
-                tabsStore.activeWorkspace === 'character' ? 'fields' : 'items'
-              )
+            class="wb-btn sm wb-collection-toggle"
+            :title="
+              uiStore.settings.collectionSwitchOpen
+                ? uiStore.t('shared.header.collectionCollapse')
+                : uiStore.t('shared.header.collectionExpand')
             "
+            :aria-label="uiStore.t('shared.header.collectionCollapse')"
+            @click="toggleCollectionSwitch"
           >
-            {{
-              tabsStore.activeWorkspace === 'character'
-                ? uiStore.t('character.header.collectionFields')
-                : uiStore.t('preset.header.collectionItems')
-            }}
+            <span class="wb-collection-toggle-arrow">{{
+              uiStore.settings.collectionSwitchOpen ? '▾' : '▸'
+            }}</span>
           </button>
-          <button
-            class="wb-btn sm"
-            :class="{ active: tabsStore.sidebarCollection === 'regex' }"
-            @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex')"
-          >
-            {{ uiStore.t('shared.header.mode.regex') }}
-          </button>
-          <button
-            class="wb-btn sm"
-            :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
-            @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern')"
-          >
-            {{ uiStore.t('shared.header.mode.tavern') }}
-          </button>
+          <template v-if="uiStore.settings.collectionSwitchOpen">
+            <button
+              class="wb-btn sm"
+              :class="{
+                active:
+                  tabsStore.sidebarCollection !== 'regex' &&
+                  tabsStore.sidebarCollection !== 'tavern',
+              }"
+              @click="
+                tabsStore.setSidebarCollection(
+                  tabsStore.activeWorkspace,
+                  tabsStore.activeWorkspace === 'character' ? 'fields' : 'items'
+                )
+              "
+            >
+              {{
+                tabsStore.activeWorkspace === 'character'
+                  ? uiStore.t('character.header.collectionFields')
+                  : uiStore.t('preset.header.collectionItems')
+              }}
+            </button>
+            <button
+              class="wb-btn sm"
+              :class="{ active: tabsStore.sidebarCollection === 'regex' }"
+              @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'regex')"
+            >
+              {{ uiStore.t('shared.header.mode.regex') }}
+            </button>
+            <button
+              class="wb-btn sm"
+              :class="{ active: tabsStore.sidebarCollection === 'tavern' }"
+              @click="tabsStore.setSidebarCollection(tabsStore.activeWorkspace, 'tavern')"
+            >
+              {{ uiStore.t('shared.header.mode.tavern') }}
+            </button>
+          </template>
         </div>
 
         <div class="wb-main">
@@ -740,6 +758,12 @@ function togglePreview() {
 function toggleToolBox() {
   const ws = tabsStore.activeWorkspace;
   tabsStore.setToolBoxOpen(ws, !tabsStore.toolBoxOpen);
+}
+
+/** 顶栏第二行"条目/正则/酒馆助手"二级切换栏的收起/展开开关，持久化到 settings.collectionSwitchOpen。 */
+function toggleCollectionSwitch() {
+  uiStore.settings.collectionSwitchOpen = !uiStore.settings.collectionSwitchOpen;
+  uiStore.saveSettings();
 }
 
 /** 动态 i18n key 拼接统一入口：`${adapter.key}.${suffix}`，显式 cast 为 LocaleKey；新增 workspace 时需配齐对应 key 集。 */

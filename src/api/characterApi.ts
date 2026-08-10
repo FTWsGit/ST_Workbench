@@ -2,6 +2,15 @@ import type { Character, CharacterListEntry } from '../types';
 import { ensureTopImporter, getTopWindow } from './hostContext';
 import { deepClonePlain } from './apiUtils';
 
+/** 角色卡头像缩略图 URL——和 ST 自己的 getThumbnailUrl('avatar', file) 同一个端点。
+ *  带 `&t=<ts>` 是为了让保存后换头能强刷浏览器缓存。 */
+export function getCharacterAvatarUrl(avatar: string, cacheBust = false): string {
+  if (!avatar) return '';
+  return `/thumbnail?type=avatar&file=${encodeURIComponent(avatar)}${
+    cacheBust ? `&t=${Date.now()}` : ''
+  }`;
+}
+
 /* ====== 角色卡 API ======
  * 读侧：通过 ensureTopImporter() import ST 的 /script.js 模块，mod.characters 是 ESM live binding。
  * 写侧：角色卡写入口是 HTTP multipart 表单 POST（/api/characters/create、/api/characters/edit），
@@ -199,6 +208,35 @@ export async function getSelectedCharacterAvatar(): Promise<string | null> {
   if (!Array.isArray(arr) || chid >= arr.length) return null;
   const av = arr[chid]?.avatar;
   return typeof av === 'string' && av ? av : null;
+}
+
+/** 把 ST 主菜单选中角色切到 avatar 对应的那张卡——只切 ST 主菜单选中项，不加载到编辑器。
+ *  Preview 生成前惰性调用：ST 的 generate 不认工具里编辑的是哪份角色，只认主菜单选中项，
+ *  不先对齐就会用错角色卡渲染。已选中同一张时跳过，零开销。
+ *  返回值：true = 切成功/本来就一致；false = 切失败（列表里找不到这个 avatar）。 */
+export async function selectCharacterByAvatar(avatar: string): Promise<boolean> {
+  if (!avatar) return false;
+  const mod = await getScriptModule();
+  const arr = mod.characters;
+  if (!Array.isArray(arr)) return false;
+  const curChid = mod.this_chid;
+  if (
+    typeof curChid === 'number' &&
+    curChid >= 0 &&
+    curChid < arr.length &&
+    arr[curChid]?.avatar === avatar
+  ) {
+    return true;
+  }
+  const chid = arr.findIndex((c: STCharEntry) => c.avatar === avatar);
+  if (chid < 0) return false;
+  try {
+    if (typeof mod.selectCharacterById !== 'function') return false;
+    await mod.selectCharacterById(chid, { switchMenu: false });
+  } catch {
+    return false;
+  }
+  return true;
 }
 
 /** 按头像文件名读取一张角色卡的完整数据。调用 `getOneCharacter(avatar)` 发起网络请求从服务端

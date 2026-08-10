@@ -123,6 +123,7 @@ export const useTabsStore = defineStore('tabs', () => {
     if (existing) existing.label = tab.label;
     else tabs.value.push(tab);
     activeIdByWorkspace.value[tab.workspace] = id;
+    syncSidebarCollection(tab);
     requestListScroll(tab.domain);
   }
 
@@ -182,8 +183,23 @@ export const useTabsStore = defineStore('tabs', () => {
     const t = tabs.value.find((x) => tabId(x) === id);
     if (t) {
       activeIdByWorkspace.value[t.workspace] = id;
+      syncSidebarCollection(t);
       requestListScroll(domain);
     }
+  }
+
+  /** 点击某个 sidebar 的 tab 时，跳回那个 sidebar：根据 tab.domain 把当前 workspace
+   *  的 sidebarCollection 切到对应的集合——比如 preset workspace 里点 regex tab，
+   *  侧边栏就从 items(PresetSidebar) 切到 regex(RegexSidebar)。已经一致时跳过。 */
+  function syncSidebarCollection(tab: OpenTab) {
+    const ws = tab.workspace;
+    const current = sidebarCollectionByWorkspace.value[ws] ?? 'items';
+    let target: string;
+    if (tab.domain === 'regex') target = 'regex';
+    else if (tab.domain === 'tavern') target = 'tavern';
+    else if (ws === 'character') target = 'fields';
+    else target = 'items';
+    if (target !== current) sidebarCollectionByWorkspace.value[ws] = target;
   }
 
   function isOpen(domain: string, key: string): boolean {

@@ -1,5 +1,28 @@
 <template>
   <div v-if="store.character" class="wb-form">
+    <div class="wb-char-avatar-row">
+      <img v-if="avatarSrc" class="wb-char-avatar" :src="avatarSrc" :alt="store.character.name" />
+      <div v-else class="wb-char-avatar wb-char-avatar-ph">?</div>
+      <div class="wb-char-avatar-tools">
+        <button class="wb-btn sm" @click="fileInput?.click()">
+          {{ uiStore.t('character.metaForm.avatarUpload') }}
+        </button>
+        <button v-if="store.pendingAvatarFile" class="wb-btn sm" @click="clearPendingAvatar">
+          {{ uiStore.t('character.metaForm.avatarReset') }}
+        </button>
+        <p v-if="store.pendingAvatarFile" class="wb-char-avatar-hint">
+          {{ uiStore.t('character.metaForm.avatarPending') }}
+        </p>
+        <input
+          ref="fileInput"
+          class="wb-char-avatar-input"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          @change="onAvatarSelected"
+        />
+      </div>
+    </div>
+
     <label class="wb-form-check"
       ><input type="checkbox" v-model="fav" /> {{ uiStore.t('character.metaForm.favLabel') }}</label
     >
@@ -57,17 +80,51 @@
 /** 角色卡 Meta 表单：角色卡自身属性（fav/creator/creatorNotes/version/tags/talkativeness）+ 世界书换绑下拉。
  *  仅服务角色卡 domain，不参数化；世界书列表只读跨 domain 取 worldbookStore.worldbookList（App.vue 打开面板时已 refreshWorldbookList）。
  *  worldbook 字段最终写入 v2CharData.extensions.world 由 characterApi.ts 保存时处理。 */
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { Character } from '../../types';
 import { useCharacterStore } from '../../stores/characterStore';
 import { useWorldbookStore } from '../../stores/worldbookStore';
 import { useUiStore } from '../../stores/uiStore';
+import { getCharacterAvatarUrl } from '../../api/characterApi';
 import AdvancedGroup from '../shared/AdvancedGroup.vue';
 import FormField from '../shared/FormField.vue';
 
 const store = useCharacterStore();
 const worldbookStore = useWorldbookStore();
 const uiStore = useUiStore();
+const fileInput = ref<HTMLInputElement | null>(null);
+/** 选好新头像后先用 URL.createObjectURL 预览，保存时由 doSaveCharacter 一并 POST。 */
+const pendingPreview = ref<string>('');
+
+/** 显示的头像：用户刚选了新头像优先预览，否则用 ST 端原头像缩略图。 */
+const avatarSrc = computed(() => {
+  if (pendingPreview.value) return pendingPreview.value;
+  const av = store.character?.avatar;
+  return av ? getCharacterAvatarUrl(av) : '';
+});
+
+function onAvatarSelected(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    uiStore.showToast(uiStore.t('character.toast.avatarNotImage'));
+    return;
+  }
+  // 上一张 pendingPreview 是上一次选头像时建的 object URL，换新前 revoke 掉避免内存泄漏。
+  if (pendingPreview.value) URL.revokeObjectURL(pendingPreview.value);
+  pendingPreview.value = URL.createObjectURL(file);
+  store.setPendingAvatar(file);
+}
+
+function clearPendingAvatar() {
+  store.setPendingAvatar(null);
+  if (pendingPreview.value) {
+    URL.revokeObjectURL(pendingPreview.value);
+    pendingPreview.value = '';
+  }
+}
 
 function field<K extends 'creator' | 'creatorNotes' | 'version' | 'talkativeness' | 'fav'>(key: K) {
   return computed({
