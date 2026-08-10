@@ -38,13 +38,21 @@ export const usePresetStore = defineStore('main', () => {
     uiStore.t(key as LocaleKey, params as Record<string, string | number>);
   const showToast = uiStore.showToast;
 
+  /* ====== Core State ====== */
+  const rawData = ref<PresetData | null>(null);
+  const prompts = ref<PresetBlock[]>([]);
+  const order = ref<OrderNode[]>([]);
+  const presetName = ref('');
+  const presetList = ref<PresetListEntry[]>([]);
+
   /* 跨域变量重扫 watch：origin 深扫捕捉 block 增删/启用切换/重排序；prompts 浅扫兜底（content 改字不触发，避打字卡顿）；
    * character/worldbook 域数据变化各自 deep watch 触发（跨域扫描器读的是三域当前数据）。
    * 刻意放在 presetStore 而非 uiStore：`watch(getter, cb)` 注册时立即求值 getter，会触发 useCharacterStore()/
    * useWorldbookStore() 实例化——若放在 uiStore.setup，那两个 store 顶部 `const showToast = uiStore.showToast`
    * 会在 uiStore 尚未 return（proxy 上无任何属性）时求值，捕获 undefined，运行时报 is not a function。
    * presetStore 的 setup 触发 uiStore.setup 完成（顶 const uiStore = useUiStore()），此后才调下面两个域 store，
-   * 它们顶部的 showToast/t 绑定都拿到的是已完成的 uiStore。 */
+   * 它们顶部的 showToast/t 绑定都拿到的是已完成的 uiStore。
+   * 同时必须在 order/prompts ref 声明之后：watch 注册时立即求值 getter，会访问 order.value/prompts.value。 */
   const characterStore = useCharacterStore();
   const worldbookStore = useWorldbookStore();
   watch(
@@ -66,13 +74,6 @@ export const usePresetStore = defineStore('main', () => {
     () => uiStore.rebuildVarIndex(),
     { deep: true }
   );
-
-  /* ====== Core State ====== */
-  const rawData = ref<PresetData | null>(null);
-  const prompts = ref<PresetBlock[]>([]);
-  const order = ref<OrderNode[]>([]);
-  const presetName = ref('');
-  const presetList = ref<PresetListEntry[]>([]);
 
   /* flatNodes 构建 + 选择态(selectedGi/anchorGi)/折叠/绑定/拆组/重排由 useGroupedList 提供。
    * 解构说明：toggleBlock/toggleGroupCollapse/reorderBlock/selectBlock/identifierToGi/revealAndFindGi
