@@ -371,3 +371,45 @@ describe('长文本与记忆化', () => {
     expect(html1).toContain('x');
   });
 });
+
+/* ============================================================
+ * 性能（时间上界，防灾难性退化——不是精确基准）
+ * ============================================================ */
+describe('性能时间上界', () => {
+  // 本地实测余量 ~20x：长 JS 约 90ms/千函数、长宏文本约 5ms/千行，
+  // 上界取 500ms 只拦"指数/平方级退化"这类灾难，不拦正常机器抖动。
+  it('长 JS 代码（tavern 脚本规模）highlightLines 在 500ms 内完成', () => {
+    const parts: string[] = [];
+    for (let i = 0; i < 1000; i++) {
+      parts.push(
+        `function handler${i}(ev) {
+  const name = 'value' + i;   // 单行注释
+  if (ev) { return { id: i, text: 's' + i }; }
+  return null;
+}`
+      );
+    }
+    const text = parts.join('\n');
+    const t0 = performance.now();
+    const lines = highlightLines(text, 'js');
+    const elapsed = performance.now() - t0;
+    expect(lines).toHaveLength(text.split('\n').length); // 顺便保正确性
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  it('长宏文本（preset 域规模）highlightLines 在 500ms 内完成', () => {
+    const parts: string[] = [];
+    const content = 'word'.repeat(10);
+    for (let i = 0; i < 1000; i++) {
+      parts.push(`line${i} {{setvar::k${i}::v${i}${content}}
+        <<"wowowo"{{user}}>>
+        `);
+    }
+    const text = parts.join('\n');
+    const t0 = performance.now();
+    const lines = highlightLines(text);
+    const elapsed = performance.now() - t0;
+    expect(lines).toHaveLength(text.split('\n').length);
+    expect(elapsed).toBeLessThan(500);
+  });
+});

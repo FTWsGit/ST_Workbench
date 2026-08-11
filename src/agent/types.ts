@@ -11,6 +11,8 @@ export interface Message {
   isError?: boolean;
   /** assistant 消息携带的 tool_calls。 */
   toolCalls?: ToolCall[];
+  /** 模型思考过程（reasoning_content / thinking 块）。仅 assistant 消息。 */
+  reasoning?: string;
   /** 摘要注入、compaction 提示等合成消息打这个标记。 */
   synthetic?: boolean;
   meta?: { timestamp: number };

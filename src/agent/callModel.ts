@@ -17,6 +17,8 @@ export interface ModelTurnResult {
   content: string;
   /** 解析出的 tool_calls，没有则 null。 */
   toolCalls: ToolCall[] | null;
+  /** 模型思考过程（reasoning_content / thinking 块）。无则空字符串。 */
+  reasoning: string;
   /** 原始响应对象（调试/扩展用）。 */
   raw?: unknown;
 }
@@ -123,7 +125,7 @@ export async function callModelRaw(
     throw new Error('SillyTavern 不支持 CHAT_COMPLETION_SETTINGS_READY 事件');
   }
 
-  const prompt = messages;
+  const prompt = '';
 
   // 准备 tools 注入（方案 A：在 CHAT_COMPLETION_SETTINGS_READY 回调里 mutate generate_data）
   const toolsWire = tools.length > 0 ? buildToolsWire(tools) : null;
@@ -134,6 +136,7 @@ export async function callModelRaw(
       generateData.tools = toolsWire;
       generateData.tool_choice = 'auto';
     }
+    generateData.messages = messages;
     if (config.temperature != null) generateData.temperature = config.temperature;
     if (config.maxTokens != null) generateData.max_tokens = config.maxTokens;
     if (config.topP != null) generateData.top_p = config.topP;
@@ -177,20 +180,42 @@ export async function callModelRaw(
   const toolCalls = extractToolCallsInternal(response, source);
 
   let content: string;
+  let reasoning = '';
   if (isOpenAIFamilyInternal(source)) {
     content = String(response?.choices?.[0]?.message?.content ?? '');
+    reasoning = extractReasoningOpenAI(response);
   } else if (source === 'claude') {
     const textBlocks = Array.isArray(response?.content)
       ? response.content.filter((b) => b && b.type === 'text')
       : [];
     content = textBlocks.map((b) => String(b.text ?? '')).join('\n');
+    const thinkingBlocks = Array.isArray(response?.content)
+      ? response.content.filter((b) => b && (b.type === 'thinking' || b.type === 'redacted_thinking'))
+      : [];
+    reasoning = thinkingBlocks.map((b) => String(b.thinking ?? b.data ?? '')).join('\n');
   } else if (source === 'cohere') {
     content = String(response?.text ?? response?.message?.content ?? '');
   } else {
     content = String(response?.choices?.[0]?.message?.content ?? response?.content ?? '');
+    reasoning = extractReasoningOpenAI(response);
   }
 
-  return { content, toolCalls, raw: response };
+  return { content, toolCalls, reasoning, raw: response };
+}
+
+/** 从 OpenAI 系响应里抠出 reasoning_content / reasoning。 */
+function extractReasoningOpenAI(response: RawModelResponse): string {
+  const msg = response?.choices?.[0]?.message;
+  if (!msg) return '';
+  const candidates = [
+    (msg as Record<string, unknown>).reasoning_content,
+    (msg as Record<string, unknown>).reasoning,
+    (msg as Record<string, unknown>).thinking,
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim()) return c;
+  }
+  return '';
 }
 
 function extractToolCallsInternal(response: RawModelResponse, source: string): ToolCall[] | null {

@@ -102,8 +102,6 @@ export const useAgentStore = defineStore('agent', () => {
   const runtime = ref<AgentRuntimeState>({ ...initialRuntime });
   /** 加载时遇到的版本不匹配错误，UI 据此显示"重置 agent 数据"按钮。 */
   const versionMismatch = ref<AgentVersionMismatchError | null>(null);
-  /** 当前回合的 AbortController（cancel 用）。 */
-  let abortController: AbortController | null = null;
   /** 异步加载标志：首次 loadAgentData 完成前置 true。 */
   const loading = ref(false);
   /** 是否已成功加载过一次（避免重复 load）。 */
@@ -359,11 +357,16 @@ export const useAgentStore = defineStore('agent', () => {
     });
   }
 
-  function pushAssistantMessage(content: string, toolCalls?: ToolCall[]): void {
+  function pushAssistantMessage(
+    content: string,
+    toolCalls?: ToolCall[],
+    reasoning?: string
+  ): void {
     activeSessionMessages.value.push({
       role: 'assistant',
       text: content,
       toolCalls,
+      reasoning,
       meta: { timestamp: Date.now() },
     });
   }
@@ -475,27 +478,26 @@ export const useAgentStore = defineStore('agent', () => {
 
         // 没有工具调用 → 追加 assistant 消息，回合完成
         if (!result.toolCalls || result.toolCalls.length === 0) {
-          pushAssistantMessage(result.content);
+          pushAssistantMessage(result.content, undefined, result.reasoning);
           await finalizeTurn('complete');
           return;
         }
 
         // 有工具调用 → 追加 assistant 消息（含 tool_calls），进入 tool_loop
-        pushAssistantMessage(result.content, result.toolCalls);
+        pushAssistantMessage(result.content, result.toolCalls, result.reasoning);
         runtime.value = { ...runtime.value, turnState: 'tool_loop' };
 
-        // 串行执行工具（3.2：只读工具可并行，写类串行；P1 全是只读，简化为串行）
+        // 并行执行本轮所有工具调用（按调用顺序并发起 Promise，Promise.all 等齐）
+        runtime.value = { ...runtime.value, currentTool: result.toolCalls.map((c) => c.name).join(', ') };
+        const outcomes = await Promise.all(
+          result.toolCalls.map((call) => executeTool(call))
+        );
         let stoppedByApproval = false;
-        for (const call of result.toolCalls) {
-          runtime.value = { ...runtime.value, currentTool: call.name };
-          const outcome = await executeTool(call);
+        result.toolCalls.forEach((call, idx) => {
+          const outcome = outcomes[idx];
           pushToolResultMessage(call.id, outcome.text, outcome.isError);
-          // 用户拒绝审批 → 直接停本轮，不再让模型续跑工具/续答
-          if (outcome.stopTurn) {
-            stoppedByApproval = true;
-            break;
-          }
-        }
+          if (outcome.stopTurn) stoppedByApproval = true;
+        });
 
         // 持久化（每轮工具调用后存一次）
         await persist();
@@ -511,6 +513,14 @@ export const useAgentStore = defineStore('agent', () => {
       pushToolResultMessage('max_rounds', `[max rounds exceeded: ${MAX_TOOL_ROUNDS}]`, true);
       await finalizeTurn('error');
     } catch (e) {
+      // 用户取消：emit GENERATION_STOPPED 后 ST 内部 abort fetch，抛 AbortError
+      const isAbort =
+        (typeof DOMException !== 'undefined' && e instanceof DOMException && e.name === 'AbortError') ||
+        (e instanceof Error && /^abort|cancelled|user abort/i.test(e.message));
+      if (isAbort) {
+        await finalizeTurn('canceled');
+        return;
+      }
       const errMsg = e instanceof Error ? e.message : String(e);
       pushToolResultMessage('error', `[ERROR] ${errMsg}`, true);
       runtime.value = { ...initialRuntime, turnState: 'error', error: errMsg };
@@ -637,28 +647,26 @@ export const useAgentStore = defineStore('agent', () => {
     return result.content || '[摘要生成失败]';
   }
 
-  /** 取消当前回合。 */
+  /** 取消当前回合：emit GENERATION_STOPPED 让 generateRawData 内部 abort 自己的 fetch。 */
   function cancelTurn(): void {
-    if (abortController) {
-      try {
-        abortController.abort();
-      } catch {
-        /* abort 失败无需处理 */
-      }
-      abortController = null;
-    }
-    // 尝试中断 ST 的生成
     try {
       const ctx = (
         window.top as unknown as {
-          SillyTavern?: { getContext?: () => { stopGeneration?: () => void } | null };
+          SillyTavern?: { getContext?: () => Record<string, unknown> | null };
         }
       )?.SillyTavern?.getContext?.();
-      ctx?.stopGeneration?.();
+      const eventSource = ctx?.['eventSource'] as
+        | { emit?: (type: string) => Promise<void> | void }
+        | undefined;
+      const eventTypes = ctx?.['event_types'] as { GENERATION_STOPPED?: string } | undefined;
+      const type = eventTypes?.GENERATION_STOPPED;
+      if (eventSource?.emit && type) {
+        void eventSource.emit(type);
+      }
     } catch {
-      /* stopGeneration 失败无需处理 */
+      /* emit 失败无需处理 */
     }
-    runtime.value = { ...initialRuntime, turnState: 'idle' };
+    runtime.value = { ...initialRuntime, turnState: 'canceled' };
   }
 
   /** 更新 config（用户在设置里改 agent 配置时触发）。 */
