@@ -89,6 +89,8 @@ export interface AgentPersisted {
   config: AgentConfig;
   sessions: AgentSessionMeta[];
   activeSessionId: string | null;
+  /** 按 session id 存各会话的消息历史（含活跃会话，persist 时写回最新）。 */
+  sessionMessages: Record<string, Message[]>;
   /** 当前活跃会话的完整消息序列——唯一允许变大的字段，靠容量纪律控制。 */
   activeSessionMessages: Message[];
 }

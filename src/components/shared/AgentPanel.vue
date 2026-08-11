@@ -171,14 +171,32 @@
         </button>
       </div>
 
-      <!-- 会话头：title + 新建按钮 -->
+      <!-- 会话头：session 切换器 + 新建 + 删除当前会话 -->
       <div
-        v-if="agentStore.hasActiveSession && !agentStore.versionMismatch"
+        v-if="agentStore.sessions.length > 0 && !agentStore.versionMismatch"
         class="wb-agent-session-bar"
       >
-        <span class="wb-agent-session-title">{{ activeSessionTitle }}</span>
+        <select
+          class="wb-agent-session-select"
+          :title="uiStore.t('agent.session.switch')"
+          :aria-label="uiStore.t('agent.session.switch')"
+          :value="agentStore.activeSessionId ?? undefined"
+          @change="onSwitchSession"
+        >
+          <option v-for="s in sortedSessions" :key="s.id" :value="s.id">
+            {{ truncateTitle(s.title) }}
+          </option>
+        </select>
         <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">
           ＋
+        </button>
+        <button
+          class="wb-btn icon-btn compact"
+          :title="uiStore.t('agent.session.delete')"
+          :aria-label="uiStore.t('agent.session.delete')"
+          @click="onDeleteSession"
+        >
+          🗑
         </button>
       </div>
 
@@ -251,6 +269,7 @@
       <div class="wb-agent-status">
         <span class="wb-agent-status-dot" :class="agentStore.turnState"></span>
         <span class="wb-agent-status-text">{{ stateLabel }}</span>
+        <span class="wb-agent-status-tokens">{{ usedContextTokens }}/{{ maxContextDisplay }}</span>
       </div>
 
       <!-- 输入框 -->
@@ -458,14 +477,32 @@
         </button>
       </div>
 
-      <!-- 会话头：title + 新建按钮 -->
+      <!-- 会话头：session 切换器 + 新建 + 删除当前会话 -->
       <div
-        v-if="agentStore.hasActiveSession && !agentStore.versionMismatch"
+        v-if="agentStore.sessions.length > 0 && !agentStore.versionMismatch"
         class="wb-agent-session-bar"
       >
-        <span class="wb-agent-session-title">{{ activeSessionTitle }}</span>
+        <select
+          class="wb-agent-session-select"
+          :title="uiStore.t('agent.session.switch')"
+          :aria-label="uiStore.t('agent.session.switch')"
+          :value="agentStore.activeSessionId ?? undefined"
+          @change="onSwitchSession"
+        >
+          <option v-for="s in sortedSessions" :key="s.id" :value="s.id">
+            {{ truncateTitle(s.title) }}
+          </option>
+        </select>
         <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">
           ＋
+        </button>
+        <button
+          class="wb-btn icon-btn compact"
+          :title="uiStore.t('agent.session.delete')"
+          :aria-label="uiStore.t('agent.session.delete')"
+          @click="onDeleteSession"
+        >
+          🗑
         </button>
       </div>
 
@@ -538,6 +575,7 @@
       <div class="wb-agent-status">
         <span class="wb-agent-status-dot" :class="agentStore.turnState"></span>
         <span class="wb-agent-status-text">{{ stateLabel }}</span>
+        <span class="wb-agent-status-tokens">{{ usedContextTokens }}/{{ maxContextDisplay }}</span>
       </div>
 
       <!-- 输入框 -->
@@ -571,11 +609,14 @@
  * 设置区可配置 system prompt、temperature、maxTokens（写入 agentStore.config 并持久化）。
  * 不进 tabsStore 的 domain 路由——agent 不编辑"一份文档"，开关状态放 uiStore.agentPanelOpen。
  */
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import { useUiStore } from '../../stores/uiStore';
+import { useConfirmStore } from '../../stores/confirmStore';
 import { useAgentStore } from '../../agent/agentStore';
 import type { AgentConfig } from '../../agent/types';
+import { countTokensAsync } from '../../agent/contextManager';
 import { usePanelResize } from '../../composables/usePanelResize';
+import { esc } from '../../utils';
 import FloatingPanelShell from './FloatingPanelShell.vue';
 import PanelModeSwitch from './PanelModeSwitch.vue';
 import NumberInput from './NumberInput.vue';
@@ -583,6 +624,7 @@ import type { PanelMode } from '../../types';
 import type { LocaleKey } from '../../i18n';
 
 const uiStore = useUiStore();
+const confirmStore = useConfirmStore();
 const agentStore = useAgentStore();
 
 /** 当前形态（docked 挤开 / overlay 右侧悬浮 / float 完全悬浮），持久化到 settings.agentMode。 */
@@ -601,12 +643,38 @@ const messagesContainer = ref<HTMLDivElement | null>(null);
 /** 审批卡片上的"本会话自动同意"复选状态。 */
 const autoApproveThisSession = ref(false);
 
-const activeSessionTitle = computed(() => {
+/** session 列表，按 updatedAt 降序（最近使用的排前）。 */
+const sortedSessions = computed(() =>
+  [...agentStore.sessions].sort((a, b) => b.updatedAt - a.updatedAt)
+);
+
+/** option 标题截断到 30 字符。 */
+function truncateTitle(t: string): string {
+  return t.length > 30 ? t.slice(0, 30) + '…' : t;
+}
+
+function onSwitchSession(e: Event) {
+  const id = (e.target as HTMLSelectElement).value;
+  if (!id) return;
+  void agentStore.switchSession(id);
+}
+
+/** 删除当前活跃会话：confirmStore 确认（不用原生 confirm）。 */
+function onDeleteSession() {
   const id = agentStore.activeSessionId;
-  if (!id) return '';
+  if (!id) return;
   const s = agentStore.sessions.find((x) => x.id === id);
-  return s?.title || uiStore.t('agent.session.untitled');
-});
+  const title = s?.title || uiStore.t('agent.session.untitled');
+  confirmStore.ask({
+    title: uiStore.t('agent.session.delete'),
+    message: uiStore.t('agent.session.deleteConfirm', { title: esc(title) }),
+    confirmText: uiStore.t('common.delete'),
+    cancelText: uiStore.t('common.cancel'),
+    onConfirm: () => {
+      void agentStore.deleteSession(id);
+    },
+  });
+}
 
 const stateLabel = computed(() => {
   const map: Record<string, LocaleKey> = {
@@ -619,6 +687,48 @@ const stateLabel = computed(() => {
   };
   const key = map[agentStore.turnState] || 'agent.state.idle';
   return uiStore.t(key);
+});
+
+/** 当前会话已用的上下文 token 数（异步精确计数）。 */
+const usedContextTokens = ref(0);
+
+async function refreshTokenCount() {
+  const messages = agentStore.activeSessionMessages;
+  if (messages.length === 0) {
+    usedContextTokens.value = 0;
+    return;
+  }
+  try {
+    usedContextTokens.value = await countTokensAsync(messages);
+  } catch {
+    usedContextTokens.value = 0;
+  }
+}
+
+// 消息变化时重算
+watch(
+  () => agentStore.activeSessionMessages,
+  () => {
+    void refreshTokenCount();
+  },
+  { deep: true }
+);
+// 切换会话时也重算
+watch(
+  () => agentStore.activeSessionId,
+  () => {
+    void refreshTokenCount();
+  }
+);
+// 挂载时算一次
+onMounted(() => {
+  void refreshTokenCount();
+});
+
+/** 最大上下文 token 显示：配置为 0 表示用默认阈值，显示 '?'。 */
+const maxContextDisplay = computed(() => {
+  const max = agentStore.config.maxContextTokens;
+  return max > 0 ? String(max) : '?';
 });
 
 function roleLabel(role: string): string {

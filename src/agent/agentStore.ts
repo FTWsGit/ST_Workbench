@@ -8,13 +8,12 @@ import {
 } from '../api/agentApi';
 import { DEFAULT_AGENT_PERSISTED } from './defaultPersisted';
 import { callModelRaw, renderMessages, type ModelTurnResult } from './callModel';
-import { MAX_TOOL_ROUNDS } from './constants';
+import { MAX_TOOL_ROUNDS, MAX_RETAINED_SESSIONS } from './constants';
 import {
-  listAgentToolsForWorkspace,
+  listAgentTools,
   getAgentTool,
   type AgentToolContext,
   type AgentToolDef,
-  type AgentWorkspace,
 } from './toolRegistry';
 import {
   shouldCompact,
@@ -94,6 +93,8 @@ export const useAgentStore = defineStore('agent', () => {
   const config = ref<AgentConfig>({ ...DEFAULT_AGENT_PERSISTED.config });
   const sessions = ref<AgentSessionMeta[]>([]);
   const activeSessionId = ref<string | null>(null);
+  /** 按 session id 存各会话的消息历史（含活跃会话）。持久化字段，persist 时写回最新。 */
+  const sessionMessages = ref<Record<string, Message[]>>({});
   /** 当前活跃会话的完整消息序列——唯一允许变大的字段，靠容量纪律控制。 */
   const activeSessionMessages = ref<Message[]>([]);
 
@@ -149,7 +150,19 @@ export const useAgentStore = defineStore('agent', () => {
       config.value = { ...DEFAULT_AGENT_PERSISTED.config, ...data.config };
       sessions.value = data.sessions;
       activeSessionId.value = data.activeSessionId;
-      activeSessionMessages.value = data.activeSessionMessages;
+      sessionMessages.value = data.sessionMessages ?? {};
+      // 活跃会话消息：优先从 sessionMessages[activeSessionId] 取。
+      // 兼容老数据（v1）：sessionMessages 为空但 activeSessionMessages 有值 → 迁移到 sessionMessages。
+      if (activeSessionId.value && sessionMessages.value[activeSessionId.value]) {
+        activeSessionMessages.value = sessionMessages.value[activeSessionId.value];
+      } else if (data.activeSessionMessages.length > 0) {
+        activeSessionMessages.value = data.activeSessionMessages;
+        if (activeSessionId.value) {
+          sessionMessages.value[activeSessionId.value] = data.activeSessionMessages;
+        }
+      } else {
+        activeSessionMessages.value = [];
+      }
       loaded.value = true;
     } catch (e) {
       if (e instanceof AgentVersionMismatchError) {
@@ -171,11 +184,20 @@ export const useAgentStore = defineStore('agent', () => {
 
   /** 把当前内存态 patch 写回 extensionSettings。调用方保证不传响应式对象。 */
   async function persist(): Promise<void> {
+    // 把当前活跃会话消息写回 sessionMessages[activeSessionId]，保持两者一致
+    if (activeSessionId.value) {
+      sessionMessages.value[activeSessionId.value] = activeSessionMessages.value;
+    }
+    const sm: Record<string, Message[]> = {};
+    for (const [k, v] of Object.entries(sessionMessages.value)) {
+      sm[k] = v.map((m) => ({ ...m }));
+    }
     const patch: Partial<AgentPersisted> = {
       version: version.value,
       config: { ...config.value },
       sessions: sessions.value.map((s) => ({ ...s })),
       activeSessionId: activeSessionId.value,
+      sessionMessages: sm,
       activeSessionMessages: activeSessionMessages.value.map((m) => ({ ...m })),
     };
     await saveAgentStore(patch);
@@ -188,6 +210,7 @@ export const useAgentStore = defineStore('agent', () => {
     config.value = { ...fresh.config };
     sessions.value = [];
     activeSessionId.value = null;
+    sessionMessages.value = {};
     activeSessionMessages.value = [];
     runtime.value = { ...initialRuntime };
     versionMismatch.value = null;
@@ -199,9 +222,9 @@ export const useAgentStore = defineStore('agent', () => {
   async function newSession(
     workspace: 'preset' | 'worldbook' | 'character' | null = null
   ): Promise<void> {
-    // 若已有活跃会话且有消息，先持久化当前状态
-    if (activeSessionId.value && activeSessionMessages.value.length > 0) {
-      await persist();
+    // 先把当前活跃会话消息存到 sessionMessages[oldId]（即使为空也存，保持索引完整）
+    if (activeSessionId.value) {
+      sessionMessages.value[activeSessionId.value] = activeSessionMessages.value;
     }
 
     const id = genSessionId();
@@ -214,8 +237,9 @@ export const useAgentStore = defineStore('agent', () => {
       workspace,
     };
 
-    // 切换：清空旧活跃会话的消息（已 persist），建立新会话
+    // 建立新会话：清空活跃消息、登记 sessionMessages[newId]
     activeSessionMessages.value = [];
+    sessionMessages.value[id] = [];
     activeSessionId.value = id;
     sessions.value = [...sessions.value, meta];
     // 新会话清空自动放行集合（"本会话同意"不跨会话残留）
@@ -231,20 +255,24 @@ export const useAgentStore = defineStore('agent', () => {
   /** 切换到另一个会话。 */
   async function switchSession(id: string): Promise<void> {
     if (id === activeSessionId.value) return;
-    // 持久化当前活跃会话状态
+    // 先把当前活跃会话消息存到 sessionMessages[oldId]（不丢消息）
     if (activeSessionId.value) {
-      await persist();
+      sessionMessages.value[activeSessionId.value] = activeSessionMessages.value;
     }
-    // 切换活跃会话 id，但消息正文只在内存里——这里简化处理：切换时清空消息，
-    // 实际产品中会话切换由 P5 阶段的归档迁移机制处理
+    // 从 sessionMessages[id] 加载目标会话消息到 activeSessionMessages（不要清空）
+    activeSessionMessages.value = sessionMessages.value[id] ?? [];
+    // 更新目标会话的 updatedAt（最近使用的排前）
+    const s = sessions.value.find((x) => x.id === id);
+    if (s) s.updatedAt = Date.now();
     activeSessionId.value = id;
-    activeSessionMessages.value = [];
     runtime.value = { ...initialRuntime };
+    await persist();
   }
 
   /** 删除一个会话索引。 */
   async function deleteSession(id: string): Promise<void> {
     sessions.value = sessions.value.filter((s) => s.id !== id);
+    delete sessionMessages.value[id];
     if (activeSessionId.value === id) {
       activeSessionId.value = null;
       activeSessionMessages.value = [];
@@ -254,13 +282,16 @@ export const useAgentStore = defineStore('agent', () => {
 
   /** 容量纪律：sessions 超过 MAX_RETAINED_SESSIONS 时丢弃最旧的已归档会话索引。 */
   function trimSessions(): void {
-    const max = 20; // MAX_RETAINED_SESSIONS，但 constants 还没导出这个值，直接用字面量
-    if (sessions.value.length <= max) return;
+    if (sessions.value.length <= MAX_RETAINED_SESSIONS) return;
     // 按 createdAt 升序排，丢最旧的
     const sorted = [...sessions.value].sort((a, b) => a.createdAt - b.createdAt);
-    const toRemove = sorted.slice(0, sessions.value.length - max);
+    const toRemove = sorted.slice(0, sessions.value.length - MAX_RETAINED_SESSIONS);
     const removeIds = new Set(toRemove.map((s) => s.id));
     sessions.value = sessions.value.filter((s) => !removeIds.has(s.id));
+    // 同步清理 sessionMessages 里对应的 id，避免 orphan 消息累积
+    for (const rid of removeIds) {
+      delete sessionMessages.value[rid];
+    }
   }
 
   /** 更新当前活跃会话的 title。 */
@@ -392,13 +423,8 @@ export const useAgentStore = defineStore('agent', () => {
     runtime.value = { ...initialRuntime, turnState: 'thinking' };
 
     try {
-      // 当前会话 workspace，用于工具越界校验
-      const ws = tabsStore.activeWorkspace;
-      const workspace: AgentWorkspace =
-        ws === 'preset' ? 'preset' : ws === 'worldbook' ? 'worldbook' : 'character';
-
-      // 按当前 workspace 过滤可用工具
-      const tools = listAgentToolsForWorkspace(workspace);
+      // 全量工具，不分 workspace
+      const tools = listAgentTools();
 
       for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
         runtime.value = {
@@ -462,7 +488,7 @@ export const useAgentStore = defineStore('agent', () => {
         let stoppedByApproval = false;
         for (const call of result.toolCalls) {
           runtime.value = { ...runtime.value, currentTool: call.name };
-          const outcome = await executeTool(call, workspace);
+          const outcome = await executeTool(call);
           pushToolResultMessage(call.id, outcome.text, outcome.isError);
           // 用户拒绝审批 → 直接停本轮，不再让模型续跑工具/续答
           if (outcome.stopTurn) {
@@ -492,21 +518,13 @@ export const useAgentStore = defineStore('agent', () => {
     }
   }
 
-  /** 执行单个工具调用（含 availableIn 越界校验 + 审批门 P2 接）。 */
+  /** 执行单个工具调用（含审批门 P2 接）。 */
   async function executeTool(
-    call: ToolCall,
-    workspace: AgentWorkspace
+    call: ToolCall
   ): Promise<{ text: string; isError?: boolean; stopTurn?: boolean }> {
     const def = getAgentTool(call.name);
     if (!def) {
       return { text: `unknown tool: ${call.name}`, isError: true };
-    }
-    // 越界校验（7.3）
-    if (!def.availableIn.includes(workspace)) {
-      return {
-        text: `tool "${call.name}" not available in workspace "${workspace}"`,
-        isError: true,
-      };
     }
 
     // 解析参数（弱模型容错：arguments 可能不是合法 JSON）
@@ -527,7 +545,6 @@ export const useAgentStore = defineStore('agent', () => {
       characterStore: useCharacterStoreSafe(),
       confirmStore: useConfirmStoreSafe(),
       uiStore,
-      workspace,
     };
 
     try {
@@ -699,6 +716,7 @@ export const useAgentStore = defineStore('agent', () => {
     config,
     sessions,
     activeSessionId,
+    sessionMessages,
     activeSessionMessages,
     // runtime state
     runtime,

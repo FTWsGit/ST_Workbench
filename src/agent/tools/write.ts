@@ -3,7 +3,7 @@
  * 设计文档 5.2 + 7.1：risk:'risky' 工具在 execute() 前先弹 confirmStore.ask()，
  * 用户确认后才继续；拒绝则工具结果记为 isError:true 的 tool 消息。
  *
- * availableIn 越界校验已在 agentStore.executeTool 里统一做，这里不重复。
+ * 工具不分 workspace，全部可调用（审批门在 execute() 内处理）。
  *
  * 工具直接复用/包装现有 store 方法：
  *   preset: preset_edit_block / preset_create_block / preset_reorder_block
@@ -101,7 +101,6 @@ registerAgentTool({
   },
   risk: 'risky',
   readonly: false,
-  availableIn: ['preset'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const id = String(args?.identifier ?? '').trim();
@@ -165,7 +164,6 @@ registerAgentTool({
   },
   risk: 'risky',
   readonly: false,
-  availableIn: ['preset'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -228,7 +226,6 @@ registerAgentTool({
   },
   risk: 'risky',
   readonly: false,
-  availableIn: ['preset'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const id = String(args?.identifier ?? '').trim();
@@ -286,7 +283,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'risky',
   readonly: false,
-  availableIn: ['preset'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -319,7 +315,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'risky',
   readonly: false,
-  availableIn: ['preset'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -347,7 +342,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'risky',
   readonly: false,
-  availableIn: ['preset'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -406,7 +400,6 @@ registerAgentTool({
   },
   risk: 'risky',
   readonly: false,
-  availableIn: ['worldbook'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true };
@@ -461,7 +454,6 @@ registerAgentTool({
   },
   risk: 'risky',
   readonly: false,
-  availableIn: ['worldbook'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const uid = Number(args?.uid);
@@ -525,7 +517,6 @@ registerAgentTool({
   },
   risk: 'risky',
   readonly: false,
-  availableIn: ['worldbook'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const uid = Number(args?.uid);
@@ -582,7 +573,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'risky',
   readonly: false,
-  availableIn: ['worldbook'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true };
@@ -633,7 +623,6 @@ registerAgentTool({
   },
   risk: 'risky',
   readonly: false,
-  availableIn: ['character'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     const key = String(args?.field_key ?? '').trim();
@@ -697,7 +686,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'risky',
   readonly: false,
-  availableIn: ['character'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     if (!store.character) return { text: frame('当前没有加载任何角色卡。'), isError: true };

@@ -31,7 +31,7 @@ export const MAX_RETAINED_SESSIONS = 20;
 export const ACTIVE_SESSION_SOFT_LIMIT_BYTES = 256 * 1024;
 
 /** 持久化数据结构版本号。不匹配时显式报错给用户重置按钮，禁止静默按新结构误读旧数据。 */
-export const AGENT_PERSISTED_VERSION = 1;
+export const AGENT_PERSISTED_VERSION = 2;
 
 /** extensionSettings 命名空间键，唯一不通用，仿官方扩展指南的 MODULE_NAME 规范。 */
 export const AGENT_NS = 'ST_Workbench_Agent';

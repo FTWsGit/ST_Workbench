@@ -90,7 +90,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
-  availableIn: ['preset'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -174,7 +173,6 @@ registerAgentTool({
   },
   risk: 'safe',
   readonly: true,
-  availableIn: ['preset'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const id = String(args?.identifier ?? '').trim();
@@ -216,7 +214,6 @@ registerAgentTool({
   },
   risk: 'safe',
   readonly: true,
-  availableIn: ['preset'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const query = String(args?.query ?? '').trim();
@@ -262,7 +259,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
-  availableIn: ['worldbook'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true };
@@ -313,7 +309,6 @@ registerAgentTool({
   },
   risk: 'safe',
   readonly: true,
-  availableIn: ['worldbook'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const uid = Number(args?.uid);
@@ -354,7 +349,6 @@ registerAgentTool({
   },
   risk: 'safe',
   readonly: true,
-  availableIn: ['worldbook'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const query = String(args?.query ?? '').trim();
@@ -398,7 +392,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
-  availableIn: ['character'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     if (!store.character) return { text: frame('当前没有加载任何角色卡。'), isError: true };
@@ -446,7 +439,6 @@ registerAgentTool({
   },
   risk: 'safe',
   readonly: true,
-  availableIn: ['character'],
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     const key = String(args?.field_key ?? '').trim();

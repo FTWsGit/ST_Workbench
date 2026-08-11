@@ -67,7 +67,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: true,
-  availableIn: ['preset'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -119,7 +118,6 @@ registerAgentTool({
   parameters: { type: 'object', properties: {} },
   risk: 'safe',
   readonly: false,
-  availableIn: ['preset'],
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };

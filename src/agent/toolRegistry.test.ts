@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  registerAgentTool,
-  getAgentTool,
-  listAgentTools,
-  listAgentToolsForWorkspace,
-  type AgentToolDef,
-  type AgentWorkspace,
-} from './toolRegistry';
+import { registerAgentTool, getAgentTool, listAgentTools, type AgentToolDef } from './toolRegistry';
 
 /** 构造最小合法 AgentToolDef（execute 不会真跑，只占位）。 */
 function makeTool(name: string, overrides: Partial<AgentToolDef> = {}): AgentToolDef {
@@ -16,7 +9,6 @@ function makeTool(name: string, overrides: Partial<AgentToolDef> = {}): AgentToo
     parameters: { type: 'object', properties: {} },
     risk: 'safe',
     readonly: false,
-    availableIn: ['preset'],
     execute: vi.fn(async () => ({ text: 'ok' })),
     ...overrides,
   };
@@ -68,58 +60,6 @@ describe('toolRegistry', () => {
       all.length = 0;
       // 内部不受影响
       expect(getAgentTool(t.name)).toBe(t);
-    });
-  });
-
-  describe('listAgentToolsForWorkspace', () => {
-    it('只放行 availableIn 包含当前 workspace 的工具', () => {
-      const wsPreset: AgentWorkspace = 'preset';
-      const wsChar: AgentWorkspace = 'character';
-      const wsWb: AgentWorkspace = 'worldbook';
-      const t1 = makeTool('ws1_' + counter, { availableIn: ['preset'] });
-      const t2 = makeTool('ws2_' + counter, { availableIn: ['preset', 'character'] });
-      const t3 = makeTool('ws3_' + counter, { availableIn: ['character', 'worldbook'] });
-      registerAgentTool(t1);
-      registerAgentTool(t2);
-      registerAgentTool(t3);
-
-      const presetTools = listAgentToolsForWorkspace(wsPreset);
-      expect(presetTools).toContain(t1);
-      expect(presetTools).toContain(t2);
-      expect(presetTools).not.toContain(t3);
-
-      const charTools = listAgentToolsForWorkspace(wsChar);
-      expect(charTools).not.toContain(t1);
-      expect(charTools).toContain(t2);
-      expect(charTools).toContain(t3);
-
-      const wbTools = listAgentToolsForWorkspace(wsWb);
-      expect(wbTools).not.toContain(t1);
-      expect(wbTools).not.toContain(t2);
-      expect(wbTools).toContain(t3);
-    });
-
-    it('availableIn 为空数组时任何 workspace 都不放行', () => {
-      const t = makeTool('ws_empty_' + counter, { availableIn: [] });
-      registerAgentTool(t);
-      expect(listAgentToolsForWorkspace('preset')).not.toContain(t);
-      expect(listAgentToolsForWorkspace('character')).not.toContain(t);
-      expect(listAgentToolsForWorkspace('worldbook')).not.toContain(t);
-    });
-
-    it('risk 字段不过滤，保留在结果里供下游判断', () => {
-      const safe = makeTool('risk_safe_' + counter, { risk: 'safe', availableIn: ['preset'] });
-      const risky = makeTool('risk_risky_' + counter, { risk: 'risky', availableIn: ['preset'] });
-      registerAgentTool(safe);
-      registerAgentTool(risky);
-      const presetTools = listAgentToolsForWorkspace('preset');
-      expect(presetTools).toContain(safe);
-      expect(presetTools).toContain(risky);
-      // risk 值保留
-      const safeResult = presetTools.find((t) => t.name === safe.name);
-      expect(safeResult?.risk).toBe('safe');
-      const riskyResult = presetTools.find((t) => t.name === risky.name);
-      expect(riskyResult?.risk).toBe('risky');
     });
   });
 });

@@ -569,7 +569,10 @@ export interface SearchField {
   key: string;
   /** i18n key，供 UI 用 uiStore.t() 显示字段名 */
   labelKey: string;
-  /** text=全文按行搜 / list=数组每个 string 元素按行搜 / enum=离散值整值匹配 */
+  /** 决定 searchFields() 怎么处理这个字段：
+   *  - 'text'：按行 IndexOf 裁窗 ±30 字生成 context
+   *  - 'list'：数组逐元素按行搜（SearchHit.line = 元素下标）
+   *  - 'enum'：`String(item[field]) === query` 整值匹配（line/col 恒为 -1） */
   kind: 'text' | 'list' | 'enum';
 }
 

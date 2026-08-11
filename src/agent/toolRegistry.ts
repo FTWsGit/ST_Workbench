@@ -12,9 +12,6 @@ import type { useCharacterStore } from '../stores/characterStore';
 import type { useConfirmStore } from '../stores/confirmStore';
 import type { useUiStore } from '../stores/uiStore';
 
-/** workspace 名（与 tabsStore.activeWorkspace 同集）。 */
-export type AgentWorkspace = 'preset' | 'worldbook' | 'character';
-
 /** 工具执行上下文：注入三个 domain store + confirmStore + uiStore.t。 */
 export interface AgentToolContext {
   presetStore: ReturnType<typeof usePresetStore>;
@@ -22,8 +19,6 @@ export interface AgentToolContext {
   characterStore: ReturnType<typeof useCharacterStore>;
   confirmStore: ReturnType<typeof useConfirmStore>;
   uiStore: ReturnType<typeof useUiStore>;
-  /** 当前会话所在 workspace（越界校验用）。 */
-  workspace: AgentWorkspace;
 }
 
 /** 工具执行结果。text 是回给模型的字符串内容。 */
@@ -55,8 +50,6 @@ export interface AgentToolDef {
   risk: 'safe' | 'risky';
   /** true 才允许并行执行（只读工具）。 */
   readonly: boolean;
-  /** 限定哪些 workspace 下可调用，越界则拒绝（模块 7.3）。 */
-  availableIn: AgentWorkspace[];
   /** 执行函数。args 是已解析的参数对象。 */
   execute: (args: Record<string, unknown>, ctx: AgentToolContext) => Promise<AgentToolResult>;
 }
@@ -77,9 +70,4 @@ export function getAgentTool(name: string): AgentToolDef | undefined {
 /** 列出所有已注册工具定义（供 callModel 组装 tools wire format）。 */
 export function listAgentTools(): AgentToolDef[] {
   return Array.from(AGENT_TOOL_REGISTRY.values());
-}
-
-/** 按 workspace 过滤可用工具（越界的不给模型选）。 */
-export function listAgentToolsForWorkspace(ws: AgentWorkspace): AgentToolDef[] {
-  return listAgentTools().filter((t) => t.availableIn.includes(ws));
 }

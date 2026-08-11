@@ -8,5 +8,6 @@ export const DEFAULT_AGENT_PERSISTED: AgentPersisted = {
   config: { ...DEFAULT_AGENT_CONFIG },
   sessions: [],
   activeSessionId: null,
+  sessionMessages: {},
   activeSessionMessages: [],
 };
