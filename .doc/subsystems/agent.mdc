@@ -29,7 +29,7 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的持续对话
 |---|---|
 | `src/agent/agentStore.ts` | Pinia store（id `'agent'`），持有 `AgentPersisted` live 状态 + 运行时状态机；唯一调用 LLM 生成与工具执行循环的入口；内嵌审批门；组装分块 system 消息（`buildSystemMessages` + `refreshRuntimePrompt`）；不直接操作 `presetStore`/`worldbookStore`/`characterStore` 的内部字段——所有跨 store 操作必须经过工具注册表 |
 | `src/api/agentApi.ts` | agent 持久化读写层，走 `extensionSettings`（服务端 `settings.json` 同级），跟 `characterApi.ts`/`presetApi.ts` 同一套 `ensureTopImporter()` 顶层动态 import 模式 |
-| `src/agent/callModel.ts` | LLM 调用层：监听 `CHAT_COMPLETION_SETTINGS_READY` 事件，在请求体组装完成、即将发 API 之前把 `tools` 塞进去；`generateRawData` 返回原始 response object |
+| `src/agent/callModel.ts` | LLM 调用层：监听 `CHAT_COMPLETION_SETTINGS_READY` 事件，在请求体组装完成、即将发 API 之前把 `tools` 塞进去；`generateRawData` 返回原始 response object。**传参绕过 ST 宏替换**：传 `prompt: ''`（空字符串）给 `generateRawData`，让 ST 的 `createRawPrompt` 只处理它自己创建的空消息；在 `CHAT_COMPLETION_SETTINGS_READY` 的 handler 里把 `generateData.messages` 覆盖成我们的原始消息数组，同时注入 `tools`/`tool_choice`/采样参数/`thinking`。ST 的 `createRawPrompt`（`script.js:3886`）会对每条 message 的 content 跑 `substituteParams`，把 `{{addvar::...}}` 这类宏执行掉并替换成空字符串——所以**绝不能把我们的消息数组直接传给 `generateRawData`**，只能传空字符串让 ST 吃自己的空消息，再在 handler 里覆盖 |
 | `src/agent/toolCallCompat.ts` | 极简 tool-call 提取层（非流式，OpenAI/Claude/Cohere 三族） |
 | `src/agent/toolRegistry.ts` | agent 专用工具注册表（JSON Schema + risk 分级 + execute 函数）|
 | `src/agent/tools/readonly.ts` | 只读工具集（`risk:'safe'`） |
@@ -38,7 +38,8 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的持续对话
 | `src/agent/contextManager.ts` | 上下文管理：神圣前缀（压缩永不触碰）+ 入库截断 + 整段摘要压缩 |
 | `src/agent/constants.ts` | agent 子系统的可调常数集中表（禁止散落到各文件当魔法数字） |
 | `src/agent/types.ts` | agent 类型定义（`Message`/`ToolCall`/`AgentPersisted`/`AgentConfig`/`AgentSessionMeta`/`AgentRuntimeState`） |
-| `src/components/shared/AgentPanel.vue` | Agent 助手右侧栏，三态形态（docked/overlay/float，`settings.agentMode`）；面板内有可展开设置区（⚙ 按钮）：system prompt（绑 `config.prompts.system`）+ temperature/maxTokens/topP/topK/presencePenalty/frequencyPenalty/thinking/maxContextTokens/compactThresholdRatio 全部可配字段，变更走 `agentStore.updateConfig()` 持久化；并渲染内嵌审批卡片（`pendingApproval` + "本会话自动同意"） |
+| `src/components/shared/AgentPanel.vue` | Agent 助手右侧栏，三态形态（docked/overlay/float，`settings.agentMode`）；消息渲染支持可折叠区块：thinking（`msg.reasoning`）/tool_result/tool_call args，默认折叠、点击展开；内嵌审批卡片（`pendingApproval` + "本会话自动同意"） |
+| `src/components/shared/AgentSettings.vue` | Agent 设置区子组件（从 AgentPanel.vue 抽出，避免 float/docked 两份重复）：编辑 system/project/workflow/knowledge 四块提示词；knowledge 是数组，每块带 enable/disable 开关 + 删除按钮 + "新增知识块"按钮；采样参数（temperature/maxTokens/topP/topK/presence/frequencyPenalty/thinking/maxContextTokens/compactThresholdRatio）全部可配；变更走 `agentStore.updateConfig()` 持久化；设置区 `max-height: 60vh` + `overflow-y: auto` 可滚动 |
 
 ## 持久化机制
 
@@ -51,8 +52,9 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的持续对话
 纯 ST 原生 API（`/script.js` + `/scripts/extensions.js`），不依赖 Tavern Helper。对策是自己在 ST 原生的更底层原语上重建一层"只拿结构化 `tool_calls`、不自动执行、不写 chat"的调用层：
 
 1. 监听 `CHAT_COMPLETION_SETTINGS_READY` 事件：在 `generateRawData()` 触发这个事件的那一刻把 `tools` 塞进去。
-2. 调用 `generateRawData({ prompt: renderMessages(store.messages) })`，拿到原始 response object。
-3. 自己写极简版 tool-call 提取函数（`toolCallCompat.ts`），从 response 里挖 `tool_calls`。
+2. 调用 `generateRawData({ prompt: '' })`——**传空字符串，不传我们的消息数组**。ST 的 `createRawPrompt`（`script.js:3886`）会对每条 message 的 content 跑 `substituteParams`，把 `{{addvar::...}}` 这类宏执行掉并替换成空字符串；传空字符串让 ST 只处理它自己创建的空消息。
+3. 在 `CHAT_COMPLETION_SETTINGS_READY` 的 handler 里把 `generateData.messages` 覆盖成我们的原始消息数组，同时注入 `tools`/`tool_choice`/采样参数/`thinking`。emit 到 fetch 之间没有任何 ST 代码，覆盖保证生效。
+4. 自己写极简版 tool-call 提取函数（`toolCallCompat.ts`），从 response 里挖 `tool_calls`。
 
 `tool` 角色编码：我们自己组装的是发给 provider 的原始请求消息数组（OpenAI wire format），`role: 'tool'`（配 `tool_call_id`）是这个格式原生支持的字段。`renderMessages()` 序列化时按 4 角色原样映射。
 
@@ -83,7 +85,7 @@ async function runAgentTurn(store, userText) {
 }
 ```
 
-- 只读工具可并行（`readonly: true`），写类工具串行；
+- 本轮所有工具调用**并行执行**（`Promise.all`），不串行；审批拒绝的 `stopTurn` 会在工具全部跑完后统一检查；
 - `MAX_TOOL_ROUNDS` 熔断：防止模型陷入调用循环；
 
 ## 上下文管理
@@ -104,6 +106,10 @@ compact 分两路：user/assistant 喂 LLM summary（重试 `COMPACT_MAX_RETRIES
 ### 审批停止
 
 写类工具审批被拒绝时工具结果记为 `isError:true` 的 `tool` 消息并置 `stopTurn:true`——`runAgentTurn` 看到 `stopTurn` 直接 break 工具循环、finalize 成 `'canceled'`，不再让模型续跑工具或续答。
+
+### 用户取消（停止按钮）
+
+UI（`AgentPanel.vue`）的发送按钮在 busy 时变"停止"，不禁用、不分流到 `cancelTurn()`。`cancelTurn()` emit `ctx.eventSource.emit(ctx.event_types.GENERATION_STOPPED)`——`generateRawData` 内部监听该事件并 abort 自己的 fetch（ST 的 `generateRawData` 签名不支持外部 signal，所以**不能**靠外部 AbortController 中断；走事件是唯一可行途径）。不调 `stopGeneration()` 避免连带 abort 主聊天生成。`runAgentTurn` 的 catch 识别 `DOMException name==='AbortError'` 或 message 匹 `/abort|cancelled|user abort/` → `finalizeTurn('canceled')`，不当普通错误写进消息历史。
 
 ## 安全与审批边界
 
