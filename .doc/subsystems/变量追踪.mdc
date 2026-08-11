@@ -46,7 +46,7 @@ alwaysApply: false
 
 ### var-click 协议（指针）
 
-点击 `{{var}}` 的检测由 `HighlightedEditor.vue` 的 `enableVarClick` prop（默认关）承担：命中/未命中分别发 `var-click` / `var-click-miss`，三域编辑器统一 `onVarClick` 路由到 `uiStore.showVarPopup(...)`。
+点击命中检测的事件协议（prop/事件/payload 形状）属于「编辑器内核」——`HighlightedEditor` 是唯一的发出方。这里只记它接进来之后的去向：三域编辑器统一把 `onVarClick` 路由到 `uiStore.showVarPopup(...)`，这一步是变量追踪自己的职责。
 
 ### 集成设计理由
 
@@ -72,4 +72,4 @@ preset/character/worldbook 三个内容编辑器都接 `enable-var-click` + `@va
 
 ## 重扫触发
 
-`rebuildVarIndex()` 触发点全部在 uiStore：四条 watch（preset `order` 深 / `prompts` 浅 / character 深 / worldbook entries 深）自动重扫，外加预设加载/删除 block（presetStore 里调 `uiStore.rebuildVarIndex()`）、BatchTool 批量删除、VarPanel 的 🔄 按钮。uiStore 通过 return 重新导出 useVarNav 的索引态与方法，供 VarPanel/VarPopup 与各编辑器读取。
+`rebuildVarIndex()` 触发点：四条 watch（preset `order` 深 / `prompts` 浅 / character 深 / worldbook entries 深）自动重扫；外加预设加载/删除 block（presetStore 里调 `uiStore.rebuildVarIndex()`）、BatchTool 批量删除、VarPanel 的 🔄 按钮。这四条 watch 的宿主是 `presetStore.setup`（不是 uiStore——为什么不在 uiStore、宿主迁移的根因，见 decision 0009）；`rebuildVarIndex` 本身仍是 uiStore 的方法，watch 的 cb 调它。uiStore 通过 return 重新导出 useVarNav 的索引态与方法，供 VarPanel/VarPopup 与各编辑器读取。

@@ -111,6 +111,24 @@ type CharacterBook = {
 
 `this_chid` 是 `characters` 数组下标（字符串），当前选中角色 = `characters[this_chid]`。
 
+### 选中 / 切换主菜单选中项
+
+| 函数 | 参数 | 返回 | 语义 |
+| --- | --- | --- | --- |
+| `selectCharacterById`（`mod`，`/scripts/quickReply.js` 里由 ST 暴露的 `getContext().selectCharacterById`） | `chid: number`, `opts?: { switchMenu?: boolean }` | `void` | 切 ST 主菜单选中角色。`chid` 是 `mod.characters` 数组下标。`switchMenu: false` 表示只切角色不切 ST 顶层菜单标签页 |
+
+Precise Preview 生成前要调一次这个，把 ST 主菜单选中角色对齐到工具里正在编辑的那张——ST 的 `generate` 只认主菜单选中项，不显式对齐就会用错角色卡渲染（设计见 decision 0005）。本项目封装在 `api/characterApi.ts` 的 `selectCharacterByAvatar(avatar)`，内部按 `avatar` 在 `mod.characters` 里反查 `chid`，已是同一张时直接跳过。
+
+### 缩略图端点
+
+角色头像缩略图走 ST 的 `/thumbnail` 端点：
+
+```
+/thumbnail?type=avatar&file=<encodeURIComponent(avatar)>&<可选 cacheBust>
+```
+
+`avatar` 是角色卡文件名（含 `.png` 后缀），缓存失效时附一个时间戳查询参数。本项目 `api/characterApi.ts` 的 `getCharacterAvatarUrl(avatar, cacheBust?)` 负责拼这个 URL，`CharacterMetaForm.vue` 直接 `<img :src>` 用它显示原头像。
+
 ### 写入
 
 | 函数 | 参数 | 返回 | 语义 |

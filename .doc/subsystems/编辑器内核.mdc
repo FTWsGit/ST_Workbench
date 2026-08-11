@@ -18,6 +18,31 @@ alwaysApply: false
 - 不需要的功能不传对应 prop 即可，组件内部天然是 no-op。
 - 设置弹窗改字体后 textarea 元素本身不 resize，`ResizeObserver` 感知不到——各个父组件各自 watch `uiStore.settings.editorFontSize/editorFontFamily`，变了就调 `editorRef.value?.refreshFont()` 让它重新测量。
 
+### 跳转协议：`jump` prop
+
+外部请求"把光标移到此处"（搜索结果、变量导航跨域跳转）统一走 `jump` prop：
+
+```
+:jump="tabsStore.editorJump"          // 三域 ContentEditor 都接同一份
+watch(props.jump) → moveCursorTo(line, col, len)   // 组件内部反应
+```
+
+`tabsStore.editorJump` 是这个协议唯一的写入口，三域共用同一份，光标 select 高亮在跨域跳转时都生效。
+
+### var-click 协议：变量点击检测
+
+`enableVarClick` prop（默认关）开启对 `{{setvar/addvar/getvar::name}}` 的点击命中检测：
+
+```
+enable-var-click          // prop
+@var-click="onVarClick"   // 事件
+
+emit('var-click', { varName, scope, cursorPos, pos })   // 命中变量宏名
+emit('var-click-miss')                                  // 未命中
+```
+
+三域编辑器统一把 `onVarClick` 路由到 `uiStore.showVarPopup(...)`——这一步是「变量追踪」子系统的职责，不是本篇；本篇只管这个事件本身的触发条件和 payload 形状。
+
 ## 三层结构
 
 1. **底层 `<textarea>`**：承载真实文本、光标、选区、原生 IME 输入。打字直接走 `onInput`，不需要任何 `contenteditable` 或隐藏 textarea 的复杂手段。

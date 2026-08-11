@@ -14,12 +14,14 @@ description: ST_Workbench 项目的读码前置纪律。任何需要理解这个
 | 子目录 | kind | 回答什么问题 | 装什么 |
 |---|---|---|---|
 | `.doc/`（根） | `overview` | 项目是什么 | 项目概览，唯一入口级文档 |
-| `.doc/explanation/architecture/` | `architecture` | 整体结构是什么 | 本项目自己的结构性设计现状 |
-| `.doc/explanation/subsystems/` | `subsystem` | 每个子系统/模块的机制 | 相对独立的技术子系统机制 |
+| `.doc/architecture/` | `architecture` | 整体结构是什么 | 跨子系统的结构性叙事（数据怎么流、store 怎么分工） |
+| `.doc/subsystems/` | `subsystem` | 一个子系统的现状 | 是什么 + 就地的从句级局部理由 + 这个子系统自己的不变量，一个子系统一个文件说完 |
 | `.doc/guides/` | `guide` | How do I…? | 任务导向的查表型文档，一行任务对一行答案 |
-| `.doc/guides/contract` | `contract` | 子系统之间、项目内部的契约和规则 | 各个subsystem的types.ts之外的调用规范，使用契约 |
+| `.doc/guides/contract/` | `contract` | 真正跨子系统、没有单一 owner 的规则 | i18n key 命名、CSS class 字典这类没有任何一个子系统能独占的规范；能算进某个子系统自己的事，就不放这里，放对应 `subsystems/*.mdc` |
 | `.doc/reference/spec/` | `spec` | 外部知识和契约 | SillyTavern 自己的数据结构/API 契约，ST 上游协议变了才该动 |
-| `.doc/decisions/` | `decision` | 为什么做某个决策 | 标准ADR。单个设计决策的背景/决策/后果，追加式、编号、accepted 后不改正文 |
+| `.doc/decisions/` | `decision` | 为什么选了这个而不是那个 | 标准 ADR，只收"防回归/真权衡/跨场景可复用"这三类；只言片语的从句级理由不开 ADR，就地写在 subsystems 里 |
+
+**引用规则**：`decisions/NNNN` 和 `subsystems/<name>` 都可以被其它 `.mdc` 按稳定标识引用（decision 用四位编号、subsystem 用 front matter 的 `name`），例如"见 decision 0005"「见「编辑器内核」」——不要把已经在别处写过的论证/协议复述一遍。`guides/` 内部文件之间也一样，按 `name` 互相指。唯一禁止的是引用裸文件路径（如 `见 xxx.mdc`），因为路径会随目录调整而失效，`name` 不会。
 
 ## 脚本
 

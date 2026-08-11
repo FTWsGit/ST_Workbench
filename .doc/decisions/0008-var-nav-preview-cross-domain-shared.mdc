@@ -1,7 +1,7 @@
 ---
 name: "0008-var-nav-preview-cross-domain-shared"
 kind: "decision"
-description: "为什么 VarPanel/VarPopup/PreviewPanel 从 components/preset/ 迁到 components/shared/，varnav/preview 状态机从 presetStore 迁到 uiStore（跨 workspace 工具，切换 workspace 不关闭，跟 AgentPanel 对齐）。改这几个组件归属、或判断新组件该放 preset/ 还是 shared/ 时读。"
+description: "为什么 VarPanel/VarPopup/PreviewPanel 从 components/preset/ 迁到 components/shared/，varnav/preview 状态机从 presetStore 迁到 uiStore（跨 workspace 工具，切换 workspace 不关闭，跟 AgentPanel 对齐）"
 alwaysApply: false
 status: "accepted"
 supersedes: "0003-preset-owned-shared-components"
@@ -31,3 +31,10 @@ char/wb 工作区同样可用。两个工具不再属于 preset 一个域——�
   "domain-agnostic 或跨 workspace 工具组件"，两者都不硬编码单个 domain。
 - 新组件归属：只服务单个 domain 的放 `components/<domain>/`；跨 workspace 通用工具
   的状态机放 uiStore、组件放 shared/（或收进工具箱按 scene 派发）。
+
+## 后续：四条跨域 watch 的宿主
+
+这四条跨域 `watch`（preset `order` 深 / `prompts` 浅 / character 深 / worldbook
+entries 深）原本注册在 `uiStore.setup`，后来因为 Pinia setup store 初始化环问题迁到
+`presetStore.setup`——这件事的根因、决策、后果单独开了一篇，见 decision 0009，这里
+不重复。

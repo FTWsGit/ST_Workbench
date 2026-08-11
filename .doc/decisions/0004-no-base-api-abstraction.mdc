@@ -1,7 +1,7 @@
 ---
 name: "0004-no-base-api-abstraction"
 kind: "decision"
-description: "为什么 presetApi/worldbookApi/characterApi 不抽 BaseApi<T> 基类。想给三个 API 文件提取公共基类，或新增 domain 时纠结要不要仿造已有 API 结构时读。"
+description: "为什么 presetApi/worldbookApi/characterApi 不抽 BaseApi<T> 基类"
 alwaysApply: false
 status: "accepted"
 supersedes: ""

@@ -1,7 +1,7 @@
 ---
 name: "0006-watch-active-tab-not-scroll-token"
 kind: "decision"
-description: "为什么标签驱动侧边栏高亮的 watcher 监听 activeTab 引用本身，不能改成监听 listScrollToken。改这段 watcher 逻辑，或排查'多选点了 Ctrl/Shift 反而被重置成单选'时读。"
+description: "为什么标签驱动侧边栏高亮的 watcher 监听 activeTab 引用本身，不能改成监听 listScrollToken"
 alwaysApply: false
 status: "accepted"
 supersedes: ""

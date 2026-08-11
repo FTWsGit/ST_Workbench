@@ -1,5 +1,5 @@
 ---
-name: "SillyTavern-API"
+name: "API层"
 kind: "subsystem"
 description: "查工作层 api 层与 ST 原生模块/端点的契约、字段重命名与转换时读"
 alwaysApply: false

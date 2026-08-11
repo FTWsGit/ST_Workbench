@@ -48,7 +48,7 @@ alwaysApply: false
 
 ## 改既有 store/持久化代码的坑（查表，不含设计理由）
 
-改 store/持久化相关代码前先扫一遍——这是这类改动纪律的唯一 how-to 单源。为什么会有这些坑见 decision 0007（shadow tree 双轨 rebuild）与「状态与持久化」的 dirty 追踪一节，这里只收"要做什么"。
+改 store/持久化相关代码前先扫一遍——这是这类改动纪律的唯一 how-to 单源。为什么会有这些坑见 decision 0007（shadow tree 双轨 rebuild）与「数据结构与持久化」的 dirty 追踪一节，这里只收"要做什么"。
 
 | 要做什么 | 怎么做 |
 | --- | --- |

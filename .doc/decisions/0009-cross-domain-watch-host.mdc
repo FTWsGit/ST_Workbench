@@ -1,0 +1,46 @@
+---
+name: "0009-cross-domain-watch-host"
+kind: "decision"
+description: "为什么 VarNav 的四条跨域 watch（preset order/prompts、character、worldbook entries）宿主从 uiStore 迁到 presetStore"
+alwaysApply: false
+status: "accepted"
+supersedes: ""
+---
+
+# 0009. 四条跨域 watch 从 uiStore 迁到 presetStore
+
+## 背景
+
+`rebuildVarIndex()` 触发点是四条 watch：preset `order`（深）/ `prompts`（浅）/ character
+深 / worldbook entries 深。原本这四条 watch 注册在 `uiStore.setup` 里，getter 直接调
+`useCharacterStore()` / `useWorldbookStore()` 拿到对应 ref。
+
+`uiStore` 是 `characterStore` / `worldbookStore` setup 顶部 `const showToast = uiStore.showToast`
+这行解构会首先触发的 store。Pinia setup store 在 `setup()` 函数 return 之前，proxy 上
+还没有任何属性——`uiStore.setup` 里 `watch(crossDomainGetter, cb)` 注册时会立即求值
+getter 收集依赖，这一求值就把 `characterStore` / `worldbookStore` **在 uiStore return
+之前**强制实例化了，于是它们顶部那行 `const showToast = uiStore.showToast` 拿到的是
+`undefined`，后续调 `showToast(...)` 报 `TypeError: showToast is not a function`。
+
+为什么三个 store 表现不同：触发 uiStore setup 的那个 store 是"自己先 setup → 再调
+`useUiStore()` 完成 uiStore → 再解构 showToast"的顺序，没问题；但被 uiStore 里的 watch
+getter 提前实例化的那两个 store，顶部解构 `uiStore.showToast` / `uiStore.t` 时 uiStore
+还没 return，拿到的就是 `undefined`。
+
+## 决策
+
+把那四条跨域 `watch` 从 `uiStore.setup` 删掉，迁到 `presetStore.setup`：presetStore 的
+setup 在 `useUiStore()` 完成（这是 presetStore 自己 setup 链路上的一步）之后才注册这些
+watch，此时调 `useCharacterStore()` / `useWorldbookStore()` 实例化它们，它们顶部解构
+`uiStore.showToast` / `uiStore.t` 拿到的就是已完成的 uiStore。`uiStore` 里删掉这四个 watch
+和不再使用的 `watch` import。
+
+## 后果
+
+- 跨域 watch 的宿主从 uiStore 迁到 presetStore，`rebuildVarIndex` 仍是 uiStore 的方法
+  （watch 的 cb 调它），只是 watch 注册的时机和地点变了。
+- 这是 Pinia setup store "setup 顶部立即解构别的 store" 模式的一个固有陷阱：被解构的
+  store 若在自身 setup 里又解构第三个 store，第三个 store 的顶部解构会拿到未完成的引用。
+  以后再遇到"A store setup 里 watch 另一个 store 的 getter"这种结构，先确认 watch 注册
+  的时机不会比被 watch store 的"顶部解构链路"更早。
+- 不在 `uiStore.setup` 里放任何会"提前实例化别的 store"的逻辑，是这次修复留下的不变量。

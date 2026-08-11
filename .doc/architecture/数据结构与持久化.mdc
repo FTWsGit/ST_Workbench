@@ -29,10 +29,10 @@ alwaysApply: false
 - **`flatNodes`**：computed，`order` 或 group 的 `collapsed` 变化时重建，preset 域所有选中/跳转/拖拽都基于这个数组的索引。
 - **`selectPresetByName(name)`**：见上面"为什么需要切换 ST 主菜单选中项"，只被 `PreviewPanel.vue` 生成前调用，不是通用的预设切换入口——那是 `switchPreset()` 的事，两者不要混。
 - **`revealAndFindGi(identifier)`**：跳转专用，先自动展开目标所在的折叠组，再查 gi，避免折叠组里的块跳不过去。**不由各跳转函数各自手动调用**——紧挨着它下面有一个 `watch(() => tabsStore.activeTab, (tab) => {...}, { immediate: true, flush: 'sync' })`，是"标签驱动侧边栏"这件事**唯一**的实现：只要 `activeTab` 变成了某个 block（不管是变量导航点击、TabBar 点击、还是侧边栏自己点击触发的），这个 watcher 就会 `revealAndFindGi()` 展开折叠组、然后把 `selectedGi`/`anchorGi` 重置成只选中这一行。`jumpToVarOp`/`jumpToPopupVar` 只需要 `tabsStore.open({domain:'preset', key, label})` + `requestEditorJump(...)`——`flush: 'sync'` 是为了保证这个 watcher 先于 `useListScrollSync.ts` 那个监听同一个 token 的 watcher 跑完，否则会有"组还没展开就去 `scrollIntoView`，滚到一个还不存在的行"的竞态。工具箱 SearchTool 的 `selectSide()` 把命中同步到 `selectedGi` 时也调 `revealAndFindGi` 展开每个命中所在组，但**不**走那个 watcher——它要的是多选态，watcher 会把 `selectedGi` 重置成单行，所以 `selectSide` 先脉冲 `selectBlock(anchor)` 触发 `requestListScroll` 滚到 anchor，再覆写 `selectedGi` 为完整命中集合。`jumpToVarOp`/`jumpToPopupVar` 和变量弹窗整套（`showVarPopup`/`hideVarPopup`/`rebuildVarIndex` 等）已抽到 `composables/useVarNav.ts`——uiStore setup 时解构调用、store return 继续导出（状态机宿主已从 presetStore 迁到 uiStore，跨 workspace 通用），UI 不变。**变量追踪已升级为跨三域扫描**（preset/character/worldbook 三域 + 13 种宏 + 装配序排序 + `VarOp.source.domain` 跨域跳转分派 + var-click 协议）。
-  - **这个 watcher 监听的是 `activeTab` 引用本身，不是 `tabsStore.listScrollToken['preset']`**。代价是"重新点击已经是 active 的那个 tab"这种情况 watcher 不重新触发，`PresetSidebar.vue` 的普通点击处理函数仍在本地做一次同样的 `selectedGi`/`anchorGi` 重置兜底。
+  - **这个 watcher 监听的是 `activeTab` 引用本身，不是 `tabsStore.listScrollToken['preset']`**——为什么不能改成监听后者、以及"重新点击已经是 active 的那个 tab"这个 edge case 怎么兜底，见 decision 0006。
 - **Preset IO 原语**：`loadPresetByName()` 是唯一真正的 load，其它都是薄包装——`loadFromContext()`（首次打开面板，加载 ST 当前选中的那份）、`switchPreset(name)`（明确切到另一份预设，丢弃未保存改动，UI 层负责先 confirm）、`reloadPreset()`（重新加载**本工具当前打开的这份**（`presetName.value`），不是 ST 当前选中的——两者可以不同）、`refreshPresetList()`（同步预设下拉列表）。
 - **`generatePreviewBlocks()`/`generatePreviewRaw()`**：真实调用 SillyTavern 自身渲染管线，不是本地模拟。整段已抽到 `composables/usePreviewEngine.ts`——uiStore setup 时解构调用、store return 继续导出（状态机宿主已从 presetStore 迁到 uiStore，跨 workspace 通用），UI 不变。
-- **`jumpToFieldHit(...)`**：工具箱通用 Search 的"跳到命中"出口，三个 store 都各自实现一份（preset/worldbook/character）。preset 的还兼任正则脚本宿主——`itemId` 是 script id 时按正则跳转。worldbook `revealAndFindGi` + `tabsStore.open`。character 按 `field:xxx`/`field:greeting:<id>` 虚拟 tab key 直接 `tabsStore.open`，没有 groupedList 也就没有 revealAndFindGi。**editorJump 跨域共享在 tabsStore**：三个域的 ContentEditor 都接 `:jump=tabsStore.editorJump`，跨域跳转时光标 select 高亮都生效（`watch(props.jump)` → `moveCursorTo(line, col, len)` 这个协议）。
+- **`jumpToFieldHit(itemId, fieldKey, line, col, len)`**：工具箱通用 Search 的"跳到命中"出口，三个 store 都各自实现一份（preset/worldbook/character），签名统一、行为各异。preset 的还兼任正则脚本宿主——`itemId` 是 script id 时按正则跳转。worldbook `revealAndFindGi` + `tabsStore.open`。character 按 `field:xxx`/`field:greeting:<id>` 虚拟 tab key 直接 `tabsStore.open`，没有 groupedList 也就没有 revealAndFindGi。**editorJump 跨域共享在 tabsStore**：三个域的 ContentEditor 都接 `:jump=tabsStore.editorJump`，跨域跳转时光标 select 高亮都生效（`watch(props.jump)` → `moveCursorTo(line, col, len)` 这个协议）。
 
 ### worldbookStore
 
@@ -40,7 +40,13 @@ alwaysApply: false
 
 ### characterStore
 
-虚拟字段路由是核心区别——`currentField`/`setCurrentFieldValue` 是唯一解析入口，`activeTab.key` 是 `field:xxx`/`field:greeting:<id>` 这种字符串前缀，`CharacterContentEditor.vue` 自己不解析 key。七个创作字段（description/scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt）+ greetings 可拖拽排序。`depthPrompt` 字段额外带一条 depth/role 的 meta 栏（角色卡故意不接 SettingsDock，这两个数值/枚举字段没有别的地方能编辑）。**切到 character workspace 时自动加载一个角色**：`App.vue` 的 `switchWorkspace('character')` 在 `character.value` 为 null 时调 `loadSelectedOrFirst()`——优先 ST 当前选中（`characterApi.getSelectedCharacterAvatar()` 拿 `this_chid` 索引 `characters` 那项的 avatar），兜底角色列表第一项。这让 varNav/Preview 切到 character 域就有数据可用，不必用户先手动选一个角色。已加载且 avatar 一致时跳过，零无谓网络请求。**var-click 已接到 char/wb 域**：`CharacterContentEditor.vue`/`WorldbookContentEditor.vue` 给 `HighlightedEditor` 加 `enable-var-click`+`@var-click="onVarClick"`，`onVarClick` 路由到 `uiStore.showVarPopup`（跨域 `useVarNav` 整套只挂在 uiStore，char/wb ContentEditor 直接 import uiStore 复用）。`var-click` 的事件协议与 `clickDomain`/`clickBlockId` payload 形状。
+虚拟字段路由是核心区别——`currentField`/`setCurrentFieldValue` 是唯一解析入口，`activeTab.key` 是 `field:xxx`/`field:greeting:<id>` 这种字符串前缀，`CharacterContentEditor.vue` 自己不解析 key。七个创作字段（description/scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt）+ greetings 可拖拽排序。`depthPrompt` 字段额外带一条 depth/role 的 meta 栏（角色卡故意不接 SettingsDock，这两个数值/枚举字段没有别的地方能编辑）。
+
+**切到 character workspace 不自动选中角色卡**（跟 worldbook 启动不自动选一份书同理）：`loadSelectedOrFirst()` 现在只刷新角色列表，不主动选 ST 主菜单当前选中项或列表第一项，避免无谓占用 ST 主菜单选中项 + 网络请求。用户在 sidebar 手动点选后才加载某张卡。
+
+**头像上传**：`CharacterMetaForm.vue` 顶上有头像行——`<img>` 预览（pending 文件用 `URL.createObjectURL`，否则走 `characterApi.getCharacterAvatarUrl(avatar)` 拼的 `/thumbnail?type=avatar&file=...` 端点）、上传按钮（触发隐藏 file input）、重置按钮（只在有 pending 时显示）。`setPendingAvatar(file | null)` 暂存新头像文件，设了就 `markDirty`；`doSaveCharacter` 保存时一并 POST（`pendingAvatarFile` 字段本来就存在，这次只是补了 UI 入口）。
+
+**Preview 前惰性 select char**：`selectCharacterForPreview()` 封装 `characterApi.selectCharacterByAvatar(avatar)`，调 ST 的 `mod.selectCharacterById(chid, { switchMenu: false })`（`chid` 是 `mod.characters` 里 avatar 匹配项的下标），已在 ST 主菜单选中同一张时直接 return true 跳过、零开销。失败时 `showToast('character.toast.selectCharFailed')` 不中断生成。`PreviewPanel.vue` 的 `generate()` 在 `selectPresetByName` 之后调它——设计见 decision 0005。**var-click 已接到 char/wb 域**：`CharacterContentEditor.vue`/`WorldbookContentEditor.vue` 给 `HighlightedEditor` 加 `enable-var-click`+`@var-click="onVarClick"`，`onVarClick` 路由到 `uiStore.showVarPopup`（跨域 `useVarNav` 整套只挂在 uiStore，char/wb ContentEditor 直接 import uiStore 复用）。`var-click` 的事件协议与 `clickDomain`/`clickBlockId` payload 形状。
 
 ### 分组与多选
 
@@ -56,6 +62,8 @@ alwaysApply: false
 ### tabsStore
 
 标签页 `tabs`（`{domain, key, label, workspace}`）、`activeWorkspace`（当前活跃工作区，`preset`/`worldbook`/`character` 三态，顶栏第一行，Save/Reload 按钮和"未保存"红点只对它生效）、`sidebarCollection`（工作区内部当前在看哪个集合，顶栏第二行，只有 `preset`/`character` 有得选）、`settingsDockOpen`、`listScrollToken`（按 domain 的"请把当前项滚动进视野"信号）。这些是"UI 现在长什么样"，跟"预设/角色卡里存了什么数据"是两码事，故意分开。
+
+`syncSidebarCollection(tab)` 在 `open(tab)` 和 `focus(domain, key)` 里被调——点击 TabBar 切到某个 tab 时，如果当前 `sidebarCollection` 跟该 tab 的 `domain` 对不上（比如停在 preset/items 但点了 regex tab），按 `tab.domain` 把 `tab.workspace` 名下的 `sidebarCollection` 切到对应集合（regex→`'regex'`、tavern→`'tavern'`、character workspace→`'fields'`、其余→`'items'`）；已经一致时跳过。这条规则把"点 tab 跳回那个 sidebar"作为单源写在 tabsStore，UI 层不再各自判断。
 
 ### confirmStore
 

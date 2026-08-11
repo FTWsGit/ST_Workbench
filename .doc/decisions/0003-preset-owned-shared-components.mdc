@@ -1,7 +1,7 @@
 ---
 name: "0003-preset-owned-shared-components"
 kind: "decision"
-description: "已废弃的决策：当初为什么 VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 放在 components/preset/ 而不是 components/shared/。现状：VarPanel/VarPopup/PreviewPanel 已迁到 shared/（跨 workspace 工具），CopyPanel/PresetMetaForm 仍留 preset/。判断新组件该放 preset/ 还是 shared/ 时读。"
+description: "已废弃的决策：当初为什么 VarPanel/VarPopup/PreviewPanel/CopyPanel/PresetMetaForm 放在 components/preset/ 而不是 components/shared/。现状：VarPanel/VarPopup/PreviewPanel 已迁到 shared/（跨 workspace 工具），CopyPanel/PresetMetaForm 仍留 preset/"
 alwaysApply: false
 status: "superseded"
 supersedes: ""

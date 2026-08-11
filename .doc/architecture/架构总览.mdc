@@ -7,8 +7,6 @@ alwaysApply: true
 
 # 架构总览：状态怎么流动
 
-**先看这个，再看任何具体组件。**
-
 ## 数据流全景
 
 从 `api/*` 层读取到内存(preset/character/worldbook) -> `sidebar` 点击 -> `tabsStore.open(...)` -> `EditorShell.vue`（`<component :is>` + `EDITOR_COMPONENTS` 路由表）/`SettingsDock.vue`（`FORMS` 表）按 `tabsStore.activeTab.domain` 挂载对应组件（host-dependent 的 regex/tavern 经 `tabsStore.getDomainAdapter(tab.domain, tab.workspace)` -> 组件从对应 domain store 拿数据 -> 改字段/改顺序触发对应 store 的 dirty 追踪 -> 保存经 `api/*` 层写回 SillyTavern

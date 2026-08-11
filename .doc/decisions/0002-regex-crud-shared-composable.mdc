@@ -1,7 +1,7 @@
 ---
 name: "0002-regex-crud-shared-composable"
 kind: "decision"
-description: "为什么 preset/character 的 regex CRUD 抽成 useScriptList/useRegexScripts 复用，以及 store 层为什么要手动 rebuild。改正则脚本增删排序逻辑，或排查'改了字段但列表没刷新'时读。"
+description: "为什么 preset/character 的 regex CRUD 抽成 useScriptList/useRegexScripts 复用，以及 store 层为什么要手动 rebuild"
 alwaysApply: false
 status: "accepted"
 supersedes: ""

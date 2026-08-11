@@ -1,7 +1,7 @@
 ---
 name: "0007-shadow-tree-dual-track-rebuild"
 kind: "decision"
-description: "为什么 regex/tavern 段要维护裸数组+树两份状态、为什么桥接靠显式 rebuild + deep watch 双轨而不是单一机制。改 regexOrder/scriptTreeOrder 相关代码，或排查'改了字段但列表没刷新/勾选生效但保存后丢'时读。"
+description: "为什么 regex/tavern 段要维护裸数组+树两份状态、为什么桥接靠显式 rebuild + deep watch 双轨而不是单一机制"
 alwaysApply: false
 status: "accepted"
 supersedes: ""

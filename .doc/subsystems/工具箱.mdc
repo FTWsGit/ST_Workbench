@@ -11,7 +11,7 @@ alwaysApply: false
 
 ## 关键文件
 
-- `src/components/toolbox/registry.ts`：注册表脚手架，暴露 `registerTool` / `getToolsForScene`。`registerTool` 是唯一填表入口（禁止直接 mutate `TOOL_REGISTRY`）。**表本身是空的**，靠工具各自的 `register.ts` 启动期 side-effect import 命填。
+- `src/components/toolbox/registry.ts`：注册表脚手架，暴露 `registerTool` / `getToolsForScene`。`TOOL_REGISTRY` 表本身是空的，靠各工具 `register.ts` 启动期 side-effect import 命填——**禁止直接 mutate `TOOL_REGISTRY`，只能走 `registerTool`**，这是这张表唯一的填表入口。
 - `src/components/toolbox/register.ts`：把 SearchTool/BatchTool/CopyPanel 注册到各适用 scene 的 side-effect 模块。**必须在启动链路里被 import 一次才会填表**——当前由 `App.vue` 顶层 `import './components/toolbox/register'` 触发（幂等）。漏这行则工具箱显示"无可用工具"。
 - `src/components/toolbox/ToolBoxPanel.vue`：容器壳。三种形态（`settings.toolBoxMode: PanelMode`，切换 UI 是共享的 `PanelModeSwitch.vue`）：docked 嵌入态抄 `.wb-right-panel` 套路（`.wb-toolbox-panel` + `.wb-right-resize-handle` + `usePanelResize` 挂 `settings.toolBoxWidth`），overlay 加 `.wb-toolbox-panel.float` 盖右侧不挤开，float 形态借 `FloatingPanelShell`（同 MetaPanel）。顶栏 segmented control 列 `getToolsForScene` 命中工具，`<component :is>` 挂载（外层 KeepAlive + `toolKey` 按 scene 分实例，保 tool 切换时 CopyPanel 的左右两侧加载状态）；按 `(activeWorkspace, sidebarCollection)` scene 派发契约与工具统一接收的 `scene/workspace/collection` 三个 props。开关按 workspace 分桶存 `tabsStore.toolBoxOpen`（沿用 preview 雨格，不另起状态）。
 - `src/components/toolbox/searchFields.ts`：scene 适配器。`getSearchScene(workspace, collection)` 的返回形状（`items + SearchField[] + getItemMeta`）——preset/items 喂 `presetStore.prompts`、regex scene 喂对应 store 的 `regexScripts`、worldbook/items 喂 `entries`、character/fields 把 `CHARACTER_FIELDS` + greetings 展平成 items。`jumpToFieldHit`/`applyReplace` 是按 scene 派到对应 store 的修改出口。
@@ -19,10 +19,19 @@ alwaysApply: false
 
 ## Search 的 LLM-friendly 形状
 
-`utils.ts` 抽出的 `searchFields(items, fields, query, getItemMeta)` 是纯函数，不碰 Vue 响应式（签名、`SearchField.kind` 三态与返回 `SearchHit[]`）
+`utils.ts` 抽出的 `searchFields(items, fields, query, getItemMeta)` 是纯函数，不碰 Vue 响应式；签名、`SearchField.kind` 三态语义、`SearchHit` 形状直接看 `utils.ts` 里 `SearchField`/`SearchHit` 的 JSDoc——那是这两个类型的唯一权威来源，不在这里复述。
 
 ## BatchTool：批量操作与影子树双状态
 
 批量操作读 SearchTool 同步进 sidebar 自己那份 useGroupedList 选中态批改（"modify what matched"回路见上方 tools 条目）。**批量操作不清选中态**（开关/改 role/改激活方式只改字段不删 item，选中态保留下来才能连续批改——比如先 enabled 再改 role）；只有**批量删除**清选中态（删了的东西没 gi 了，`doDelete` 里 regex 走 `regexClearSelection`、preset/worldbook 走 `selectedGi = new Set()`）。
 
 regex/tavern 段是**裸数组 + 影子树的双状态**：`regexScripts`/`tavernHelper.scripts` 是真数据，`regexOrder`/`scriptTreeOrder` 是侧边栏渲染树，桥接靠"显式 rebuild + deep watch"双轨。
+
+## CopyPanel：跨预设复制的独立状态
+
+preset/items 场景的 tool，是工具箱里唯一**不用任何 Pinia store 数据**的工具——自己维护左右两侧各一份 `SideState`（`name`/`data`/`sel`/`anchor`/`dirty`），直接调 `ST.getPresetByName`/`ST.listPresets`/`api/presetApi.ts` 读写，跟主编辑器当前打开的那份预设互不干扰。
+
+- 每侧独立 `load`（有未保存改动先 `confirmStore.ask` 确认）、独立 `dirty`、独立 `save`，两侧之间不共享任何状态。
+- 列表点击复用主编辑器侧边栏同款多选模型 `applyMultiSelect`，`all` 必须按视觉顺序（`leftOrdered`/`rightOrdered`，隐藏块追加到末尾）传入，否则 shift 区间选择会选错行。
+- `copy(from)`：按源侧视觉顺序遍历选中块，深拷贝后**重新生成 identifier**（`genId()` 撞了已有 id 就重生成），避免跟目标侧已有块或之前粘贴过的同块副本冲突；目标侧标 `dirty = true`，不自动保存。
+- `onActivated()` 里刷新 `presetOptions`，不依赖主编辑器的 `store.presetList`（可能过期或未加载）——工具箱工具是 `KeepAlive` 缓存实例，切回来时才会重新触发这个钩子。

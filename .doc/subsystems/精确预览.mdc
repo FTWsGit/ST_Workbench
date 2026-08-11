@@ -19,7 +19,7 @@ alwaysApply: false
 
 ## 同步时机
 
-预览不自动同步：预览是点"生成"那一刻的快照，编辑器里的后续改动不会自动触发重算。唯一的同步点是点"生成"前先调用一次 `store.selectPresetByName(store.presetName)`，把 ST 主菜单选中的预设对齐到当前工具正在编辑的这份——因为 `ST.generate()` 不认工具里编辑的是哪份，只认主菜单选中项，不先对齐预览就会生成主菜单那份的内容。函数内部先判 `ST.getSelectedPresetName() === name`，相等则跳过，已经一致时这一步是零开销的空操作。刻意不做成实时同步的 watcher：`selectPresetByName` 在 ST 里很慢，只在真正需要（点生成）时付这一次代价。
+预览不自动同步：预览是点"生成"那一刻的快照，编辑器里的后续改动不会自动触发重算。同步点是点"生成"前依次调用 `store.selectPresetByName(store.presetName)` 和 `characterStore.selectCharacterForPreview()`（后者封装 `selectCharacterByAvatar`，按 `avatar` 反查 `chid` 调 `mod.selectCharacterById`）——两个函数都内部先判断"ST 主菜单当前是否已经是这份"，是则跳过、零开销，只有真不一致时才付这一次代价；切换失败走对应 toast（`shared.toast.selectPresetFailed` / `character.toast.selectCharFailed`）不中断生成。**这不是遗漏，是刻意的**——为什么不做成实时同步的 watcher、以后想加类似同步逻辑该怎么办，见 decision 0005。
 
 ## 结果呈现与高亮
 

@@ -9,14 +9,19 @@
 //                   解析器不是真 YAML、不支持转义，双引号会提前把值截断
 //   --kind <kind>  文档性质，决定该放哪个子目录、决定它的权威来源和该多久检查一次过不过期：
 //                     guide        —— 任务导向的查表型文档（How do I…?），放 .doc/guides/
+//                     contract     —— 真正跨子系统、没有单一 owner 的规则（i18n key 命名/CSS 字典这类），
+//                                     放 .doc/guides/contract/——先确认这条规则真的没法归到某一个 subsystem，
+//                                     能归到某个子系统就不要用这个 kind，改用 subsystem
 //                     spec         —— 外部数据契约（SillyTavern 自己的协议，What is…?），放 .doc/reference/spec/
-//                     architecture —— 本项目自己的结构性设计现状（Why…?），放 .doc/explanation/architecture/
-//                     subsystem    —— 相对独立的技术子系统机制（Why…?），放 .doc/explanation/subsystems/
+//                     architecture —— 跨子系统的结构性叙事（数据怎么流、store 怎么分工），放 .doc/architecture/
+//                     subsystem    —— 一个子系统的现状：是什么 + 从句级局部理由 + 它自己的不变量，
+//                                     放 .doc/subsystems/，一个子系统一个文件，不要另外去 guides/contract 开第二份
 //                     decision     —— 单个设计决策的背景/决策/后果，放 .doc/decisions/，文件名前缀四位序号
 //                                     （0001-slug.mdc），alwaysApply 恒为 false；决策被推翻时新开一篇声明
-//                                     supersedes，不回头改旧文件正文（旧文件的 status 改成 superseded）
+//                                     supersedes，不回头改旧文件正文（旧文件的 status 改成 superseded）；
+//                                     只收"防回归/真权衡/跨场景可复用"的决策，从句级的局部理由直接写进 subsystem
 //   --always       设置 alwaysApply: true（默认 false）
-//   --dir <path>   目标目录，默认 .doc（建议配合 --kind 传对应子目录，如 --dir .doc/explanation/subsystems）
+//   --dir <path>   目标目录，默认 .doc（建议配合 --kind 传对应子目录，如 --dir .doc/subsystems）
 //   --force        目标文件已存在时允许覆盖（默认拒绝，防止手滑覆盖已有文档）
 
 import fs from 'node:fs'
