@@ -12,7 +12,7 @@
   align-items: center;
 }
 .wb-form-data-json {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--wb-fc);
   white-space: pre;
   tab-size: 2;
 }

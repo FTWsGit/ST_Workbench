@@ -47,7 +47,7 @@
   padding: 8px 14px 6px;
   border-bottom: 1px solid var(--wb-border);
   font-size: var(--wb-fs-1);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wb-tx2);
@@ -140,7 +140,7 @@
 .wb-tree-name {
   flex: 1;
   font-size: var(--wb-fs-4);
-  font-weight: 500;
+  font-weight: var(--wb-fw-m);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -150,7 +150,7 @@
   font-size: var(--wb-fs-1);
   padding: 1px 5px;
   border-radius: var(--wb-radius-0);
-  font-weight: 600;
+  font-weight: var(--wb-fw-sb);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   flex-shrink: 0;
@@ -219,7 +219,7 @@
   user-select: none;
   -webkit-user-select: none;
   background: var(--wb-bg-e);
-  font-weight: 600;
+  font-weight: var(--wb-fw-sb);
 }
 .st-wb .wb-tree-group:hover {
   background: var(--wb-bg-h);
@@ -266,14 +266,14 @@
   color: var(--wb-tx3);
   background: var(--wb-bg-input);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--wb-radius-0);
   flex-shrink: 0;
 }
 
 .st-wb .wb-tree-group-name-input {
   flex: 1;
   font-size: var(--wb-fs-4);
-  font-weight: 500;
+  font-weight: var(--wb-fw-m);
   padding: 2px 6px;
   background: var(--wb-bg-input);
   border: 1px solid var(--wb-border-f);
@@ -290,7 +290,7 @@
 .st-wb .wb-tree-name-input {
   flex: 1;
   font-size: var(--wb-fs-4);
-  font-weight: 500;
+  font-weight: var(--wb-fw-m);
   padding: 2px 6px;
   background: var(--wb-bg-input);
   border: 1px solid var(--wb-border-f);
@@ -327,7 +327,7 @@
   padding: 8px 14px 6px;
   border-bottom: 1px solid var(--wb-border);
   font-size: var(--wb-fs-1);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wb-tx2);
@@ -370,7 +370,7 @@
 }
 .wb-editor-meta label {
   font-size: var(--wb-fs-3);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--wb-tx2);
@@ -523,7 +523,7 @@
    neutral/muted instead of color-coded by type. */
 .wb-copy-hidden-badge {
   font-size: var(--wb-fs-0);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 1px 5px;

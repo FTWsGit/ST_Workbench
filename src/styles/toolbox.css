@@ -45,7 +45,7 @@
   padding: var(--wb-sp-2) 10px;
   border-radius: var(--wb-radius-0);
   font-size: var(--wb-fs-2);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   letter-spacing: 0.02em;
   color: var(--wb-tx2);
   transition: all var(--wb-tr);
@@ -94,7 +94,7 @@
     width: 100% !important;
     height: 82vh;
     max-height: 82vh;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--wb-radius-lg) var(--wb-radius-lg) 0 0;
     box-shadow: 0 -8px 40px var(--wb-shadow-a4);
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -105,7 +105,7 @@
     left: 50%;
     width: 36px;
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--wb-radius-hair);
     background: var(--wb-border);
     transform: translateX(-50%);
   }
@@ -134,7 +134,7 @@
 }
 .wb-preset-sr-block {
   color: var(--wb-ac);
-  font-weight: 500;
+  font-weight: var(--wb-fw-m);
   flex-shrink: 0;
   max-width: 140px;
   overflow: hidden;
@@ -157,7 +157,7 @@
 .wb-preset-sr-ctx em {
   color: var(--wb-ac);
   font-style: normal;
-  font-weight: 600;
+  font-weight: var(--wb-fw-sb);
 }
 
 /* 世界书批量工具悬浮面板（WorldbookToolsPanel.vue）——只需要几行竖排间距，其余全靠已有的

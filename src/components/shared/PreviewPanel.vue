@@ -103,9 +103,7 @@
           </p>
         </template>
         <template v-else>
-          <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{
-            uiStore.previewRawText
-          }}</pre>
+          <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{ uiStore.previewRawText }}</pre>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
             {{ uiStore.t('preset.preview.emptyRaw') }}
           </p>
@@ -228,9 +226,7 @@
           </p>
         </template>
         <template v-else>
-          <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{
-            uiStore.previewRawText
-          }}</pre>
+          <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{ uiStore.previewRawText }}</pre>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
             {{ uiStore.t('preset.preview.emptyRaw') }}
           </p>

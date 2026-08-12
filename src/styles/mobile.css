@@ -99,7 +99,7 @@
     width: 100% !important;
     height: 82vh;
     max-height: 82vh;
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--wb-radius-lg) var(--wb-radius-lg) 0 0;
     box-shadow: 0 -8px 40px var(--wb-shadow-a4);
     transform: translateY(100%);
     transition: transform 0.25s ease;
@@ -118,7 +118,7 @@
     left: 50%;
     width: 36px;
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--wb-radius-hair);
     background: var(--wb-border);
     transform: translateX(-50%);
   }
@@ -154,7 +154,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: var(--wb-fs-6);
     background: transparent;
     border: 1px solid var(--wb-border);
     border-radius: var(--wb-rs);
@@ -171,7 +171,7 @@
     bottom: 0;
     z-index: 150;
     background: var(--wb-bg-e);
-    border-radius: 16px 16px 0 0;
+    border-radius: var(--wb-radius-lg) var(--wb-radius-lg) 0 0;
     box-shadow: 0 -8px 40px var(--wb-shadow-a4);
     padding: 8px 0 max(8px, env(safe-area-inset-bottom));
     display: flex;
@@ -185,7 +185,7 @@
   .wb-mobile-tools-grip {
     width: 36px;
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--wb-radius-hair);
     background: var(--wb-border);
     margin: 8px auto 4px;
   }

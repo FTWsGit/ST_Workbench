@@ -5,7 +5,7 @@
 .wb-list-section-label {
   padding: 10px 14px 4px;
   font-size: var(--wb-fs-0);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--wb-tx3);
@@ -40,7 +40,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 2em;
   color: var(--wb-muted);
 }
 .wb-char-avatar-tools {

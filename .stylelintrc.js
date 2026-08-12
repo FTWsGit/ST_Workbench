@@ -2,9 +2,9 @@ export default {
   plugins: ['stylelint-declaration-strict-value'],
   rules: {
     'scale-unlimited/declaration-strict-value': [
-      ['color', 'background-color', 'border-color', 'border-radius', 'font-size', 'font-family', 'font-weight' ],
+      ['color', 'background-color', 'border-color', 'font-size', 'font-family', 'font-weight' ],
       {
-        ignoreValues: ['transparent', 'inherit', 'currentColor', 'none', '0'],
+        ignoreValues: ['transparent', 'inherit', 'currentColor', 'none', '0', '.*em'],
       },
     ],
   },

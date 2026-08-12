@@ -84,7 +84,7 @@
   border-radius: var(--wb-radius-0);
   background: var(--wb-bg-input);
   font-size: var(--wb-fs-3);
-  font-weight: 600;
+  font-weight: var(--wb-fw-sb);
 }
 .wb-agent-kb-desc {
   width: 100%;
@@ -111,7 +111,7 @@
 }
 .wb-agent-settings .wb-form-label {
   font-size: var(--wb-fs-2);
-  font-weight: 600;
+  font-weight: var(--wb-fw-sb);
   color: var(--wb-tx2);
   margin: 0;
 }
@@ -132,7 +132,7 @@
   flex-shrink: 0;
 }
 .wb-agent-version-title {
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   margin-bottom: 6px;
   color: var(--wb-tx);
 }
@@ -159,7 +159,7 @@
   min-width: 0;
   max-width: 100%;
   font-size: var(--wb-fs-2);
-  font-weight: 600;
+  font-weight: var(--wb-fw-sb);
   color: var(--wb-tx2);
   background: var(--wb-bg-input);
   border: 1px solid var(--wb-border);
@@ -170,7 +170,7 @@
   flex: 1;
   min-width: 0;
   font-size: var(--wb-fs-3);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   color: var(--wb-tx2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -193,7 +193,7 @@
 }
 .wb-agent-empty-title {
   font-size: var(--wb-fs-4);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   margin-bottom: 6px;
   color: var(--wb-tx2);
 }
@@ -224,7 +224,7 @@
 }
 .wb-agent-msg-role {
   font-size: var(--wb-fs-1);
-  font-weight: 700;
+  font-weight: var(--wb-fw-b);
   letter-spacing: 0.05em;
   color: var(--wb-tx3);
   text-transform: uppercase;
@@ -264,14 +264,14 @@
   padding: 0;
   cursor: pointer;
   font-size: var(--wb-fs-1);
-  font-weight: 600;
+  font-weight: var(--wb-fw-sb);
   color: var(--wb-tx3);
   text-align: left;
 }
 .wb-agent-msg-collapse-arrow {
   display: inline-block;
   transition: transform 0.15s ease;
-  font-size: 9px;
+  font-size: var(--wb-fs-0);
 }
 .wb-agent-msg-collapse.open .wb-agent-msg-collapse-arrow {
   transform: rotate(90deg);
@@ -338,7 +338,7 @@
 .wb-agent-status-tokens {
   margin-left: auto;
   color: var(--wb-tx3);
-  font-size: 0.85em;
+  font-size: var(--wb-fs-4);
   white-space: nowrap;
 }
 .wb-agent-input-row {

@@ -21,12 +21,8 @@
         )
       }}</span>
       <span class="wb-vp-spacer"></span>
-      <button class="wb-vp-btn" aria-label="上一个匹配" @click="uiStore.navPopupVar(-1)">
-        ◀
-      </button>
-      <button class="wb-vp-btn" aria-label="下一个匹配" @click="uiStore.navPopupVar(1)">
-        ▶
-      </button>
+      <button class="wb-vp-btn" aria-label="上一个匹配" @click="uiStore.navPopupVar(-1)">◀</button>
+      <button class="wb-vp-btn" aria-label="下一个匹配" @click="uiStore.navPopupVar(1)">▶</button>
       <button
         class="wb-vp-btn close-btn"
         :aria-label="uiStore.t('common.close')"

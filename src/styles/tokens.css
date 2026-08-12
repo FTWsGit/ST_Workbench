@@ -83,9 +83,11 @@
   --wb-space-4: 14px;
   --wb-space-5: 20px;
   /* Radius scale */
+  --wb-radius-hair: 2px; /* 发丝圆角：高亮 pill / 抽屉拖动把手 */
   --wb-radius-0: 3px;
   --wb-radius-1: 4px;
   --wb-radius-2: 8px;
+  --wb-radius-lg: 16px; /* 大圆角：移动端弹层/抽屉顶角 */
   /* Typography scale — 之前全项目 100+ 处 font-size 都是散落字面量（9px~16px 十几个不同值，
    * 同一语义在不同组件里字号还不一致），没有一层统一收口。这里补上，映射规则：
    * fs-0 只给"纯装饰性"的极小元素（折叠箭头/徽标），不用于任何要读的文字；
@@ -100,9 +102,11 @@
   --wb-fs-3: 13px;
   --wb-fs-4: 14px;
   --wb-fs-5: 15px;
+  --wb-fs-6: 16px; /* 根字号/图标字形：.st-wb 基底与图标按钮字形 */
   /* Control sizing */
   --wb-size-ctrl-h: 34px; /* 桌面端标准控件高度（按钮/下拉框）*/
   --wb-size-icon-btn: 34px; /* 纯图标按钮正方形尺寸 */
+  --wb-icon: 50px; /* 空状态大图标字形（.wb-editor-empty .icon）*/
   --wb-size-editor-pad: 16px; /* 编辑器内边距，textarea/highlight/measure 共用（行号测量硬契约，见 HighlightedEditor.vue）*/
 
   /* =========================================================================
@@ -150,6 +154,10 @@
    * ========================================================================= */
   /* （预留：组件级令牌按需在此追加，例 --wb-btn-bg / --wb-modal-pad 等）*/
 
+  /* Font weight（500/600/700 三档离散，无刻度，全项目统一收口）*/
+  --wb-fw-m: 500;
+  --wb-fw-sb: 600;
+  --wb-fw-b: 700;
   /* Fonts / transition（无分层的全局基底，不进三层体系）*/
   --wb-fm: 'DM Sans', -apple-system, sans-serif;
   --wb-fc: 'JetBrains Mono', 'Fira Code', monospace;
@@ -176,7 +184,7 @@
 
   font-family: var(--wb-fm);
   color: var(--wb-tx);
-  font-size: 16px;
+  font-size: var(--wb-fs-6);
   line-height: 1.5;
   position: relative;
   width: 100%;
