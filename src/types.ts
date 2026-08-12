@@ -220,11 +220,10 @@ export const SEARCH_MAX = 200;
 
 export const FONT_OPTIONS = [
   { name: 'Consolas', value: "'Consolas',monospace" },
-  { name: 'JetBrains Mono', value: "'JetBrains Mono','Fira Code',monospace" },
-  { name: 'Fira Code', value: "'Fira Code',monospace" },
-  { name: 'Source Code Pro', value: "'Source Code Pro',monospace" },
-  { name: 'IBM Plex Mono', value: "'IBM Plex Mono',monospace" },
-  { name: 'Ubuntu Mono', value: "'Ubuntu Mono',monospace" },
+  { name: 'JetBrains Mono', value: "'JetBrains Mono',monospace" },
+  { name: 'DM Sans', value: "'DM Sans',monospace" },
+  { name: 'Microsoft Yahei Mono', value: "'Microsoft Yahei Mono',monospace" },
+  { name: 'LXGW WenKai Mono TC', value: "'LXGW WenKai Mono TC',monospace" },
 ];
 
 export const SYNTAX_LABEL_KEYS = {

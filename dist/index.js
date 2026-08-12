@@ -3733,23 +3733,19 @@ var qs = {
 	},
 	{
 		name: "JetBrains Mono",
-		value: "'JetBrains Mono','Fira Code',monospace"
+		value: "'JetBrains Mono',monospace"
 	},
 	{
-		name: "Fira Code",
-		value: "'Fira Code',monospace"
+		name: "DM Sans",
+		value: "'DM Sans',monospace"
 	},
 	{
-		name: "Source Code Pro",
-		value: "'Source Code Pro',monospace"
+		name: "Microsoft Yahei Mono",
+		value: "'Microsoft Yahei Mono',monospace"
 	},
 	{
-		name: "IBM Plex Mono",
-		value: "'IBM Plex Mono',monospace"
-	},
-	{
-		name: "Ubuntu Mono",
-		value: "'Ubuntu Mono',monospace"
+		name: "LXGW WenKai Mono TC",
+		value: "'LXGW WenKai Mono TC',monospace"
 	}
 ], Xs = {
 	"hl-b": "shared.syntax.hl-b",
@@ -17367,8 +17363,23 @@ function aC() {
 	let n = document;
 	if (!n.getElementById("st-wb-entry-button")) {
 		window.$;
-		let e = n.getElementById("extensionsMenu") || n.getElementById("topRightTogglePanel") || n.body, t = n.createElement("button");
-		t.id = "st-wb-entry-button", t.textContent = "Workbench", t.style.cssText = "background-color:grey;cursor:pointer;pointer-events:auto;", t.addEventListener("click", rC), e === n.body && (t.style.position = "fixed", t.style.bottom = "16px", t.style.right = "16px", t.style.zIndex = "2147483647"), e.appendChild(t);
+		let e = n.getElementById("extensionsMenu") || n.getElementById("topRightTogglePanel") || n.body, t = n.createElement("div");
+		t.id = "st-wb-entry-button", t.className = "list-group-item flex-container flexGap5";
+		let r = "#171717";
+		t.style.cssText = `
+      opacity: 0.7;
+      cursor: pointer;
+      pointer-events: auto;
+      color: #7ab8ff;
+      background: ${r};
+      font-family: JetBrains Mono
+    `, t.addEventListener("mouseenter", () => {
+			t.style.opacity = "0.9", t.style.background = "#15202b";
+		}), t.addEventListener("mouseleave", () => {
+			t.style.opacity = "0.7", t.style.background = r;
+		});
+		let i = n.createElement("div");
+		i.className = "fa-solid fa-grip extensionsMenuExtensionButton", t.appendChild(i), t.appendChild(n.createTextNode("Workbench")), t.addEventListener("click", rC), e === n.body && (t.style.position = "fixed", t.style.bottom = "16px", t.style.right = "16px", t.style.zIndex = "2147483647"), e.appendChild(t);
 	}
 }
 function oC() {

@@ -160,11 +160,11 @@
   --wb-fw-b: 700;
   /* Fonts / transition（无分层的全局基底，不进三层体系）*/
   --wb-fm: 'DM Sans', -apple-system, sans-serif;
-  --wb-fc: 'JetBrains Mono', 'Fira Code', monospace;
+  --wb-fc: 'Consolas', monospace;
   --wb-tr: 0.2s ease;
   --wb-fs: 14.5px;
   --wb-lh: 1.65;
-  --wb-ff: 'JetBrains Mono', 'Fira Code', monospace;
+  --wb-ff: 'JetBrains Mono', monospace;
   /* 兼容旧引用：语法着色令牌保留扁平名，避免改 useHighlight.ts 全量重命名 */
   --hl-b: var(--wb-hl-b);
   --hl-k: var(--wb-hl-k);
