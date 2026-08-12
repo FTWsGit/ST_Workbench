@@ -13,7 +13,7 @@
         v-model="script.findRegex"
         :placeholder="props.t('regex.settings.findRegexPlaceholder')"
       ></textarea>
-      <p v-if="!findValid" class="wb-regex-err">
+      <p v-if="!findValid" class="wb-form-err">
         {{ props.t('regex.settings.findRegexInvalid') }}
       </p>
     </FormField>
@@ -40,7 +40,7 @@
     </FormField>
 
     <FormField :label="props.t('regex.settings.surfaceLabel')">
-      <div class="wb-regex-surface">
+      <div class="wb-btn-surface">
         <button
           class="wb-btn sm"
           :class="{ active: script.markdownOnly && !script.promptOnly }"

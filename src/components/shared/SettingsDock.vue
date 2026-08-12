@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="formComponent && uiStore.settingsDockOpen"
-    class="wb-right-panel wb-settings-dock"
+    class="wb-right-panel wb-dock"
     :class="{ float: uiStore.settings.settingsDockFloat }"
     :style="{ width: uiStore.settings.settingsDockWidth + 'px' }"
   >
@@ -31,7 +31,7 @@
         </button>
       </div>
     </div>
-    <div class="wb-settings-dock-body">
+    <div class="wb-dock-body">
       <component :is="formComponent" v-bind="formProps" />
     </div>
   </div>

@@ -22,7 +22,7 @@
       </div>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.order.length" class="wb-preset-cp-empty">
+      <p v-if="!store.order.length" class="wb-list-empty">
         {{ uiStore.t('worldbook.sidebar.empty') }}
       </p>
       <template v-for="(node, gi) in store.flatNodes" :key="nodeKey(node, gi)">

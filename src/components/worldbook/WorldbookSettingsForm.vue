@@ -18,7 +18,7 @@
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupActivation')" default-open>
       <FormField :label="uiStore.t('worldbook.settings.activationLabel')">
-        <div class="wb-regex-surface">
+        <div class="wb-btn-surface">
           <button
             class="wb-btn sm"
             :class="{ active: activationMode === 'keyWord' }"

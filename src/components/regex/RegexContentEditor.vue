@@ -53,7 +53,7 @@
         v-model="testInput"
         :placeholder="props.t('regex.editor.testPlaceholder')"
       ></textarea>
-      <p v-if="!findValid" class="wb-regex-err">
+      <p v-if="!findValid" class="wb-form-err">
         {{ props.t('regex.editor.invalidFindRegex') }}
       </p>
       <p class="wb-muted" style="font-size: 12px">

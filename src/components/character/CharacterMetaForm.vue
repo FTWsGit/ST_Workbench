@@ -71,7 +71,7 @@
       </FormField>
     </AdvancedGroup>
   </div>
-  <p v-else class="wb-preset-cp-empty">
+  <p v-else class="wb-list-empty">
     {{ uiStore.t('character.sidebar.empty') }}
   </p>
 </template>

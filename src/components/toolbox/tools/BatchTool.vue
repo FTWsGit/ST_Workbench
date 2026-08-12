@@ -12,7 +12,7 @@
       <!-- regex scene：选中态来自 SearchTool.selectSide 同步（tabsStore 共享态），对齐其他 scene -->
       <div v-if="isRegex" class="wb-tools-section">
         <FormField :label="uiStore.t('toolbox.batch.enableLabel')">
-          <div class="wb-regex-surface">
+          <div class="wb-btn-surface">
             <button class="wb-btn sm" :disabled="!selectedCount" @click="regexSetDisabled(false)">
               {{ uiStore.t('toolbox.batch.enableSelected') }}
             </button>
@@ -26,7 +26,7 @@
       <!-- preset/items：批量启用/禁用 + 批量改 role -->
       <div v-else-if="isPresetItems" class="wb-tools-section">
         <FormField :label="uiStore.t('toolbox.batch.enableLabel')">
-          <div class="wb-regex-surface">
+          <div class="wb-btn-surface">
             <button class="wb-btn sm" :disabled="!selectedCount" @click="presetSetEnabled(true)">
               {{ uiStore.t('toolbox.batch.enableSelected') }}
             </button>
@@ -36,7 +36,7 @@
           </div>
         </FormField>
         <FormField :label="uiStore.t('toolbox.batch.roleLabel')">
-          <div class="wb-regex-surface">
+          <div class="wb-btn-surface">
             <button
               v-for="r in ROLES"
               :key="r"
@@ -53,7 +53,7 @@
       <!-- worldbook/items：批量启用/禁用 + 批量改激活方式（三态互斥：keyWord/constant/vectorized） -->
       <div v-else-if="isWorldbookItems" class="wb-tools-section">
         <FormField :label="uiStore.t('toolbox.batch.enableLabel')">
-          <div class="wb-regex-surface">
+          <div class="wb-btn-surface">
             <button class="wb-btn sm" :disabled="!selectedCount" @click="wbSetDisabled(false)">
               {{ uiStore.t('toolbox.batch.enableSelected') }}
             </button>
@@ -63,7 +63,7 @@
           </div>
         </FormField>
         <FormField :label="uiStore.t('toolbox.batch.activationLabel')">
-          <div class="wb-regex-surface">
+          <div class="wb-btn-surface">
             <button
               class="wb-btn sm"
               :disabled="!selectedCount"
@@ -92,7 +92,7 @@
       <!-- 批量删除（preset/items、regex、worldbook/items 都有） -->
       <div class="wb-tools-section">
         <FormField>
-          <div class="wb-regex-surface">
+          <div class="wb-btn-surface">
             <button class="wb-btn sm" :disabled="!selectedCount" @click="deleteSelected()">
               {{ uiStore.t('toolbox.batch.deleteSelected') }}
             </button>

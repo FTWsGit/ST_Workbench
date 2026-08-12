@@ -24,7 +24,7 @@
     />
     <!-- enum 字段：候选 toggle 选 query（点哪个就把该候选值当 query，命中即"当前是这个值的全部 item"） -->
     <FormField v-if="currentFieldKind === 'enum'" :label="uiStore.t('toolbox.search.enumHint')">
-      <div class="wb-regex-surface">
+      <div class="wb-btn-surface">
         <button
           v-for="c in enumChoices"
           :key="String(c.value)"
@@ -55,7 +55,7 @@
       v-if="currentFieldKind === 'enum' && enumChoices.length"
       :label="uiStore.t('toolbox.search.replace')"
     >
-      <div class="wb-regex-surface">
+      <div class="wb-btn-surface">
         <button
           v-for="c in enumChoices"
           :key="'r' + String(c.value)"
@@ -71,7 +71,7 @@
 
     <!-- 导航 + 单条替换 + 全替换 + 把命中同步到 sidebar 多选态（反馈3：modify what matched） -->
     <div class="wb-tools-section">
-      <div class="wb-regex-surface">
+      <div class="wb-btn-surface">
         <button class="wb-btn sm" :disabled="!hits.length" @click="nav(-1)">◀</button>
         <button class="wb-btn sm" :disabled="!hits.length" @click="nav(1)">▶</button>
         <button class="wb-btn sm" :disabled="idx < 0" @click="replaceCurrent()">
@@ -88,7 +88,7 @@
         >
           {{ uiStore.t('toolbox.search.selectSide') }}
         </button>
-        <span class="wb-preset-search-count">{{
+        <span class="wb-search-count">{{
           uiStore.t('toolbox.search.results', { count: hits.length })
         }}</span>
       </div>

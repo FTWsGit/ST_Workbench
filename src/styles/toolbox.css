@@ -1,0 +1,182 @@
+/* ===== Toolbox domain: ToolBoxPanel.vue + tools/* (BatchTool/SearchTool) ===== */
+
+/* ====== Toolbox Panel (cross-workspace) ======
+   Embedded by default — sits on the right edge of the main area (like Preview) with the shared
+   right-side resize handle; floating mode is delegated to FloatingPanelShell (see above).
+   Tool-switch tabs reuse the preview mode-tabs look. */
+.wb-toolbox-panel {
+  background: var(--wb-bg-e);
+  border-left: 1px solid var(--wb-amber-a3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+/* Overlay mode: floats over the right edge without squeezing the editor, same as Preview's .float. */
+.wb-toolbox-panel.float {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  box-shadow: -8px 0 40px var(--wb-shadow-a3);
+}
+.st-wb .wb-toolbox-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-sp-2);
+  padding: var(--wb-sp-3) 12px;
+  overflow: auto;
+}
+.st-wb .wb-toolbox-tabs {
+  display: flex;
+  gap: var(--wb-sp-1);
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  padding: 3px;
+  flex-shrink: 0;
+}
+.st-wb .wb-toolbox-tab {
+  flex: 1;
+  padding: var(--wb-sp-2) 10px;
+  border-radius: var(--wb-radius-0);
+  font-size: var(--wb-fs-2);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--wb-tx2);
+  transition: all var(--wb-tr);
+}
+.st-wb .wb-toolbox-tab:hover {
+  color: var(--wb-tx);
+}
+.st-wb .wb-toolbox-tab.active {
+  background: var(--wb-ac-d);
+  color: var(--wb-ac);
+}
+.st-wb .wb-toolbox-empty {
+  font-size: var(--wb-fs-2);
+  color: var(--wb-tx3);
+  padding: 8px 2px;
+}
+/* Floating shell title slot (📌 toggle next to the panel title) — self-contained, only affects the toolbox. */
+.st-wb .wb-toolbox-float-title {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-1);
+  flex: 1;
+  min-width: 0;
+}
+.st-wb .wb-toolbox-float-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-wb .wb-toolbox-float-title .icon-btn {
+  flex-shrink: 0;
+}
+/* Mobile: same bottom-sheet treatment as the other right-side panels, but always visible when
+   open — the toolbox is not wired into App.vue's drawer state machine. */
+@media (max-width: 720px) {
+  .wb-toolbox-panel,
+  .wb-toolbox-panel.float {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    z-index: 150;
+    width: 100% !important;
+    height: 82vh;
+    max-height: 82vh;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px var(--wb-shadow-a4);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .wb-toolbox-panel::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--wb-border);
+    transform: translateX(-50%);
+  }
+  .wb-toolbox-panel .wb-rp-header {
+    padding-top: 20px;
+  }
+}
+
+/* Search Panel */
+.wb-preset-sr-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--wb-sp-1) 8px;
+  border-radius: var(--wb-rs);
+  font-size: var(--wb-fs-3);
+  font-family: var(--wb-fc);
+  cursor: pointer;
+  transition: background var(--wb-tr);
+}
+.wb-preset-sr-item:hover {
+  background: var(--wb-bg-h);
+}
+.wb-preset-sr-item.active {
+  background: var(--wb-ac-d);
+}
+.wb-preset-sr-block {
+  color: var(--wb-ac);
+  font-weight: 500;
+  flex-shrink: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-preset-sr-line {
+  color: var(--wb-tx3);
+  flex-shrink: 0;
+  width: 32px;
+  text-align: right;
+}
+.wb-preset-sr-ctx {
+  color: var(--wb-tx2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.wb-preset-sr-ctx em {
+  color: var(--wb-ac);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* 世界书批量工具悬浮面板（WorldbookToolsPanel.vue）——只需要几行竖排间距，其余全靠已有的
+   .wb-float-body/.wb-form-label/.wb-regex-surface/.wb-muted，不需要一整套新样式。 */
+.wb-tools-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.wb-tools-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 表单/分组里"第一个字段不该有多余的顶部间距"（tools 域部分）：结构选择器随内容顺序自动零间距。 */
+.wb-tools-section > .wb-field-row:first-child {
+  margin-top: 0;
+}
+.wb-tools-section > .wb-form-label:first-child {
+  margin-top: 0;
+}

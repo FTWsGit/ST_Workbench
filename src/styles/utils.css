@@ -1,0 +1,39 @@
+/* =========================================================================
+ * Utility classes（wb-u- 前缀）— 不是要把整个项目改成 utility-first，只是把重复率最高的几种
+ * flex 组合（统计过：display:flex 全文件出现 100+ 次，其中"纵向排列"34 处、"水平居中对齐"31 处、
+ * "水平+垂直都居中"10 处、"两端对齐"4 处，占了大半）收成几个类，新写组件时优先复用，减少继续
+ * 手抄 display/align-items/justify-content 三件套。不追求覆盖所有 flex 场景——特殊布局
+ * （grid、非常规 gap、resize 手柄等）该写专属类还是写专属类，这几个只接管最常见的四种。
+ * ========================================================================= */
+.wb-u-row {
+  display: flex;
+  align-items: center;
+}
+.wb-u-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wb-u-col {
+  display: flex;
+  flex-direction: column;
+}
+.wb-u-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* gap 挂成独立的修饰类，跟上面四个布局类搭配用（例: class="wb-u-row wb-u-gap-2"），
+ * 数值直接对齐已有的 --wb-sp-* 间距刻度，不再新开一套数字。 */
+.wb-u-gap-1 {
+  gap: var(--wb-sp-1);
+}
+.wb-u-gap-2 {
+  gap: var(--wb-sp-2);
+}
+.wb-u-gap-3 {
+  gap: var(--wb-sp-3);
+}
+.wb-u-gap-4 {
+  gap: var(--wb-sp-4);
+}

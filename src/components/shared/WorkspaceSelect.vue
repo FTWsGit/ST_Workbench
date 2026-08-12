@@ -3,7 +3,7 @@
        列表非空时渲染 <select>；空但有当前文档时显示只读名字；都没有则什么都不渲染。 -->
   <select
     v-if="sel.hasList"
-    class="wb-preset-select"
+    class="wb-workspace-select"
     :value="sel.currentId"
     @change="onSelect"
     :title="uiStore.t(sel.switchTitleKey)"
@@ -15,7 +15,7 @@
       {{ it.label }}
     </option>
   </select>
-  <span v-else-if="sel.fallbackText" class="wb-preset-name">{{ sel.fallbackText }}</span>
+  <span v-else-if="sel.fallbackText" class="wb-workspace-name">{{ sel.fallbackText }}</span>
 </template>
 
 <script setup lang="ts">

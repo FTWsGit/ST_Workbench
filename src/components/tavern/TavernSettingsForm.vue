@@ -63,7 +63,7 @@
           :placeholder="props.t('tavern.settings.dataJsonPlaceholder')"
           spellcheck="false"
         />
-        <p v-if="dataJsonError" class="wb-regex-err">{{ dataJsonError }}</p>
+        <p v-if="dataJsonError" class="wb-form-err">{{ dataJsonError }}</p>
       </FormField>
     </div>
 

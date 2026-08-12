@@ -190,7 +190,9 @@ export async function callModelRaw(
       : [];
     content = textBlocks.map((b) => String(b.text ?? '')).join('\n');
     const thinkingBlocks = Array.isArray(response?.content)
-      ? response.content.filter((b) => b && (b.type === 'thinking' || b.type === 'redacted_thinking'))
+      ? response.content.filter(
+          (b) => b && (b.type === 'thinking' || b.type === 'redacted_thinking')
+        )
       : [];
     reasoning = thinkingBlocks.map((b) => String(b.thinking ?? b.data ?? '')).join('\n');
   } else if (source === 'cohere') {

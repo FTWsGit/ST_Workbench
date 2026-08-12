@@ -45,57 +45,57 @@
       <button class="wb-btn" @click="uiStore.navVar(1, 'local')">
         {{ uiStore.t('preset.varPanel.next') }}
       </button>
-      <span class="wb-preset-search-count"
+      <span class="wb-search-count"
         >{{ uiStore.localFiltered.length }}/{{ uiStore.localRefs.length }} · G{{
           uiStore.globalFiltered.length
         }}/{{ uiStore.globalRefs.length }}</span
       >
     </div>
-    <div class="wb-rp-list wb-preset-vr-list">
+    <div class="wb-rp-list wb-vr-list">
       <!-- LOCAL 分区 -->
-      <div class="wb-preset-vr-section">
+      <div class="wb-vr-section">
         {{ uiStore.t('preset.varPanel.local') }}
       </div>
       <template v-for="(v, i) in uiStore.localFiltered" :key="'l' + i">
         <div
           v-if="i === 0 || v.varName !== uiStore.localFiltered[i - 1].varName"
-          class="wb-preset-vr-group"
+          class="wb-vr-group"
         >
           {{ v.varName }}
         </div>
         <div
-          class="wb-preset-vr-item"
+          class="wb-vr-item"
           :class="{ active: i === uiStore.varIdx, dim: !v.certain }"
           @click="uiStore.jumpToVarOp(v)"
         >
-          <span class="wb-preset-vr-type" :class="varOpBadge(v.kind).cls">{{
+          <span class="wb-vr-type" :class="varOpBadge(v.kind).cls">{{
             varOpBadge(v.kind).label
           }}</span>
           <span class="wb-var-name-em">{{ v.varName }}</span>
-          <span class="wb-preset-vr-block">[{{ v.source.blockLabel }}]</span>
+          <span class="wb-vr-block">[{{ v.source.blockLabel }}]</span>
         </div>
       </template>
       <!-- GLOBAL 分区 -->
-      <div class="wb-preset-vr-section">
+      <div class="wb-vr-section">
         {{ uiStore.t('preset.varPanel.global') }}
       </div>
       <template v-for="(v, i) in uiStore.globalFiltered" :key="'g' + i">
         <div
           v-if="i === 0 || v.varName !== uiStore.globalFiltered[i - 1].varName"
-          class="wb-preset-vr-group"
+          class="wb-vr-group"
         >
           {{ v.varName }}
         </div>
         <div
-          class="wb-preset-vr-item"
+          class="wb-vr-item"
           :class="{ active: 'g' + i === String(uiStore.varIdx), dim: !v.certain }"
           @click="uiStore.jumpToVarOp(v)"
         >
-          <span class="wb-preset-vr-type" :class="varOpBadge(v.kind).cls">{{
+          <span class="wb-vr-type" :class="varOpBadge(v.kind).cls">{{
             varOpBadge(v.kind).label
           }}</span>
           <span class="wb-var-name-em">{{ v.varName }}</span>
-          <span class="wb-preset-vr-block">[{{ v.source.blockLabel }}]</span>
+          <span class="wb-vr-block">[{{ v.source.blockLabel }}]</span>
         </div>
       </template>
     </div>

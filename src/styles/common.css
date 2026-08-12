@@ -1,0 +1,1529 @@
+/* ===== Common classes: app shell (App.vue) + shared components (components/shared/*) + cross-domain ===== */
+
+/* FAB */
+.wb-fab {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--wb-bg-e) !important;
+  border: 1px solid var(--wb-amber-a6) !important;
+  color: var(--wb-ac);
+  font-size: var(--wb-fs-5);
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px var(--wb-shadow-a2);
+  transition: all 0.2s;
+  pointer-events: auto !important;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.wb-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 24px var(--wb-amber-a4);
+}
+/* While the long-press-drag is active (see App.vue's onFabPointerDown): no transition (it would
+   lag a whole frame behind the pointer), a "grabbing" cursor, and a slightly stronger shadow/scale
+   so there's an unambiguous visual "you're moving this now" cue distinct from the plain :hover
+   state above. */
+.wb-fab.dragging {
+  transition: none;
+  cursor: grabbing;
+  box-shadow: 0 6px 28px var(--wb-shadow-a4);
+  transform: scale(1.08);
+}
+
+/* Panel (fullscreen overlay) */
+.wb-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  background: var(--wb-bg);
+  color: var(--wb-tx);
+  font-family: var(--wb-fm);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+/* Header/Toolbar */
+.wb-header {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-2);
+  padding: 8px 16px;
+  background: var(--wb-bg-s);
+  border-bottom: 1px solid var(--wb-border);
+  min-height: 44px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.wb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: var(--wb-rs);
+  background: var(--wb-bg-e);
+  border: 1px solid var(--wb-border);
+  font-size: var(--wb-fs-4);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: all var(--wb-tr);
+  white-space: nowrap;
+}
+.wb-btn:hover {
+  background: var(--wb-bg-h);
+  border-color: var(--wb-amber-a5);
+}
+.wb-btn.accent {
+  background: var(--wb-ac-d);
+  border-color: var(--wb-amber-a6);
+  color: var(--wb-ac);
+}
+.wb-btn.accent:hover {
+  background: var(--wb-amber-a2);
+  border-color: var(--wb-ac);
+}
+.wb-btn.active {
+  border-color: var(--wb-amber-a6);
+  color: var(--wb-ac);
+}
+.wb-btn.close-btn {
+  font-size: 16px;
+  padding: var(--wb-sp-1) 8px;
+}
+.wb-btn.close-btn:hover {
+  background: var(--wb-dg-d);
+  color: var(--wb-dg);
+}
+.wb-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--wb-border);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+.wb-spacer {
+  flex: 1;
+}
+
+/* 顶栏第二行——"当前工作区内部在看哪个集合"（预设的 条目/正则、角色卡的 字段/正则）。
+ * 故意跟第一行（.wb-header/.wb-mode-switch）拉开视觉差异，而不是简单地再摆一排一样的按钮：
+ * 背景更浅、没有底部分隔线的强对比、字号更小、padding 更紧——第一行是"选工作区"，分量重；
+ * 这一行是"工作区内部换个集合看"，分量应该明显更轻，用户扫一眼就能看出这两排不是同一件事的
+ * 选项，不用读文字也能感觉到层级差。 */
+.wb-collection-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--wb-sp-1) 16px;
+  background: var(--wb-bg);
+  border-bottom: 1px solid var(--wb-border);
+  flex-shrink: 0;
+}
+.wb-collection-switch .wb-btn {
+  padding: 3px 11px;
+  font-size: var(--wb-fs-2);
+  font-weight: 500;
+  background: transparent;
+  border-color: transparent;
+  color: var(--wb-tx2);
+}
+.wb-collection-switch .wb-btn:hover {
+  background: var(--wb-bg-h);
+  color: var(--wb-tx);
+}
+.wb-collection-switch .wb-btn.active {
+  background: var(--wb-ac-d);
+  border-color: transparent;
+  color: var(--wb-ac);
+}
+/* 收起态：只剩一个小箭头按钮，行高变矮。 */
+.wb-collection-switch.collapsed {
+  padding: 2px 16px;
+}
+.wb-collection-toggle {
+  width: 22px;
+  padding: 3px 0 !important;
+  text-align: center;
+}
+.wb-collection-toggle-arrow {
+  font-size: var(--wb-fs-0);
+  line-height: 1;
+}
+
+/* Main Layout */
+.wb-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Resize handles */
+.wb-right-resize-handle {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  z-index: 5;
+  background: transparent;
+  touch-action: none;
+}
+.wb-right-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 1px;
+  width: 3px;
+  background: var(--wb-border);
+  transition: background var(--wb-tr);
+}
+.wb-right-resize-handle:hover::after,
+.wb-right-resize-handle.active::after {
+  background: var(--wb-ac);
+}
+
+/* Editor — shared meta/content/statusbar shell for BOTH the preset editor (PresetContentEditor.vue) and the
+   regex content editor (RegexContentEditor.vue via .wb-regex-editor below). Keep changes here in sync
+   across both; don't let one domain grow its own copy of this shell. */
+.wb-editor-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--wb-bg);
+  min-width: 280px;
+}
+.wb-editor-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--wb-tx3);
+  gap: var(--wb-sp-3);
+}
+.wb-editor-empty .icon {
+  font-size: 50px;
+  opacity: 0.25;
+}
+.wb-editor-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+.wb-line-nums {
+  width: 46px;
+  background: var(--wb-bg-s);
+  border-right: 1px solid var(--wb-border);
+  overflow: hidden;
+  padding: var(--wb-editor-pad) 0;
+  flex-shrink: 0;
+  user-select: none;
+}
+.wb-line-nums .ln {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-right: 8px;
+  font-family: var(--wb-ff);
+  font-size: var(--wb-fs);
+  line-height: var(--wb-lh);
+  color: var(--wb-tx3);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.wb-editor-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+/* Qualified with the .wb-editor-wrap ancestor (not just the bare class) so these reliably
+   beat the base ".st-wb textarea{...}" rule above, which has higher specificity (0,1,1) than
+   a single class selector (0,1,0) would. Without this, the base rule's opaque background and
+   visible text color silently won, leaving a fully-opaque, wrong-font-size textarea sitting on
+   top of (z-index 2) and completely hiding the correctly-highlighted <pre> underneath. */
+.wb-editor-wrap .wb-editor-hl,
+.wb-editor-wrap .wb-editor-ta {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: var(--wb-editor-pad);
+  font-family: var(--wb-ff);
+  font-size: var(--wb-fs);
+  line-height: var(--wb-lh);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  tab-size: 4;
+  margin: 0;
+  border: none;
+  letter-spacing: 0;
+  box-sizing: border-box;
+}
+.wb-editor-wrap .wb-editor-ta {
+  z-index: 2;
+  color: transparent !important;
+  caret-color: var(--wb-tx);
+  background: transparent !important;
+  resize: none;
+  outline: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.wb-editor-wrap .wb-editor-hl {
+  z-index: 1;
+  pointer-events: none;
+  color: var(--wb-tx);
+  background: var(--wb-bg);
+  overflow: hidden;
+}
+/* Invisible measurement elements, never shown: .wb-line-mirror measures single-line height /
+   caret coords; .wb-lh-measure lays out one child div per logical line so updateLineNums() can
+   read each line's REAL wrapped height (see HighlightedEditor.vue). Its child divs inherit
+   font / white-space / tab-size / line-height from this rule, so they wrap exactly like the
+   textarea does. */
+.wb-editor-wrap .wb-line-mirror,
+.wb-editor-wrap .wb-lh-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  height: auto;
+  padding: 0 var(--wb-editor-pad);
+  font-family: var(--wb-ff);
+  font-size: var(--wb-fs);
+  line-height: var(--wb-lh);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  tab-size: 4;
+  margin: 0;
+  border: none;
+  letter-spacing: 0;
+  box-sizing: border-box;
+}
+.wb-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 3px 20px;
+  background: var(--wb-bg-s);
+  border-top: 1px solid var(--wb-border);
+  font-size: var(--wb-fs-3);
+  color: var(--wb-tx3);
+  font-family: var(--wb-fc);
+  flex-shrink: 0;
+}
+
+/* Search Panel */
+.wb-search-count {
+  font-size: var(--wb-fs-3);
+  color: var(--wb-tx3);
+  white-space: nowrap;
+  font-family: var(--wb-fc);
+}
+
+/* Var click popup — small floating popup near a clicked {{...var...}}, ported from MiMo */
+.st-wb .wb-var-popup {
+  position: absolute;
+  z-index: 200000;
+  background: var(--wb-bg-e);
+  border: 1px solid var(--wb-amber-a6);
+  border-radius: var(--wb-r);
+  box-shadow: 0 8px 30px var(--wb-shadow-a1);
+  min-width: 340px;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  animation: wb-fadeUp 0.12s ease;
+  pointer-events: auto;
+}
+.st-wb .wb-vp-header {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-2);
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--wb-border);
+  font-size: var(--wb-fs-2);
+  flex-shrink: 0;
+}
+.st-wb .wb-vp-varname {
+  color: var(--hl-v);
+  font-weight: 600;
+  font-family: var(--wb-fc);
+  font-size: var(--wb-fs-4);
+}
+.st-wb .wb-vp-count {
+  color: var(--wb-tx3);
+  font-size: var(--wb-fs-3);
+}
+.st-wb .wb-vp-spacer {
+  flex: 1;
+}
+.st-wb .wb-vp-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--wb-rs);
+  font-size: var(--wb-fs-1);
+  color: var(--wb-tx2);
+  transition: all var(--wb-tr);
+}
+.st-wb .wb-vp-btn:hover {
+  background: var(--wb-bg-h);
+  color: var(--wb-tx);
+}
+.st-wb .wb-vp-btn.close-btn:hover {
+  background: var(--wb-dg-d);
+  color: var(--wb-dg);
+}
+.st-wb .wb-vp-list {
+  overflow-y: auto;
+  padding: 3px;
+  max-height: 200px;
+}
+.st-wb .wb-vp-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: var(--wb-rs);
+  font-size: var(--wb-fs-1);
+  font-family: var(--wb-fc);
+  cursor: pointer;
+  transition: background var(--wb-tr);
+}
+.st-wb .wb-vp-item:hover {
+  background: var(--wb-bg-h);
+}
+.st-wb .wb-vp-item.current {
+  background: var(--wb-ac-d);
+}
+.st-wb .wb-vp-item.dim {
+  opacity: 0.45;
+}
+.st-wb .wb-vp-item.dim:hover {
+  opacity: 1;
+}
+.st-wb .wb-vp-scope {
+  color: var(--wb-tx3);
+  font-size: var(--wb-fs-1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.st-wb .wb-vp-block {
+  color: var(--wb-tx);
+  font-size: var(--wb-fs-1);
+  font-family: var(--wb-fc);
+}
+
+/* === from agent.css: right panel framework === */
+/* Right panels */
+.wb-right-panel {
+  width: 360px;
+  background: var(--wb-bg-s);
+  border-left: 1px solid var(--wb-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+.wb-right-panel.float {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 50;
+  box-shadow: -6px 0 30px var(--wb-shadow-a2);
+  border-left: 1px solid var(--wb-amber-a3);
+}
+.wb-rp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid var(--wb-border);
+  font-size: var(--wb-fs-5);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--wb-tx2);
+  flex-shrink: 0;
+}
+
+/* === from agent.css: var ref (VarPanel) === */
+.wb-rp-tools {
+  display: flex;
+  gap: var(--wb-sp-2);
+  padding: 8px 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--wb-border);
+  flex-shrink: 0;
+}
+.wb-rp-tools input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--wb-fs-4);
+  padding: 5px 8px;
+}
+.wb-rp-nav {
+  display: flex;
+  gap: var(--wb-sp-2);
+  padding: var(--wb-sp-2) 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--wb-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.wb-rp-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--wb-sp-1) 8px;
+}
+.wb-vr-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: var(--wb-rs);
+  font-size: var(--wb-fs-3);
+  font-family: var(--wb-fc);
+  cursor: pointer;
+  transition: background var(--wb-tr);
+  margin-left: 8px;
+}
+.wb-vr-item:hover {
+  background: var(--wb-bg-h);
+}
+.wb-vr-item.active {
+  background: var(--wb-ac-d);
+}
+.wb-vr-type {
+  padding: 1px 5px;
+  border-radius: var(--wb-radius-0);
+  font-size: var(--wb-fs-1);
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.wb-vr-type.set {
+  background: var(--wb-role-set-bg);
+  color: var(--wb-role-set-fg);
+}
+.wb-vr-type.add {
+  background: var(--wb-role-add-bg);
+  color: var(--wb-role-add-fg);
+}
+.wb-vr-type.get {
+  background: var(--wb-role-get-bg);
+  color: var(--wb-role-get-fg);
+}
+.wb-vr-type.inc,
+.wb-vr-type.dec,
+.wb-vr-type.has,
+.wb-vr-type.delete {
+  background: var(--wb-bg-h);
+  color: var(--wb-tx2);
+}
+.wb-vr-section {
+  margin: 8px 4px 4px;
+  padding: var(--wb-sp-1) 8px 2px;
+  border-top: 1px solid var(--wb-border-a2);
+  color: var(--wb-tx3);
+  font-size: var(--wb-fs-1);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.wb-vr-item.dim {
+  opacity: 0.45;
+}
+.wb-vr-item.dim:hover {
+  opacity: 1;
+}
+.wb-vr-group {
+  margin: 7px 4px 3px;
+  padding: var(--wb-sp-1) 6px 2px;
+  border-top: 1px solid var(--wb-border-a2);
+  color: var(--wb-ac-h);
+  font-size: var(--wb-fs-2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.wb-vr-val {
+  color: var(--wb-tx2);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.wb-vr-block {
+  color: var(--wb-tx);
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--wb-fs-3);
+}
+
+/* === from agent.css: icon-btn (shared by preset/preview/agent) === */
+/* 之前 padding:2px 6px 撑出来的图标按钮视觉上明显比旁边的 .wb-btn 矮小（这批按钮承担的是
+ * "新建/导入/删除"这种有实际后果的操作，太不起眼容易被忽略，也不好点中）。改成固定的正方形
+ * --wb-icon-btn 尺寸 + flex 居中，图标字符本身不放大（避免视觉上显得突兀），纯粹是可点击区域
+ * 和按钮本身的存在感变大。 */
+.st-wb .icon-btn {
+  width: var(--wb-icon-btn);
+  height: var(--wb-icon-btn);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--wb-fs-5);
+}
+.st-wb .icon-btn.active {
+  color: var(--wb-ac);
+  border-color: var(--wb-amber-a7);
+  background: var(--wb-ac-d);
+}
+
+/* === from agent.css: preset preview panel === */
+/* Preview — embedded by default (pushes/squeezes the editor, like Var Nav), .float switches it
+   to a floating overlay drawer instead. Toggled via the 📌 button in the panel header. */
+.wb-preview-panel {
+  background: var(--wb-bg-e);
+  border-left: 1px solid var(--wb-amber-a3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+.wb-preview-panel.float {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 60;
+  box-shadow: -8px 0 40px var(--wb-shadow-a3);
+}
+/* 三态共用的内容体：float 形态在 FloatingPanelShell 的 .wb-float-body 里，嵌入/悬浮态在 panel 里，都靠它撑满。 */
+.st-wb .wb-preview-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Floating shell title slot（三态切换按钮旁挂标题）——self-contained，只影响 preview。 */
+.st-wb .wb-preview-float-title {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-1);
+  flex: 1;
+  min-width: 0;
+}
+.st-wb .wb-preview-float-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-wb .wb-preview-float-title .icon-btn {
+  flex-shrink: 0;
+}
+.st-wb .wb-pp-tools {
+  padding: var(--wb-sp-3) 16px;
+  border-bottom: 1px solid var(--wb-border);
+  flex-shrink: 0;
+}
+.st-wb .wb-pp-output-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+}
+.st-wb .wb-pb-body .wb-phl,
+.st-wb .wb-pp-raw .wb-phl {
+  background: var(--wb-amber-a2);
+  color: var(--wb-ac-h);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+/* Mode tabs (Per-Block vs Full Text) */
+.st-wb .wb-preview-tabs {
+  display: flex;
+  gap: var(--wb-sp-1);
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  padding: 3px;
+}
+.st-wb .wb-preview-tab {
+  flex: 1;
+  padding: var(--wb-sp-2) 10px;
+  border-radius: var(--wb-radius-0);
+  font-size: var(--wb-fs-2);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--wb-tx2);
+  transition: all var(--wb-tr);
+}
+.st-wb .wb-preview-tab:hover {
+  color: var(--wb-tx);
+}
+.st-wb .wb-preview-tab.active {
+  background: var(--wb-ac-d);
+  color: var(--wb-ac);
+}
+.st-wb .wb-pp-mode-hint {
+  font-size: var(--wb-fs-2);
+  line-height: 1.5;
+  color: var(--wb-tx3);
+  margin-top: 8px;
+}
+.st-wb .wb-pp-error {
+  font-size: var(--wb-fs-2);
+  color: var(--wb-dg);
+  background: var(--wb-dg-d);
+  border-radius: var(--wb-rs);
+  padding: var(--wb-sp-2) 10px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* === from agent.css: preview blocks === */
+/* Preview blocks — one card per prompt block, separated & collapsible */
+.st-wb .wb-pb-block {
+  margin-bottom: 6px;
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-r);
+  overflow: hidden;
+}
+.st-wb .wb-pb-header {
+  font-size: var(--wb-fs-3);
+  font-weight: 700;
+  padding: var(--wb-sp-3) 14px;
+  border-bottom: 1px solid var(--wb-border-a3);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  transition: background var(--wb-tr);
+  background: var(--wb-bg);
+}
+.st-wb .wb-pb-header:hover {
+  background: var(--wb-bg-h);
+}
+.st-wb .wb-pb-role {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--wb-fs-2);
+  padding: 2px 7px;
+  border-radius: var(--wb-radius-0);
+}
+.st-wb .wb-pb-role.pb-sys {
+  background: var(--wb-role-sys-bg);
+  color: var(--wb-role-sys-fg);
+}
+.st-wb .wb-pb-role.pb-user {
+  background: var(--wb-role-user-bg);
+  color: var(--wb-role-user-fg);
+}
+.st-wb .wb-pb-role.pb-asst {
+  background: var(--wb-role-asst-bg);
+  color: var(--wb-role-asst-fg);
+}
+.st-wb .wb-pb-role.pb-marker {
+  background: var(--wb-amber-a1);
+  color: var(--wb-ac-h);
+}
+.st-wb .wb-pb-name {
+  color: var(--wb-tx);
+  font-size: var(--wb-fs-3);
+  font-weight: 600;
+}
+.st-wb .wb-pb-msg-count {
+  color: var(--wb-tx3);
+  font-size: var(--wb-fs-1);
+  font-weight: 600;
+}
+.st-wb .wb-pb-body {
+  padding: var(--wb-sp-3) 14px;
+  margin: 0;
+}
+.st-wb .wb-pb-block.collapsed .wb-pb-body {
+  display: none;
+}
+.st-wb .wb-pb-block.collapsed {
+  padding-bottom: 0;
+}
+.st-wb .wb-pb-toggle {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--wb-rs);
+  font-size: var(--wb-fs-1);
+  color: var(--wb-tx2);
+  transition: all var(--wb-tr);
+  margin-left: auto;
+}
+.st-wb .wb-pb-header:hover .wb-pb-toggle {
+  color: var(--wb-tx);
+}
+.st-wb .wb-pb-block.collapsed .wb-pb-toggle {
+  transform: rotate(-90deg);
+}
+.st-wb .wb-pb-msg {
+  padding: var(--wb-sp-2) 0;
+}
+.st-wb .wb-pb-msg + .wb-pb-msg {
+  border-top: 1px solid var(--wb-border-a1);
+  margin-top: 2px;
+}
+.st-wb .wb-pb-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.st-wb .wb-pb-tokens {
+  font-family: var(--wb-fc);
+  font-size: var(--wb-fs-1);
+  color: var(--wb-tx3);
+}
+.st-wb .wb-pb-msg-text {
+  font-family: var(--wb-ff);
+  font-size: var(--wb-fs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--wb-tx);
+  margin: 0;
+}
+
+/* === from agent.css: full-text raw preview === */
+/* Full-text raw preview */
+.st-wb .wb-pp-raw {
+  font-family: var(--wb-ff);
+  font-size: var(--wb-fs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--wb-tx);
+  margin: 0;
+}
+
+/* ===== Panel three-mode segmented switch =====
+   Shared by right-side panels (Preview / Var Nav / Toolbox / Agent).
+   Compact icon-only capsule: 3 fixed-size square icon buttons, active one
+   gets accent fill. Replaces the old 3-text-button row. */
+.wb-mode-seg {
+  display: inline-flex;
+  gap: 1px;
+  padding: 2px;
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  flex-shrink: 0;
+}
+.wb-mode-seg-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--wb-radius-0);
+  color: var(--wb-tx3);
+  cursor: pointer;
+  transition: all var(--wb-tr);
+}
+.wb-mode-seg-btn:hover {
+  color: var(--wb-tx);
+  background: var(--wb-bg-h);
+}
+.wb-mode-seg-btn.active {
+  color: var(--wb-ac);
+  background: var(--wb-ac-d);
+}
+.wb-mode-seg-btn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Modals */
+.wb-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--wb-shadow-a3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  z-index: 300000;
+}
+.wb-modal {
+  background: var(--wb-bg-e);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-r);
+  padding: 24px;
+  min-width: 360px;
+  max-width: 500px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+.wb-modal h3 {
+  font-size: var(--wb-fs-5);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.wb-modal-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  max-height: 300px;
+}
+.wb-modal-item {
+  padding: var(--wb-sp-3) 12px;
+  border-radius: var(--wb-rs);
+  cursor: pointer;
+  transition: background var(--wb-tr);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wb-modal-item:hover {
+  background: var(--wb-bg-h);
+}
+.wb-modal-item.static {
+  cursor: default;
+}
+.wb-modal-item.static:hover {
+  background: none;
+}
+.wb-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.wb-confirm-text {
+  font-size: var(--wb-fs-4);
+  line-height: 1.6;
+  color: var(--wb-tx2);
+  margin: 0 0 18px;
+}
+.wb-confirm-text strong {
+  color: var(--wb-tx);
+}
+.wb-confirm-danger {
+  color: var(--wb-dg);
+}
+
+/* Modal size modifiers — an instance can add .lg/.sm instead of inline min/max-width. */
+.wb-modal.lg {
+  min-width: 500px;
+  max-width: 640px;
+  max-height: 82vh;
+}
+.wb-modal.sm {
+  min-width: 420px;
+  max-width: 520px;
+}
+.wb-modal-scroll {
+  overflow-y: auto;
+  flex: 1;
+  margin-bottom: 16px;
+  padding-right: 4px;
+}
+
+/* Generic confirmStore prompt() input — see confirmStore.ts/Modals.vue. Same .wb-modal.sm shell
+   as the confirm dialog, just with a text input above the footer instead of a message. */
+.wb-prompt-input {
+  width: 100%;
+  margin: 4px 0 18px;
+}
+
+/* ====== Floating Panel Shell ======
+ * True draggable/resizable floating windows — see FloatingPanelShell.vue / useFloatingPanel.ts.
+ * Distinct from .wb-modal above: no dimming backdrop on desktop (multiple of these can be open
+ * side-by-side with the main editor still usable underneath), position/size come from inline
+ * style (useFloatingPanel's x/y/width/height), this stylesheet only supplies the chrome. */
+.wb-float-shell {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--wb-bg-e);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-r);
+  box-shadow: 0 16px 56px var(--wb-shadow-a3);
+  overflow: hidden;
+}
+.wb-float-shell.dragging {
+  transition: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.wb-float-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--wb-sp-3) 14px;
+  background: var(--wb-bg-s);
+  border-bottom: 1px solid var(--wb-border);
+  cursor: move;
+  touch-action: none;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.wb-float-title {
+  flex: 1;
+  font-size: var(--wb-fs-4);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-float-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: auto;
+}
+.wb-float-resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: nwse-resize;
+  touch-action: none;
+  color: var(--wb-tx3);
+}
+.wb-float-resize-handle:hover {
+  color: var(--wb-ac);
+}
+/* Mobile: same bottom-sheet treatment as .wb-right-panel/.wb-preview-panel (see the @media block
+   further down) — no room to float freely on a phone screen, so it docks to the bottom instead.
+   Also see FloatingPanelShell.vue's own backdrop (rendered only when isMobile, separate from
+   App.vue's shared .wb-mobile-backdrop since this Shell is meant to be self-contained and usable
+   without wiring into App.vue's drawer state machine). */
+.wb-float-shell.mobile {
+  left: 0 !important;
+  right: 0 !important;
+  top: auto !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 82vh !important;
+  max-height: 82vh;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 40px var(--wb-shadow-a4);
+}
+.wb-float-mobile-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 100009;
+  background: var(--wb-shadow-a2);
+}
+
+.wb-panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-bottom: 1px solid var(--wb-border);
+  flex-shrink: 0;
+}
+
+/* Settings */
+.wb-settings-section {
+  margin-bottom: 18px;
+}
+.wb-settings-section > label {
+  font-size: var(--wb-fs-3);
+  font-weight: 700;
+  color: var(--wb-tx2);
+  display: block;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.wb-color-row {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-3);
+  margin-bottom: 6px;
+}
+.wb-color-row input[type='color'] {
+  width: 36px;
+  height: 26px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-1);
+  cursor: pointer;
+  padding: 1px;
+  background: var(--wb-bg-input);
+}
+.wb-color-row .cl-label {
+  font-size: var(--wb-fs-3);
+  color: var(--wb-tx);
+  flex: 1;
+}
+.wb-color-row .cl-hex {
+  font-family: var(--wb-fc);
+  font-size: var(--wb-fs-2);
+  color: var(--wb-tx3);
+  min-width: 60px;
+}
+
+/* Shared small utilities — replace one-off inline style="..." attributes that were scattered
+   across Modals.vue / PreviewPanel.vue / VarPanel.vue for the same handful of layout patterns. */
+.wb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.wb-row-tight {
+  display: flex;
+  gap: var(--wb-sp-1);
+}
+.wb-row-mt {
+  display: flex;
+  gap: var(--wb-sp-2);
+  margin-top: 8px;
+}
+.wb-flex1 {
+  flex: 1;
+}
+.wb-muted {
+  color: var(--wb-tx3);
+}
+.wb-range-wide {
+  width: 220px;
+  accent-color: var(--wb-ac);
+}
+.wb-select-wide {
+  width: 280px;
+}
+.wb-value-label {
+  font-family: var(--wb-fc);
+  font-size: var(--wb-fs-4);
+  min-width: 50px;
+}
+.wb-var-name-em {
+  color: var(--wb-tx);
+  font-weight: 500;
+}
+
+/* Toast */
+.wb-toast {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--wb-bg-a);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-r);
+  padding: 9px 18px;
+  font-size: var(--wb-fs-2);
+  font-weight: 500;
+  z-index: 300001;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.wb-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Animations */
+.wb-fab-enter-active,
+.wb-fab-leave-active {
+  transition: opacity 0.2s ease;
+}
+.wb-fab-enter-from,
+.wb-fab-leave-to {
+  opacity: 0;
+}
+.wb-panel-enter-active,
+.wb-panel-leave-active {
+  transition: all 0.25s ease;
+}
+.wb-panel-enter-from {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.wb-panel-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+@keyframes wb-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wb-workspace-name {
+  font-family: var(--wb-fc);
+  font-size: var(--wb-fs-3);
+  color: var(--wb-tx3);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-workspace-select {
+  font-family: var(--wb-fc);
+  font-size: var(--wb-fs-3);
+  color: var(--wb-tx2);
+  max-width: 220px;
+  height: var(--wb-ctrl-h);
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  padding: 0 8px;
+  transition:
+    border-color var(--wb-tr),
+    color var(--wb-tr);
+}
+.wb-workspace-select:hover {
+  color: var(--wb-tx);
+  border-color: var(--wb-amber-a6);
+}
+.wb-workspace-select:focus-visible {
+  outline: 2px solid var(--wb-ac);
+  outline-offset: 1px;
+}
+
+.wb-mode-switch {
+  display: flex;
+  gap: 2px;
+}
+
+.wb-editor-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.wb-editor-row {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ===== TabBar.vue ===== */
+.wb-tabbar {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--wb-border);
+  background: var(--wb-bg);
+}
+.wb-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-2);
+  padding: 0 5px;
+  height: 32px;
+  border-right: 1px solid var(--wb-border);
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--wb-tx3);
+  font-size: var(--wb-fs-3);
+  flex-shrink: 0;
+}
+.wb-tab:hover {
+  background: var(--wb-bg-h);
+}
+.wb-tab.active {
+  background: var(--wb-bg-e);
+  color: var(--wb-tx);
+  border-bottom: 2px solid var(--wb-ac);
+  margin-bottom: -1px;
+}
+.wb-tab-domain-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--wb-tx3);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.wb-tab-domain-dot.domain-regex {
+  background: var(--wb-ac);
+}
+.wb-tab-close {
+  font-size: 24px;
+  opacity: 0.5;
+  padding: 0 2px;
+  border-radius: var(--wb-radius-0);
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.wb-tab-close:hover {
+  opacity: 1;
+  background: var(--wb-dg-d);
+  color: var(--wb-dg);
+}
+
+.wb-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-sp-1);
+}
+.wb-form-label {
+  font-size: var(--wb-fs-4);
+  color: var(--wb-tx);
+  margin-top: var(--wb-sp-3);
+}
+.wb-form .wb-form-input,
+.wb-form textarea {
+  width: 100%;
+}
+/* select 不再强制 100% 宽——大多数 select 里就 2-4 个字的短选项（AND 任意/跟随全局设置这种），
+ * 撑满一整行纯粹是浪费，改成随内容宽度 + 下限，配合 .wb-field-row 让 label 和 select 同一行。
+ * 选项本来就多的（插入位置 8 个）会自然撑到 max-width，不受影响。 */
+.wb-form select {
+  width: auto;
+  min-width: 120px;
+  max-width: 100%;
+}
+.wb-form-err {
+  color: var(--wb-dg);
+  font-size: var(--wb-fs-2);
+  margin-top: 2px;
+}
+.wb-form-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--wb-fs-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wb-form-num {
+  width: 90px !important;
+}
+.wb-form-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--wb-border);
+}
+
+.wb-btn-surface {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wb-sp-1);
+  margin-top: var(--wb-sp-1);
+}
+
+/* label 和控件同一行布局，标签固定宽度左对齐，控件紧跟标签后，不再两端对齐 */
+.wb-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-3);
+  margin-top: var(--wb-sp-3);
+}
+.wb-field-row .wb-form-label {
+  margin-top: 0;
+  flex-shrink: 0;
+  min-width: 120px;
+}
+.wb-field-row select {
+  flex-shrink: 0;
+}
+.wb-field-row .wb-form-input,
+.wb-field-row .wb-form-textarea {
+  flex: 1;
+}
+.wb-field-row .wb-num-wrap {
+  flex-shrink: 0;
+}
+/* .wb-row 是"一行塞多个 label+控件 对"的场景（比如 sticky/cooldown/delay 三连），跟 .wb-field-row
+ * 同样需要把 label 的默认 margin-top 清零——之前只有 .wb-field-row 有这条，.wb-row 里的 label
+ * 只能每处手写 style="margin:0" 补，现在两种行容器都统一处理，不用再补了。故意不带
+ * min-width:120px（.wb-row 里的 label 通常是"深度"/"角色"这种短标签，强制 120px 反而挤占控件
+ * 空间——这个差异是有意为之，不是遗漏）。 */
+.wb-row .wb-form-label {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+/* 表单/分组里"第一个字段不该有多余的顶部间距"——以前每个表单/分组的第一个字段都要在 markup 里
+ * 手写 style="margin-top:0" 逐个消除，写漏一个就会看到那个字段莫名比别的字段离标题远一截。
+ * 改成 :first-child 结构选择器，跟内容顺序自动同步：以后调整字段顺序、插入/删除字段，永远是
+ * 当前排第一的那个自动零间距，不需要再手动追着改 style。 */
+.wb-form > .wb-field-row:first-child {
+  margin-top: 0;
+}
+.wb-form > .wb-form-label:first-child {
+  margin-top: 0;
+}
+.wb-group-body > .wb-field-row:first-child {
+  margin-top: 0;
+}
+.wb-group-body > .wb-form-label:first-child {
+  margin-top: 0;
+}
+
+/* AdvancedGroup.vue：可折叠分组卡片，取代单个 .wb-regex-advanced 大杂烩，一个表单里可以放好几个 */
+.wb-group {
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.wb-group-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--wb-bg-h);
+  border: none;
+  font-size: var(--wb-fs-3);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  color: var(--wb-tx);
+}
+.wb-group-head:hover {
+  background: var(--wb-bg-a);
+}
+.wb-group.open .wb-group-head {
+  color: var(--wb-ac);
+}
+.wb-group-chevron {
+  display: inline-block;
+  font-size: var(--wb-fs-3);
+  color: var(--wb-tx3);
+  transition: transform var(--wb-tr);
+  flex-shrink: 0;
+}
+.wb-group.open .wb-group-chevron {
+  transform: rotate(90deg);
+  color: var(--wb-ac);
+}
+.wb-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wb-sp-1);
+  padding: var(--wb-sp-3) 12px;
+  border-top: 1px solid var(--wb-border);
+}
+.wb-group-body .wb-form-label:first-child {
+  margin-top: 0;
+}
+
+/* NumberInput.vue：原生 number input 右边接一个拖拽手柄按钮，横向拖动=改数值，不影响原本的
+ * 键盘输入/上下箭头/滚轮。 */
+.wb-num-wrap {
+  display: inline-flex;
+  align-items: stretch;
+  width: auto;
+}
+.wb-num-wrap .wb-form-num {
+  width: 68px !important;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+.wb-num-wrap .wb-form-num::-webkit-inner-spin-button,
+.wb-num-wrap .wb-form-num::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+.wb-num-wrap .wb-form-num {
+  appearance: textfield;
+}
+.wb-num-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  flex-shrink: 0;
+  background: var(--wb-bg-h);
+  border: 1px solid var(--wb-border);
+  border-left: none;
+  border-top-right-radius: var(--wb-rs);
+  border-bottom-right-radius: var(--wb-rs);
+  color: var(--wb-tx3);
+  font-size: var(--wb-fs-3);
+  cursor: ew-resize;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: all var(--wb-tr);
+}
+.wb-num-handle:hover {
+  background: var(--wb-bg-a);
+  color: var(--wb-ac);
+}
+.wb-num-wrap.dragging .wb-form-num {
+  border-color: var(--wb-ac);
+}
+.wb-num-wrap.dragging .wb-num-handle {
+  background: var(--wb-ac-d);
+  color: var(--wb-ac);
+  border-color: var(--wb-amber-a6);
+}
+
+/* .wb-btn 修饰符：跨域共用（App/agent/shared/toolbox），随 .wb-btn 本体一起进 common。 */
+.wb-btn.close-btn.compact {
+  padding: 2px 6px;
+}
+.wb-btn.sm {
+  padding: var(--wb-sp-1) 10px;
+}

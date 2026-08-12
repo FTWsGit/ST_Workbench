@@ -22,7 +22,7 @@
       </div>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.regexScripts.length" class="wb-preset-cp-empty">
+      <p v-if="!store.regexScripts.length" class="wb-list-empty">
         {{ uiStore.t('regex.sidebar.empty') }}
       </p>
       <template v-for="(node, gi) in store.regexFlatNodes" :key="nodeKey(node, gi)">

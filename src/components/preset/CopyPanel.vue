@@ -1,9 +1,9 @@
 <template>
-  <div class="wb-preset-cp-wrap">
-    <div class="wb-preset-cp-body">
-      <div class="wb-preset-cp-col">
-        <div class="wb-preset-cp-col-head">
-          <select class="wb-preset-cp-sel" v-model="sides.left.name">
+  <div class="wb-copy-panel-wrap">
+    <div class="wb-copy-panel-body">
+      <div class="wb-copy-panel-col">
+        <div class="wb-copy-panel-col-head">
+          <select class="wb-copy-panel-sel" v-model="sides.left.name">
             <option value="" disabled>
               {{ uiStore.t('preset.copyPanel.selectPreset') }}
             </option>
@@ -16,14 +16,14 @@
           </button>
         </div>
         <template v-if="sides.left.data">
-          <div class="wb-preset-cp-toolbar">
+          <div class="wb-panel-toolbar">
             <button class="wb-btn" @click="selectAll('left')">
               {{ uiStore.t('preset.copyPanel.selectAll') }}
             </button>
             <button class="wb-btn" @click="clearSel('left')">
               {{ uiStore.t('preset.copyPanel.clearAll') }}
             </button>
-            <span class="wb-preset-search-count"
+            <span class="wb-search-count"
               >{{ sides.left.sel.size }}/{{ sides.left.data.prompts.length }}</span
             >
             <span class="wb-spacer"></span>
@@ -31,14 +31,14 @@
               {{ uiStore.t('common.save') }}{{ sides.left.dirty ? ' *' : '' }}
             </button>
           </div>
-          <div class="wb-preset-cp-list">
-            <p v-if="!leftOrdered.length" class="wb-preset-cp-empty">
+          <div class="wb-copy-panel-list">
+            <p v-if="!leftOrdered.length" class="wb-list-empty">
               {{ uiStore.t('preset.copyPanel.noBlocks') }}
             </p>
             <div
               v-for="e in leftOrdered"
               :key="e.block.identifier"
-              class="wb-preset-cp-item wb-tree-item"
+              class="wb-copy-panel-item wb-tree-item"
               :class="{ selected: sides.left.sel.has(e.block.identifier) }"
               @click="onItemClick('left', e.block.identifier, $event)"
             >
@@ -46,7 +46,7 @@
               <span class="wb-tree-name">{{ e.block.name || e.block.identifier }}</span>
               <span
                 v-if="e.hidden"
-                class="wb-hidden-badge"
+                class="wb-copy-hidden-badge"
                 :title="uiStore.t('preset.sidebar.hiddenTitle')"
                 >{{ uiStore.t('common.hidden') }}</span
               >
@@ -59,12 +59,12 @@
             </div>
           </div>
         </template>
-        <p v-else class="wb-preset-cp-empty">
+        <p v-else class="wb-list-empty">
           {{ uiStore.t('preset.copyPanel.pickPreset') }}
         </p>
       </div>
 
-      <div class="wb-preset-cp-mid">
+      <div class="wb-copy-panel-mid">
         <button
           class="wb-btn accent"
           :disabled="!sides.left.sel.size || !sides.right.data"
@@ -83,9 +83,9 @@
         </button>
       </div>
 
-      <div class="wb-preset-cp-col">
-        <div class="wb-preset-cp-col-head">
-          <select class="wb-preset-cp-sel" v-model="sides.right.name">
+      <div class="wb-copy-panel-col">
+        <div class="wb-copy-panel-col-head">
+          <select class="wb-copy-panel-sel" v-model="sides.right.name">
             <option value="" disabled>
               {{ uiStore.t('preset.copyPanel.selectPreset') }}
             </option>
@@ -98,14 +98,14 @@
           </button>
         </div>
         <template v-if="sides.right.data">
-          <div class="wb-preset-cp-toolbar">
+          <div class="wb-panel-toolbar">
             <button class="wb-btn" @click="selectAll('right')">
               {{ uiStore.t('preset.copyPanel.selectAll') }}
             </button>
             <button class="wb-btn" @click="clearSel('right')">
               {{ uiStore.t('preset.copyPanel.clearAll') }}
             </button>
-            <span class="wb-preset-search-count"
+            <span class="wb-search-count"
               >{{ sides.right.sel.size }}/{{ sides.right.data.prompts.length }}</span
             >
             <span class="wb-spacer"></span>
@@ -113,14 +113,14 @@
               {{ uiStore.t('common.save') }}{{ sides.right.dirty ? ' *' : '' }}
             </button>
           </div>
-          <div class="wb-preset-cp-list">
-            <p v-if="!rightOrdered.length" class="wb-preset-cp-empty">
+          <div class="wb-copy-panel-list">
+            <p v-if="!rightOrdered.length" class="wb-list-empty">
               {{ uiStore.t('preset.copyPanel.noBlocks') }}
             </p>
             <div
               v-for="e in rightOrdered"
               :key="e.block.identifier"
-              class="wb-preset-cp-item wb-tree-item"
+              class="wb-copy-panel-item wb-tree-item"
               :class="{ selected: sides.right.sel.has(e.block.identifier) }"
               @click="onItemClick('right', e.block.identifier, $event)"
             >
@@ -128,7 +128,7 @@
               <span class="wb-tree-name">{{ e.block.name || e.block.identifier }}</span>
               <span
                 v-if="e.hidden"
-                class="wb-hidden-badge"
+                class="wb-copy-hidden-badge"
                 :title="uiStore.t('preset.sidebar.hiddenTitle')"
                 >{{ uiStore.t('common.hidden') }}</span
               >
@@ -141,7 +141,7 @@
             </div>
           </div>
         </template>
-        <p v-else class="wb-preset-cp-empty">
+        <p v-else class="wb-list-empty">
           {{ uiStore.t('preset.copyPanel.pickPreset') }}
         </p>
       </div>

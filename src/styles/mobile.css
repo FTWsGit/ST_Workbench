@@ -1,0 +1,316 @@
+/* ==========================================================================
+   Mobile layout (<= MOBILE_BREAKPOINT in hostEnv.ts, kept in sync with the
+   px value below by hand — CSS can't read the TS constant, so if you change
+   one, change the other).
+
+   REVISION NOTE: an earlier version of this block tried to keep every panel
+   in normal document flow and stack them into a single column, showing only
+   one at a time via display:none toggling (.wb-mobile-hide). That caused
+   real bugs in practice (nested/nonsensical scroll containers once
+   `.wb-main` itself became `overflow-y:auto` while its flex children *also*
+   scroll internally — "what scrolls and what you see stop matching up" —
+   plus `.float` panels got forced out of floating mode, breaking their own
+   toggle). This version instead takes panels OUT of flow entirely on
+   mobile (position:absolute, anchored to the single position:fixed wrapper
+   set up in main.ts — see its comment for why every overlay in this app
+   shares ONE fixed anchor instead of each being independently
+   position:fixed) and slides them on/off screen as overlays. Only
+   `.wb-editor-col` (the actual prompt editor) stays in normal flow, full
+   width — it's the one thing that should always just be "the page" on a
+   phone. This is the standard off-canvas-drawer / bottom-sheet pattern:
+   nothing here fights the editor's own scroll container for space, so
+   there's no layering ambiguity to begin with.
+
+     - .wb-sidebar (preset/regex list) slides in from the LEFT, toggled by
+       the ☰ button in the mobile header — see App.vue's mobileDrawerVisible
+       state and the .wb-mobile-hamburger button.
+     - .wb-right-panel (var nav + settings dock share this class) and
+       .wb-preview-panel become BOTTOM SHEETS instead — slide up from the
+       bottom, ~82vh tall. These are reached via the mobile header's ⋯
+       "tools" button, which opens a small action-sheet listing them (see
+       .wb-mobile-tools-sheet below) rather than cramming 8+ buttons into
+       one header row, which is its own usability problem on a ~360px
+       screen independent of the panel-layering bugs above.
+     - Resize handles are pointless with no side-by-side neighbor to size
+       against, so they're hidden.
+     - A shared .wb-mobile-backdrop dims the editor behind whichever
+       drawer/sheet is open and closes it on tap.
+   ========================================================================== */
+@media (max-width: 720px) {
+  .wb-header {
+    padding: var(--wb-sp-2) 8px;
+    gap: var(--wb-sp-1);
+  }
+  .wb-btn {
+    padding: 5px 9px;
+    font-size: var(--wb-fs-3);
+  }
+  .wb-preset-sel,
+  .wb-workspace-select,
+  .wb-workspace-name {
+    max-width: 90px;
+  }
+
+  .wb-main {
+    position: relative;
+    overflow: hidden;
+  }
+  .wb-editor-col {
+    width: 100% !important;
+  }
+
+  /* Sidebar: left slide-in drawer. width needs !important — <aside> carries its own inline
+     `style="width: ...px"` bound to store.settings.sidebarWidth (the desktop resize-drag value),
+     and an inline style otherwise always wins over any class selector regardless of source
+     order, @media or not. */
+  .wb-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 150;
+    width: 85vw !important;
+    max-width: 340px;
+    transform: translateX(-100%);
+    box-shadow: 6px 0 40px var(--wb-shadow-a4);
+    transition: transform 0.25s ease;
+  }
+  .wb-sidebar.wb-mobile-drawer-open {
+    transform: translateX(0);
+  }
+
+  /* Var Nav / Settings Dock / Preview: bottom sheets. Written as compound
+     selectors matching the `.float` variant too (`.wb-right-panel.float` /
+     `.wb-preview-panel.float` are defined earlier in agent.css, OUTSIDE any
+     media query, with position:absolute) — matching specificity (2 classes)
+     plus later source order is what lets this win the cascade regardless of
+     whether the user has "float mode" toggled on, instead of relying on a
+     fragile specificity accident. */
+  .wb-right-panel,
+  .wb-right-panel.float,
+  .wb-preview-panel,
+  .wb-preview-panel.float {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    z-index: 150;
+    width: 100% !important;
+    height: 82vh;
+    max-height: 82vh;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px var(--wb-shadow-a4);
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+  }
+  .wb-right-panel.wb-mobile-drawer-open,
+  .wb-preview-panel.wb-mobile-drawer-open {
+    transform: translateY(0);
+  }
+  /* Small grab-handle affordance at the top of each sheet, standard bottom-sheet visual cue.
+     Needs the panel's own header pushed down a bit so the grip doesn't sit on top of its text. */
+  .wb-right-panel::before,
+  .wb-preview-panel::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--wb-border);
+    transform: translateX(-50%);
+  }
+  .wb-right-panel .wb-rp-header,
+  .wb-preview-panel .wb-rp-header {
+    padding-top: 20px;
+  }
+
+  .wb-resize-handle,
+  .wb-right-resize-handle {
+    display: none;
+  }
+
+  /* Shared dimmed backdrop behind whichever drawer/sheet is open — see
+     App.vue's mobileDrawerVisible + closeMobileDrawer(). */
+  .wb-mobile-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 140;
+    background: var(--wb-shadow-a2);
+  }
+
+  /* Compact mobile header row: App.vue renders a different, shorter button
+     set on mobile (☰ / Save / preset name / ⋯ / ✕) instead of the full
+     desktop row — 8+ buttons don't fit a ~360px header no matter how much
+     padding gets trimmed, so the overflow buttons move into the ⋯ tools
+     sheet below rather than getting squeezed. */
+  .wb-mobile-hamburger,
+  .wb-mobile-tools-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background: transparent;
+    border: 1px solid var(--wb-border);
+    border-radius: var(--wb-rs);
+    color: var(--wb-tx);
+  }
+
+  /* ⋯ tools action sheet — compact bottom sheet, distinct from the full-height
+     ones above (this one just lists actions/entry points, it isn't a panel
+     with its own scrollable content). */
+  .wb-mobile-tools-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 150;
+    background: var(--wb-bg-e);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 40px var(--wb-shadow-a4);
+    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.25s ease;
+  }
+  .wb-mobile-tools-sheet.wb-mobile-drawer-open {
+    transform: translateY(0);
+  }
+  .wb-mobile-tools-grip {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--wb-border);
+    margin: 8px auto 4px;
+  }
+  .wb-mobile-tools-item {
+    padding: var(--wb-sp-4) 20px;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--wb-border);
+    color: var(--wb-tx);
+    font-size: var(--wb-fs-5);
+  }
+  .wb-mobile-tools-item:last-child {
+    border-bottom: none;
+  }
+  .wb-mobile-tools-item:disabled {
+    opacity: 0.4;
+  }
+  .wb-mobile-tools-item.active {
+    color: var(--wb-ac);
+  }
+
+  /* .wb-tree-actions (per-row edit/delete icons) are hover-revealed on desktop
+     (.wb-tree-item:hover .wb-tree-actions{opacity:1} above) — touch has no hover state, so
+     without this override these buttons are invisible and undiscoverable on mobile. Same for
+     .wb-drag-handle, which fades in on hover for the same reason — it also now doubles as the
+     ONLY touch drag-initiation target (see useDragReorder.ts / PresetSidebar.vue's
+     onItemMouseDown), so it needs to be both visible and comfortably sized, not just
+     discoverable. */
+  .wb-tree-actions {
+    opacity: 0.85 !important;
+  }
+  .wb-drag-handle {
+    opacity: 0.85 !important;
+    touch-action: none; /* stop the browser reading a handle-drag as a page/list scroll */
+    padding: 8px 6px;
+    margin: -8px -6px; /* grow the tap target without shifting layout */
+  }
+
+  /* Touch targets: desktop-sized icon buttons (20x20 / 22x22 / 24x24px) are undersized for a
+     finger (~40px is the commonly cited comfortable minimum). Rather than resizing the icons
+     themselves (which would look oversized relative to surrounding text), grow the tappable
+     area with padding and center the icon inside it via flex, so visual size is unchanged. */
+  .wb-tree-act,
+  .wb-vp-btn,
+  .wb-pb-toggle,
+  .wb-tree-group-toggle {
+    width: 36px;
+    height: 36px;
+  }
+  .wb-toggle-sw {
+    width: 38px;
+    height: 20px;
+  }
+  .wb-toggle-sw::after {
+    width: 16px;
+    height: 16px;
+  }
+  .wb-toggle-sw.on::after {
+    transform: translateX(18px);
+  }
+  .wb-tab {
+    height: 40px;
+  }
+  /* 桌面端 .icon-btn 现在是固定 width/height（见 desktop 规则），这里不能再用 padding 撑大，
+   * 否则跟固定尺寸打架——改成覆盖同一个尺寸变量本身，40px 是常见的移动端舒适点击下限。 */
+  .icon-btn {
+    --wb-icon-btn: 40px;
+  }
+
+  /* Modals: desktop's centered fixed-width dialog (min-width:360px) can overflow a narrow
+     phone screen. Let it use most of the viewport width instead, and drop the height cap that
+     assumed a keyboard-free desktop viewport. */
+  .wb-modal {
+    min-width: 0;
+    width: 92vw;
+    max-height: 80vh;
+  }
+  .wb-modal.lg,
+  .wb-modal.sm {
+    min-width: 0;
+    max-width: 92vw;
+  }
+
+  /* Safe-area insets for notched phones and bottom nav bars */
+  .wb-list {
+    padding-bottom: calc(3px + env(safe-area-inset-bottom));
+  }
+  .wb-fab {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    right: calc(16px + env(safe-area-inset-right));
+  }
+  .wb-right-panel,
+  .wb-preview-panel {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Sidebar tools: 桌面已经 overflow-x:auto 横滚兜底，移动端沿用同一行为——按钮不换行不被裁文字，
+   * 溢出就滚。之前用的 flex-wrap:wrap + flex:1 + ellipsis 那套会把按钮文字裁掉（"Bind" 变成 "Bi…"），
+   * 按钮变扁还得猜内容，不如保持原形可滚。移动端按钮 padding 由 .wb-btn 移动端规则统一放大。 */
+  .wb-sidebar-tools .wb-btn {
+    padding: 5px 9px;
+  }
+
+  /* Tighten block rows so name+role+actions fit */
+  .wb-tree-item {
+    gap: var(--wb-sp-1);
+    padding: var(--wb-sp-2) 4px;
+  }
+  .wb-tree-name {
+    font-size: var(--wb-fs-3);
+  }
+  .wb-tree-role {
+    font-size: var(--wb-fs-0);
+    padding: 0 3px;
+    letter-spacing: 0;
+  }
+
+  /* Editor meta row: don't wrap, let name ellipsis */
+  .wb-editor-meta {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .wb-regex-editor-name {
+    min-width: 0;
+  }
+}

@@ -51,7 +51,7 @@
           class="wb-agent-kb"
           :class="{ disabled: !kb.enabled }"
         >
-          <div class="wb-agent-kb-row">
+          <div class="wb-agent-kb-row wb-u-row wb-u-gap-1">
             <input
               class="wb-agent-kb-name"
               :value="kb.name"
@@ -182,9 +182,7 @@
         />
       </div>
       <div class="wb-form-field">
-        <label class="wb-form-label">{{
-          uiStore.t('agent.settings.compactThresholdRatio')
-        }}</label>
+        <label class="wb-form-label">{{ uiStore.t('agent.settings.compactThresholdRatio') }}</label>
         <NumberInput
           :model-value="agentStore.config.compactThresholdRatio"
           :min="0"
@@ -212,10 +210,7 @@ const uiStore = useUiStore();
 const agentStore = useAgentStore();
 
 /** system/project/workflow 三块文本的统一变更入口。 */
-function onBlockChange(
-  e: Event,
-  key: 'system' | 'project' | 'workflow'
-): void {
+function onBlockChange(e: Event, key: 'system' | 'project' | 'workflow'): void {
   const prompts = agentStore.config.prompts;
   prompts[key] = (e.target as HTMLTextAreaElement).value;
   agentStore.updateConfig({ prompts: { ...prompts } });

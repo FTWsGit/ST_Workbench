@@ -357,11 +357,7 @@ export const useAgentStore = defineStore('agent', () => {
     });
   }
 
-  function pushAssistantMessage(
-    content: string,
-    toolCalls?: ToolCall[],
-    reasoning?: string
-  ): void {
+  function pushAssistantMessage(content: string, toolCalls?: ToolCall[], reasoning?: string): void {
     activeSessionMessages.value.push({
       role: 'assistant',
       text: content,
@@ -488,10 +484,11 @@ export const useAgentStore = defineStore('agent', () => {
         runtime.value = { ...runtime.value, turnState: 'tool_loop' };
 
         // 并行执行本轮所有工具调用（按调用顺序并发起 Promise，Promise.all 等齐）
-        runtime.value = { ...runtime.value, currentTool: result.toolCalls.map((c) => c.name).join(', ') };
-        const outcomes = await Promise.all(
-          result.toolCalls.map((call) => executeTool(call))
-        );
+        runtime.value = {
+          ...runtime.value,
+          currentTool: result.toolCalls.map((c) => c.name).join(', '),
+        };
+        const outcomes = await Promise.all(result.toolCalls.map((call) => executeTool(call)));
         let stoppedByApproval = false;
         result.toolCalls.forEach((call, idx) => {
           const outcome = outcomes[idx];
@@ -515,7 +512,9 @@ export const useAgentStore = defineStore('agent', () => {
     } catch (e) {
       // 用户取消：emit GENERATION_STOPPED 后 ST 内部 abort fetch，抛 AbortError
       const isAbort =
-        (typeof DOMException !== 'undefined' && e instanceof DOMException && e.name === 'AbortError') ||
+        (typeof DOMException !== 'undefined' &&
+          e instanceof DOMException &&
+          e.name === 'AbortError') ||
         (e instanceof Error && /^abort|cancelled|user abort/i.test(e.message));
       if (isAbort) {
         await finalizeTurn('canceled');
@@ -656,8 +655,7 @@ export const useAgentStore = defineStore('agent', () => {
         }
       )?.SillyTavern?.getContext?.();
       const eventSource = ctx?.['eventSource'] as
-        | { emit?: (type: string) => Promise<void> | void }
-        | undefined;
+        { emit?: (type: string) => Promise<void> | void } | undefined;
       const eventTypes = ctx?.['event_types'] as { GENERATION_STOPPED?: string } | undefined;
       const type = eventTypes?.GENERATION_STOPPED;
       if (eventSource?.emit && type) {

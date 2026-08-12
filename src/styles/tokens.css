@@ -1,0 +1,184 @@
+.st-wb {
+  /* =========================================================================
+   * Layer 1 · Primitive tokens — 原始色阶/字号/半径，无语义，仅作 single source of truth。
+   * 改这层 = 改全局基底；上层 semantic 全靠 var() 引用，自动跟变。
+   * ========================================================================= */
+  /* Neutral ramp（中性灰阶，从深到浅）*/
+  --wb-neutral-0: #0f1017; /* 最深底 */
+  --wb-neutral-1: #15161f;
+  --wb-neutral-2: #1b1d27;
+  --wb-neutral-3: #232530;
+  --wb-neutral-4: #2b2e3c;
+  --wb-neutral-5: #282a3a; /* 边线 */
+  --wb-neutral-6: #3a3c4e; /* 悬停滚动条 */
+  /* Accent ramp（主题强调色，琥珀色系）*/
+  --wb-amber-0: #c8954a; /* 主题强调 */
+  --wb-amber-1: #d8a55a; /* 强调高亮 */
+  /* Amber alpha ramp — 强调色带透明度的阶（边线/淡底/悬停底等），反复出现的 rgba(200,149,74,X) 全收于此 */
+  --wb-amber-a0: rgba(200, 149, 74, 0.15); /* 焦点环 halo（input focus 2px ring）*/
+  --wb-amber-a1: rgba(200, 149, 74, 0.18); /* 淡底（toggle on / pb-marker）*/
+  --wb-amber-a2: rgba(200, 149, 74, 0.22); /* 强调淡底（accent hover / phl）*/
+  --wb-amber-a3: rgba(200, 149, 74, 0.25); /* 边线弱（preview panel border）*/
+  --wb-amber-a4: rgba(200, 149, 74, 0.3); /* 边线中（selected border / drag over）*/
+  --wb-amber-a5: rgba(200, 149, 74, 0.35); /* 边线强（btn hover）*/
+  --wb-amber-a6: rgba(200, 149, 74, 0.4); /* 边线最强（var-popup border / btn accent）*/
+  --wb-amber-a7: rgba(200, 149, 74, 0.5); /* toggle on 边线 */
+  /* Shadow alpha ramp — 黑色阴影透明度阶，rgba(0,0,0,X) 全收于此 */
+  --wb-shadow-a1: rgba(0, 0, 0, 0.45); /* var-popup / preview float */
+  --wb-shadow-a2: rgba(0, 0, 0, 0.5); /* FAB / right-panel float / backdrop / float-mobile */
+  --wb-shadow-a3: rgba(0, 0, 0, 0.55); /* modal-overlay / preview-panel float / big modal */
+  --wb-shadow-a4: rgba(0, 0, 0, 0.6); /* dragging / mobile sheet */
+  /* Border alpha ramp — neutral 边线带透明度，rgba(40,42,58,X)（弱分隔线）*/
+  --wb-border-a1: rgba(40, 42, 58, 0.5); /* pb-msg 分隔 */
+  --wb-border-a2: rgba(40, 42, 58, 0.55); /* vr-group 顶线 */
+  --wb-border-a3: rgba(40, 42, 58, 0.6); /* pb-header 底线 */
+  /* Semantic ramp（语义色：危险/成功）*/
+  --wb-red-0: #b86060; /* 危险 */
+  --wb-green-0: #60b060; /* 成功 */
+  /* Text ramp（文本灰，按对比度递弱）*/
+  --wb-text-0: #ccc8be; /* 主文本 ≈ 11.3:1 */
+  --wb-text-1: #a8a4b8; /* 次要 ≈ 6.4:1 */
+  --wb-text-2: #8fa0a2; /* 弱化 ≈ 4.7:1 */
+  /* Syntax highlight primitive（编辑器语法着色，跨主题复用）*/
+  --wb-hl-b: #58b8b0;
+  --wb-hl-k: #a078c0;
+  --wb-hl-s: #555570;
+  --wb-hl-v: #c8a045;
+  --wb-hl-c: #68b868;
+  --wb-hl-cm: #555570;
+  --wb-hl-m: #6090c0;
+  --wb-hl-sq: #c89850;
+  --wb-hl-dq: #78b0c0;
+  --wb-hl-ab: #60a870;
+  --wb-hl-sb: #d08a5c;
+  /* JS syntax highlight primitive（tavern_helper 脚本编辑器，Prism 语法高亮专用，见 useHighlight.ts
+   * 的 tokenizeJs）。语义相近的复用上面已有色相（keyword/comment/string/number），没有既有
+   * 类比的（函数名/参数名/类名/操作符与标点）新开三个色相，标点/操作符刻意用低对比度的
+   * text-2 灰调，避免结构噪音比标识符还抢眼。*/
+  --wb-hl-js-fn: #6bb8e0;
+  --wb-hl-js-param: #d08a5c;
+  --wb-hl-js-cls: #78c0a0;
+  --wb-hl-js-op: #8fa0a2;
+
+  /* Role primitive — ST 角色 schema 色票（sys/user/asst）+ 变量类型色票（set/add/get）。
+   * 这套是跨 domain 复用、带透明度的语义色票，不进 neutral/amber ramp，独立成系。
+   * background 用 rgba（透明底），color 用纯色（标签文字），分开定义避免透明度耦合。 */
+  --wb-role-sys-bg: rgba(236, 72, 153, 0.2);
+  --wb-role-sys-fg: #f9a8d4;
+  --wb-role-user-bg: rgba(0, 178, 255, 0.25);
+  --wb-role-user-fg: #9ad9ff;
+  --wb-role-asst-bg: rgba(74, 222, 128, 0.18);
+  --wb-role-asst-fg: #8af0a9;
+  --wb-role-set-bg: rgba(74, 222, 128, 0.16);
+  --wb-role-set-fg: #4ade80;
+  --wb-role-add-bg: rgba(96, 165, 250, 0.16);
+  --wb-role-add-fg: #60a5fa;
+  --wb-role-get-bg: rgba(251, 191, 36, 0.16);
+  --wb-role-get-fg: #fbbf24;
+
+  /* Spacing scale（4px 基刻度）*/
+  --wb-space-1: 4px;
+  --wb-space-2: 6px;
+  --wb-space-3: 10px;
+  --wb-space-4: 14px;
+  --wb-space-5: 20px;
+  /* Radius scale */
+  --wb-radius-0: 3px;
+  --wb-radius-1: 4px;
+  --wb-radius-2: 8px;
+  /* Typography scale — 之前全项目 100+ 处 font-size 都是散落字面量（9px~16px 十几个不同值，
+   * 同一语义在不同组件里字号还不一致），没有一层统一收口。这里补上，映射规则：
+   * fs-0 只给"纯装饰性"的极小元素（折叠箭头/徽标），不用于任何要读的文字；
+   * fs-1 是能接受的最小阅读字号（tool 参数/角色标签/计数这类高频扫视但非精读的 meta 文本）；
+   * fs-2/fs-3 是绝大多数控件与正文的默认区间，fs-3 是全局出现频率最高的"默认"字号；
+   * fs-4/fs-5 用于标题、强调正文（agent 回复正文、弹窗标题）。
+   * 原来还有 12.5px / 11.5px 这类"半像素"值（应该是历史上手感调节留下的），予以合并进相邻整数
+   * 档位，不再保留半档——字号 token 化的意义就在于把这类漂移收敛掉，而不是把漂移也变量化。 */
+  --wb-fs-0: 10px;
+  --wb-fs-1: 11px;
+  --wb-fs-2: 12px;
+  --wb-fs-3: 13px;
+  --wb-fs-4: 14px;
+  --wb-fs-5: 15px;
+  /* Control sizing */
+  --wb-size-ctrl-h: 34px; /* 桌面端标准控件高度（按钮/下拉框）*/
+  --wb-size-icon-btn: 34px; /* 纯图标按钮正方形尺寸 */
+  --wb-size-editor-pad: 16px; /* 编辑器内边距，textarea/highlight/measure 共用（行号测量硬契约，见 HighlightedEditor.vue）*/
+
+  /* =========================================================================
+   * Layer 2 · Semantic tokens — 用途别名，引用 primitive。改这层 = 改主题映射。
+   * ========================================================================= */
+  /* Surfaces（背景层级：底/副/凸/悬/激活）*/
+  --wb-bg: var(--wb-neutral-0);
+  --wb-bg-s: var(--wb-neutral-1);
+  --wb-bg-e: var(--wb-neutral-2);
+  --wb-bg-h: var(--wb-neutral-3);
+  --wb-bg-a: var(--wb-neutral-4);
+  --wb-bg-input: var(--wb-neutral-1);
+  /* Borders */
+  --wb-border: var(--wb-neutral-5);
+  --wb-border-f: var(--wb-amber-0); /* focus 边线 */
+  /* Text（主/次/弱）*/
+  --wb-tx: var(--wb-text-0);
+  --wb-tx2: var(--wb-text-1);
+  --wb-tx3: var(--wb-text-2);
+  /* Accent（主题强调：基/高亮/淡底）*/
+  --wb-ac: var(--wb-amber-0);
+  --wb-ac-h: var(--wb-amber-1);
+  --wb-ac-d: rgba(200, 149, 74, 0.12); /* 强调淡底，需透明度，留字面量 */
+  /* Semantic states */
+  --wb-dg: var(--wb-red-0);
+  --wb-dg-d: rgba(184, 96, 96, 0.14);
+  --wb-ok: var(--wb-green-0);
+  /* Spacing（语义间距，引用刻度）*/
+  --wb-sp-1: var(--wb-space-1);
+  --wb-sp-2: var(--wb-space-2);
+  --wb-sp-3: var(--wb-space-3);
+  --wb-sp-4: var(--wb-space-4);
+  --wb-sp-5: var(--wb-space-5);
+  /* Radius */
+  --wb-r: var(--wb-radius-2); /* 默认圆角 */
+  --wb-rs: var(--wb-radius-1); /* 小圆角（按钮/条目）*/
+  /* Control sizing */
+  --wb-ctrl-h: var(--wb-size-ctrl-h);
+  --wb-icon-btn: var(--wb-size-icon-btn);
+  --wb-editor-pad: var(--wb-size-editor-pad);
+
+  /* =========================================================================
+   * Layer 3 · Component tokens — 组件级覆写，引用 semantic。当前扁平项目少有组件级
+   * 差异，这里暂留少数；后续加组件变体（如悬浮窗独立主题）只在这一层加，不动 primitive/semantic。
+   * ========================================================================= */
+  /* （预留：组件级令牌按需在此追加，例 --wb-btn-bg / --wb-modal-pad 等）*/
+
+  /* Fonts / transition（无分层的全局基底，不进三层体系）*/
+  --wb-fm: 'DM Sans', -apple-system, sans-serif;
+  --wb-fc: 'JetBrains Mono', 'Fira Code', monospace;
+  --wb-tr: 0.2s ease;
+  --wb-fs: 14.5px;
+  --wb-lh: 1.65;
+  --wb-ff: 'JetBrains Mono', 'Fira Code', monospace;
+  /* 兼容旧引用：语法着色令牌保留扁平名，避免改 useHighlight.ts 全量重命名 */
+  --hl-b: var(--wb-hl-b);
+  --hl-k: var(--wb-hl-k);
+  --hl-s: var(--wb-hl-s);
+  --hl-v: var(--wb-hl-v);
+  --hl-c: var(--wb-hl-c);
+  --hl-cm: var(--wb-hl-cm);
+  --hl-m: var(--wb-hl-m);
+  --hl-sq: var(--wb-hl-sq);
+  --hl-dq: var(--wb-hl-dq);
+  --hl-ab: var(--wb-hl-ab);
+  --hl-sb: var(--wb-hl-sb);
+  --hl-js-fn: var(--wb-hl-js-fn);
+  --hl-js-param: var(--wb-hl-js-param);
+  --hl-js-cls: var(--wb-hl-js-cls);
+  --hl-js-op: var(--wb-hl-js-op);
+
+  font-family: var(--wb-fm);
+  color: var(--wb-tx);
+  font-size: 16px;
+  line-height: 1.5;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}

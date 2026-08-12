@@ -9,7 +9,7 @@
       <span>{{ uiStore.t('character.sidebar.title') }}</span>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.hasData" class="wb-preset-cp-empty">
+      <p v-if="!store.hasData" class="wb-list-empty">
         {{ uiStore.t('character.sidebar.empty') }}
       </p>
       <template v-else>

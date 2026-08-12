@@ -303,10 +303,7 @@
               class="wb-agent-msg-collapse"
               :class="{ open: openCollapse[i + 'reasoning'] }"
             >
-              <button
-                class="wb-agent-msg-collapse-toggle"
-                @click="toggleCollapse(i + 'reasoning')"
-              >
+              <button class="wb-agent-msg-collapse-toggle" @click="toggleCollapse(i + 'reasoning')">
                 <span class="wb-agent-msg-collapse-arrow">▶</span>
                 {{ uiStore.t('agent.msg.thinking') }}
               </button>
@@ -314,14 +311,8 @@
             </div>
             <!-- tool_result：正文可折叠 -->
             <template v-if="msg.role === 'tool'">
-              <div
-                class="wb-agent-msg-collapse"
-                :class="{ open: openCollapse[i + 'tool'] }"
-              >
-                <button
-                  class="wb-agent-msg-collapse-toggle"
-                  @click="toggleCollapse(i + 'tool')"
-                >
+              <div class="wb-agent-msg-collapse" :class="{ open: openCollapse[i + 'tool'] }">
+                <button class="wb-agent-msg-collapse-toggle" @click="toggleCollapse(i + 'tool')">
                   <span class="wb-agent-msg-collapse-arrow">▶</span>
                   {{ uiStore.t('agent.msg.toolResult') }}
                 </button>

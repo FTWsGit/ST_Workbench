@@ -1,0 +1,11 @@
+/* ===== Regex domain: RegexSettingsForm.vue / RegexSidebar.vue ===== */
+
+.wb-form-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wb-sp-1) var(--wb-sp-4);
+}
+
+.wb-form-textarea.invalid {
+  border-color: var(--wb-dg);
+}

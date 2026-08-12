@@ -76,7 +76,7 @@
       </FormField>
     </AdvancedGroup>
   </div>
-  <p v-else class="wb-preset-cp-empty">
+  <p v-else class="wb-list-empty">
     {{ uiStore.t('preset.toast.loadFirst') }}
   </p>
 </template>

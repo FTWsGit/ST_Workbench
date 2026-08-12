@@ -1,0 +1,98 @@
+.st-wb *,
+.st-wb *::before,
+.st-wb *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+.st-wb button {
+  font-family: var(--wb-fm);
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--wb-tx);
+  font-size: var(--wb-fs-3);
+}
+/* :not([type='checkbox']) — checkbox 曾经吃过这条规则的亏：input 元素默认也会命中这里，
+ * padding/background/border 把 checkbox 撑成长方形，跟它自己想画的勾选态背景打架，勾选后
+ * 对号"融进背景里"。之前的修法是在 .wb-form-check 这一个用到 checkbox 的类里单独 appearance:none
+ * 覆写，但项目里还有 .wb-agent-toggle / .wb-agent-approval-auto / .wb-batch-script-item 等好几处
+ * 也用了裸 <input type="checkbox">，没套 .wb-form-check，同样的问题原样复现。改成在源头排除
+ * checkbox，再统一定义一份全局 checkbox 外观（见下方 .st-wb input[type='checkbox']），不管哪个
+ * 组件、哪个包裹类里写 <input type="checkbox">，都自动拿到统一样式，不用逐处补丁。 */
+.st-wb input:not([type='checkbox']),
+.st-wb select,
+.st-wb textarea {
+  font-family: var(--wb-fm);
+  color: var(--wb-tx);
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  padding: var(--wb-sp-2) 10px;
+  font-size: var(--wb-fs-3);
+  outline: none;
+  transition: border var(--wb-tr);
+}
+.st-wb input:not([type='checkbox']):focus,
+.st-wb select:focus,
+.st-wb textarea:focus {
+  border-color: var(--wb-border-f);
+}
+/* 全局 checkbox 外观——不依赖任何包裹类，任何 <input type="checkbox"> 都会命中。
+ * appearance:none 完全自己画（方框尺寸/边框/勾选态颜色），不依赖浏览器/WebView2 对
+ * accent-color 与自定义 background 混用时的处理差异，跨平台表现一致。 */
+.st-wb input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid var(--wb-tx3);
+  border-radius: var(--wb-radius-0);
+  background: var(--wb-bg-input);
+  cursor: pointer;
+  position: relative;
+  transition: all var(--wb-tr);
+}
+.st-wb input[type='checkbox']:hover {
+  border-color: var(--wb-ac);
+}
+.st-wb input[type='checkbox']:checked {
+  background: var(--wb-ac);
+  border-color: var(--wb-ac);
+}
+.st-wb input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 3px;
+  height: 7px;
+  border: solid var(--wb-bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.st-wb select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2378768a'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 26px;
+}
+.st-wb ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.st-wb ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.st-wb ::-webkit-scrollbar-thumb {
+  background: var(--wb-border);
+  border-radius: var(--wb-radius-0);
+}
+.st-wb ::-webkit-scrollbar-thumb:hover {
+  background: var(--wb-neutral-6);
+}

@@ -26,7 +26,7 @@
       </div>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.tavernHelper.scripts.length" class="wb-preset-cp-empty">
+      <p v-if="!store.tavernHelper.scripts.length" class="wb-list-empty">
         {{ uiStore.t('tavern.sidebar.empty') }}
       </p>
       <template v-for="(node, gi) in store.scriptTreeFlatNodes" :key="nodeKey(node, gi)">

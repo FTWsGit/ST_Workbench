@@ -1,0 +1,359 @@
+/* ====== Agent Panel (right sidebar, cross-store ops assistant) ======
+   docked/overlay 复用共享的右侧栏外观；float 形态由 FloatingPanelShell 接管。
+   消息列表/输入行/设置区共用同一套 .wb-agent-* 视觉，三种形态一致。 */
+.wb-agent-panel {
+  background: var(--wb-bg-e);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wb-agent-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wb-agent-float-title {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-1);
+  flex: 1;
+  min-width: 0;
+}
+.wb-agent-float-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-agent-settings-toggle {
+  align-self: flex-start;
+  margin: 8px 12px 0;
+  flex-shrink: 0;
+}
+.wb-agent-settings {
+  padding: 14px 14px 16px;
+  border-bottom: 1px solid var(--wb-border);
+  background: var(--wb-bg);
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+.wb-agent-settings-prompt {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--wb-ff);
+  font-size: var(--wb-fs);
+  line-height: 1.5;
+  resize: vertical;
+}
+/* knowledge block list */
+.wb-agent-kb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wb-sp-2);
+}
+.wb-agent-kb-empty {
+  font-size: var(--wb-fs-2);
+  color: var(--wb-tx3);
+  padding: 6px 0;
+}
+.wb-agent-kb {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  background: var(--wb-bg-s);
+}
+.wb-agent-kb.disabled {
+  opacity: 0.55;
+}
+/* 布局纯靠 wb-u-row + wb-u-gap-1 两个工具类接管（见文件顶部 Utility classes），这里不再重复
+ * 定义 display/align-items/gap——.wb-agent-kb-row 这个类保留只是为了后续如果这一行需要专属
+ * 样式（比如 hover 态）还有地方挂，纯布局场景本身不需要它。模板改法见 AgentSettings.vue。 */
+.wb-agent-kb-name {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-0);
+  background: var(--wb-bg-input);
+  font-size: var(--wb-fs-3);
+  font-weight: 600;
+}
+.wb-agent-kb-desc {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius-0);
+  background: var(--wb-bg-input);
+  font-size: var(--wb-fs-2);
+  color: var(--wb-tx2);
+}
+/* Settings form field spacing: each field block needs breathing room between
+   label/controls and the next field. The 12px gap also pushes the bottom row
+   of buttons away from the textarea text above. */
+.wb-agent-settings .wb-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.wb-agent-settings .wb-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wb-agent-settings .wb-form-label {
+  font-size: var(--wb-fs-2);
+  font-weight: 600;
+  color: var(--wb-tx2);
+  margin: 0;
+}
+.wb-agent-settings select,
+.wb-agent-settings textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  background: var(--wb-bg-input);
+  font-size: var(--wb-fs-4);
+}
+.wb-agent-version-error {
+  padding: 12px;
+  margin: 10px 12px 0;
+  border: 1px solid var(--wb-amber-a3);
+  border-radius: var(--wb-rs);
+  background: var(--wb-bg);
+  flex-shrink: 0;
+}
+.wb-agent-version-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--wb-tx);
+}
+.wb-agent-version-body {
+  font-size: var(--wb-fs-2);
+  color: var(--wb-tx2);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.wb-agent-version-meta {
+  font-size: var(--wb-fs-2);
+  color: var(--wb-tx3);
+  margin-bottom: 8px;
+}
+.wb-agent-session-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--wb-sp-2);
+  padding: 8px 12px 4px;
+  flex-shrink: 0;
+}
+.wb-agent-session-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  font-size: var(--wb-fs-2);
+  font-weight: 600;
+  color: var(--wb-tx2);
+  background: var(--wb-bg-input);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-rs);
+  padding: 3px 6px;
+}
+.wb-agent-session-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--wb-fs-3);
+  font-weight: 700;
+  color: var(--wb-tx2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-agent-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wb-agent-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--wb-tx3);
+  padding: 20px;
+}
+.wb-agent-empty-title {
+  font-size: var(--wb-fs-4);
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--wb-tx2);
+}
+.wb-agent-empty-hint {
+  font-size: var(--wb-fs-2);
+  line-height: 1.5;
+}
+.wb-agent-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--wb-rs);
+  background: var(--wb-bg);
+  border: 1px solid var(--wb-border);
+}
+.wb-agent-msg.role-user {
+  background: var(--wb-bg-s);
+}
+.wb-agent-msg.role-tool {
+  border-style: dashed;
+}
+.wb-agent-msg.error {
+  border-color: var(--wb-amber-a3);
+}
+.wb-agent-msg.synthetic {
+  opacity: 0.65;
+}
+.wb-agent-msg-role {
+  font-size: var(--wb-fs-1);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--wb-tx3);
+  text-transform: uppercase;
+}
+.wb-agent-msg-text {
+  font-size: var(--wb-fs-5);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--wb-tx);
+}
+.wb-agent-msg-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.wb-agent-msg-tool {
+  font-size: var(--wb-fs-1);
+  color: var(--wb-tx2);
+  background: var(--wb-bg-input);
+  border-radius: var(--wb-radius-0);
+  padding: 2px 6px;
+  align-self: flex-start;
+}
+/* 折叠区块（thinking / tool_result / tool_call args）。默认折叠：body 不渲染。 */
+.wb-agent-msg-collapse {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wb-agent-msg-collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: var(--wb-fs-1);
+  font-weight: 600;
+  color: var(--wb-tx3);
+  text-align: left;
+}
+.wb-agent-msg-collapse-arrow {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  font-size: 9px;
+}
+.wb-agent-msg-collapse.open .wb-agent-msg-collapse-arrow {
+  transform: rotate(90deg);
+}
+/* 折叠态：隐藏 body；展开态：显示。CSS 只控制显隐，不动画高度（pre-wrap 内容高度不定）。 */
+.wb-agent-msg-collapse > .wb-agent-msg-thinking-body,
+.wb-agent-msg-collapse > .wb-agent-msg-text,
+.wb-agent-msg-collapse > .wb-agent-msg-tool-args {
+  display: none;
+}
+.wb-agent-msg-collapse.open > .wb-agent-msg-thinking-body,
+.wb-agent-msg-collapse.open > .wb-agent-msg-text,
+.wb-agent-msg-collapse.open > .wb-agent-msg-tool-args {
+  display: block;
+}
+.wb-agent-msg-thinking-body {
+  font-size: var(--wb-fs-2);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--wb-tx2);
+  background: var(--wb-bg-s);
+  border-left: 2px solid var(--wb-border);
+  padding: 6px 8px;
+  border-radius: 0 var(--wb-radius-0) var(--wb-radius-0) 0;
+}
+.wb-agent-msg-tool-args {
+  font-size: var(--wb-fs-1);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--wb-tx3);
+  margin-top: 2px;
+}
+.wb-agent-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--wb-border);
+}
+.wb-agent-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wb-tx3);
+  flex-shrink: 0;
+}
+.wb-agent-status-dot.thinking,
+.wb-agent-status-dot.tool_loop,
+.wb-agent-status-dot.pending_approval {
+  background: var(--wb-ac);
+}
+.wb-agent-status-dot.error {
+  background: var(--wb-amber-a3);
+}
+.wb-agent-status-dot.complete {
+  background: #68b868;
+}
+.wb-agent-status-text {
+  font-size: var(--wb-fs-2);
+  color: var(--wb-tx3);
+}
+.wb-agent-status-tokens {
+  margin-left: auto;
+  color: var(--wb-tx3);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.wb-agent-input-row {
+  display: flex;
+  gap: var(--wb-sp-2);
+  padding: 8px 12px;
+  border-top: 1px solid var(--wb-border);
+  flex-shrink: 0;
+}
+.wb-agent-input {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  font-family: var(--wb-ff);
+  font-size: var(--wb-fs);
+  line-height: 1.5;
+  padding: 6px 8px;
+}

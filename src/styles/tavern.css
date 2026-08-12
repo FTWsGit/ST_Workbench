@@ -1,0 +1,18 @@
+/* ===== Tavern domain: TavernSettingsForm.vue / TavernContentEditor.vue ===== */
+
+/* TavernSettingsForm.vue：酒馆设置表单的分区/按钮列表/JSON 预览 */
+.wb-form-buttons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wb-form-button-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.wb-form-data-json {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+  tab-size: 2;
+}

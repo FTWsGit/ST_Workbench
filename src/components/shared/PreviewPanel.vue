@@ -9,8 +9,8 @@
     @close="uiStore.previewOpen = false"
   >
     <template #title>
-      <span class="wb-preset-preview-float-title">
-        <span class="wb-preset-preview-float-name">{{ uiStore.t('preset.preview.title') }}</span>
+      <span class="wb-preview-float-title">
+        <span class="wb-preview-float-name">{{ uiStore.t('preset.preview.title') }}</span>
         <button
           v-if="uiStore.previewMode === 'blocks'"
           class="wb-btn icon-btn"
@@ -23,25 +23,25 @@
         <PanelModeSwitch :model-value="mode" @update:model-value="setMode" />
       </span>
     </template>
-    <div class="wb-preset-preview-body">
-      <div class="wb-preset-pp-tools">
-        <div class="wb-preset-preview-tabs">
+    <div class="wb-preview-body">
+      <div class="wb-pp-tools">
+        <div class="wb-preview-tabs">
           <button
-            class="wb-preset-preview-tab"
+            class="wb-preview-tab"
             :class="{ active: uiStore.previewMode === 'blocks' }"
             @click="uiStore.previewMode = 'blocks'"
           >
             {{ uiStore.t('preset.preview.modeBlocks') }}
           </button>
           <button
-            class="wb-preset-preview-tab"
+            class="wb-preview-tab"
             :class="{ active: uiStore.previewMode === 'raw' }"
             @click="uiStore.previewMode = 'raw'"
           >
             {{ uiStore.t('preset.preview.modeRaw') }}
           </button>
         </div>
-        <p class="wb-preset-pp-mode-hint">
+        <p class="wb-pp-mode-hint">
           <template v-if="uiStore.previewMode === 'blocks'">{{
             uiStore.t('preset.preview.hintBlocks')
           }}</template>
@@ -58,42 +58,42 @@
             {{ uiStore.t('preset.preview.copy') }}
           </button>
         </div>
-        <p v-if="uiStore.previewError" class="wb-preset-pp-error">⚠ {{ uiStore.previewError }}</p>
+        <p v-if="uiStore.previewError" class="wb-pp-error">⚠ {{ uiStore.previewError }}</p>
       </div>
-      <div class="wb-preset-pp-output-wrap">
+      <div class="wb-pp-output-wrap">
         <template v-if="uiStore.previewMode === 'blocks'">
           <template v-if="uiStore.previewBlockGroups.length">
             <div
               v-for="g in uiStore.previewBlockGroups"
               :key="g.id"
-              class="wb-preset-pb-block"
+              class="wb-pb-block"
               :class="{ collapsed: uiStore.previewCollapsed[g.id] }"
             >
-              <div class="wb-preset-pb-header" @click="uiStore.togglePreviewBlock(g.id)">
-                <span v-if="g.isMarker" class="wb-preset-pb-role pb-marker">MARKER</span>
-                <span class="wb-preset-pb-name">{{ g.name }}</span>
-                <span class="wb-preset-pb-msg-count" v-if="g.messages.length > 1"
+              <div class="wb-pb-header" @click="uiStore.togglePreviewBlock(g.id)">
+                <span v-if="g.isMarker" class="wb-pb-role pb-marker">MARKER</span>
+                <span class="wb-pb-name">{{ g.name }}</span>
+                <span class="wb-pb-msg-count" v-if="g.messages.length > 1"
                   >{{ g.messages.length }} {{ uiStore.t('common.messages') }}</span
                 >
                 <button
-                  class="wb-preset-pb-toggle"
+                  class="wb-pb-toggle"
                   :title="uiStore.t('preset.preview.collapseExpandSingle')"
                 >
                   ▾
                 </button>
               </div>
-              <div class="wb-preset-pb-body">
-                <div v-for="(m, mi) in g.messages" :key="mi" class="wb-preset-pb-msg">
-                  <div class="wb-preset-pb-msg-meta">
-                    <span class="wb-preset-pb-role" :class="roleClass(m.role)">{{
+              <div class="wb-pb-body">
+                <div v-for="(m, mi) in g.messages" :key="mi" class="wb-pb-msg">
+                  <div class="wb-pb-msg-meta">
+                    <span class="wb-pb-role" :class="roleClass(m.role)">{{
                       m.role.toUpperCase()
                     }}</span>
-                    <span class="wb-preset-pb-tokens"
+                    <span class="wb-pb-tokens"
                       >{{ m.tokens }} {{ uiStore.t('common.tokens') }}</span
                     >
                   </div>
                   <!-- eslint-disable-next-line vue/no-v-html -->
-                  <pre class="wb-preset-pb-msg-text" v-html="renderSegments(m.segments)"></pre>
+                  <pre class="wb-pb-msg-text" v-html="renderSegments(m.segments)"></pre>
                 </div>
               </div>
             </div>
@@ -103,7 +103,7 @@
           </p>
         </template>
         <template v-else>
-          <pre v-if="uiStore.previewRawText" class="wb-preset-pp-raw">{{
+          <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{
             uiStore.previewRawText
           }}</pre>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
@@ -117,7 +117,7 @@
   <!-- 嵌入/悬浮态：docked 在文档流里挤开编辑区；overlay absolute 盖在右侧不挤开。 -->
   <div
     v-else
-    class="wb-preset-preview-panel"
+    class="wb-preview-panel"
     :class="{ float: mode === 'overlay' }"
     :style="{ width: uiStore.settings.previewWidth + 'px' }"
   >
@@ -148,25 +148,25 @@
         </button>
       </div>
     </div>
-    <div class="wb-preset-preview-body">
-      <div class="wb-preset-pp-tools">
-        <div class="wb-preset-preview-tabs">
+    <div class="wb-preview-body">
+      <div class="wb-pp-tools">
+        <div class="wb-preview-tabs">
           <button
-            class="wb-preset-preview-tab"
+            class="wb-preview-tab"
             :class="{ active: uiStore.previewMode === 'blocks' }"
             @click="uiStore.previewMode = 'blocks'"
           >
             {{ uiStore.t('preset.preview.modeBlocks') }}
           </button>
           <button
-            class="wb-preset-preview-tab"
+            class="wb-preview-tab"
             :class="{ active: uiStore.previewMode === 'raw' }"
             @click="uiStore.previewMode = 'raw'"
           >
             {{ uiStore.t('preset.preview.modeRaw') }}
           </button>
         </div>
-        <p class="wb-preset-pp-mode-hint">
+        <p class="wb-pp-mode-hint">
           <template v-if="uiStore.previewMode === 'blocks'">{{
             uiStore.t('preset.preview.hintBlocks')
           }}</template>
@@ -183,42 +183,42 @@
             {{ uiStore.t('preset.preview.copy') }}
           </button>
         </div>
-        <p v-if="uiStore.previewError" class="wb-preset-pp-error">⚠ {{ uiStore.previewError }}</p>
+        <p v-if="uiStore.previewError" class="wb-pp-error">⚠ {{ uiStore.previewError }}</p>
       </div>
-      <div class="wb-preset-pp-output-wrap">
+      <div class="wb-pp-output-wrap">
         <template v-if="uiStore.previewMode === 'blocks'">
           <template v-if="uiStore.previewBlockGroups.length">
             <div
               v-for="g in uiStore.previewBlockGroups"
               :key="g.id"
-              class="wb-preset-pb-block"
+              class="wb-pb-block"
               :class="{ collapsed: uiStore.previewCollapsed[g.id] }"
             >
-              <div class="wb-preset-pb-header" @click="uiStore.togglePreviewBlock(g.id)">
-                <span v-if="g.isMarker" class="wb-preset-pb-role pb-marker">MARKER</span>
-                <span class="wb-preset-pb-name">{{ g.name }}</span>
-                <span class="wb-preset-pb-msg-count" v-if="g.messages.length > 1"
+              <div class="wb-pb-header" @click="uiStore.togglePreviewBlock(g.id)">
+                <span v-if="g.isMarker" class="wb-pb-role pb-marker">MARKER</span>
+                <span class="wb-pb-name">{{ g.name }}</span>
+                <span class="wb-pb-msg-count" v-if="g.messages.length > 1"
                   >{{ g.messages.length }} {{ uiStore.t('common.messages') }}</span
                 >
                 <button
-                  class="wb-preset-pb-toggle"
+                  class="wb-pb-toggle"
                   :title="uiStore.t('preset.preview.collapseExpandSingle')"
                 >
                   ▾
                 </button>
               </div>
-              <div class="wb-preset-pb-body">
-                <div v-for="(m, mi) in g.messages" :key="mi" class="wb-preset-pb-msg">
-                  <div class="wb-preset-pb-msg-meta">
-                    <span class="wb-preset-pb-role" :class="roleClass(m.role)">{{
+              <div class="wb-pb-body">
+                <div v-for="(m, mi) in g.messages" :key="mi" class="wb-pb-msg">
+                  <div class="wb-pb-msg-meta">
+                    <span class="wb-pb-role" :class="roleClass(m.role)">{{
                       m.role.toUpperCase()
                     }}</span>
-                    <span class="wb-preset-pb-tokens"
+                    <span class="wb-pb-tokens"
                       >{{ m.tokens }} {{ uiStore.t('common.tokens') }}</span
                     >
                   </div>
                   <!-- eslint-disable-next-line vue/no-v-html -->
-                  <pre class="wb-preset-pb-msg-text" v-html="renderSegments(m.segments)"></pre>
+                  <pre class="wb-pb-msg-text" v-html="renderSegments(m.segments)"></pre>
                 </div>
               </div>
             </div>
@@ -228,7 +228,7 @@
           </p>
         </template>
         <template v-else>
-          <pre v-if="uiStore.previewRawText" class="wb-preset-pp-raw">{{
+          <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{
             uiStore.previewRawText
           }}</pre>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
@@ -285,7 +285,7 @@ function roleClass(role: string) {
 
 function renderSegments(segments: PreviewSegment[]) {
   return segments
-    .map((s) => (s.added ? `<span class="wb-preset-phl">${esc(s.text)}</span>` : esc(s.text)))
+    .map((s) => (s.added ? `<span class="wb-phl">${esc(s.text)}</span>` : esc(s.text)))
     .join('');
 }
 
