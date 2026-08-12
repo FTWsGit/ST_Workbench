@@ -1,22 +1,20 @@
 /* agent 持久化读写层。
  *
  * 走 SillyTavern 官方给扩展预留的 extensionSettings 通道（服务端 settings.json 同级），
- * 跟 characterApi.ts/presetApi.ts 同一套接入模式：ensureTopImporter() 顶层动态 import。
+ * 跟 characterApi.ts/presetApi.ts 同一套接入模式：顶层动态 import()。
  *
  * 纪律：
  *  - 写入前 deepClonePlain()，绝不把 Pinia 响应式对象塞进 extension_settings；
  *  - 读出来也过一次 deepClonePlain()，避免 agentStore 跟原始对象引用共享；
  *  - 命名空间键唯一不通用（ST_Workbench_Agent）。
  */
-import { ensureTopImporter } from './hostContext';
 import { deepClonePlain } from './apiUtils';
 import { AGENT_NS, AGENT_PERSISTED_VERSION } from '../agent/constants';
 import type { AgentPersisted } from '../agent/types';
 import { DEFAULT_AGENT_PERSISTED } from '../agent/defaultPersisted';
 
 async function getExtensionSettingsModule() {
-  const importer = await ensureTopImporter();
-  const mod = await importer('/scripts/extensions.js');
+  const mod = await import(/* @vite-ignore */ '/scripts/extensions.js' as string);
   if (!mod || typeof mod.extension_settings !== 'object') {
     throw new Error(
       'SillyTavern 扩展设置模块不可用（/scripts/extensions.js 结构异常，或当前 ST 版本已更新）'
@@ -26,8 +24,7 @@ async function getExtensionSettingsModule() {
 }
 
 async function getSaveSettingsFn(): Promise<() => void> {
-  const importer = await ensureTopImporter();
-  const scriptMod = await importer('/script.js');
+  const scriptMod = await import(/* @vite-ignore */ '/script.js' as string);
   if (typeof scriptMod.saveSettingsDebounced !== 'function') {
     throw new Error('SillyTavern 设置保存函数不可用（saveSettingsDebounced 缺失）');
   }

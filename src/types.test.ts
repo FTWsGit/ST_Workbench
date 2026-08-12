@@ -18,8 +18,8 @@ describe('DEFAULT_SETTINGS 与 Settings 字段对齐', () => {
   it('DEFAULT_SETTINGS 的 key 全集等于 Settings 接口的字段全集', () => {
     const defaultKeys = Object.keys(DEFAULT_SETTINGS).sort();
     // Settings 的字段全集由编译期类型系统保证（DEFAULT_SETTINGS: Settings 标注），
-    // 运行期断言其与 keyof Settings 的已知全集一致。这里直接列出 Settings 的 17 个字段名
-    // 作为对照基准（来自源码 L167-188），防止运行期漏检。
+    // 运行期断言其与 keyof Settings 的已知全集一致。这里直接列出 Settings 的 16 个字段名
+    // 作为对照基准（来自源码 Settings 接口），防止运行期漏检。
     const settingsFields: Array<keyof Settings> = [
       'editorFontSize',
       'editorFontFamily',
@@ -37,7 +37,6 @@ describe('DEFAULT_SETTINGS 与 Settings 字段对齐', () => {
       'settingsDockFloat',
       'collectionSwitchOpen',
       'language',
-      'fabPos',
     ];
     const expected = settingsFields.slice().sort();
     expect(defaultKeys).toEqual(expected);
@@ -64,7 +63,6 @@ describe('DEFAULT_SETTINGS 与 Settings 字段对齐', () => {
       'settingsDockFloat',
       'collectionSwitchOpen',
       'language',
-      'fabPos',
     ]);
     for (const k of Object.keys(DEFAULT_SETTINGS)) {
       expect(knownSettingsKeys.has(k)).toBe(true);

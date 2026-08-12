@@ -1,46 +1,5 @@
 /* ===== Common classes: app shell (App.vue) + shared components (components/shared/*) + cross-domain ===== */
 
-/* FAB */
-.wb-fab {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--wb-bg-e) !important;
-  border: 1px solid var(--wb-amber-a6) !important;
-  color: var(--wb-ac);
-  font-size: var(--wb-fs-5);
-  font-weight: var(--wb-fw-b);
-  cursor: pointer;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 20px var(--wb-shadow-a2);
-  transition: all 0.2s;
-  pointer-events: auto !important;
-  touch-action: none;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-.wb-fab:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 24px var(--wb-amber-a4);
-}
-/* While the long-press-drag is active (see App.vue's onFabPointerDown): no transition (it would
-   lag a whole frame behind the pointer), a "grabbing" cursor, and a slightly stronger shadow/scale
-   so there's an unambiguous visual "you're moving this now" cue distinct from the plain :hover
-   state above. */
-.wb-fab.dragging {
-  transition: none;
-  cursor: grabbing;
-  box-shadow: 0 6px 28px var(--wb-shadow-a4);
-  transform: scale(1.08);
-}
-
 /* Panel (fullscreen overlay) */
 .wb-panel {
   position: absolute;
@@ -1176,14 +1135,6 @@
 }
 
 /* Animations */
-.wb-fab-enter-active,
-.wb-fab-leave-active {
-  transition: opacity 0.2s ease;
-}
-.wb-fab-enter-from,
-.wb-fab-leave-to {
-  opacity: 0;
-}
 .wb-panel-enter-active,
 .wb-panel-leave-active {
   transition: all 0.25s ease;

@@ -13,11 +13,11 @@ import { useWorldbookStore } from './worldbookStore';
 
 /**
  * 全局 UI 状态单例。拥有：
- *   - settings（字体/颜色/面板宽度/语言/FAB 位置）
+ *   - settings（字体/颜色/面板宽度/语言）
  *   - toast 通知
  *   - i18n t() 函数
  *   - settings 弹窗开关（全局 —— settings 不是按 domain 分的）
- *   - 主面板开关（整个 ST_Workbench 浮动面板）
+ *   - 主面板开关（模态面板，由 ST 顶栏按钮/斜杠命令经 App.openPanel() 打开）
  */
 export const useUiStore = defineStore('ui', () => {
   const settings = ref<Settings>(loadSettings());
@@ -33,7 +33,7 @@ export const useUiStore = defineStore('ui', () => {
     };
   });
 
-  // 主面板开关 —— 整个 ST_Workbench 浮动面板。全局，不按 domain 分。
+  // 主面板开关 —— 模态面板开关，全局，不按 domain 分。
   const panelOpen = ref(false);
 
   // Settings 弹窗开关 —— 全局，不按 domain 分。

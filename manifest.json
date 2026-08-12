@@ -3,8 +3,13 @@
     "loading_order": 100,
     "requires": [],
     "optional": [],
-    "js": "dist/index.iife.js",
-    "css": "src/styles/main.css",
+    "js": "dist/index.js",
+    "css": "dist/style.css",
+    "hooks": {
+        "activate": "init",
+        "install": "refresh",
+        "update": "refresh"
+    },
     "author": "FTW",
     "version": "1.0.0",
     "homePage": "https://github.com/FTWsGit/ST_Workbench",

@@ -33,3 +33,27 @@
   padding: var(--wb-sp-2);
   overflow-y: auto;
 }
+
+/* ===== 模态面板（迁移后覆盖 common.css 里的 .wb-panel 基规则） =====
+ * 从「常驻 FAB + 可穿透全屏面板」迁移成「模态 dialog」后：
+ *  - 面板基底不再不透明白底，改由 ::before 提供 rgba(0,0,0,0.5) 半透明遮罩，
+ *    宿主页面透过面板表面间隙（或开合过渡期）看到压暗的页面，提示页面已冻结；
+ *  - 面板内部各表面（header/sidebar/editor 等）自带不透明背景，正常状态视觉不变。
+ * 注：.wb-panel 的 position:absolute; inset:0; z-index:100000 等基属性保留在 common.css，
+ *     这里只覆盖背景；pointer-events 不再需要（根容器 #ST_Workbench 已按 :has() 规则控制）。 */
+.wb-panel {
+  background: transparent;
+}
+.wb-panel::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--wb-shadow-a2); /* rgba(0,0,0,0.5) —— 模态遮罩 */
+  pointer-events: none;
+  z-index: -1;
+}
+/* 模态遮罩行为：main.ts 的根容器 #ST_Workbench 默认铺满视口且吃所有点击。面板关闭时容器内
+ * 没有 .wb-panel，若不放开指针事件会整页冻结宿主页面——:has() 让容器只在面板挂载时吞点击。 */
+#ST_Workbench:not(:has(.wb-panel)) {
+  pointer-events: none;
+}

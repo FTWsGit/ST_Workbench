@@ -181,11 +181,6 @@ export interface Settings {
   settingsDockFloat: boolean;
   collectionSwitchOpen: boolean;
   language: 'zh-CN' | 'en';
-  /** FAB 的显式左上角位置（px，视口坐标——见 App.vue 的 onFabPointerDown），
-   *  用户首次长按拖拽时设置。`null` 表示"使用 CSS 默认值"
-   *  (bottom:24px/right:24px，见 main.css 的 .wb-fab)，默认位置会响应
-   *  移动端 safe-area 媒体查询——显式保存的位置会覆盖此行为。 */
-  fabPos: { x: number; y: number } | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -217,7 +212,6 @@ export const DEFAULT_SETTINGS: Settings = {
   settingsDockFloat: true,
   collectionSwitchOpen: true,
   language: 'zh-CN',
-  fabPos: null,
 };
 
 /** Cap on how many search-result rows the results list renders — searchFields() 纯函数仍收集每条命中，

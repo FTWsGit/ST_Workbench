@@ -1,16 +1,14 @@
 import type { Worldbook, WorldbookEntry } from '../types';
-import { ensureTopImporter } from './hostContext';
 import { deepClonePlain } from './apiUtils';
 
 /* ====== 世界书 API ======
- * 通过 ensureTopImporter() import ST 的 /scripts/world-info.js 模块获取世界书操作函数
+ * 通过动态 import() 导入 ST 的 /scripts/world-info.js 模块获取世界书操作函数
  * （world_names / loadWorldInfo / createNewWorldInfo / saveWorldInfo / deleteWorldInfo）。
  * 状态全在模块实例内部，不发 HTTP 请求。import() 走浏览器原生模块缓存，同一 URL 拿到同一实例，
  * mod.world_names 是 ESM live binding。 */
 
 async function getWorldInfoModule() {
-  const importer = await ensureTopImporter();
-  const mod = await importer('/scripts/world-info.js');
+  const mod = await import(/* @vite-ignore */ '/scripts/world-info.js' as string);
   if (!mod || typeof mod.loadWorldInfo !== 'function') {
     throw new Error(
       'SillyTavern 世界书模块不可用（/scripts/world-info.js 结构异常，或当前 ST 版本已更新）'

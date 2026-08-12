@@ -274,10 +274,6 @@
   .wb-list {
     padding-bottom: calc(3px + env(safe-area-inset-bottom));
   }
-  .wb-fab {
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    right: calc(16px + env(safe-area-inset-right));
-  }
   .wb-right-panel,
   .wb-preview-panel {
     padding-bottom: env(safe-area-inset-bottom);

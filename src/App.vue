@@ -1,18 +1,5 @@
 <template>
   <div class="st-wb" :style="uiStore.cssVars">
-    <Transition name="wb-fab">
-      <button
-        v-if="!uiStore.panelOpen"
-        class="wb-fab"
-        :class="{ dragging: fab.dragging }"
-        :style="fab.style"
-        @pointerdown="fab.onPointerDown"
-        @click="fab.onClick"
-      >
-        W
-      </button>
-    </Transition>
-
     <Transition name="wb-panel">
       <div v-if="uiStore.panelOpen" class="wb-panel">
         <div class="wb-header">
@@ -574,7 +561,6 @@ import type { LocaleKey } from './i18n';
 import type { Workspace } from './types';
 import { computed, onMounted, onUnmounted } from 'vue';
 import { useIsMobile, getHostWindow } from './composables/hostEnv';
-import { useFabDrag } from './composables/useFabDrag';
 import { useMobileWorkspaceDrawer } from './composables/useMobileWorkspaceDrawer';
 import { createWorkspaceRegistry, type DocumentWorkspaceAdapter } from './stores/workspaceRegistry';
 
@@ -646,18 +632,20 @@ const drawer = useMobileWorkspaceDrawer({
   closeOn: [() => tabsStore.activeId, () => tabsStore.editorJump],
 });
 
-/** FAB 长按拖动（useFabDrag.ts），持久化到 uiStore.settings.fabPos；点击则打开面板。 */
-const fab = useFabDrag({
-  getPos: () => uiStore.settings.fabPos,
-  setPos: (pos) => {
-    uiStore.settings.fabPos = pos;
-  },
-  commit: () => uiStore.saveSettings(),
-  onTap: () => openPanel(),
-});
+/** FAB 已删除：入口由 main.ts worker 接 ST 顶栏按钮/斜杠命令，在宿主 window 上派发本事件触发打开面板。
+ *  事件名是 App.vue ↔ 入口（main.ts）的契约，两侧需保持一致；监听挂 getHostWindow()（hostEnv 保留，方案 a）。 */
+const OPEN_PANEL_EVENT = 'st-workbench:open-panel';
 
 function handleKeydown(e: KeyboardEvent) {
   if (!uiStore.panelOpen) return;
+
+  // Esc 关面板：复用 onClosePanel() 的未保存改动确认逻辑，与 ✕ 走同一条关闭路径。
+  // 有确认/输入弹窗打开时不处理——避免再次调 onClosePanel() 把当前弹窗刷掉重开。
+  if (e.key === 'Escape') {
+    if (confirmStore.open || confirmStore.promptOpen || confirmStore.multiOpen) return;
+    onClosePanel();
+    return;
+  }
 
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
@@ -666,13 +654,12 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  fab.onHostResize();
-  getHostWindow().addEventListener('resize', fab.onHostResize);
   getHostWindow().addEventListener('keydown', handleKeydown);
+  getHostWindow().addEventListener(OPEN_PANEL_EVENT, openPanel);
 });
 onUnmounted(() => {
-  getHostWindow().removeEventListener('resize', fab.onHostResize);
   getHostWindow().removeEventListener('keydown', handleKeydown);
+  getHostWindow().removeEventListener(OPEN_PANEL_EVENT, openPanel);
 });
 
 function openPanel() {

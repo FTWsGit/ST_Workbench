@@ -1,5 +1,5 @@
 import type { PresetData } from '../types';
-import { getCtx, ensureTopImporter } from './hostContext';
+import { getCtx } from './hostContext';
 import { deepClonePlain } from './apiUtils';
 
 /* ====== PresetManager ======
@@ -114,11 +114,10 @@ export async function getPromptManagerMessages(): Promise<Record<string, Rendere
   const ctx = getCtx();
   if (typeof ctx.generate !== 'function')
     throw new Error('SillyTavern context 不可用（ctx.generate 缺失）');
-  const importer = await ensureTopImporter();
 
   await ctx.generate('normal', {}, true);
 
-  const module = await importer('/scripts/openai.js');
+  const module = await import(/* @vite-ignore */ '/scripts/openai.js' as string);
   const pm = module?.setupChatCompletionPromptManager?.();
   if (!pm?.messages?.collection) {
     throw new Error(

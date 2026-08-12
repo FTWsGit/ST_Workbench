@@ -1,5 +1,4 @@
 import type { Character, CharacterListEntry } from '../types';
-import { ensureTopImporter, getTopWindow } from './hostContext';
 import { deepClonePlain } from './apiUtils';
 
 /** 角色卡头像缩略图 URL——和 ST 自己的 getThumbnailUrl('avatar', file) 同一个端点。
@@ -12,9 +11,9 @@ export function getCharacterAvatarUrl(avatar: string, cacheBust = false): string
 }
 
 /* ====== 角色卡 API ======
- * 读侧：通过 ensureTopImporter() import ST 的 /script.js 模块，mod.characters 是 ESM live binding。
+ * 读侧：动态 import() ST 的 /script.js 模块，mod.characters 是 ESM live binding。
  * 写侧：角色卡写入口是 HTTP multipart 表单 POST（/api/characters/create、/api/characters/edit），
- * 用 getTopWindow().fetch() 发起——iframe 自己的 fetch 会按假 origin 解析相对路径。 */
+ * 用裸 fetch() 发起。 */
 
 /** /script.js 的 characters 数组元素（ST v1CharData 的最小形状，只声明本文件用到的字段——
  *  完整结构是松散的，工作层不在这里做全量建模，其余字段照旧走 fromRaw(raw: Record<string, unknown>)）。 */
@@ -25,8 +24,7 @@ interface STCharEntry {
 }
 
 async function getScriptModule() {
-  const importer = await ensureTopImporter();
-  const mod = await importer('/script.js');
+  const mod = await import(/* @vite-ignore */ '/script.js' as string);
   if (!mod || !Array.isArray(mod.characters)) {
     throw new Error('SillyTavern 角色卡模块不可用（/script.js 结构异常，或当前 ST 版本已更新）');
   }
@@ -46,7 +44,7 @@ async function multipartHeaders(): Promise<HeadersInit> {
 
 async function postMultipart(path: string, fd: FormData): Promise<Response> {
   const headers = await multipartHeaders();
-  const res = await getTopWindow().fetch(path, {
+  const res = await fetch(path, {
     method: 'POST',
     headers,
     body: fd,
