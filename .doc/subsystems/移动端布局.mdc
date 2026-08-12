@@ -18,7 +18,7 @@ alwaysApply: false
 桌面端是侧边栏 / 编辑区 / 右侧面板并排（变量面板、预览面板、工具箱、Agent 面板都支持 docked 挤开 / overlay 右侧悬浮 / float 完全悬浮三态），移动端屏幕放不下，所以整体换了一套 **off-canvas drawer / bottom sheet** 模式，而不是把面板硬塞进一列纵向堆叠：
 
 - **`.wb-sidebar`**：左侧滑入式抽屉，头部 ☰ 按钮触发（`App.vue` 的 `toggleMobileSidebar`）。
-- **`.wb-right-panel`（变量面板 + 设置面板 + AgentPanel 的 docked/overlay 形态共用这个 class）和 `.wb-preset-preview-panel`**：底部弹出式 sheet，从头部 ⋯ 打开的工具抽屉里选中对应项才会出现（见下）。工具箱 `ToolBoxPanel` 也是同款底部 sheet，但不进抽屉状态机——打开即常驻。
+- **`.wb-right-panel`（变量面板 + 设置面板 + AgentPanel 的 docked/overlay 形态共用这个 class）和 `.wb-preview-panel`**：底部弹出式 sheet，从头部 ⋯ 打开的工具抽屉里选中对应项才会出现（见下）。工具箱 `ToolBoxPanel` 也是同款底部 sheet，但不进抽屉状态机——打开即常驻。
 - **`.wb-editor-col`**（真正的提示词/正则编辑区）：唯一一直留在正常文档流里、始终占满宽度的东西——手机上应该"随时都在"的只有这一块。
 - 一个共享的 `.wb-mobile-backdrop` 半透明遮罩，盖住编辑区，点它关闭当前打开的那一个抽屉/sheet。
 

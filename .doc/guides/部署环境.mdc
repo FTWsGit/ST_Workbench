@@ -16,7 +16,7 @@ alwaysApply: false
 
 ## 挂载点本身长什么样
 
-（`main.ts`）：显式给了一套完整的定位样式，直接内联写在元素上（不依赖 CSS 层叠，避免被任何后加载的规则打乱）：`position:fixed; top:0; left:0; width:100vw; height:100dvh(回退100vh); z-index:2147483647`（合法 z-index 最大值）；同时 `pointer-events:none`——挂载点本身铺满全屏但不吃任何点击，真正可见的部分（`.wb-fab`/`.wb-panel`/`.wb-preset-var-popup` 等）各自在 CSS 里单独声明 `pointer-events:auto` 抢回来，宿主页面其它地方的点击照常穿透。这个元素 append 到 `targetDoc.body`（不是 `<html>`）。挂载后还有一段一次性诊断：检测到宿主 `<html>` 上有非 `none` 的 `transform`/`perspective`/`filter`/`will-change: transform` 时 `console.warn`——这类属性本身不影响 `vw`/`dvh` 的尺寸计算，但如果 transform 真的包含位移，会让 `top:0;left:0` 偏离真实视口角落。
+（`main.ts`）：显式给了一套完整的定位样式，直接内联写在元素上（不依赖 CSS 层叠，避免被任何后加载的规则打乱）：`position:fixed; top:0; left:0; width:100vw; height:100dvh(回退100vh); z-index:2147483647`（合法 z-index 最大值）；同时 `pointer-events:none`——挂载点本身铺满全屏但不吃任何点击，真正可见的部分（`.wb-fab`/`.wb-panel`/`..wb-var-popup` 等）各自在 CSS 里单独声明 `pointer-events:auto` 抢回来，宿主页面其它地方的点击照常穿透。这个元素 append 到 `targetDoc.body`（不是 `<html>`）。挂载后还有一段一次性诊断：检测到宿主 `<html>` 上有非 `none` 的 `transform`/`perspective`/`filter`/`will-change: transform` 时 `console.warn`——这类属性本身不影响 `vw`/`dvh` 的尺寸计算，但如果 transform 真的包含位移，会让 `top:0;left:0` 偏离真实视口角落。
 
 **全局错误边界**：`app.config.errorHandler` 捕获任何组件 setup/render 抛错或 watcher 异常——本扩展注入到宿主页面顶层 `<body>`，未捕获错误会导致整个面板白屏、甚至破坏宿主页面布局。handler 里至少 `console.error` 出来，再往顶层文档叠一个红色 banner 提示"出错了、建议刷新"，点击关闭——避免用户看到一片空白还以为是宿主页面的 bug。此时 Pinia store 可能尚未初始化（错误发生在 `app.mount` 之前），所以不能依赖 `uiStore.showToast`，只能用最原始的 DOM。
 
@@ -43,8 +43,8 @@ alwaysApply: false
 酒馆本身是个大页面，没有 Shadow DOM 隔离，所有样式共享同一个层叠上下文：
 
 1. **选择器优先级算错**：基础规则意外压过专门给编辑器写的覆盖规则。用祖先类名限定（如 `.wb-editor-wrap .wb-editor-ta`）确保优先级稳赢。
-2. **裸 `input` 选择器连 checkbox 一起选中**：写 `.rx-form input{width:100%}` 没限定 type，把 checkbox 也撑成整条横线。写 `.rx-form .rx-input{width:100%}` 只选中文本类输入框，checkbox 另外单独 `width:auto`（形状见「ui样式与组件字典」的 `.rx-input` 一条）。**同类规则以后再写，先想清楚会不会连累到 checkbox/radio**。
+2. **裸 `input` 选择器连 checkbox 一起选中**：写 `.wb-form input{width:100%}` 没限定 type，把 checkbox 也撑成整条横线。写 `.wb-form .wb-form-textarea{width:100%}` 只选中文本类输入框，checkbox 另外单独 `width:auto`（形状见「ui样式与组件字典」表单类）。**同类规则以后再写，先想清楚会不会连累到 checkbox/radio**。
 3. **类名太通用导致被外部样式撞车**：语法高亮相关类名要加 `.st-wb` 前缀。
 4. **重构 DOM 结构后 CSS 选择器没跟着改**：选择器语法合法但匹配不到任何元素，安静失效。**重构 DOM 结构时必须同步检查所有引用了旧 class 名的 CSS 选择器**。
 5. **宿主页面（特别是移动端主题）的全局 `button` 重置会覆盖我们的样式**：关键视觉样式加 `!important`（`background`/`border`/`pointer-events`）。
-6. **移动端断点规则要赢过桌面端的 `.float` 修饰**：`.wb-right-panel`/`.pr-preview-panel` 的 `.float` 变体是在 `@media` 外面定义的（同样 `position:absolute`），如果移动端断点内的规则选择器特异性不够，用户开着悬浮模式进入手机布局时会看到桌面端悬浮样式而不是底部 sheet。做法是断点内**显式复合选择器同时匹配 `.float` 变体**（`.wb-right-panel.float` 而不是只写 `.wb-right-panel`），配合媒体查询内规则总是后声明的源码顺序，稳赢桌面端规则。
+6. **移动端断点规则要赢过桌面端的 `.float` 修饰**：`.wb-right-panel`/`.wb-preview-panel` 的 `.float` 变体是在 `@media` 外面定义的（同样 `position:absolute`），如果移动端断点内的规则选择器特异性不够，用户开着悬浮模式进入手机布局时会看到桌面端悬浮样式而不是底部 sheet。做法是断点内**显式复合选择器同时匹配 `.float` 变体**（`.wb-right-panel.float` 而不是只写 `.wb-right-panel`），配合媒体查询内规则总是后声明的源码顺序，稳赢桌面端规则。

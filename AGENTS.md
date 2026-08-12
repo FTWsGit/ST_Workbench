@@ -2,9 +2,9 @@
 
 ## 大面积修改/增加测试/重构 workflow
 最佳实践：
-1. 传奇调查员：派出并行subagents(worker)进行调查，在.temp/invest-*.md写出调查报告，每个subagent对应一篇，以供subagents进行修改时查阅
+1. 传奇调查员：派出并行subagents(Worker)进行调查，在.temp/invest-*.md写出调查报告，每个subagent对应一篇，以供subagents进行修改时查阅. 因为需要写报告，所以必须是Worker
 2. 任务batch撰写：根据任务，在.temp/task-*.md写出任务上下文 & 任务目标，每篇对应一个subagent，避免将全部任务上下文和巨量细节直接写到tasks数组里面
-3. 赏金猎人：派出并行subagents(worker)进行任务，提供基本上下文和目标，告知它对应的调查报告和任务报告，由它自己读取
+3. 赏金猎人：派出并行subagents(Worker)进行任务，提供基本上下文和目标，告知它对应的调查报告和任务报告，由它自己读取
 
 ## 注释/文档纪律
 
@@ -41,7 +41,8 @@
 | `npm run build` | Vite IIFE build → `dist/index.iife.js` |
 | `npm run typecheck` | `vue-tsc --noEmit` |
 | `npm run format` | `prettier --write src` |
-| `npm run lint` | `eslint src` |
+| `npm run lint` | `eslint src && stylelint src/**/*.css` |
+| `npm run lint-fix` | `eslint src --fix && stylelint src/**/*.css --fix` |
 | `npm run test` | `vitest run` |
 
 

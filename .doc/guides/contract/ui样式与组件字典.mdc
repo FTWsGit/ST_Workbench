@@ -7,11 +7,11 @@ alwaysApply: false
 
 # UI 样式与组件字典
 
-跨全应用的 CSS class、共享组件、面板三态形态、UI 数值常量查表用，镜像 `components/shared/` + `styles/`（main.css）+ `types.ts`。
+跨全应用的 CSS class、共享组件、面板三态形态、UI 数值常量查表用，镜像 `components/shared/` + `styles/` + `types.ts`。styles 按域拆文件：common（App 壳 + shared 组件 + 跨域通用）/ preset（工作区共用 + preset 域）/ character / regex / tavern / agent / settings / toolbox / mobile（响应式覆盖）/ base / utils / tokens，main.css 只做 @import。
 
 ## CSS class 字典
 
-class 前缀约定：`pr` -> preset 专用；`rx` -> regex 专用；`wb` -> workbench 全局专用。想复用某个 domain 专用 CSS，那有可能需要改名。
+类名统一 `wb-` 前缀；归属按 css 文件分域（见上）：只被一个域的组件用的类放该域文件，被 ≥2 个域或 shared 组件/App.vue 用的放 common.css。想复用某个域专用 CSS，先把类提级到 common.css 再复用。
 
 ### 按钮
 
@@ -23,7 +23,7 @@ class 前缀约定：`pr` -> preset 专用；`rx` -> regex 专用；`wb` -> work
 
 ### 可选中的列表行
 
-`.pr-block-item` + `.selected` + `.pr-block-name` + `.pr-block-role`/`.sys`/`.user`/`.asst` + `.pr-block-act`/`.del`。`PresetSidebar`/`CopyPanel`/`RegexSidebar` 共用同一套。
+`.wb-tree-item` + `.selected` + `.wb-tree-name` + `.wb-tree-role`（角色色由 `roleClass()` 动态拼 `.sys`/`.user`/`.asst`）+ `.wb-tree-act`/`.del`。五个工作区 Sidebar + `CopyPanel` 共用同一套（preset.css）。
 
 ### 徽标
 
@@ -34,15 +34,15 @@ class 前缀约定：`pr` -> preset 专用；`rx` -> regex 专用；`wb` -> work
 
 `.wb-row`/`.wb-row-tight`/`.wb-row-mt`/`.wb-flex1`/`.wb-range-wide`/`.wb-select-wide`/`.wb-value-label`——一次性 flex 行/宽度值优先用这些。
 
-### 正则表单（.rx-*）
+### 正则表单
 
-`.rx-form` 内的输入框要用 `.rx-input`/`textarea`/`select` 才会 `width:100%`。
+regex 表单主体用通用 `.wb-form-*` 类（`.wb-form-textarea`/`.wb-form-check` 等，common.css）；regex 域专属的 `.wb-form-checks`（复选项组）/`.wb-form-textarea.invalid`（校验失败态）在 regex.css。
 
 ## 三态面板形态
 
 右侧面板支持三种形态，切换 UI 是共享组件 `PanelModeSwitch.vue`：
 
-- **docked** = 右侧挤开：`.wb-right-panel`/`.wb-toolbox-panel`/`.wb-preset-preview-panel` 默认态（嵌入布局挤开编辑区）。
+- **docked** = 右侧挤开：`.wb-right-panel`/`.wb-toolbox-panel`/`.wb-preview-panel` 默认态（嵌入布局挤开编辑区）。
 - **overlay** = 右侧悬浮：加 `.float` 修饰（absolute 盖右侧不挤开，`.wb-toolbox-panel.float` 同理）。
 - **float** = 完全悬浮：借 `FloatingPanelShell`（见「复用组件速查」）。
 
@@ -67,6 +67,6 @@ agent 侧：`AgentPanel.vue` 同支持三态，形态存 `settings.agentMode`，
 | `DRAG_THRESHOLD` | 4 px | `useDragReorder.ts` 拖拽/长按判定的移动阈值（防止滑动列表时意外拖拽或误触发长按）；也是 `useFabDrag` 默认 `dragThreshold=4` |
 | `LONG_PRESS_MS` | 200 ms | `useListSelection.ts` 移动端触屏长按多选的延迟（`pointerType !== 'mouse'` 且落点不在 `.wb-drag-handle` 上时启动计时器） |
 | tap target | ~40px | 移动端触摸目标舒适下限：桌面 20~24px 的小图标按钮用 padding 撑大可点击区域、内容居中，视觉尺寸不变、命中区域变大 |
-| FAB 默认位置 | `bottom:24px;right:24px` | `.wb-fab` 悬浮球默认位置（带安全区适配 `env(safe-area-inset-*)`），唯一来源 `main.css`；`size` 需跟 `.wb-fab` 的 width/height 保持一致 |
+| FAB 默认位置 | `bottom:24px;right:24px` | `.wb-fab` 悬浮球默认位置（带安全区适配 `env(safe-area-inset-*)`），唯一来源 `common.css`；`size` 需跟 `.wb-fab` 的 width/height 保持一致 |
 | 数字拖拽 Shift 步进 | 0.1× step | 按住 Shift 精细调整时每像素位移映射为 0.1×step |
-| z-index 序列 | 100000→100003 | 唯一来源 `main.css`：`.wb-panel` 100000 / `.wb-modal-overlay` 100001 / `.wb-toast` 100002 / `.wb-preset-var-popup` 100003；悬浮窗模块级递增计数器初始值 100010 卡在序列上方 |
+| z-index 序列 | 9999→300001 | 唯一来源 `common.css`：`.wb-fab` 9999 / `.wb-panel` 100000 / `..wb-var-popup` 200000 / `.wb-modal-overlay` 300000 / `.wb-toast` 300001；悬浮窗模块级递增计数器初始值 100010（useFloatingPanel.ts），高于 `.wb-panel` 但低于 var-popup/modal/toast |
