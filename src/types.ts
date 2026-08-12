@@ -222,7 +222,7 @@ export const FONT_OPTIONS = [
   { name: 'Consolas', value: "'Consolas',monospace" },
   { name: 'JetBrains Mono', value: "'JetBrains Mono',monospace" },
   { name: 'DM Sans', value: "'DM Sans',monospace" },
-  { name: 'Microsoft Yahei Mono', value: "'Microsoft Yahei Mono',monospace" },
+  { name: 'Microsoft Yahei Mono', value: "'Microsoft Yahei Mono','Microsoft YaHei',monospace" },
   { name: 'LXGW WenKai Mono TC', value: "'LXGW WenKai Mono TC',monospace" },
 ];
 

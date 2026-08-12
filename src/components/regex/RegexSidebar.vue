@@ -74,7 +74,9 @@
           />
           <span class="wb-tree-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
           <span class="wb-tree-actions">
-            <span class="wb-tree-act del" @click.stop="onDeleteGroup(gi)">🗑</span>
+            <span class="wb-tree-act del" @click.stop="onDeleteGroup(gi)"
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
         <div
@@ -126,8 +128,8 @@
               class="wb-tree-act del"
               :title="uiStore.t('regex.sidebar.deleteTitle')"
               @click.stop="onDeleteBlock(gi)"
-              >🗑</span
-            >
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
       </template>
@@ -158,6 +160,7 @@ import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
 import { esc } from '../../utils';
 import ListToolbar from '../shared/ListToolbar.vue';
+import Icon from '../shared/Icon.vue';
 
 const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 

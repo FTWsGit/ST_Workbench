@@ -34,22 +34,22 @@ export default {
   // shared：跨域通用组件/逻辑
   // ========================================
   // ---- 顶部工具栏 ----
-  'shared.header.save': '💾 Save{star}',
-  'shared.header.reload': '↻ Reload',
-  'shared.header.settings': '⚙ Settings',
-  'shared.header.meta': 'ⓘ Meta',
+  'shared.header.save': 'Save{star}',
+  'shared.header.reload': 'Reload',
+  'shared.header.settings': 'Settings',
+  'shared.header.meta': 'Meta',
   'shared.header.mode.preset': 'Preset',
   'shared.header.mode.regex': 'Regex',
   'shared.header.mode.worldbook': 'Worldbook',
   'shared.header.mode.character': 'Character',
   'shared.header.mode.tavern': 'Scripts',
-  'shared.header.toolBox': '🔧 Toolbox',
+  'shared.header.toolBox': 'Toolbox',
   'shared.header.collectionCollapse': 'Collapse collection switch',
   'shared.header.collectionExpand': 'Expand collection switch',
 
   // ---- Sidebar ListTools ----
-  'shared.sidebar.bind': '🔗 Bind',
-  'shared.sidebar.unbind': '🔓 Unbind',
+  'shared.sidebar.bind': 'Bind',
+  'shared.sidebar.unbind': 'Unbind',
 
   // ---- 移动端专属 ----
   'shared.mobile.sidebar': 'Sidebar',
@@ -75,7 +75,7 @@ export default {
     'The following workspaces have unsaved changes. Closing the panel only hides it—changes stay in memory and will be restored next time you open it, but they will be lost if you refresh or close SillyTavern before saving:',
 
   // ---- 通用组件 ----
-  'shared.settingsDock.title': '⚙ Settings',
+  'shared.settingsDock.title': 'Settings',
   'shared.floatingPanel.toggleFloat': 'Toggle floating mode',
   // Panel three-mode switch: docked / overlay / fully floating
   'shared.panelMode.docked': 'Dock',
@@ -105,8 +105,8 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'preset.header.collectionItems': 'Prompts',
-  'preset.header.varNav': '📊 Variable Navigator',
-  'preset.header.preview': '👁 Preview',
+  'preset.header.varNav': 'Variable Navigator',
+  'preset.header.preview': 'Preview',
   'preset.header.new': 'New Preset',
   'preset.header.delete': 'Delete Preset',
   'preset.header.switch': 'Switch Preset',
@@ -208,15 +208,15 @@ export default {
   'preset.role.assistant': 'assistant',
 
   // ---- 变量导航面板 ----
-  'preset.varPanel.title': '📊 Variables',
+  'preset.varPanel.title': 'Variables',
   'preset.varPanel.filter': 'Filter…',
-  'preset.varPanel.prev': '◀ Prev',
-  'preset.varPanel.next': 'Next ▶',
+  'preset.varPanel.prev': 'Prev',
+  'preset.varPanel.next': 'Next',
   'preset.varPanel.local': 'LOCAL',
   'preset.varPanel.global': 'GLOBAL',
 
   // ---- 预览面板 ----
-  'preset.preview.title': '👁 Prompt Preview',
+  'preset.preview.title': 'Prompt Preview',
   'preset.preview.collapseExpand': 'Collapse/Expand All',
   'preset.preview.modeBlocks': 'Per Block',
   'preset.preview.modeRaw': 'Final Request',
@@ -224,9 +224,9 @@ export default {
     "Real per-block rendering from SillyTavern's prompt manager. Highlighted text is substituted in (macros/regex etc.)—not literal in block source.",
   'preset.preview.hintRaw':
     'Exact messages array SillyTavern is about to send to the API—captured via a real generation that is immediately cancelled, so nothing is actually sent.',
-  'preset.preview.generate': '▶ Generate',
-  'preset.preview.copy': '📋 Copy',
-  'preset.preview.generating': '⏳ Generating…',
+  'preset.preview.generate': 'Generate',
+  'preset.preview.copy': 'Copy',
+  'preset.preview.generating': 'Generating…',
   'preset.preview.collapseExpandSingle': 'Collapse/Expand',
   'preset.preview.emptyBlocks':
     'Click "Generate" for a real per-block render (this runs an actual dry-run generation).',
@@ -240,7 +240,6 @@ export default {
   'preset.varPopup.global': 'GLOBAL',
 
   // ---- 跨预设复制面板 ----
-  'preset.copyPanel.title': '⇆ Copy Prompt Blocks Between Presets',
   'preset.copyPanel.selectPreset': 'Select preset…',
   'preset.copyPanel.selectAll': 'All',
   'preset.copyPanel.clearAll': 'None',
@@ -255,7 +254,7 @@ export default {
   'preset.copyPanel.selectBlocksFirst': 'Select blocks to copy first',
 
   // ---- 预设元信息（模型参数） ----
-  'preset.metaForm.title': 'ⓘ Preset Parameters',
+  'preset.metaForm.title': 'Preset Parameters',
   'preset.metaForm.contextLabel': 'Max Context (Tokens)',
   'preset.metaForm.maxTokensLabel': 'Max Response Length (Tokens)',
   'preset.metaForm.repliesLabel': 'Number of Replies',
@@ -289,8 +288,8 @@ export default {
   'regex.sidebar.defaultGroupName': 'Group ({count})',
 
   // ---- 内容编辑 ----
-  'regex.editor.edit': '✏️ Edit',
-  'regex.editor.preview': '👁 Preview',
+  'regex.editor.edit': 'Edit',
+  'regex.editor.preview': 'Preview',
   'regex.editor.plainText': 'Plain Text',
   'regex.editor.html': 'HTML',
   'regex.editor.settingsPanel': 'Settings Panel',
@@ -454,7 +453,7 @@ export default {
   'worldbook.position.afterExample': 'After Example Messages',
   'worldbook.position.beforeAuthorsNote': "Before Author's Note",
   'worldbook.position.afterAuthorsNote': "After Author's Note",
-  'worldbook.position.atDepth': 'At Depth ⚙',
+  'worldbook.position.atDepth': 'At Depth',
   'worldbook.position.outlet': 'Outlet',
   'worldbook.logic.andAny': 'AND Any',
   'worldbook.logic.notAll': 'NOT All',
@@ -579,7 +578,6 @@ export default {
   'character.sidebar.greetingsLabel': 'Greetings',
   'character.sidebar.addGreeting': '+ Greeting',
   'character.sidebar.regexMode': 'Regex',
-  'character.sidebar.fieldsMode': '← Fields',
   'character.sidebar.deleteGreetingTitle': 'Delete this greeting',
   'character.sidebar.greetingLabel': 'Greeting {n}',
 
@@ -598,8 +596,8 @@ export default {
   'character.field.mesExample': 'Examples of dialogue',
 
   // ---- 角色元信息 ----
-  'character.metaForm.title': 'ⓘ Character Info',
-  'character.metaForm.favLabel': '⭐ Favorite',
+  'character.metaForm.title': 'Character Info',
+  'character.metaForm.favLabel': 'Favorite',
   'character.metaForm.creatorLabel': 'Creator',
   'character.metaForm.versionLabel': 'Version',
   'character.metaForm.creatorNotesLabel': 'Creator Notes',
@@ -620,7 +618,7 @@ export default {
   // ========================================
   // toolbox：cross-workspace toolbox panel (container shell)
   // ========================================
-  'toolbox.title': '🔧 Toolbox',
+  'toolbox.title': 'Toolbox',
   'toolbox.empty': 'No tools available for this scene',
 
   // ---- Tool switch tabs ----
@@ -660,7 +658,7 @@ export default {
   // ========================================
   // agent: cross-store ops assistant
   // ========================================
-  'agent.header.open': '🤖 Agent',
+  'agent.header.open': 'Agent',
   'agent.panel.title': 'Agent Assistant',
   'agent.settings.title': 'Agent Settings',
   'agent.settings.systemPrompt': 'System prompt',

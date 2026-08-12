@@ -10,7 +10,9 @@
   >
     <template #title>
       <span class="wb-preview-float-title">
-        <span class="wb-preview-float-name">{{ uiStore.t('preset.preview.title') }}</span>
+        <span class="wb-preview-float-name"
+          ><Icon name="eye" /> {{ uiStore.t('preset.preview.title') }}</span
+        >
         <button
           v-if="uiStore.previewMode === 'blocks'"
           class="wb-btn icon-btn"
@@ -18,7 +20,7 @@
           :aria-label="uiStore.t('preset.preview.collapseExpand')"
           @click="uiStore.toggleAllPreviewBlocks()"
         >
-          ▾
+          <Icon name="chevronDown" />
         </button>
         <PanelModeSwitch :model-value="mode" @update:model-value="setMode" />
       </span>
@@ -49,16 +51,20 @@
         </p>
         <div class="wb-row-mt">
           <button class="wb-btn accent" :disabled="uiStore.previewLoading" @click="generate()">
-            <template v-if="uiStore.previewLoading">{{
-              uiStore.t('preset.preview.generating')
-            }}</template>
-            <template v-else>{{ uiStore.t('preset.preview.generate') }}</template>
+            <template v-if="uiStore.previewLoading">
+              <Icon name="wait" /> {{ uiStore.t('preset.preview.generating') }}</template
+            >
+            <template v-else
+              ><Icon name="play" /> {{ uiStore.t('preset.preview.generate') }}</template
+            >
           </button>
           <button class="wb-btn" @click="copyPreview()">
-            {{ uiStore.t('preset.preview.copy') }}
+            <Icon name="clipboard" /> {{ uiStore.t('preset.preview.copy') }}
           </button>
         </div>
-        <p v-if="uiStore.previewError" class="wb-pp-error">⚠ {{ uiStore.previewError }}</p>
+        <p v-if="uiStore.previewError" class="wb-pp-error">
+          <Icon name="warning" :size="14" /> {{ uiStore.previewError }}
+        </p>
       </div>
       <div class="wb-pp-output-wrap">
         <template v-if="uiStore.previewMode === 'blocks'">
@@ -79,7 +85,7 @@
                   class="wb-pb-toggle"
                   :title="uiStore.t('preset.preview.collapseExpandSingle')"
                 >
-                  ▾
+                  <Icon name="chevronDown" :size="12" />
                 </button>
               </div>
               <div class="wb-pb-body">
@@ -125,7 +131,7 @@
       @pointerdown="resize.onPointerDown"
     ></div>
     <div class="wb-rp-header">
-      <span>{{ uiStore.t('preset.preview.title') }}</span>
+      <span><Icon name="eye" /> {{ uiStore.t('preset.preview.title') }}</span>
       <div class="wb-row-tight">
         <button
           v-if="uiStore.previewMode === 'blocks'"
@@ -134,7 +140,7 @@
           :aria-label="uiStore.t('preset.preview.collapseExpand')"
           @click="uiStore.toggleAllPreviewBlocks()"
         >
-          ▾
+          <Icon name="chevronDown" />
         </button>
         <PanelModeSwitch :model-value="mode" @update:model-value="setMode" />
         <button
@@ -142,7 +148,7 @@
           :aria-label="uiStore.t('common.close')"
           @click="uiStore.previewOpen = false"
         >
-          ✕
+          <Icon name="close" />
         </button>
       </div>
     </div>
@@ -172,16 +178,20 @@
         </p>
         <div class="wb-row-mt">
           <button class="wb-btn accent" :disabled="uiStore.previewLoading" @click="generate()">
-            <template v-if="uiStore.previewLoading">{{
-              uiStore.t('preset.preview.generating')
-            }}</template>
-            <template v-else>{{ uiStore.t('preset.preview.generate') }}</template>
+            <template v-if="uiStore.previewLoading">
+              <Icon name="wait" /> {{ uiStore.t('preset.preview.generating') }}</template
+            >
+            <template v-else
+              ><Icon name="play" /> {{ uiStore.t('preset.preview.generate') }}</template
+            >
           </button>
           <button class="wb-btn" @click="copyPreview()">
-            {{ uiStore.t('preset.preview.copy') }}
+            <Icon name="clipboard" /> {{ uiStore.t('preset.preview.copy') }}
           </button>
         </div>
-        <p v-if="uiStore.previewError" class="wb-pp-error">⚠ {{ uiStore.previewError }}</p>
+        <p v-if="uiStore.previewError" class="wb-pp-error">
+          <Icon name="warning" :size="14" /> {{ uiStore.previewError }}
+        </p>
       </div>
       <div class="wb-pp-output-wrap">
         <template v-if="uiStore.previewMode === 'blocks'">
@@ -202,7 +212,7 @@
                   class="wb-pb-toggle"
                   :title="uiStore.t('preset.preview.collapseExpandSingle')"
                 >
-                  ▾
+                  <Icon name="chevronDown" :size="12" />
                 </button>
               </div>
               <div class="wb-pb-body">
@@ -247,6 +257,7 @@ import { watch, computed } from 'vue';
 import type { PreviewSegment, PanelMode } from '../../types';
 import FloatingPanelShell from './FloatingPanelShell.vue';
 import PanelModeSwitch from './PanelModeSwitch.vue';
+import Icon from './Icon.vue';
 
 const presetStore = usePresetStore();
 const characterStore = useCharacterStore();

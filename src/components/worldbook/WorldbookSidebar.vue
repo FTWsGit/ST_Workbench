@@ -75,7 +75,9 @@
           />
           <span class="wb-tree-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
           <span class="wb-tree-actions">
-            <span class="wb-tree-act del" @click.stop="store.deleteEntry(gi)">🗑</span>
+            <span class="wb-tree-act del" @click.stop="store.deleteEntry(gi)"
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
         <!-- 条目 -->
@@ -127,7 +129,9 @@
             activationLabel(getEntry((node.ref as OrderItem).identifier))
           }}</span>
           <span class="wb-tree-actions">
-            <span class="wb-tree-act del" @click.stop="store.deleteEntry(gi)">🗑</span>
+            <span class="wb-tree-act del" @click.stop="store.deleteEntry(gi)"
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
       </template>
@@ -155,6 +159,7 @@ import { useDragReorder } from '../../composables/useDragReorder';
 import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
 import ListToolbar from '../shared/ListToolbar.vue';
+import Icon from '../shared/Icon.vue';
 
 const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 

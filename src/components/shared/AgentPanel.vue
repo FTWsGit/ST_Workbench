@@ -22,7 +22,7 @@
         :aria-label="uiStore.t('agent.settings.title')"
         @click="settingsOpen = !settingsOpen"
       >
-        ⚙
+        <Icon name="gear" />
       </button>
       <AgentSettings v-if="settingsOpen" />
 
@@ -72,7 +72,7 @@
           </option>
         </select>
         <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">
-          ＋
+          <Icon name="plus" />
         </button>
         <button
           class="wb-btn icon-btn compact"
@@ -80,7 +80,7 @@
           :aria-label="uiStore.t('agent.session.delete')"
           @click="onDeleteSession"
         >
-          🗑
+          <Icon name="trash" />
         </button>
       </div>
 
@@ -105,11 +105,13 @@
             class="wb-agent-msg"
             :class="['role-' + msg.role, { error: msg.isError, synthetic: msg.synthetic }]"
           >
-            <div class="wb-agent-msg-role">{{ roleLabel(msg.role) }}</div>
+            <div class="wb-agent-msg-role">
+              <Icon :name="roleIcon(msg.role)" :size="14" />
+            </div>
             <div class="wb-agent-msg-text">{{ msg.text }}</div>
             <div v-if="msg.toolCalls && msg.toolCalls.length" class="wb-agent-msg-tools">
               <div v-for="(tc, j) in msg.toolCalls" :key="j" class="wb-agent-msg-tool">
-                🔧 {{ tc.name }}
+                <Icon name="wrench" :size="12" /> {{ tc.name }}
               </div>
             </div>
           </div>
@@ -122,7 +124,9 @@
         class="wb-agent-approval"
         :class="{ danger: agentStore.pendingApproval.danger }"
       >
-        <div class="wb-agent-approval-tool">🔧 {{ agentStore.pendingApproval.toolName }}</div>
+        <div class="wb-agent-approval-tool">
+          <Icon name="wrench" :size="14" /> {{ agentStore.pendingApproval.toolName }}
+        </div>
         <div class="wb-agent-approval-title">
           {{ agentStore.pendingApproval.title }}
         </div>
@@ -202,7 +206,7 @@
           :aria-label="uiStore.t('agent.settings.title')"
           @click="settingsOpen = !settingsOpen"
         >
-          ⚙
+          <Icon name="gear" />
         </button>
         <PanelModeSwitch :model-value="mode" @update:model-value="setMode" />
         <button
@@ -210,7 +214,7 @@
           :aria-label="uiStore.t('common.close')"
           @click="close"
         >
-          ✕
+          <Icon name="close" />
         </button>
       </div>
     </div>
@@ -263,7 +267,7 @@
           </option>
         </select>
         <button class="wb-btn sm" :title="uiStore.t('agent.session.new')" @click="onNewSession">
-          ＋
+          <Icon name="plus" />
         </button>
         <button
           class="wb-btn icon-btn compact"
@@ -271,7 +275,7 @@
           :aria-label="uiStore.t('agent.session.delete')"
           @click="onDeleteSession"
         >
-          🗑
+          <Icon name="trash" />
         </button>
       </div>
 
@@ -296,7 +300,9 @@
             class="wb-agent-msg"
             :class="['role-' + msg.role, { error: msg.isError, synthetic: msg.synthetic }]"
           >
-            <div class="wb-agent-msg-role">{{ roleLabel(msg.role) }}</div>
+            <div class="wb-agent-msg-role">
+              <Icon :name="roleIcon(msg.role)" :size="14" />
+            </div>
             <!-- 思考过程（可折叠） -->
             <div
               v-if="msg.reasoning && msg.reasoning.trim()"
@@ -304,7 +310,7 @@
               :class="{ open: openCollapse[i + 'reasoning'] }"
             >
               <button class="wb-agent-msg-collapse-toggle" @click="toggleCollapse(i + 'reasoning')">
-                <span class="wb-agent-msg-collapse-arrow">▶</span>
+                <Icon name="chevronRight" :size="12" />
                 {{ uiStore.t('agent.msg.thinking') }}
               </button>
               <div class="wb-agent-msg-thinking-body">{{ msg.reasoning }}</div>
@@ -313,7 +319,7 @@
             <template v-if="msg.role === 'tool'">
               <div class="wb-agent-msg-collapse" :class="{ open: openCollapse[i + 'tool'] }">
                 <button class="wb-agent-msg-collapse-toggle" @click="toggleCollapse(i + 'tool')">
-                  <span class="wb-agent-msg-collapse-arrow">▶</span>
+                  <Icon name="chevronRight" :size="12" />
                   {{ uiStore.t('agent.msg.toolResult') }}
                 </button>
                 <div class="wb-agent-msg-text">{{ msg.text }}</div>
@@ -333,8 +339,8 @@
                   class="wb-agent-msg-collapse-toggle"
                   @click="toggleCollapse(i + 'call' + j)"
                 >
-                  <span class="wb-agent-msg-collapse-arrow">▶</span>
-                  🔧 {{ tc.name }}
+                  <Icon name="chevronRight" :size="12" />
+                  {{ tc.name }}
                 </button>
                 <div class="wb-agent-msg-tool-args">{{ tc.arguments }}</div>
               </div>
@@ -349,7 +355,9 @@
         class="wb-agent-approval"
         :class="{ danger: agentStore.pendingApproval.danger }"
       >
-        <div class="wb-agent-approval-tool">🔧 {{ agentStore.pendingApproval.toolName }}</div>
+        <div class="wb-agent-approval-tool">
+          <Icon name="wrench" :size="14" /> {{ agentStore.pendingApproval.toolName }}
+        </div>
         <div class="wb-agent-approval-title">
           {{ agentStore.pendingApproval.title }}
         </div>
@@ -425,6 +433,7 @@ import { esc } from '../../utils';
 import FloatingPanelShell from './FloatingPanelShell.vue';
 import PanelModeSwitch from './PanelModeSwitch.vue';
 import AgentSettings from './AgentSettings.vue';
+import Icon, { type IconName } from './Icon.vue';
 import type { PanelMode } from '../../types';
 import type { LocaleKey } from '../../i18n';
 
@@ -542,12 +551,12 @@ const maxContextDisplay = computed(() => {
   return max > 0 ? String(max) : '?';
 });
 
-function roleLabel(role: string): string {
-  if (role === 'user') return '🧑';
-  if (role === 'assistant') return '🤖';
-  if (role === 'tool') return '⚙';
-  if (role === 'system') return '📋';
-  return role;
+function roleIcon(role: string): IconName {
+  if (role === 'user') return 'user';
+  if (role === 'assistant') return 'bot';
+  if (role === 'tool') return 'gear';
+  if (role === 'system') return 'clipboard';
+  return 'info';
 }
 
 /** 嵌入/悬浮态右边缘拖拽改宽，拖完持久化（settings.agentWidth）。 */

@@ -9,7 +9,7 @@
         @click="uiStore.toggleSettingsDock()"
         :title="uiStore.t('regex.editor.settingsPanel')"
       >
-        ⚙
+        <Icon name="gear" />
       </button>
     </div>
 
@@ -35,6 +35,7 @@ import { useWorldbookStore } from '../../stores/worldbookStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
+import Icon from '../shared/Icon.vue';
 
 const store = useWorldbookStore();
 const uiStore = useUiStore();

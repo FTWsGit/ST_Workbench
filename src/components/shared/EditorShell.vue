@@ -1,7 +1,7 @@
 <template>
   <div class="wb-editor-panel" v-if="!tabsStore.activeTab">
     <div class="wb-editor-empty">
-      <div class="icon">📝</div>
+      <div class="icon"><Icon name="note" :size="40" /></div>
       <p v-if="tabsStore.sidebarCollection === 'regex'">
         {{ uiStore.t('regex.editorShell.empty') }}
       </p>
@@ -43,6 +43,7 @@ import RegexContentEditor from '../regex/RegexContentEditor.vue';
 import WorldbookContentEditor from '../worldbook/WorldbookContentEditor.vue';
 import CharacterContentEditor from '../character/CharacterContentEditor.vue';
 import TavernContentEditor from '../tavern/TavernContentEditor.vue';
+import Icon from './Icon.vue';
 
 const presetStore = usePresetStore();
 const uiStore = useUiStore();

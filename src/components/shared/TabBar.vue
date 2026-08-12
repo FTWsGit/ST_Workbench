@@ -16,8 +16,9 @@
         :title="uiStore.t('common.close')"
         :aria-label="uiStore.t('common.close')"
         @click.stop="tabsStore.close(t.domain, t.key)"
-        >×</span
       >
+        <Icon name="close" />
+      </span>
     </div>
   </div>
 </template>
@@ -25,6 +26,7 @@
 <script setup lang="ts">
 import { useTabsStore } from '../../stores/tabsStore';
 import { useUiStore } from '../../stores/uiStore';
+import Icon from './Icon.vue';
 const tabsStore = useTabsStore();
 const uiStore = useUiStore();
 </script>

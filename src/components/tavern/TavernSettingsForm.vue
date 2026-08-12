@@ -44,7 +44,9 @@
               v-model="button.name"
               :placeholder="props.t('tavern.settings.buttonTextPlaceholder')"
             />
-            <button class="wb-btn sm danger" @click="removeButton(idx)">✕</button>
+            <button class="wb-btn sm danger" @click="removeButton(idx)">
+              <Icon name="close" :size="12" />
+            </button>
           </div>
           <button class="wb-btn sm" @click="addButton">
             {{ props.t('tavern.settings.addButton') }}
@@ -95,6 +97,7 @@ import { useTabsStore } from '../../stores/tabsStore';
 import type { Script, ScriptTree } from '../../types';
 import type { TavernSettingsFormProps } from './tavernProps';
 import FormField from '../shared/FormField.vue';
+import Icon from '../shared/Icon.vue';
 
 const props = defineProps<TavernSettingsFormProps>();
 

@@ -17,7 +17,7 @@
         :aria-label="closeTitle"
         @click="$emit('close')"
       >
-        ✕
+        <Icon name="close" />
       </button>
     </div>
     <div class="wb-float-body">
@@ -41,6 +41,7 @@
  *  机制在 useFloatingPanel.ts 中，本组件只负责渲染 header/body/resize 手柄与移动端遮罩。
  *  桌面端无遮罩（非模态，可与主编辑区并存）；关闭前如需确认由调用方在 @close 自行判断。 */
 import { useFloatingPanel, type UseFloatingPanelOptions } from '../../composables/useFloatingPanel';
+import Icon from './Icon.vue';
 
 const props = withDefaults(
   defineProps<

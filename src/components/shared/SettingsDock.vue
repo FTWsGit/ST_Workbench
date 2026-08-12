@@ -11,7 +11,7 @@
       @pointerdown="resize.onPointerDown"
     ></div>
     <div class="wb-rp-header">
-      <span>{{ uiStore.t('shared.settingsDock.title') }}</span>
+      <span><Icon name="gear" /> {{ uiStore.t('shared.settingsDock.title') }}</span>
       <div class="wb-row-tight">
         <button
           class="wb-btn icon-btn"
@@ -20,14 +20,14 @@
           :aria-label="uiStore.t('shared.floatingPanel.toggleFloat')"
           @click="toggleFloat"
         >
-          📌
+          <Icon name="pin" />
         </button>
         <button
           class="wb-btn close-btn compact"
           :aria-label="uiStore.t('common.close')"
           @click="uiStore.settingsDockOpen = false"
         >
-          ✕
+          <Icon name="close" />
         </button>
       </div>
     </div>
@@ -46,6 +46,7 @@ import RegexSettingsForm from '../regex/RegexSettingsForm.vue';
 import PresetSettingsForm from '../preset/PresetSettingsForm.vue';
 import WorldbookSettingsForm from '../worldbook/WorldbookSettingsForm.vue';
 import TavernSettingsForm from '../tavern/TavernSettingsForm.vue';
+import Icon from './Icon.vue';
 
 const uiStore = useUiStore();
 const tabsStore = useTabsStore();

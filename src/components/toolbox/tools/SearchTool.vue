@@ -72,8 +72,12 @@
     <!-- 导航 + 单条替换 + 全替换 + 把命中同步到 sidebar 多选态（反馈3：modify what matched） -->
     <div class="wb-tools-section">
       <div class="wb-btn-surface">
-        <button class="wb-btn sm" :disabled="!hits.length" @click="nav(-1)">◀</button>
-        <button class="wb-btn sm" :disabled="!hits.length" @click="nav(1)">▶</button>
+        <button class="wb-btn sm" :disabled="!hits.length" @click="nav(-1)">
+          <Icon name="arrowLeft" :size="12" />
+        </button>
+        <button class="wb-btn sm" :disabled="!hits.length" @click="nav(1)">
+          <Icon name="arrowRight" :size="12" />
+        </button>
         <button class="wb-btn sm" :disabled="idx < 0" @click="replaceCurrent()">
           {{ uiStore.t('toolbox.search.replace') }}
         </button>
@@ -137,6 +141,7 @@ import {
   type EnumChoice,
 } from '../searchFields';
 import FormField from '../../shared/FormField.vue';
+import Icon from '../../shared/Icon.vue';
 import { SEARCH_MAX } from '../../../types';
 import type { LocaleKey } from '../../../i18n';
 

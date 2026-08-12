@@ -78,7 +78,9 @@
           />
           <span class="wb-tree-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
           <span class="wb-tree-actions">
-            <span class="wb-tree-act del" @click.stop="onDeleteGroup(gi)">🗑</span>
+            <span class="wb-tree-act del" @click.stop="onDeleteGroup(gi)"
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
         <div
@@ -127,11 +129,10 @@
             />
             <span
               class="wb-tree-folder-tag"
-              :style="{
-                color: getFolder((node.ref as OrderItem).identifier)?.color,
-              }"
-              >{{ getFolder((node.ref as OrderItem).identifier)?.icon || '📁' }}</span
+              :style="{ color: getFolder((node.ref as OrderItem).identifier)?.color }"
             >
+              <Icon name="folder" :size="12" />
+            </span>
           </template>
           <template v-else>
             <span
@@ -160,8 +161,8 @@
               class="wb-tree-act del"
               :title="uiStore.t('tavern.sidebar.deleteTitle')"
               @click.stop="onDeleteBlock(gi)"
-              >🗑</span
-            >
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
       </template>
@@ -199,6 +200,7 @@ import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
 import { esc } from '../../utils';
 import ListToolbar from '../shared/ListToolbar.vue';
+import Icon from '../shared/Icon.vue';
 
 const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 

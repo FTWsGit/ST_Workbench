@@ -134,7 +134,7 @@
 }
 .wb-preset-sr-block {
   color: var(--wb-ac);
-  font-weight: var(--wb-fw-m);
+  font-weight: var(--wb-fw-r);
   flex-shrink: 0;
   max-width: 140px;
   overflow: hidden;
@@ -157,7 +157,7 @@
 .wb-preset-sr-ctx em {
   color: var(--wb-ac);
   font-style: normal;
-  font-weight: var(--wb-fw-sb);
+  font-weight: var(--wb-fw-m);
 }
 
 /* 世界书批量工具悬浮面板（WorldbookToolsPanel.vue）——只需要几行竖排间距，其余全靠已有的

@@ -35,7 +35,7 @@
   background: var(--wb-bg-e);
   border: 1px solid var(--wb-border);
   font-size: var(--wb-fs-4);
-  font-weight: var(--wb-fw-sb);
+  font-weight: var(--wb-fw-m);
   letter-spacing: 0.02em;
   transition: all var(--wb-tr);
   white-space: nowrap;
@@ -327,7 +327,7 @@
 }
 .st-wb .wb-vp-varname {
   color: var(--hl-v);
-  font-weight: var(--wb-fw-sb);
+  font-weight: var(--wb-fw-m);
   font-family: var(--wb-fc);
   font-size: var(--wb-fs-4);
 }
@@ -723,12 +723,12 @@
 .st-wb .wb-pb-name {
   color: var(--wb-tx);
   font-size: var(--wb-fs-3);
-  font-weight: var(--wb-fw-sb);
+  font-weight: var(--wb-fw-m);
 }
 .st-wb .wb-pb-msg-count {
   color: var(--wb-tx3);
   font-size: var(--wb-fs-1);
-  font-weight: var(--wb-fw-sb);
+  font-weight: var(--wb-fw-m);
 }
 .st-wb .wb-pb-body {
   padding: var(--wb-sp-3) 14px;
@@ -1106,7 +1106,7 @@
 }
 .wb-var-name-em {
   color: var(--wb-tx);
-  font-weight: var(--wb-fw-m);
+  font-weight: var(--wb-fw-b);
 }
 
 /* Toast */
@@ -1384,7 +1384,7 @@
   background: var(--wb-bg-h);
   border: none;
   font-size: var(--wb-fs-3);
-  font-weight: var(--wb-fw-sb);
+  font-weight: var(--wb-fw-m);
   text-align: left;
   cursor: pointer;
   color: var(--wb-tx);

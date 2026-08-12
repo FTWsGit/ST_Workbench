@@ -10,10 +10,10 @@
             </button>
             <div class="wb-sep"></div>
             <button class="wb-btn" @click="onReload()">
-              {{ uiStore.t('shared.header.reload') }}
+              <Icon name="reload" /> {{ uiStore.t('shared.header.reload') }}
             </button>
             <button class="wb-btn" @click="uiStore.settingsOpen = true">
-              {{ uiStore.t('shared.header.settings') }}
+              <Icon name="gear" /> {{ uiStore.t('shared.header.settings') }}
             </button>
             <div class="wb-sep"></div>
             <div class="wb-mode-switch">
@@ -46,7 +46,7 @@
               :class="{ active: tabsStore.toolBoxOpen }"
               @click="toggleToolBox"
             >
-              {{ uiStore.t('shared.header.toolBox') }}
+              <Icon name="toolbox" /> {{ uiStore.t('shared.header.toolBox') }}
             </button>
             <button
               v-if="tabsStore.activeWorkspace !== 'worldbook'"
@@ -54,17 +54,17 @@
               :class="{ active: uiStore.metaPanelOpen }"
               @click="uiStore.metaPanelOpen = !uiStore.metaPanelOpen"
             >
-              {{ uiStore.t('shared.header.meta') }}
+              <Icon name="info" /> {{ uiStore.t('shared.header.meta') }}
             </button>
             <div class="wb-spacer"></div>
             <button class="wb-btn" :class="{ active: uiStore.varNavOpen }" @click="toggleVarNav">
-              {{ uiStore.t('preset.header.varNav') }}
+              <Icon name="chart" /> {{ uiStore.t('preset.header.varNav') }}
             </button>
             <button class="wb-btn" :class="{ active: uiStore.previewOpen }" @click="togglePreview">
-              {{ uiStore.t('preset.header.preview') }}
+              <Icon name="eye" /> {{ uiStore.t('preset.header.preview') }}
             </button>
             <button class="wb-btn" :class="{ active: uiStore.agentPanelOpen }" @click="toggleAgent">
-              {{ uiStore.t('agent.header.open') }}
+              <Icon name="bot" /> {{ uiStore.t('agent.header.open') }}
             </button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <button
@@ -82,7 +82,7 @@
                 @click="onDeleteWorkspace(workspaceRegistry.preset)"
                 :disabled="!presetStore.presetName"
               >
-                🗑
+                <Icon name="trash" />
               </button>
               <WorkspaceSelect />
             </template>
@@ -111,7 +111,7 @@
                 @click="onDeleteWorkspace(workspaceRegistry.worldbook)"
                 :disabled="!worldbookStore.worldbookName"
               >
-                🗑
+                <Icon name="trash" />
               </button>
               <WorkspaceSelect />
             </template>
@@ -131,7 +131,7 @@
                 @click="onDeleteWorkspace(workspaceRegistry.character)"
                 :disabled="!characterStore.character?.avatar"
               >
-                🗑
+                <Icon name="trash" />
               </button>
               <WorkspaceSelect />
             </template>
@@ -140,7 +140,7 @@
               :aria-label="uiStore.t('common.close')"
               @click="onClosePanel()"
             >
-              ✕
+              <Icon name="close" />
             </button>
           </template>
           <template v-else>
@@ -150,13 +150,13 @@
               :aria-label="uiStore.t('shared.mobile.sidebar')"
               @click="drawer.toggleSidebar"
             >
-              ☰
+              <Icon name="menu" />
             </button>
             <button class="wb-btn accent" @click="onSave()">
               {{ saveLabel }}
             </button>
             <button class="wb-btn" @click="onReload()">
-              {{ uiStore.t('shared.header.reload') }}
+              <Icon name="reload" /> {{ uiStore.t('shared.header.reload') }}
             </button>
             <template v-if="tabsStore.activeWorkspace === 'preset'">
               <WorkspaceSelect />
@@ -175,14 +175,14 @@
               :aria-label="uiStore.t('shared.mobile.tools')"
               @click="drawer.toggleTools"
             >
-              ⋯
+              <Icon name="more" />
             </button>
             <button
               class="wb-btn close-btn"
               :aria-label="uiStore.t('common.close')"
               @click="onClosePanel()"
             >
-              ✕
+              <Icon name="close" />
             </button>
           </template>
         </div>
@@ -203,9 +203,10 @@
             :aria-label="uiStore.t('shared.header.collectionCollapse')"
             @click="toggleCollectionSwitch"
           >
-            <span class="wb-collection-toggle-arrow">{{
-              uiStore.settings.collectionSwitchOpen ? '▾' : '▸'
-            }}</span>
+            <span class="wb-collection-toggle-arrow">
+              <Icon v-if="uiStore.settings.collectionSwitchOpen" name="chevronDown" :size="12" />
+              <Icon v-else name="chevronRight" :size="12" />
+            </span>
           </button>
           <template v-if="uiStore.settings.collectionSwitchOpen">
             <button
@@ -420,7 +421,7 @@
             :class="{ active: tabsStore.toolBoxOpen }"
             @click="drawer.runTool(toggleToolBox)"
           >
-            {{ uiStore.t('shared.header.toolBox') }}
+            <Icon name="toolbox" /> {{ uiStore.t('shared.header.toolBox') }}
           </button>
           <button
             v-if="tabsStore.activeWorkspace !== 'worldbook'"
@@ -432,7 +433,7 @@
               })
             "
           >
-            {{ uiStore.t('shared.header.meta') }}
+            <Icon name="info" /> {{ uiStore.t('shared.header.meta') }}
           </button>
           <button
             class="wb-mobile-tools-item"
@@ -442,21 +443,21 @@
               })
             "
           >
-            {{ uiStore.t('shared.header.settings') }}
+            <Icon name="gear" /> {{ uiStore.t('shared.header.settings') }}
           </button>
           <button
             class="wb-mobile-tools-item"
             :class="{ active: uiStore.varNavOpen }"
             @click="drawer.runTool(toggleVarNav)"
           >
-            {{ uiStore.t('preset.header.varNav') }}
+            <Icon name="chart" /> {{ uiStore.t('preset.header.varNav') }}
           </button>
           <button
             class="wb-mobile-tools-item"
             :class="{ active: uiStore.previewOpen }"
             @click="drawer.runTool(togglePreview)"
           >
-            {{ uiStore.t('preset.header.preview') }}
+            <Icon name="eye" /> {{ uiStore.t('preset.header.preview') }}
           </button>
           <template v-if="tabsStore.activeWorkspace === 'preset'">
             <button
@@ -479,7 +480,7 @@
               :class="{ active: tabsStore.toolBoxOpen }"
               @click="drawer.runTool(toggleToolBox)"
             >
-              {{ uiStore.t('shared.header.toolBox') }}
+              <Icon name="toolbox" /> {{ uiStore.t('shared.header.toolBox') }}
             </button>
             <button
               class="wb-mobile-tools-item"
@@ -550,6 +551,7 @@ import { useWorldbookStore } from './stores/worldbookStore';
 import CharacterSidebar from './components/character/CharacterSidebar.vue';
 import { useCharacterStore } from './stores/characterStore';
 import Modals from './components/shared/Modals.vue';
+import Icon from './components/shared/Icon.vue';
 import TabBar from './components/shared/TabBar.vue';
 import EditorShell from './components/shared/EditorShell.vue';
 import SettingsDock from './components/shared/SettingsDock.vue';

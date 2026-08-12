@@ -21,14 +21,18 @@
         )
       }}</span>
       <span class="wb-vp-spacer"></span>
-      <button class="wb-vp-btn" aria-label="上一个匹配" @click="uiStore.navPopupVar(-1)">◀</button>
-      <button class="wb-vp-btn" aria-label="下一个匹配" @click="uiStore.navPopupVar(1)">▶</button>
+      <button class="wb-vp-btn" aria-label="上一个匹配" @click="uiStore.navPopupVar(-1)">
+        <Icon name="arrowLeft" :size="12" />
+      </button>
+      <button class="wb-vp-btn" aria-label="下一个匹配" @click="uiStore.navPopupVar(1)">
+        <Icon name="arrowRight" :size="12" />
+      </button>
       <button
         class="wb-vp-btn close-btn"
         :aria-label="uiStore.t('common.close')"
         @click="uiStore.hideVarPopup()"
       >
-        ✕
+        <Icon name="close" />
       </button>
     </div>
     <div class="wb-vp-list">
@@ -53,6 +57,7 @@ import { onMounted, onUnmounted } from 'vue';
 import { useUiStore } from '../../stores/uiStore';
 import { getHostDocument } from '../../composables/hostEnv';
 import { varOpBadge } from '../../utils';
+import Icon from './Icon.vue';
 
 const uiStore = useUiStore();
 

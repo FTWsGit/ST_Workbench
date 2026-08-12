@@ -38,22 +38,22 @@ export default {
   // shared：跨域通用组件/逻辑
   // ========================================
   // ---- 顶部工具栏 ----
-  'shared.header.save': '💾 保存{star}',
-  'shared.header.reload': '↻ 重新加载',
-  'shared.header.settings': '⚙ 设置',
-  'shared.header.meta': 'ⓘ 元信息',
+  'shared.header.save': '保存{star}',
+  'shared.header.reload': '重新加载',
+  'shared.header.settings': '设置',
+  'shared.header.meta': '元信息',
   'shared.header.mode.preset': '预设',
   'shared.header.mode.regex': '正则',
   'shared.header.mode.worldbook': '世界书',
   'shared.header.mode.character': '角色卡',
   'shared.header.mode.tavern': '脚本',
-  'shared.header.toolBox': '🔧 工具箱',
+  'shared.header.toolBox': '工具箱',
   'shared.header.collectionCollapse': '收起切换栏',
   'shared.header.collectionExpand': '展开切换栏',
 
   // ---- 侧边栏 ----
-  'shared.sidebar.bind': '🔗 绑定',
-  'shared.sidebar.unbind': '🔓 解绑',
+  'shared.sidebar.bind': '绑定',
+  'shared.sidebar.unbind': '解绑',
 
   // ---- 移动端专属 ----
   'shared.mobile.sidebar': '侧边栏',
@@ -78,7 +78,7 @@ export default {
     '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
 
   // ---- 通用组件 ----
-  'shared.settingsDock.title': '⚙ 设置',
+  'shared.settingsDock.title': '设置',
   'shared.floatingPanel.toggleFloat': '切换悬浮模式',
   // 面板三态切换：右侧挤开 / 右侧悬浮 / 完全悬浮
   'shared.panelMode.docked': '挤开',
@@ -108,8 +108,8 @@ export default {
   // ========================================
   // ---- 头部工具栏 ----
   'preset.header.collectionItems': '提示词',
-  'preset.header.varNav': '📊 变量导航',
-  'preset.header.preview': '👁 预览',
+  'preset.header.varNav': '变量导航',
+  'preset.header.preview': '预览',
   'preset.header.new': '新建预设',
   'preset.header.delete': '删除预设',
   'preset.header.switch': '切换预设',
@@ -205,15 +205,15 @@ export default {
   'preset.role.assistant': 'assistant',
 
   // ---- 变量导航面板 ----
-  'preset.varPanel.title': '📊 变量',
+  'preset.varPanel.title': '变量',
   'preset.varPanel.filter': '筛选…',
-  'preset.varPanel.prev': '◀ 上',
-  'preset.varPanel.next': '下 ▶',
+  'preset.varPanel.prev': '上',
+  'preset.varPanel.next': '下',
   'preset.varPanel.local': 'LOCAL',
   'preset.varPanel.global': 'GLOBAL',
 
   // ---- 预览面板 ----
-  'preset.preview.title': '👁 提示词预览',
+  'preset.preview.title': '提示词预览',
   'preset.preview.collapseExpand': '折叠/展开全部',
   'preset.preview.modeBlocks': '逐块',
   'preset.preview.modeRaw': '最终请求',
@@ -221,9 +221,9 @@ export default {
     '来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。',
   'preset.preview.hintRaw':
     'SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。',
-  'preset.preview.generate': '▶ 生成',
-  'preset.preview.copy': '📋 复制',
-  'preset.preview.generating': '⏳ 生成中…',
+  'preset.preview.generate': '生成',
+  'preset.preview.copy': '复制',
+  'preset.preview.generating': '生成中…',
   'preset.preview.collapseExpandSingle': '折叠/展开',
   'preset.preview.emptyBlocks': '点击"生成"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。',
   'preset.preview.emptyRaw': '点击"生成"捕获最终请求——这会短暂启动一次真实生成并立即取消。',
@@ -235,7 +235,6 @@ export default {
   'preset.varPopup.global': 'GLOBAL',
 
   // ---- 跨预设复制面板 ----
-  'preset.copyPanel.title': '⇆ 跨预设复制提示词块',
   'preset.copyPanel.selectPreset': '选择预设…',
   'preset.copyPanel.selectAll': '全部',
   'preset.copyPanel.clearAll': '无',
@@ -250,7 +249,7 @@ export default {
   'preset.copyPanel.selectBlocksFirst': '请先选择要复制的块',
 
   // ---- 预设元信息（模型参数） ----
-  'preset.metaForm.title': 'ⓘ 预设参数',
+  'preset.metaForm.title': '预设参数',
   'preset.metaForm.contextLabel': '最大上下文 (Token)',
   'preset.metaForm.maxTokensLabel': '最大回复长度 (Token)',
   'preset.metaForm.repliesLabel': '回复条数',
@@ -284,8 +283,8 @@ export default {
   'regex.sidebar.defaultGroupName': '分组 ({count})',
 
   // ---- 内容编辑 ----
-  'regex.editor.edit': '✏️ 编辑',
-  'regex.editor.preview': '👁 预览',
+  'regex.editor.edit': '编辑',
+  'regex.editor.preview': '预览',
   'regex.editor.plainText': '纯文本',
   'regex.editor.html': 'HTML',
   'regex.editor.settingsPanel': '设置面板',
@@ -445,7 +444,7 @@ export default {
   'worldbook.position.afterExample': '示例对话之后',
   'worldbook.position.beforeAuthorsNote': '作者注释之前',
   'worldbook.position.afterAuthorsNote': '作者注释之后',
-  'worldbook.position.atDepth': '在深度 ⚙',
+  'worldbook.position.atDepth': '在深度',
   'worldbook.position.outlet': '锚点',
   'worldbook.logic.andAny': 'AND 任意',
   'worldbook.logic.notAll': 'NOT 全部',
@@ -564,7 +563,6 @@ export default {
   'character.sidebar.greetingsLabel': '开场白',
   'character.sidebar.addGreeting': '+ 开场白',
   'character.sidebar.regexMode': '正则',
-  'character.sidebar.fieldsMode': '← 字段',
   'character.sidebar.deleteGreetingTitle': '删除这条开场白',
   'character.sidebar.greetingLabel': '开场白 {n}',
 
@@ -583,8 +581,8 @@ export default {
   'character.field.mesExample': '对话示例',
 
   // ---- 角色元信息 ----
-  'character.metaForm.title': 'ⓘ 角色信息',
-  'character.metaForm.favLabel': '⭐ 收藏',
+  'character.metaForm.title': '角色信息',
+  'character.metaForm.favLabel': '收藏',
   'character.metaForm.creatorLabel': '创作者',
   'character.metaForm.versionLabel': '角色版本',
   'character.metaForm.creatorNotesLabel': '创作者的注释',
@@ -605,7 +603,7 @@ export default {
   // ========================================
   // toolbox：跨 workspace 的工具箱面板（容器壳）
   // ========================================
-  'toolbox.title': '🔧 工具箱',
+  'toolbox.title': '工具箱',
   'toolbox.empty': '当前场景还没有可用的工具',
 
   // ---- 工具切换标签 ----
@@ -642,7 +640,7 @@ export default {
   // ========================================
   // agent：跨 store 运维助手
   // ========================================
-  'agent.header.open': '🤖 Agent',
+  'agent.header.open': 'Agent',
   'agent.panel.title': 'Agent 助手',
   'agent.settings.title': 'Agent 设置',
   'agent.settings.systemPrompt': '系统提示词',

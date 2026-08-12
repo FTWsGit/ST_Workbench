@@ -54,8 +54,8 @@
                 class="wb-tree-act del"
                 :title="uiStore.t('preset.copyPanel.removeBlock')"
                 @click.stop="removeBlock('left', e.block.identifier)"
-                >🗑</span
-              >
+                ><Icon name="trash" :size="12"
+              /></span>
             </div>
           </div>
         </template>
@@ -71,7 +71,7 @@
           :title="uiStore.t('preset.copyPanel.copyRight')"
           @click="copy('left')"
         >
-          {{ isMobile ? '▼' : '▶' }}
+          <Icon :name="isMobile ? 'arrowDown' : 'arrowRight'" />
         </button>
         <button
           class="wb-btn accent"
@@ -79,7 +79,7 @@
           :title="uiStore.t('preset.copyPanel.copyLeft')"
           @click="copy('right')"
         >
-          {{ isMobile ? '▲' : '◀' }}
+          <Icon :name="isMobile ? 'arrowUp' : 'arrowLeft'" />
         </button>
       </div>
 
@@ -136,8 +136,8 @@
                 class="wb-tree-act del"
                 :title="uiStore.t('preset.copyPanel.removeBlock')"
                 @click.stop="removeBlock('right', e.block.identifier)"
-                >🗑</span
-              >
+                ><Icon name="trash" :size="12"
+              /></span>
             </div>
           </div>
         </template>
@@ -159,6 +159,7 @@ import * as ST from '../../api/presetApi';
 import type { PresetListEntry } from '../../api/presetApi';
 import type { PresetData, PresetBlock, OrderItem } from '../../types';
 import { applyMultiSelect, roleClass, esc, orderedPromptsWithHidden } from '../../utils';
+import Icon from '../shared/Icon.vue';
 
 const store = usePresetStore();
 const uiStore = useUiStore();

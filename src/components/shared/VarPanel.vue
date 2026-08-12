@@ -10,7 +10,7 @@
       @pointerdown="resize.onPointerDown"
     ></div>
     <div class="wb-rp-header">
-      <span>{{ uiStore.t('preset.varPanel.title') }}</span>
+      <span><Icon name="chart" /> {{ uiStore.t('preset.varPanel.title') }}</span>
       <div class="wb-row-tight">
         <button
           class="wb-btn icon-btn"
@@ -19,14 +19,14 @@
           :aria-label="uiStore.t('shared.floatingPanel.toggleFloat')"
           @click="toggleFloat"
         >
-          📌
+          <Icon name="pin" />
         </button>
         <button
           class="wb-btn close-btn compact"
           :aria-label="uiStore.t('common.close')"
           @click="uiStore.varNavOpen = false"
         >
-          ✕
+          <Icon name="close" />
         </button>
       </div>
     </div>
@@ -36,14 +36,14 @@
         v-model="uiStore.varFilterQ"
         :placeholder="uiStore.t('preset.varPanel.filter')"
       />
-      <button class="wb-btn sm" @click="uiStore.rebuildVarIndex()">🔄</button>
+      <button class="wb-btn sm" @click="uiStore.rebuildVarIndex()"><Icon name="refresh" /></button>
     </div>
     <div class="wb-rp-nav">
       <button class="wb-btn" @click="uiStore.navVar(-1, 'local')">
-        {{ uiStore.t('preset.varPanel.prev') }}
+        <Icon name="arrowUp" /> {{ uiStore.t('preset.varPanel.prev') }}
       </button>
       <button class="wb-btn" @click="uiStore.navVar(1, 'local')">
-        {{ uiStore.t('preset.varPanel.next') }}
+        <Icon name="arrowDown" /> {{ uiStore.t('preset.varPanel.next') }}
       </button>
       <span class="wb-search-count"
         >{{ uiStore.localFiltered.length }}/{{ uiStore.localRefs.length }} · G{{
@@ -107,6 +107,7 @@ import { watch } from 'vue';
 import { useUiStore } from '../../stores/uiStore';
 import { usePanelResize } from '../../composables/usePanelResize';
 import { varOpBadge } from '../../utils';
+import Icon from './Icon.vue';
 
 const uiStore = useUiStore();
 

@@ -6,7 +6,7 @@
     @click.self="uiStore.settingsOpen = false"
   >
     <div class="wb-modal lg">
-      <h3>⚙ {{ uiStore.t('shared.settings.title') }}</h3>
+      <h3><Icon name="gear" /> {{ uiStore.t('shared.settings.title') }}</h3>
       <div class="wb-modal-scroll">
         <div class="wb-settings-section">
           <label>{{ uiStore.t('shared.settings.language') }}</label>
@@ -177,6 +177,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { FONT_OPTIONS, SYNTAX_LABEL_KEYS } from '../../types';
 import type { SyntaxColors } from '../../types';
 import { useConfirmStore } from '../../stores/confirmStore';
+import Icon from './Icon.vue';
 
 const confirmStore = useConfirmStore();
 const _presetStore = usePresetStore();

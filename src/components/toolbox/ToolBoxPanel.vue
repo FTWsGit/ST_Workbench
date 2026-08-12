@@ -10,7 +10,9 @@
   >
     <template #title>
       <span class="wb-toolbox-float-title">
-        <span class="wb-toolbox-float-name">{{ uiStore.t('toolbox.title') }}</span>
+        <span class="wb-toolbox-float-name"
+          ><Icon name="toolbox" /> {{ uiStore.t('toolbox.title') }}</span
+        >
         <PanelModeSwitch :model-value="mode" @update:model-value="setMode" />
       </span>
     </template>
@@ -51,7 +53,7 @@
       @pointerdown="resize.onPointerDown"
     ></div>
     <div class="wb-rp-header">
-      <span>{{ uiStore.t('toolbox.title') }}</span>
+      <span><Icon name="toolbox" /> {{ uiStore.t('toolbox.title') }}</span>
       <div class="wb-row-tight">
         <PanelModeSwitch :model-value="mode" @update:model-value="setMode" />
         <button
@@ -59,7 +61,7 @@
           :aria-label="uiStore.t('common.close')"
           @click="closePanel"
         >
-          ✕
+          <Icon name="close" />
         </button>
       </div>
     </div>
@@ -93,6 +95,7 @@ import { useTabsStore } from '../../stores/tabsStore';
 import { usePanelResize } from '../../composables/usePanelResize';
 import FloatingPanelShell from '../shared/FloatingPanelShell.vue';
 import PanelModeSwitch from '../shared/PanelModeSwitch.vue';
+import Icon from '../shared/Icon.vue';
 import { getToolsForScene, type ToolScene } from './registry';
 import type { PanelMode } from '../../types';
 

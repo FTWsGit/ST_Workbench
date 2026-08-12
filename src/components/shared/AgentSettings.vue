@@ -65,7 +65,7 @@
               :aria-label="kb.enabled ? uiStore.t('common.disable') : uiStore.t('common.enable')"
               @click="toggleKnowledge(idx)"
             >
-              {{ kb.enabled ? '👁' : '🚫' }}
+              <Icon :name="kb.enabled ? 'eye' : 'ban'" />
             </button>
             <button
               class="wb-btn icon-btn compact"
@@ -73,7 +73,7 @@
               :aria-label="uiStore.t('common.delete')"
               @click="removeKnowledge(idx)"
             >
-              🗑
+              <Icon name="trash" />
             </button>
           </div>
           <input
@@ -205,6 +205,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useAgentStore } from '../../agent/agentStore';
 import type { AgentConfig, KnowledgeBlock } from '../../agent/types';
 import NumberInput from './NumberInput.vue';
+import Icon from './Icon.vue';
 
 const uiStore = useUiStore();
 const agentStore = useAgentStore();

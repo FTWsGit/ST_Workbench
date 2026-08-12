@@ -4,10 +4,10 @@
       <span class="wb-regex-editor-name">{{ script.scriptName || props.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
       <button class="wb-btn sm" :class="{ active: mode === 'edit' }" @click="mode = 'edit'">
-        {{ props.t('regex.editor.edit') }}
+        <Icon name="edit" /> {{ props.t('regex.editor.edit') }}
       </button>
       <button class="wb-btn sm" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">
-        {{ props.t('regex.editor.preview') }}
+        <Icon name="eye" /> {{ props.t('regex.editor.preview') }}
       </button>
       <template v-if="mode === 'preview'">
         <button class="wb-btn sm" :class="{ active: !renderHtml }" @click="renderHtml = false">
@@ -23,7 +23,7 @@
         @click="uiStore.toggleSettingsDock()"
         :title="props.t('regex.editor.settingsPanel')"
       >
-        ⚙
+        <Icon name="gear" />
       </button>
     </div>
 
@@ -57,7 +57,7 @@
         {{ props.t('regex.editor.invalidFindRegex') }}
       </p>
       <p class="wb-muted" style="font-size: 12px">
-        {{ props.t('regex.editor.previewLimitation') }}
+        <Icon name="eye" /> {{ props.t('regex.editor.previewLimitation') }}
       </p>
     </div>
   </div>
@@ -69,6 +69,7 @@ import { useTabsStore } from '../../stores/tabsStore';
 import { useUiStore } from '../../stores/uiStore';
 import { applyRegexScript, parseFindRegex } from '../../regexEngine';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
+import Icon from '../shared/Icon.vue';
 import type { RegexContentEditorProps } from './regexProps';
 
 const props = defineProps<RegexContentEditorProps>();

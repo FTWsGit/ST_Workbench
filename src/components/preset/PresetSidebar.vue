@@ -17,10 +17,10 @@
       </ListToolbar>
       <div class="wb-sidebar-tools">
         <button class="wb-btn" :disabled="!canBind" @click="store.bindSelected()">
-          {{ uiStore.t('shared.sidebar.bind') }}
+          <Icon name="bind" /> {{ uiStore.t('shared.sidebar.bind') }}
         </button>
         <button class="wb-btn" :disabled="!canUnbind" @click="unbindCurrent()">
-          {{ uiStore.t('shared.sidebar.unbind') }}
+          <Icon name="unbind" /> {{ uiStore.t('shared.sidebar.unbind') }}
         </button>
       </div>
     </div>
@@ -74,8 +74,12 @@
           />
           <span class="wb-tree-group-count">{{ (node.ref as OrderGroup).children.length }}</span>
           <span class="wb-tree-actions">
-            <span class="wb-tree-act" @click.stop="store.toggleBlock(gi)">👁</span>
-            <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
+            <span class="wb-tree-act" @click.stop="store.toggleBlock(gi)"
+              ><Icon name="eye" :size="12"
+            /></span>
+            <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)"
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
         <div
@@ -128,8 +132,12 @@
             getBlock((node.ref as OrderItem).identifier)?.role || 'system'
           }}</span>
           <span class="wb-tree-actions">
-            <span class="wb-tree-act" @click.stop="store.hideBlock(gi)">👁</span>
-            <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)">🗑</span>
+            <span class="wb-tree-act" @click.stop="store.hideBlock(gi)"
+              ><Icon name="eye" :size="12"
+            /></span>
+            <span class="wb-tree-act del" @click.stop="store.deleteBlock(gi)"
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
       </template>
@@ -155,6 +163,7 @@ import { useDragReorder } from '../../composables/useDragReorder';
 import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
 import ListToolbar from '../shared/ListToolbar.vue';
+import Icon from '../shared/Icon.vue';
 
 /**
  * 显式 prop：本组件模板是双根节点（<aside> + 同级 .wb-resize-handle），Vue 不会自动把父级 :class/attrs

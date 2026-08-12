@@ -17,7 +17,7 @@
         @click="uiStore.toggleSettingsDock()"
         :title="uiStore.t('preset.sidebar.settingsPanel')"
       >
-        ⚙
+        <Icon name="gear" />
       </button>
     </div>
     <HighlightedEditor
@@ -42,6 +42,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { roleClass } from '../../utils';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
+import Icon from '../shared/Icon.vue';
 
 const store = usePresetStore();
 const uiStore = useUiStore();

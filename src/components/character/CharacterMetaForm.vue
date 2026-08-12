@@ -24,7 +24,8 @@
     </div>
 
     <label class="wb-form-check"
-      ><input type="checkbox" v-model="fav" /> {{ uiStore.t('character.metaForm.favLabel') }}</label
+      ><input type="checkbox" v-model="fav" /> <Icon name="star" />
+      {{ uiStore.t('character.metaForm.favLabel') }}</label
     >
 
     <FormField :label="uiStore.t('character.metaForm.worldbookLabel')">

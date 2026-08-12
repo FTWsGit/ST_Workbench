@@ -59,8 +59,8 @@
               class="wb-tree-act del"
               :title="uiStore.t('character.sidebar.deleteGreetingTitle')"
               @click.stop="store.deleteGreeting(store.greetingIds[i])"
-              >🗑</span
-            >
+              ><Icon name="trash" :size="12"
+            /></span>
           </span>
         </div>
       </template>
@@ -84,6 +84,7 @@ import { useTabsStore } from '../../stores/tabsStore';
 import { CHARACTER_FIELDS } from '../../types';
 import { useDragReorder } from '../../composables/useDragReorder';
 import { usePanelResize } from '../../composables/usePanelResize';
+import Icon from '../shared/Icon.vue';
 
 const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 

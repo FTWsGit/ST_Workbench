@@ -9,7 +9,7 @@
         @click="uiStore.toggleSettingsDock()"
         :title="props.t('tavern.editor.settingsPanel')"
       >
-        ⚙
+        <Icon name="gear" />
       </button>
     </div>
     <HighlightedEditor
@@ -28,6 +28,7 @@ import { ref, computed, watch } from 'vue';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useUiStore } from '../../stores/uiStore';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
+import Icon from '../shared/Icon.vue';
 import type { Script, ScriptTree } from '../../types';
 import type { TavernContentEditorProps } from './tavernProps';
 
