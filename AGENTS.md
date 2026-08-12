@@ -18,7 +18,6 @@
 
 ## 项目结构纪律
 - 项目不应该一味追求最小改动，假如需要抽象，那就抽象；需要统一接口，那就统一接口；需要创造复用逻辑，那就复用
-- 永远不要在vue里面使用`<style>`，这会导致产出额外的`dist/style.css`。只在`src/style/main.css`里面写
 
 ## 项目测试纪律
 - 凡是能用独立脚本先验证正确性/复现 bug 再合并的改动，都应该这么做（纯函数如 `utils.ts` / `regexEngine.ts` / `useHighlight.ts` 用 `npx tsx <file>` 跑）。

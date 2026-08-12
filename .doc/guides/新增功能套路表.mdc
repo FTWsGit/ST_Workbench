@@ -31,6 +31,7 @@ alwaysApply: false
 | 改动 `utils.ts`/`regexEngine.ts` 里的纯函数算法 | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
 | 判断当前是不是移动端布局 | `composables/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |
 | 新增一个"工作区内部还有子集合"的 domain 时 | 不要在某个 Sidebar 组件内部再发明一个本地 `localMode`，直接调 `tabsStore.setSidebarCollection(activeWorkspace, collection)` |
+| 加一个图标 / 按钮里要放小符号 | `components/shared/Icon.vue`（统一 16×16 viewBox、`stroke="currentColor"`、1.4 描边），`name` 从 `IconName` 枚举挑；需要新图标就在 ICONS 表里加一笔并补逐键 JSDoc。**不要**在模板或 i18n 字符串里写裸 emoji/Unicode 符号——跨字体渲染不一致 |
 
 ## 新增一个 domain 的完整流程
 

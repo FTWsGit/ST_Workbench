@@ -15,7 +15,7 @@ alwaysApply: false
 
 ### 按钮
 
-`.wb-btn`（默认）/ `.wb-btn.accent`（强调色）/ `.wb-btn.active`（激活态）/ `.wb-btn.sm`（小号）/ `.wb-btn.close-btn`（✕关闭）/ `.wb-btn.close-btn.compact`（面板头部用）/ `.wb-btn.icon-btn`（纯图标按钮，📌 float 切换那种）。
+`.wb-btn`（默认）/ `.wb-btn.accent`（强调色）/ `.wb-btn.active`（激活态）/ `.wb-btn.sm`（小号）/ `.wb-btn.close-btn`（✕关闭）/ `.wb-btn.close-btn.compact`（面板头部用）/ `.wb-btn.icon-btn`（纯图标按钮，📌 float 切换那种）。图标走 `<Icon>`（见「复用组件速查」），`<svg>` 上挂的 `.wb-icon` class 目前没有对应 CSS 规则——靠 SVG 自身 inline 行内属性渲染，需要整体调整样式时才在这里加规则。
 
 ### 弹窗
 
@@ -58,6 +58,7 @@ agent 侧：`AgentPanel.vue` 同支持三态，形态存 `settings.agentMode`，
 - **`NumberInput.vue`**：原生 `<input type="number">` + 右侧 ⠿ 拖拽手柄，按住拖拽的数值微调由 `useNumberDragScrub` 提供。
 - **`FloatingPanelShell.vue`**：薄壳，只渲染 header（标题+拖拽发起区+✕ 关闭）/body（`v-slot`）/右下角 resize 手柄，业务内容整个通过默认 slot 塞进去；props（`title`/`close-title`/`width`/`height`/`min-width`/`min-height`）+ `@close` 事件签名。
 - **`PanelModeSwitch.vue`**：三态面板切换 UI（docked/overlay/float），见「三态面板形态」。
+- **`Icon.vue`**：内联 SVG 图标组件，统一 16×16 viewBox、`stroke="currentColor"`、1.4 描边、`aria-hidden="true"`。props（`name: IconName`/`size?: number`，默认 16），`IconName` 类型从 `<script>` 块导出（按 Icon.vue 的逐键 JSDoc 查每个图标对应的 emoji 与用途）。所有按钮/标签里的小图标都走它，不要写裸 emoji/Unicode 符号——跨字体渲染不一致。
 
 ## 数值常量
 
