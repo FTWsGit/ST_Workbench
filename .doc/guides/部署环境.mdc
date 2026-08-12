@@ -1,44 +1,47 @@
 ---
 name: "部署环境"
-description: "宿主环境：脚本在 about:srcdoc iframe 执行但 UI 挂到顶层文档，含 CSS 层叠上下文约束。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定/CSS 选择器的代码，或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。"
+description: "宿主环境：作为标准 ST 扩展跑在主文档，含 CSS 层叠上下文约束。改任何涉及 window/document/clipboard/挂载点定位/拖拽监听器绑定/CSS 选择器的代码，或排查'设置不生效/拖拽没反应/复制失败/样式被覆盖'类症状时读。"
 kind: "guide"
 alwaysApply: false
 ---
 
 # 部署环境
 
-## 部署环境：iframe 执行 + 顶层文档挂载
+## 部署环境：标准 ST 扩展，跑在主文档
 
-1. 项目打包成单文件 `dist/index.iife.js`（`vite.config.js` 用 `lib` + `iife` format，`cssCodeSplit:false`）。
-2. 用户把它作为脚本导入到 SillyTavern「酒馆助手」的脚本区。
-3. 酒馆助手实际是在一个 **`about:srcdoc` 的 iframe 里执行脚本**，但脚本自己选择把 UI 挂到 **`window.top.document`**（顶层文档），这样悬浮窗才能正常显示。见 `main.ts`。
-4. **后果**：脚本自己 JS 执行上下文里，裸写的全局 `window`/`document` 指的是 **iframe 自己的**，跟实际渲染 UI 的顶层文档是两个完全不同的东西。凡是不小心用了裸 `window.xxx`/`document.xxx` 的地方，几乎必然出 bug。
+1. 项目打包成 `dist/index.js`（ESM，`vite.config.js` 用 `lib` + `es` format）+ `dist/style.css`（独立 CSS 产物）。
+2. `manifest.json` 声明 `js`/`css`/`hooks`，由 ST 扩展管理器加载——**脚本直接跑在 ST 主文档的 ES module 上下文里**，不是 iframe。
+3. `hooks.activate → init()` 是 ST 激活扩展时调的入口；`hooks.install/update → refresh()` = `location.reload()`。
+4. **后果**：`window`/`document` 就是主文档的，没有 iframe 分裂。裸 `window.xxx`/`document.xxx` 直接可用——但项目里仍保留 `hostEnv.ts` 的 `getHostWindow()`/`getHostDocument()` 调用点（接口保留、实现天然退化，见 decision 0010），新代码可以直接用裸引用。
+
+## 入口
+
+入口在 `main.ts` 的 `registerEntries()`（由 `init()` 调）里注册：
+- 斜杠命令 `/workbench`：宿主全局 `SlashCommandParser.addCommandObject` 注册，聊天框敲命令触发。
+- ST 顶栏按钮：幂等 id `st-wb-entry-button` 挂到 `#extensionsMenu`（兜底 `body`）。
+- 两条入口都派发 `st-workbench:open-panel` 自定义事件到 `window`，`App.vue` 在 `onMounted` 挂监听触发 `openPanel()`——事件名是 `main.ts` ↔ `App.vue` 的契约，两侧需一致。
 
 ## 挂载点本身长什么样
 
-（`main.ts`）：显式给了一套完整的定位样式，直接内联写在元素上（不依赖 CSS 层叠，避免被任何后加载的规则打乱）：`position:fixed; top:0; left:0; width:100vw; height:100dvh(回退100vh); z-index:2147483647`（合法 z-index 最大值）；同时 `pointer-events:none`——挂载点本身铺满全屏但不吃任何点击，真正可见的部分（`.wb-fab`/`.wb-panel`/`..wb-var-popup` 等）各自在 CSS 里单独声明 `pointer-events:auto` 抢回来，宿主页面其它地方的点击照常穿透。这个元素 append 到 `targetDoc.body`（不是 `<html>`）。挂载后还有一段一次性诊断：检测到宿主 `<html>` 上有非 `none` 的 `transform`/`perspective`/`filter`/`will-change: transform` 时 `console.warn`——这类属性本身不影响 `vw`/`dvh` 的尺寸计算，但如果 transform 真的包含位移，会让 `top:0;left:0` 偏离真实视口角落。
+（`main.ts`）：显式给了一套完整的定位样式，直接内联写在元素上（不依赖 CSS 层叠，避免被任何后加载的规则打乱）：`position:fixed; top:0; left:0; width:100vw; height:100dvh(回退100vh); z-index:2147483647`（合法 z-index 最大值）。这个元素 append 到 `document.body`（不是 `<html>`）。挂载后还有一段一次性诊断：检测到宿主 `<html>` 上有非 `none` 的 `transform`/`perspective`/`filter`/`will-change: transform` 时 `console.warn`——这类属性本身不影响 `vw`/`dvh` 的尺寸计算，但如果 transform 真的包含位移，会让 `top:0;left:0` 偏离真实视口角落。
 
 **全局错误边界**：`app.config.errorHandler` 捕获任何组件 setup/render 抛错或 watcher 异常——本扩展注入到宿主页面顶层 `<body>`，未捕获错误会导致整个面板白屏、甚至破坏宿主页面布局。handler 里至少 `console.error` 出来，再往顶层文档叠一个红色 banner 提示"出错了、建议刷新"，点击关闭——避免用户看到一片空白还以为是宿主页面的 bug。此时 Pinia store 可能尚未初始化（错误发生在 `app.mount` 之前），所以不能依赖 `uiStore.showToast`，只能用最原始的 DOM。
 
-**脚本卸载清理**：用户在 ST 扩展面板关掉脚本时，承载脚本的 `about:srcdoc` iframe 会被销毁，但本扩展的根容器（含 FAB）挂在顶层 `<body>` 上仍残留——FAB 不会自己消失。`main.ts` 监听 iframe 自身的 `pagehide`/`unload`（`pagehide` 在 bfcache 关闭时最可靠，`unload` 作旧浏览器兜底，都用 `once:true` 避免重复卸载），触发时 `app.unmount()` + 根容器 `el.remove()` + 注入的 `<style>` 也清掉，让 FAB 等所有可见元素一并消失，不残留本扩展的 CSS 规则到宿主页面。
+**脚本卸载清理**：标准扩展没有"扩展级卸载"事件，页面生命周期即扩展生命周期。`main.ts` 监听 `window` 的 `pagehide`/`unload`（`pagehide` 在 bfcache 关闭时最可靠，`unload` 作旧浏览器兜底，都用 `once:true` 避免重复卸载），触发时 `app.unmount()` + 根容器 `el.remove()`——CSS 由 manifest `css` 字段注入，不再有手动注入的 `<style>` 要清理。
 
-## 总纪律
+## 模态化面板
 
-任何需要"操作实际可见 UI 所在文档"的代码都走 `getHostWindow()`/`getHostDocument()`，不用裸 `window`/`document`。
+迁移后走模态 dialog 路线（见 decision 0010）：根容器不再 `pointer-events:none`，而是吃掉所有点击做遮罩；`.wb-panel` 铺满视口做编辑面，`::before` 伪元素给半透明遮罩视觉。关闭态用 `#ST_Workbench:not(:has(.wb-panel))` 让根容器在面板关时穿透回宿主页面（入口按钮照常可点）。
 
-## iframe 上下文访问约束
+## hostEnv 纪律
 
-- 裸 `window.addEventListener('mousemove',...)` 绑在 iframe 的 window 上，拖拽不生效。
-- `getComputedStyle(document.documentElement)` 读的是 iframe 自己空白的 `<html>`，字号设置不生效。
-- 命令式创建的 DOM 节点，字体解析跟着创建者的文档走。HighlightedEditor 的测量节点（`.wb-lh-measure`/`.wb-line-mirror`）统一用 `getHostDocument()` 创建。
-- `navigator.clipboard.writeText(...)` 裸调用是 iframe 自己的 `navigator`，大概率直接 reject。改用 `copyToHostClipboard()`：host window 的 clipboard API 失败就自动降级 `execCommand('copy')` 隐藏 textarea 方案。
-- 原生 `window.confirm/prompt/alert` 在 TauriTavern 的 WebView2 宿主里不可靠，一律走 `confirmStore.ask()`/`askInput()`。
+`hostEnv.ts` 接口保留（`getHostWindow()`/`getHostDocument()` 在标准扩展下天然退化为裸 `window`/`document`，调用点零改动即可工作），新代码可以直接用裸 `window`/`document`。`copyToHostClipboard()` 的 `execCommand` 兜底链、`useIsMobile()` 的 `matchMedia` 逻辑仍保留——这些不是 iframe 语义，是真实可用的兜底。原生 `window.confirm/prompt/alert` 在 TauriTavern 的 WebView2 宿主里不可靠，一律走 `confirmStore.ask()`/`askInput()`。
 
 ## CSS 与层叠上下文约束
 
-- **`<html>` 有 `transform`（即使是 identity matrix）时，`position:fixed` 元素的 containing block 会变成 `<html>` 而不是 viewport**，导致 `inset:0`/`bottom:24px` 等计算错误、UI 飘到视口外。修复：挂载点用 `100vw`/`100dvh`（视口单位，不走 containing-block 链路）显式给宽高，不用 `inset:0`；内部浮层全部 `position:absolute` 锚定到这个挂载点。
+- **`<html>` 有 `transform`（即使是 identity matrix）时，`position:fixed` 元素的 containing block 会变成 `<html>` 而不是 viewport**，导致 `inset:0`/`bottom:24px` 等计算错误、UI 滑到视口外。修复：挂载点用 `100vw`/`100dvh`（视口单位，不走 containing-block 链路）显式给宽高，不用 `inset:0`；内部浮层全部 `position:absolute` 锚定到这个挂载点。
 - **移动端 ST 主题把 `<body>` 做成 `position:fixed`**（防止软键盘弹出时页面抖动），且 `position:fixed` 会无条件建立新的层叠上下文——这意味着 `<body>` 自己变成了一个层叠上下文，包含聊天输入框等元素；一个"DOM 顺序更靠后但自身没有 positioned"的裸 `<div>`，画在"in-flow 非定位"这一层，天然低于任何 positioned 层叠上下文，跟 DOM 顺序完全无关。修复：挂载点显式给了 `position:fixed` + 具体数值的 `z-index`（`auto` 的 z-index 虽然也建立层叠上下文，但排在"z-index 0/auto"这一层，实测不足以稳定盖过 `<body>` 自己的层叠上下文；显式正数 z-index 才进入更高的"positive z-index"层，无条件盖过前者）；append 到 `<body>`（不是 `<html>`），让自己的 z-index 在 `<body>` 的层叠上下文*内部*竞争，而不是站在外面跟整个 `<body>` 比。
-- **`100vh` 在移动端会被底部导航栏/地址栏压缩**，导致内容被裁（FAB 被导航栏盖住、sidebar 底部内容看不到）。修复：挂载点高度用 `100dvh`（dynamic viewport height），不支持 `dvh` 的浏览器自动回退到 `100vh`（先设 `height:100vh` 再覆盖设 `height:100dvh`，两行都写，靠属性覆盖顺序实现"降级不报错"）。
+- **`100vh` 在移动端会被底部导航栏/地址栏压缩**，导致内容被裁。修复：挂载点高度用 `100dvh`（dynamic viewport height），不支持 `dvh` 的浏览器自动回退到 `100vh`（先设 `height:100vh` 再覆盖设 `height:100dvh`，两行都写，靠属性覆盖顺序实现"降级不报错"）。
 
 酒馆本身是个大页面，没有 Shadow DOM 隔离，所有样式共享同一个层叠上下文：
 

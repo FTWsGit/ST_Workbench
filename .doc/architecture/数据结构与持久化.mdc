@@ -55,7 +55,7 @@ alwaysApply: false
 
 ### uiStore
 
-全局 UI 单例（id `'ui'`，导出 `useUiStore()`）。字段：`settings`（字体/颜色/面板宽度/语言/FAB 位置）、`cssVars`（计算出的 CSS 变量）、`panelOpen`（整个 ST_Workbench 浮动面板的主开关）、`settingsOpen`（设置弹窗开关）、`metaPanelOpen`（元信息悬浮窗开关）、`agentPanelOpen`/`varNavOpen`/`previewOpen`（Agent/VarNav/Preview 三个跨 workspace 工具面板的开关，切换 workspace 不关闭）、`toastMsg`/`toastVisible`/`showToast`（通知系统）、`t`/`currentLocale`（i18n）。
+全局 UI 单例（id `'ui'`，导出 `useUiStore()`）。字段：`settings`（字体/颜色/面板宽度/语言）、`cssVars`（计算出的 CSS 变量）、`panelOpen`（整个 ST_Workbench 模态面板的主开关，入口经 `st-workbench:open-panel` 事件触发，见「部署环境」）、`settingsOpen`（设置弹窗开关）、`metaPanelOpen`（元信息悬浮窗开关）、`agentPanelOpen`/`varNavOpen`/`previewOpen`（Agent/VarNav/Preview 三个跨 workspace 工具面板的开关，切换 workspace 不关闭）、`toastMsg`/`toastVisible`/`showToast`（通知系统）、`t`/`currentLocale`（i18n）。
 
 **Var Nav/Preview 的状态机宿主在 uiStore**：`useVarNav`/`usePreviewEngine` 在 uiStore setup 实例化（三域数据经惰性 getter 注入），跨 workspace 通用。所有组件直接 `useUiStore()` 拿全局 UI 状态，不经过任何 domain store 转发；presetStore/worldbookStore/characterStore 内部也 `useUiStore()` 解构 `t`/`showToast` 供自己的 IO 函数用，但不再对外 return 这些字段。
 
@@ -81,7 +81,7 @@ alwaysApply: false
 
 ### settings 持久化
 
-`settings` 整体存 `localStorage`（`st-wb-settings`），加载时 `{ ...DEFAULT_SETTINGS, ...存的内容 }` 合并（`syntaxColors` 再单独深合并一层）。新增设置项只需要在 `types.ts` 的 `Settings` interface 和 `DEFAULT_SETTINGS` 加一行——比如 `fabPos: { x: number; y: number } | null`（FAB 被长按拖拽后的显式坐标，`null` 表示还没拖过、继续用 CSS 默认的 `bottom/right` 定位）。右侧面板/工具箱的形态是 `PanelMode` 枚举（`'docked'` 右侧挤开 / `'overlay'` 右侧悬浮 / `'float'` 完全悬浮），`previewMode`/`toolBoxMode`/`agentMode` 三个字段 + 共享的 `PanelModeSwitch.vue` 切换 UI。面板宽度：`previewWidth`/`toolBoxWidth`/`agentWidth`（resize 手柄改完 `uiStore.saveSettings()` 持久化），工具箱默认 `420`/docked。开关本身不存 settings——`toolBoxOpen` 按 workspace 分桶存 `tabsStore`（沿用 `previewOpen` 同款，不另起状态），`agentPanelOpen`/`metaPanelOpen` 在 `uiStore`（跨 workspace 全局）。
+`settings` 整体存 `localStorage`（`st-wb-settings`），加载时 `{ ...DEFAULT_SETTINGS, ...存的内容 }` 合并（`syntaxColors` 再单独深合并一层）。新增设置项只需要在 `types.ts` 的 `Settings` interface 和 `DEFAULT_SETTINGS` 加一行。右侧面板/工具箱的形态是 `PanelMode` 枚举（`'docked'` 右侧挤开 / `'overlay'` 右侧悬浮 / `'float'` 完全悬浮），`previewMode`/`toolBoxMode`/`agentMode` 三个字段 + 共享的 `PanelModeSwitch.vue` 切换 UI。面板宽度：`previewWidth`/`toolBoxWidth`/`agentWidth`（resize 手柄改完 `uiStore.saveSettings()` 持久化），工具箱默认 `420`/docked。开关本身不存 settings——`toolBoxOpen` 按 workspace 分桶存 `tabsStore`（沿用 `previewOpen` 同款，不另起状态），`agentPanelOpen`/`metaPanelOpen` 在 `uiStore`（跨 workspace 全局）。
 
 regex/tavern 段维护裸数组 + 影子树两份状态，靠显式 rebuild + deep watch 双轨桥接——为什么要两份状态、改码时的坑，见 decision 0007，改代码的具体纪律见「新增功能套路表」。
 

@@ -38,7 +38,7 @@
 
 | Command | Action |
 |---|---|
-| `npm run build` | Vite IIFE build → `dist/index.iife.js` |
+| `npm run build` | Vite ESM build → `dist/index.js` + `dist/style.css` |
 | `npm run typecheck` | `vue-tsc --noEmit` |
 | `npm run format` | `prettier --write src` |
 | `npm run lint` | `eslint src && stylelint src/**/*.css` |
@@ -46,18 +46,14 @@
 | `npm run test` | `vitest run` |
 
 
-Build is a library `iife` format (`vite.config.js`). No dev server. CSS is manually injected into the host document (`src/main.ts), not by vite plugins.
+Build is a library `es` format (`vite.config.js`, `cssFileName: 'style'`). No dev server. CSS is emitted as `dist/style.css` and injected by ST via the `manifest.json` `css` field, not by vite plugins.
 
 ## Critical Host-Environment Quirk
 
-The script runs inside an `about:srcdoc` iframe (Tavern Helper) but mounts UI onto `window.top.document`. **Bare `window`/`document` references refer to the iframe, not the visible page.** This silently breaks:
-- `addEventListener('mousemove', ...)` for drag/resize
-- `getComputedStyle(doc.documentElement)` for font/color settings
-- Clipboard (`navigator.clipboard.writeText`)
-- `ResizeObserver` for layout measurements
+The project runs as a standard ST extension (`manifest.json` + `hooks`) directly in the ST main document — no iframe. Bare `window`/`document` refer to the host page. The `hostEnv.ts` `getHostWindow()`/`getHostDocument()` interfaces are kept (they degrade to bare `window`/`document` under standard deployment, see decision 0010), but new code can use bare references directly.
 - **No native `window.confirm`/`prompt`/`alert`**: They're unreliable in Tauri/WebView2. Use `confirmStore.ask()` / `confirmStore.askInput()`.
 - **No native HTML5 drag-and-drop**: It breaks in Tauri/WebView2. All lists use `useDragReorder.ts` (Pointer Events). Touch drag requires a `.wb-drag-handle` with `touch-action: none`.
-**Always use** `getHostWindow()` / `getHostDocument()` from `src/composables/hostEnv.ts`. The same file also provides `copyToHostClipboard()` (with execCommand fallback) and `useIsMobile()` (matchMedia-based, listens on host window).
+- `copyToHostClipboard()` (with execCommand fallback) and `useIsMobile()` (matchMedia-based) are still real utilities — keep using them.
 
 ## Data Flow Rules
 

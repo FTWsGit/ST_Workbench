@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## 断点判定
 
-`composables/hostEnv.ts` 的 `useIsMobile()` 提供一个响应式 `isMobile` ref，断点是同文件导出的 `MOBILE_BREAKPOINT = 720`（px，宿主窗口宽度）。**优先用 `matchMedia` 监听断点跨越**，不支持时退化成 `resize` 监听——跟侧边栏 resize 一样，监听的是 `getHostWindow()`，不是裸 `window`（脚本自己的 JS 执行上下文是 iframe，裸全局对象量出来的永远是 iframe 自己的尺寸）。
+`composables/hostEnv.ts` 的 `useIsMobile()` 提供一个响应式 `isMobile` ref，断点是同文件导出的 `MOBILE_BREAKPOINT = 720`（px，宿主窗口宽度）。**优先用 `matchMedia` 监听断点跨越**，不支持时退化成 `resize` 监听——监听 `getHostWindow()`（hostEnv 接口保留，标准扩展下天然退化为裸 `window`，见 decision 0010）。
 
 > 注意：CSS 里 `@media (max-width: 720px)` 手写了同一个数字——两处改一处必须跟着改，CSS 读不到 TS 里的常量。
 
@@ -47,4 +47,4 @@ alwaysApply: false
 
 移动端触摸目标（tap target）统一放大了：桌面端 20~24px 的小图标按钮在手机上很难精确点中（业界常引用的舒适下限是 ~40px），做法是**不放大图标本身**（视觉上会显得突兀），而是用 padding 撑大可点击区域、内容居中，视觉尺寸不变、命中区域变大。
 
-拖拽/resize/悬浮窗定位这类不分平台（鼠标和触屏都要用）的交互机制（Pointer Events、`useFloatingPanel`、`useNumberDragScrub`、`useFabDrag`）——它们的权威来源是"要不要同时兼容鼠标和触屏"，不是"移动端断点内生效"。
+拖拽/resize/悬浮窗定位这类不分平台（鼠标和触屏都要用）的交互机制（Pointer Events、`useFloatingPanel`、`useNumberDragScrub`）——它们的权威来源是"要不要同时兼容鼠标和触屏"，不是"移动端断点内生效"。

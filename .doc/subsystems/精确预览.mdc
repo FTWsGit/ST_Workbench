@@ -11,7 +11,7 @@ alwaysApply: false
 
 ## 按块精确预览
 
-`getPromptManagerMessages()`：往顶层文档注入 `<script type="module">`，让 `import('/scripts/openai.js')` 在顶层文档作用域执行，拿到真实的 `promptManager` 单例，跑一次 dry-run 填充它的 `.messages.collection`。每张卡片显示该 block 经宏/正则/其它扩展全部展开后的真实渲染文本。
+`getPromptManagerMessages()`：直接 `import('/scripts/openai.js')` 拿真实的 `promptManager` 单例（标准 ST 扩展跑在主文档，裸动态 import 即可，见 decision 0010），跑一次 dry-run 填充它的 `.messages.collection`。每张卡片显示该 block 经宏/正则/其它扩展全部展开后的真实渲染文本。
 
 ## 整体原文精确预览
 

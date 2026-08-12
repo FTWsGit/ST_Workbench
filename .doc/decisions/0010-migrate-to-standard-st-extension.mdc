@@ -1,0 +1,64 @@
+---
+name: "0010-migrate-to-standard-st-extension"
+kind: "decision"
+description: "为什么从「酒馆助手脚本 iframe 蜑本」迁成「标准 ST 扩展模态 dialog」，以及为什么保留 hostEnv 接口而不是删掉"
+status: "accepted"
+supersedes: ""
+---
+
+# 0010：迁成标准 ST 扩展 + 模态 dialog
+
+## 背景
+
+项目原本部署为「酒馆助手脚本」：`vite` 打成单文件 IIFE `dist/index.iife.js`，用户手动贴到 ST 的脚本区；脚本在 `about:srcdoc` iframe 里执行，再自己把 UI 挂到 `window.top.document`。这套部署带来三套系统性约束（见旧版「部署环境」文档）：
+
+1. **iframe 上下文访问约束**——裸 `window`/`document` 指向 iframe，不是可见 UI 所在的主文档；拖拽监听、`getComputedStyle`、`navigator.clipboard`、`ResizeObserver` 全要绕 hostEnv。
+2. **穿透挂载点**——根容器 `pointer-events:none` 铺满全屏，可见部件各自 `pointer-events:auto` 抢回来，让宿主页面其它地方照常可点。FAB 常驻悬浮球做入口。
+3. **CSS 手动注入**——`?inline` 字符串导入 + `createElement('style')` 写到主文档 `<head>`，避开 iframe 克隆竞态。
+
+API 层配套有一套 `ensureTopImporter` 注入/轮询机制（往顶层文档塞 `<script type="module">` 拿 ST 模块单例），只为 iframe 假 origin 存在。
+
+## 决策
+
+迁成**标准 ST 扩展**（`manifest.json` + ESM `dist/index.js` + 独立 `dist/style.css`，`hooks.activate → init()` 由 ST 调）+ **UI 走模态 dialog 路线**（删 FAB、删穿透机制、根容器吃掉所有点击做遮罩、入口经斜杠命令 `/workbench` + ST 顶栏按钮派发 `st-workbench:open-panel` 事件触发）。
+
+## 取舍
+
+### 为什么迁标准扩展而不是保留 iframe 葚本
+
+- **iframe 原子边界做不到部分穿透**：hit-testing 时 iframe 元素是原子单位，要么吃掉所有点击（宿主页面冻结），要么跳过 iframe（自己里面的按钮也死）。本项目核心形态是"常驻浮层 + 宿主页面共存"，iframe 直接判死刑。
+- **样式隔离是真收益但代价是主题继承断裂**：ST 主题色/字体/暗色变量写在宿主 `<html>`/`<body>` 上，CSS 变量不跨文档继承，iframe 里一个都拿不到。对一个"必须长得像宿主"的工具，这是亏的。
+- **ST 的 srcdoc iframe 是执行沙箱不是显示面**：脚本 JS 必须跑在 iframe 里（ST 的机制），跟 UI 渲染到哪无关——反向撑大 iframe 元素只是把战场从挂载点 div 搬到 iframe 元素本身，层叠战争一个不少。
+
+### 为什么走模态 dialog 而不是保留非模态浮层
+
+- 模态化后穿透机制整套删除、层叠战争大幅缓解、拖拽监听全删（FAB 长按拖拽）、`fabPos` 持久化字段删除——部署环境成本大幅降低。
+- 代价是打开时聊天区不可见，但本项目是编辑工具，编辑一份预设时不需要同时看着聊天/角色卡（用户拍板）。
+
+### 为什么保留 hostEnv 接口而不是删掉
+
+标准扩展下 `window.top === window`，`getHostWindow()` 的 top 探测天然退化为恒等。两个方案：
+
+- **方案 a（采纳）**：保留 `hostEnv.ts` 接口，实现天然退化，调用点零改动。`copyToHostClipboard()` 的 `execCommand` 兜底链、`useIsMobile()` 的 `matchMedia` 逻辑不是 iframe 语义，是真实可用的兜底，本来就该留。
+- 方案 b（未采纳）：删 `hostEnv`，12 个文件的调用点改裸 `window`/`document` + 重写测试 mock seam。改动量大、风险高、收益仅是"清理已退化的抽象"。
+
+选 a：部署切换本身零调用点改动，风险极低。未来若想彻底清理，可独立做。
+
+## 后果
+
+- `vite.config.js` `formats: ['es']` + `cssFileName: 'style'`，产物 `dist/index.js` + `dist/style.css`。
+- `manifest.json` 加 `hooks: { activate: "init", install: "refresh", update: "refresh" }`。
+- `main.ts` 顶层自启 → 导出 `init()`/`refresh()`；删手写 CSS 注入（交给 manifest `css` 字段）；挂载用 `document`；根容器删 `pointer-events:none`（模态遮罩）；`registerEntries()` 注册入口。
+- `api/hostContext.ts` 删 `ensureTopImporter`/`getTopWindow`；各 API 文件退化裸 `import('/...')` 和裸 `fetch`（`/* @vite-ignore */` 跳过构建期解析）。
+- `App.vue` 删 FAB 模板 + `useFabDrag`；`handleKeydown` 补 Esc→关闭；挂 `st-workbench:open-panel` 事件监听。
+- `types.ts` 删 `Settings.fabPos` + `DEFAULT_SETTINGS.fabPos`。
+- 删 `.wb-fab` 相关 CSS（common.css/preset.css/mobile.css/settings.css）。
+- `.wb-panel` 加 `::before` 半透明遮罩做模态视觉；关闭态 `#ST_Workbench:not(:has(.wb-panel))` 穿透回宿主页面。
+
+## 防回归
+
+- 不要把 `formats` 改回 `iife`——会吞掉 `export function init`，hooks 拿不到具名导出。
+- 不要把根容器改回 `pointer-events:none`——模态遮罩要吃点击，穿透机制已删。
+- 不要往 `hostContext.ts` 加回 `ensureTopImporter`/`getTopWindow`——那套注入/轮询只为 iframe 假 origin 存在，标准扩展下裸动态 import 直接可用。
+- 不要删 `hostEnv.ts` 接口——调用点零改动是设计取舍，见上"为什么保留"。
+- 不要把入口改回自绘 FAB——模态 dialog 路线的入口契约是 `st-workbench:open-panel` 事件，由 `main.ts` 的 `registerEntries()` 派发。
