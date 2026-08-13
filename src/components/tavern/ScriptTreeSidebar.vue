@@ -8,7 +8,7 @@
     <div class="wb-sidebar-header">
       <span>{{
         uiStore.t('tavern.sidebar.title', {
-          count: store.tavernHelper.scripts.length,
+          count: store.scripts.length,
         })
       }}</span>
       <ListToolbar>
@@ -26,7 +26,7 @@
       </div>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.tavernHelper.scripts.length" class="wb-list-empty">
+      <p v-if="!store.scripts.length" class="wb-list-empty">
         {{ uiStore.t('tavern.sidebar.empty') }}
       </p>
       <template v-for="(node, gi) in store.scriptTreeFlatNodes" :key="nodeKey(node, gi)">
@@ -106,56 +106,24 @@
             :title="uiStore.t('tavern.sidebar.toggleTitle')"
             @click.stop="store.scriptTreeToggleBlock(gi)"
           ></span>
-          <template v-if="isFolder((node.ref as OrderItem).identifier)">
-            <span
-              v-if="editingFolderGi !== gi"
-              class="wb-tree-name"
-              @dblclick.stop="startEditFolderName(gi)"
-            >
-              {{
-                getFolder((node.ref as OrderItem).identifier)?.name || uiStore.t('common.unnamed')
-              }}
-            </span>
-            <input
-              v-else
-              :ref="(el) => setFolderNameInput(el, gi)"
-              class="wb-tree-name-input"
-              :value="getFolder((node.ref as OrderItem).identifier)?.name || ''"
-              @blur="finishEditFolderName(gi, $event)"
-              @keydown.enter.prevent="finishEditFolderName(gi, $event)"
-              @keydown.esc.prevent="cancelEditFolderName()"
-              @click.stop
-              @pointerdown.stop
-            />
-            <span
-              class="wb-tree-folder-tag"
-              :style="{ color: getFolder((node.ref as OrderItem).identifier)?.color }"
-            >
-              <Icon name="folder" :size="12" />
-            </span>
-          </template>
-          <template v-else>
-            <span
-              v-if="editingScriptGi !== gi"
-              class="wb-tree-name"
-              @dblclick.stop="startEditScriptName(gi)"
-            >
-              {{
-                getScript((node.ref as OrderItem).identifier)?.name || uiStore.t('common.unnamed')
-              }}
-            </span>
-            <input
-              v-else
-              :ref="(el) => setScriptNameInput(el, gi)"
-              class="wb-tree-name-input"
-              :value="getScript((node.ref as OrderItem).identifier)?.name || ''"
-              @blur="finishEditScriptName(gi, $event)"
-              @keydown.enter.prevent="finishEditScriptName(gi, $event)"
-              @keydown.esc.prevent="cancelEditScriptName()"
-              @click.stop
-              @pointerdown.stop
-            />
-          </template>
+          <span
+            v-if="editingScriptGi !== gi"
+            class="wb-tree-name"
+            @dblclick.stop="startEditScriptName(gi)"
+          >
+            {{ getScript((node.ref as OrderItem).identifier)?.name || uiStore.t('common.unnamed') }}
+          </span>
+          <input
+            v-else
+            :ref="(el) => setScriptNameInput(el, gi)"
+            class="wb-tree-name-input"
+            :value="getScript((node.ref as OrderItem).identifier)?.name || ''"
+            @blur="finishEditScriptName(gi, $event)"
+            @keydown.enter.prevent="finishEditScriptName(gi, $event)"
+            @keydown.esc.prevent="cancelEditScriptName()"
+            @click.stop
+            @pointerdown.stop
+          />
           <span class="wb-tree-actions">
             <span
               class="wb-tree-act del"
@@ -176,8 +144,8 @@
 </template>
 
 <script setup lang="ts">
-/** tavern_helper 脚本树侧边栏：分组+脚本两级列表，支持拖拽排序/多选/内联重命名/折叠分组/绑定解绑。
- *  抄 RegexSidebar 全套路，改名换域。folder 是顶层 OrderItem，展示 icon/color 标签（只读）。
+/** tavern 脚本侧边栏：分组+脚本两级列表，支持拖拽排序/多选/内联重命名/折叠分组/绑定解绑。
+ *  抄 RegexSidebar 全套路，改名换域。干净层是扁平 Script[] + _gid 分组（ScriptFolder 已在 api 边界折叠成组）。
  *  组件有两个根节点（<aside> + .wb-resize-handle），mobileDrawerOpen 显式绑到 <aside>。 */
 import { ref, computed, watch } from 'vue';
 import { useTabsStore } from '../../stores/tabsStore';
@@ -185,14 +153,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { usePresetStore } from '../../stores/presetStore';
 import { useCharacterStore } from '../../stores/characterStore';
 import { useConfirmStore } from '../../stores/confirmStore';
-import type {
-  OrderItem,
-  OrderGroup,
-  FlatNode,
-  ScriptTree,
-  Script,
-  ScriptFolder,
-} from '../../types';
+import type { OrderItem, OrderGroup, FlatNode, Script } from '../../types';
 import { usePanelResize } from '../../composables/usePanelResize';
 import { useListScrollSync } from '../../composables/useListScrollSync';
 import { useDragReorder } from '../../composables/useDragReorder';
@@ -248,26 +209,17 @@ const canUnbind = computed(() => {
   });
 });
 
-/** 按 id 预索引 tavernHelper.scripts——模板 v-for 每节点调 getScript/getFolder/isFolder，
- *  不预索引的话每次渲染都对全数组做 O(n) find/some，n 节点 × O(n) = O(n²) 响应式属性访问，
- *  大脚本树下秒级卡死（主因是 watcher 缺幂等守卫每次切 tab 换新 Set 引发整表重渲染，这个是放大因子）。
- *  Map 按 id 索引摊成 O(1) 查表。scripts 数组变（add/delete/reorder/sync）时 computed 重算重建 Map。 */
+/** 按 id 预索引 scripts——模板 v-for 每节点调 getScript，不预索引的话每次渲染都对全数组做 O(n) find，
+ *  n 节点 × O(n) = O(n²) 响应式属性访问，大脚本树下秒级卡死（主因是 watcher 缺幂等守卫每次切 tab
+ *  换新 Set 引发整表重渲染，这个是放大因子）。Map 按 id 索引摊成 O(1) 查表。
+ *  scripts 数组变（add/delete/reorder/sync）时 computed 重算重建 Map。 */
 const scriptsById = computed(() => {
-  const m = new Map<string, ScriptTree>();
-  for (const n of store.value.tavernHelper.scripts) m.set(n.id, n);
+  const m = new Map<string, Script>();
+  for (const n of store.value.scripts) m.set(n.id, n);
   return m;
 });
 function getScript(id: string): Script | undefined {
-  const n = scriptsById.value.get(id);
-  return n && n.type === 'script' ? (n as Script) : undefined;
-}
-function getFolder(id: string): ScriptFolder | undefined {
-  const n = scriptsById.value.get(id);
-  return n && n.type === 'folder' ? (n as ScriptFolder) : undefined;
-}
-function isFolder(id: string): boolean {
-  const n = scriptsById.value.get(id);
-  return n != null && n.type === 'folder';
+  return scriptsById.value.get(id);
 }
 
 function nodeKey(node: FlatNode, gi: number) {
@@ -305,8 +257,8 @@ const {
     (node.ref as OrderGroup).name = newName;
     // sync _gname 回所有属于该组的 script
     const gid = (node.ref as OrderGroup)._gid;
-    s.tavernHelper.scripts.forEach((n: ScriptTree) => {
-      if (n.type === 'script' && (n as Script)._gid === gid) (n as Script)._gname = newName;
+    s.scripts.forEach((n: Script) => {
+      if (n._gid === gid) n._gname = newName;
     });
     s.markDirty();
   },
@@ -318,42 +270,6 @@ function startEditGroupName(gi: number) {
   const node = store.value.scriptTreeFlatNodes[gi];
   if (!node || !node.isGroup) return;
   startEditGroupNameRaw(gi);
-}
-
-/** folder 名就地编辑（顶层 OrderItem，identifier = folder.id）。提交时写 folder.name + markDirty。 */
-const {
-  editingId: editingFolderGi,
-  setInputRef: setFolderNameInputRaw,
-  start: startEditFolderNameRaw,
-  finish: finishEditFolderName,
-  cancel: cancelEditFolderName,
-} = useInlineRename<number>({
-  getCurrentName: (gi) => {
-    const node = store.value.scriptTreeFlatNodes[gi];
-    if (!node || node.isGroup) return '';
-    const item = node.ref as OrderItem;
-    return getFolder(item.identifier)?.name || '';
-  },
-  onCommit: (gi, newName) => {
-    const s = store.value;
-    const node = s.scriptTreeFlatNodes[gi];
-    if (!node || node.isGroup) return;
-    const item = node.ref as OrderItem;
-    const folder = getFolder(item.identifier);
-    if (!folder) return;
-    folder.name = newName;
-    s.markDirty();
-  },
-});
-function setFolderNameInput(el: object | null, _gi: number) {
-  setFolderNameInputRaw(el);
-}
-function startEditFolderName(gi: number) {
-  const node = store.value.scriptTreeFlatNodes[gi];
-  if (!node || node.isGroup) return;
-  const item = node.ref as OrderItem;
-  if (!isFolder(item.identifier)) return;
-  startEditFolderNameRaw(gi);
 }
 
 /** script 名就地编辑（叶子节点，identifier = script.id）。提交时写 script.name + renameTab + markDirty。 */
@@ -388,8 +304,6 @@ function setScriptNameInput(el: object | null, _gi: number) {
 function startEditScriptName(gi: number) {
   const node = store.value.scriptTreeFlatNodes[gi];
   if (!node || node.isGroup) return;
-  const item = node.ref as OrderItem;
-  if (isFolder(item.identifier)) return;
   startEditScriptNameRaw(gi);
 }
 
@@ -402,7 +316,7 @@ function onAdd() {
   const s = store.value;
   const id = s.addScriptTree();
   if (!id) return;
-  const script = s.tavernHelper.scripts.find((n: ScriptTree) => n.id === id) as Script | undefined;
+  const script = s.scripts.find((n: Script) => n.id === id);
   tabsStore.open({
     domain: 'tavern',
     key: id,
@@ -411,16 +325,15 @@ function onAdd() {
   });
 }
 
-/** 删除单个脚本/folder（叶子节点）：confirmStore 确认后调 store.deleteScriptTree + close tab。 */
+/** 删除单个脚本（叶子节点）：confirmStore 确认后调 store.deleteScriptTree + close tab。 */
 function onDeleteBlock(gi: number) {
   const s = store.value;
   const node = s.scriptTreeFlatNodes[gi];
   if (!node || node.isGroup) return;
   const item = node.ref as OrderItem;
-  const tree = s.tavernHelper.scripts.find((n: ScriptTree) => n.id === item.identifier);
+  const tree = s.scripts.find((n: Script) => n.id === item.identifier);
   if (!tree) return;
-  const name =
-    (tree.type === 'folder' ? (tree as ScriptFolder).name : (tree as Script).name) || tree.id;
+  const name = tree.name || tree.id;
   confirmStore.ask({
     title: uiStore.t('tavern.confirm.delete.title'),
     message: uiStore.t('tavern.confirm.delete.message', { name: esc(name) }),
@@ -508,8 +421,8 @@ watch(
     const gi = store.value.scriptTreeRevealAndFindGi(tab.key);
     if (gi < 0) return;
     // 幂等守卫：高亮实际不变时不给侧边栏 v-for 新 Set 引用（缺这个守卫每次切 tab 都换新 Set →
-    // 整个 sidebar v-for 全量重渲染 → 每节点 getScript/getFolder/isFolder 对 tavernHelper.scripts 做
-    // O(n) 线性 find/some → O(n²) 响应式属性访问 → 大脚本树下秒级卡死）。同 presetStore 范本。
+    // 整个 sidebar v-for 全量重渲染 → 每节点 getScript 对 scripts 做 O(n) 线性 find →
+    // O(n²) 响应式属性访问 → 大脚本树下秒级卡死）。同 presetStore 范本。
     if (
       store.value.scriptTreeAnchorGi === gi &&
       store.value.scriptTreeSelectedGi.size === 1 &&
@@ -525,7 +438,7 @@ watch(
 /**
  * 列表选择（同 RegexSidebar 模式）：
  * - 多选（ctrl/shift/长按）走 store.scriptTreeSelectBlock；
- * - 普通点击：本地清空选中并只选当前行，点组标题切换折叠，点脚本/folder 打开对应标签。
+ * - 普通点击：本地清空选中并只选当前行，点组标题切换折叠，点脚本打开对应标签。
  */
 const listSelection = useListSelection<number>({
   onSelect: (mode, gi) => {
@@ -546,7 +459,7 @@ const listSelection = useListSelection<number>({
       s.scriptTreeToggleGroupCollapse(gi);
     } else {
       const item = node.ref as OrderItem;
-      const tree = s.tavernHelper.scripts.find((n: ScriptTree) => n.id === item.identifier);
+      const tree = s.scripts.find((n: Script) => n.id === item.identifier);
       const label = tree?.name || item.identifier;
       tabsStore.open({
         domain: 'tavern',

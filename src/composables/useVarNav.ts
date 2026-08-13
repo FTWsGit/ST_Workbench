@@ -2,7 +2,7 @@ import { ref, watch } from 'vue';
 import type {
   Character,
   OrderNode,
-  PresetBlock,
+  PromptBlock,
   VarOp,
   VarDomain,
   VarAssemblyLayer,
@@ -10,6 +10,18 @@ import type {
 } from '../types';
 import { scanVariableMacros, type VarOpMatch, type VarScope } from '../utils';
 import { isGroupNode } from './useGroupedList';
+
+/** CHARACTER_FIELDS 里映射到 otherPrompts 的纯文本字段（description 顶层、depthPrompt 复合对象，另行处理）。 */
+type OtherPromptTextKey = Exclude<keyof Character['otherPrompts'], 'depthPrompt'>;
+
+/** 按字段 key 读 Character 的纯文本：description 读顶层、depthPrompt 读 otherPrompts.depthPrompt.prompt、
+ *  其余读 otherPrompts[key]。与 characterStore.getFieldValue 同一映射。 */
+function readCharacterField(char: Character, field: string): string {
+  if (field === 'description') return char.description;
+  if (field === 'depthPrompt') return char.otherPrompts.depthPrompt.prompt;
+  const v = char.otherPrompts[field as OtherPromptTextKey];
+  return typeof v === 'string' ? v : '';
+}
 
 /**
  * 变量追踪：跨 preset/character/worldbook 三域扫描所有变量宏（13 种），
@@ -27,7 +39,7 @@ export function useVarNav(
   sources: {
     preset: {
       order: () => OrderNode[];
-      prompts: () => PresetBlock[];
+      prompts: () => PromptBlock[];
       presetName: () => string;
     } | null;
     character: {
@@ -35,9 +47,9 @@ export function useVarNav(
       greetingIds: () => string[];
       /** 虚拟字段 tab key 合成器（characterStore 已有此模式）。 */
       greetingKey: (id: string) => string;
-      /** 字段固定序（CHARACTER_FIELDS），intraOrder 按此序。 */
+      /** 字段固定序（CHARACTER_FIELDS），intraOrder 按此序。field 是 CHARACTER_FIELDS key 或 'greeting'。 */
       fieldOrder: readonly {
-        field: keyof Character | 'greeting';
+        field: string;
         labelKey: string;
       }[];
     } | null;
@@ -149,7 +161,7 @@ export function useVarNav(
               fileId,
               blockId,
               blockLabel,
-              isGreeting ? 'greeting' : (f.field as string),
+              isGreeting ? 'greeting' : f.field,
               'character',
               intra,
               true
@@ -165,33 +177,27 @@ export function useVarNav(
           pushHits(scanVariableMacros(val), c.greetingKey(id), fieldLabel);
         });
       } else {
-        const v = char[f.field];
-        const text =
-          typeof v === 'string'
-            ? v
-            : v && typeof v === 'object' && 'prompt' in v
-              ? (v as { prompt: string }).prompt
-              : '';
-        pushHits(scanVariableMacros(text), `field:${String(f.field)}`, fieldLabel);
+        const text = readCharacterField(char, f.field);
+        pushHits(scanVariableMacros(text), `field:${f.field}`, fieldLabel);
       }
       intra++;
     }
     return out;
   }
 
-  /* 扫 worldbook：遍历 entries，intraOrder 按 entry.order（insertion_order）降序——
+  /* 扫 worldbook：遍历 entries，intraOrder 按 entry.position.order（insertion_order）降序——
    * order 大的先注入、出现在 prompt 更靠前位置（ST 用 sortFn = (a,b)=>b.order-a.order）。
-   * 激活语义决定 certain：constant=true 必触发；关键词/概率/向量化皆非必定 → certain=false。 */
+   * 激活语义决定 certain：strategy.type==='constant' 必触发；关键词/概率/向量化皆非必定 → certain=false。 */
   function scanWorldbook(): VarOp[] {
     const w = sources.worldbook;
     if (!w) return [];
     const out: VarOp[] = [];
     const entries = [...w.entries()];
     // 降序：order 大的 intraOrder 小（更靠前装配）
-    entries.sort((a, b) => b.order - a.order);
+    entries.sort((a, b) => b.position.order - a.position.order);
     entries.forEach((entry, idx) => {
-      if (entry.disabled) return; // 全局禁用，跳过
-      const certain = !!entry.constant;
+      if (!entry.enabled) return; // 全局禁用，跳过
+      const certain = entry.strategy.type === 'constant';
       const hits = scanVariableMacros(entry.content || '');
       hits.forEach((h) =>
         out.push(
@@ -200,7 +206,7 @@ export function useVarNav(
             'worldbook',
             w.worldbookName(),
             String(entry.uid),
-            entry.comment || String(entry.uid),
+            entry.name || String(entry.uid),
             undefined,
             'worldbook',
             idx,

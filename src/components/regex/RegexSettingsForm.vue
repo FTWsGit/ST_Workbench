@@ -117,9 +117,9 @@ const findValid = computed(
   () => !script.value || !script.value.findRegex || !!parseFindRegex(script.value.findRegex)
 );
 const enabled = computed({
-  get: () => !script.value?.disabled,
+  get: () => script.value?.enabled ?? false,
   set: (v: boolean) => {
-    if (script.value) script.value.disabled = !v;
+    if (script.value) script.value.enabled = v;
   },
 });
 const trimStringsText = computed({

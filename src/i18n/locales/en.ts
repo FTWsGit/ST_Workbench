@@ -338,6 +338,7 @@ export default {
   'regex.field.placement': 'Placement',
   'regex.field.trimStrings': 'Trim Strings',
   'regex.field.substituteRegex': 'Substitute Regex',
+  'regex.field.enabled': 'Enabled',
   'regex.field.disabled': 'Disabled',
 
   // ---- 确认弹窗 ----
@@ -466,6 +467,7 @@ export default {
 
   // ---- Field labels (toolbox search) ----
   'worldbook.field.content': 'Content',
+  'worldbook.field.name': 'Name',
   'worldbook.field.comment': 'Comment',
   'worldbook.field.keys': 'Primary Keywords',
   'worldbook.field.keysecondary': 'Secondary Keywords',
@@ -475,10 +477,12 @@ export default {
   'worldbook.field.depth': 'Depth',
   'worldbook.field.order': 'Order',
   'worldbook.field.probability': 'Probability',
+  'worldbook.field.enabled': 'Enabled',
   'worldbook.field.disabled': 'Disabled',
   'worldbook.field.constant': 'Constant',
   'worldbook.field.keyWord': 'Keyword',
   'worldbook.field.vectorized': 'Vectorized',
+  'worldbook.field.strategyType': 'Strategy',
 
   // ---- 编辑器 ----
   'worldbook.editor.placeholder': 'Edit worldbook entry content here…',

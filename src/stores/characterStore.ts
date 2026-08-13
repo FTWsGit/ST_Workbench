@@ -7,9 +7,7 @@ import {
   type OrderNode,
   type OrderGroup,
   type OrderItem,
-  type ScriptTree,
   type Script,
-  type TavernHelper,
   CHARACTER_FIELDS,
 } from '../types';
 import * as CH from '../api/characterApi';
@@ -41,25 +39,49 @@ function emptyCharacter(name: string): Character {
     avatar: '',
     name,
     description: '',
-    scenario: '',
-    mesExample: '',
-    personality: '',
-    systemPrompt: '',
-    postHistoryInstructions: '',
-    depthPrompt: { prompt: '', depth: 4, role: 0 },
+    otherPrompts: {
+      scenario: '',
+      mesExample: '',
+      personality: '',
+      systemPrompt: '',
+      postHistoryInstructions: '',
+      depthPrompt: { prompt: '', depth: 4, role: 0 },
+    },
     greetings: [''],
-    creator: '',
-    creatorNotes: '',
-    version: '',
-    tags: [],
+    creatorMeta: { creator: '', creatorNotes: '', version: '', tags: [] },
     talkativeness: 0.5,
     fav: false,
     worldbook: null,
-    extensions: {
-      regex_scripts: [],
-      tavern_helper: { scripts: [], variables: {} },
-    },
+    regexs: [],
+    scripts: [],
   };
+}
+
+/** CHARACTER_FIELDS 里映射到 otherPrompts 的"文本字段"子集（description 在顶层、depthPrompt 是对象，单独处理）。 */
+type OtherPromptTextKey = Exclude<keyof Character['otherPrompts'], 'depthPrompt'>;
+
+/** 按 CHARACTER_FIELDS key 从 Character 取虚拟字段的值：description 读顶层，depthPrompt 读
+ *  otherPrompts.depthPrompt.prompt，其余读 otherPrompts[key]。非字段 key 返回 null。 */
+function getFieldValue(char: Character, key: string): string | null {
+  if (key === 'description') return char.description;
+  if (key === 'depthPrompt') return char.otherPrompts.depthPrompt.prompt;
+  if (!CHARACTER_FIELDS.some((f) => f.key === key)) return null;
+  return char.otherPrompts[key as OtherPromptTextKey];
+}
+
+/** 与 getFieldValue 对称的写入。返回是否写入成功（非法字段 key 返回 false）。 */
+function setFieldValue(char: Character, key: string, value: string): boolean {
+  if (key === 'description') {
+    char.description = value;
+    return true;
+  }
+  if (key === 'depthPrompt') {
+    char.otherPrompts.depthPrompt.prompt = value;
+    return true;
+  }
+  if (!CHARACTER_FIELDS.some((f) => f.key === key)) return false;
+  char.otherPrompts[key as OtherPromptTextKey] = value;
+  return true;
 }
 
 /** 独立文档 store：角色卡工作区。跟 worldbook 的区别：
@@ -104,9 +126,8 @@ export const useCharacterStore = defineStore('character', () => {
       return idx < 0 ? null : { key, value: character.value.greetings[idx] ?? '' };
     }
     const fieldKey = key.slice('field:'.length);
-    if (fieldKey === 'depthPrompt') return { key, value: character.value.depthPrompt.prompt };
-    const v = character.value[fieldKey];
-    return typeof v === 'string' ? { key, value: v } : null;
+    const v = getFieldValue(character.value, fieldKey);
+    return v === null ? null : { key, value: v };
   });
 
   function setCurrentFieldValue(value: string) {
@@ -116,15 +137,8 @@ export const useCharacterStore = defineStore('character', () => {
     if (key.startsWith('field:greeting:')) {
       const idx = greetingIds.value.indexOf(key.slice('field:greeting:'.length));
       if (idx >= 0) character.value.greetings[idx] = value;
-    } else {
-      const fieldKey = key.slice('field:'.length);
-      if (fieldKey === 'depthPrompt') {
-        character.value.depthPrompt.prompt = value;
-      } else if (CHARACTER_FIELDS.some((f) => f.key === fieldKey)) {
-        character.value[fieldKey] = value;
-      } else {
-        return; // 非法字段直接忽略，避免污染对象
-      }
+    } else if (!setFieldValue(character.value, key.slice('field:'.length), value)) {
+      return; // 非法字段直接忽略，避免污染对象
     }
     markDirty();
   }
@@ -139,9 +153,9 @@ export const useCharacterStore = defineStore('character', () => {
     _len: number
   ) {
     if (!character.value) return;
-    // tavern 域：按 script/folder id 反查，开对应标签 + 展组到该行（scriptTreeIdentifierToGi 在
+    // tavern 域：按 script id 反查，开对应标签 + 展组到该行（scriptTreeIdentifierToGi 在
     //  下文 tavern 段声明，函数调用时才解析闭包引用，TDZ 不触发）
-    const thNode = getScriptTrees()?.find((s) => s.id === itemId);
+    const thNode = scripts.value.find((s) => s.id === itemId);
     if (thNode) {
       tabsStore.open({
         domain: 'tavern',
@@ -176,29 +190,11 @@ export const useCharacterStore = defineStore('character', () => {
     });
   }
 
-  /* ====== Bound Regex Scripts（同 presetStore.regexScripts 的模式，宿主换成 character） ====== */
-  const regexScripts = computed<RegexScript[]>(() => {
-    if (!character.value) return [];
-    if (!character.value.extensions)
-      character.value.extensions = {
-        regex_scripts: [],
-        tavern_helper: { scripts: [], variables: {} },
-      };
-    if (!Array.isArray(character.value.extensions.regex_scripts))
-      character.value.extensions.regex_scripts = [];
-    return character.value.extensions.regex_scripts;
-  });
+  /* ====== Bound Regex Scripts（同 presetStore.regexs 的模式，宿主换成 character） ====== */
+  const regexs = computed<RegexScript[]>(() => character.value?.regexs ?? []);
 
   function getRegexScripts(): RegexScript[] | null {
-    if (!character.value) return null;
-    if (!character.value.extensions)
-      character.value.extensions = {
-        regex_scripts: [],
-        tavern_helper: { scripts: [], variables: {} },
-      };
-    if (!Array.isArray(character.value.extensions.regex_scripts))
-      character.value.extensions.regex_scripts = [];
-    return character.value.extensions.regex_scripts;
+    return character.value ? character.value.regexs : null;
   }
 
   const {
@@ -234,7 +230,7 @@ export const useCharacterStore = defineStore('character', () => {
     groupName: (n) => t('regex.sidebar.defaultGroupName', { count: n }),
   });
 
-  /** add/delete 后显式 rebuild 树：watch([regexScripts], rebuild) 浅 watch 不触发原地变异
+  /** add/delete 后显式 rebuild 树：watch([regexs], rebuild) 浅 watch 不触发原地变异
    *  （computed getter 返回同一数组引用）——不 rebuild 则 sidebar 不显示新建项/删后 stale。 */
   function addRegexScript(): string | null {
     const id = addRegexScriptRaw();
@@ -246,7 +242,7 @@ export const useCharacterStore = defineStore('character', () => {
     rebuildRegexOrder();
   }
 
-  /** regex 单条开关包装：toggle 改树后 sync 回 regexScripts 的 script.disabled（修双状态镜像 seam——
+  /** regex 单条开关包装：toggle 改树后 sync 回 regexs 的 script.enabled（修双状态镜像 seam——
    *  裸 toggle 只翻树 enabled 不写回真数据，保存时会把改动丢掉）。 */
   function regexToggleBlock(gi: number) {
     regexToggleBlockRaw(gi);
@@ -254,9 +250,9 @@ export const useCharacterStore = defineStore('character', () => {
     markDirty();
   }
 
-  /** 从 regexScripts 裸数组重建 regexOrder 分组树——读每个 script 的 _gid/_gname/_gcollapsed/_genabled/_gidx。 */
+  /** 从 regexs 裸数组重建 regexOrder 分组树——读每个 script 的 _gid/_gname/_gcollapsed/_genabled/_gidx。 */
   function rebuildRegexOrder() {
-    const scripts = regexScripts.value;
+    const scripts = regexs.value;
     const groups = new Map<
       string,
       {
@@ -294,21 +290,21 @@ export const useCharacterStore = defineStore('character', () => {
           enabled: g.enabled,
           children: g.items.map((x) => ({
             identifier: x.script.id,
-            enabled: !x.script.disabled,
+            enabled: x.script.enabled,
           })),
         } as OrderGroup);
         usedGroups.add(script._gid);
       } else {
         topLevel.push({
           identifier: script.id,
-          enabled: !script.disabled,
+          enabled: script.enabled,
         } as OrderItem);
       }
     });
     regexOrder.value = topLevel;
   }
 
-  /** 把 regexOrder 树展平写回 regexScripts 裸数组：重排 scripts 顺序 + 更新 _gid 等分组字段。 */
+  /** 把 regexOrder 树展平写回 regexs 裸数组：重排 scripts 顺序 + 更新 _gid 等分组字段。 */
   function syncRegexScriptsFromOrder() {
     const scripts = getRegexScripts();
     if (!scripts) return;
@@ -319,7 +315,7 @@ export const useCharacterStore = defineStore('character', () => {
         node.children.forEach((child, cidx) => {
           const s = byId.get(child.identifier);
           if (!s) return;
-          s.disabled = !child.enabled;
+          s.enabled = child.enabled;
           s._gid = node._gid;
           s._gname = node.name;
           s._gcollapsed = node.collapsed;
@@ -330,7 +326,7 @@ export const useCharacterStore = defineStore('character', () => {
       } else {
         const s = byId.get(node.identifier);
         if (!s) return;
-        s.disabled = !node.enabled;
+        s.enabled = node.enabled;
         delete s._gid;
         delete s._gname;
         delete s._gcollapsed;
@@ -365,62 +361,26 @@ export const useCharacterStore = defineStore('character', () => {
     showToast(t('preset.toast.unbound'));
   }
 
-  /** deep watch 监听数组元素字段变异（settings 表单改 script.disabled 后 sidebar 联动）——
-   *  浅 watch([regexScripts], ...) 只追踪 computed 重新求值，push/splice/改字段都不触发。 */
-  watch(regexScripts, () => rebuildRegexOrder(), {
+  /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）——
+   *  浅 watch([regexs], ...) 只追踪 computed 重新求值，push/splice/改字段都不触发。 */
+  watch(regexs, () => rebuildRegexOrder(), {
     deep: true,
     immediate: true,
   });
   watch(regexOrder, markDirty, { deep: true });
 
-  /* ====== Bound Tavern Helper（tavern_helper 段，照 regex 段模式，宿主换成 character）======
-   * character 域注意：Character.extensions.tavern_helper 的内部变量字段名是 `variables`（拼写差异，
-   * 按 Character 接口保留），缺则补默认 `{ scripts: [], variables: {} }`。读 character 的宽松
-   * scripts 数组时 coerce 成严格 ScriptTree 形状（缺 type 补 'script'，缺 id 补 genId）。 */
-  const tavernHelper = computed<TavernHelper>(() => {
-    if (!character.value) return { scripts: [], variables: {} } as unknown as TavernHelper;
-    if (!character.value.extensions)
-      character.value.extensions = {
-        regex_scripts: [],
-        tavern_helper: { scripts: [], variables: {} },
-      };
-    const ext = character.value.extensions;
-    if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variables: {} };
-    return ext.tavern_helper as TavernHelper;
-  });
+  /* ====== Bound Tavern Helper（照 regex 段模式，宿主换成 character）====== */
+  const scripts = computed<Script[]>(() => character.value?.scripts ?? []);
 
-  /** coerce 宽松 Record<string,unknown>[] 成严格 ScriptTree[] 形状：缺 type 补 'script'，缺 id 补 'th_...'。
-   *  在 load 时一次性 mutate 原数据，不在 computed getter 里做（getter 里 mutate 触发响应式重算 → coerce 又跑 → 死循环）。 */
-  function coerceScriptTrees(scripts: Record<string, unknown>[]) {
-    if (!Array.isArray(scripts)) return;
-    scripts.forEach((node: Record<string, unknown>) => {
-      if (!node || typeof node !== 'object') return;
-      if (!node.type) node.type = 'script';
-      if (!node.id)
-        node.id = 'th_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    });
-  }
-
-  function getScriptTrees(): ScriptTree[] | null {
-    if (!character.value) return null;
-    if (!character.value.extensions)
-      character.value.extensions = {
-        regex_scripts: [],
-        tavern_helper: { scripts: [], variables: {} },
-      };
-    const ext = character.value.extensions;
-    if (!ext.tavern_helper) ext.tavern_helper = { scripts: [], variables: {} };
-    const th = ext.tavern_helper;
-    if (!Array.isArray(th.scripts)) th.scripts = [];
-    if (!th.variables) th.variables = {};
-    return th.scripts as ScriptTree[];
+  function getScripts(): Script[] | null {
+    return character.value ? character.value.scripts : null;
   }
 
   const {
     addScriptTree: addScriptTreeRaw,
     deleteScriptTree: deleteScriptTreeRaw,
     reorderScriptTree,
-  } = useScriptTree(getScriptTrees, {
+  } = useScriptTree(getScripts, {
     markDirty,
     showToast,
     t,
@@ -428,7 +388,7 @@ export const useCharacterStore = defineStore('character', () => {
     defaultPlacement: [2],
   });
 
-  /* ====== tavern_helper 分组树（同 presetStore tavern 段，identifier 填 script/folder 的 id）====== */
+  /* ====== tavern 脚本分组树（同 presetStore tavern 段，identifier 填 script id）====== */
   const scriptTreeOrder = ref<OrderNode[]>([]);
   const {
     flatNodes: scriptTreeFlatNodes,
@@ -449,7 +409,7 @@ export const useCharacterStore = defineStore('character', () => {
     groupName: (n) => t('tavern.sidebar.defaultGroupName', { count: n }),
   });
 
-  /** add/delete 后显式 rebuild 树：watch([tavernHelper.value.scripts], rebuild) 浅 watch 不触发原地变异——
+  /** add/delete 后显式 rebuild 树：watch([scripts], rebuild) 浅 watch 不触发原地变异——
    *  不 rebuild 则 sidebar 不显示新建项/删后 stale。 */
   function addScriptTree(): string | null {
     const id = addScriptTreeRaw();
@@ -468,10 +428,10 @@ export const useCharacterStore = defineStore('character', () => {
     markDirty();
   }
 
-  /** 从 tavernHelper.scripts 裸数组重建 scriptTreeOrder 分组树——读每个 Script 的
-   *  _gid/_gname/_gcollapsed/_genabled/_gidx。ScriptFolder 不参与 _gid 分组，直接挂顶层。 */
+  /** 从 scripts 裸数组重建 scriptTreeOrder 分组树——读每个 Script 的
+   *  _gid/_gname/_gcollapsed/_genabled/_gidx。 */
   function rebuildScriptTreeOrder() {
-    const scripts = tavernHelper.value.scripts as ScriptTree[];
+    const list = scripts.value;
     const groups = new Map<
       string,
       {
@@ -481,9 +441,7 @@ export const useCharacterStore = defineStore('character', () => {
         items: { script: Script; idx: number }[];
       }
     >();
-    scripts.forEach((node) => {
-      if (node.type === 'folder') return;
-      const script = node as Script;
+    list.forEach((script) => {
       if (script._gid) {
         if (!groups.has(script._gid)) {
           groups.set(script._gid, {
@@ -499,15 +457,7 @@ export const useCharacterStore = defineStore('character', () => {
     groups.forEach((g) => g.items.sort((a, b) => a.idx - b.idx));
     const usedGroups = new Set<string>();
     const topLevel: OrderNode[] = [];
-    scripts.forEach((node) => {
-      if (node.type === 'folder') {
-        topLevel.push({
-          identifier: node.id,
-          enabled: node.enabled,
-        } as OrderItem);
-        return;
-      }
-      const script = node as Script;
+    list.forEach((script) => {
       if (script._gid) {
         if (usedGroups.has(script._gid)) return;
         const g = groups.get(script._gid)!;
@@ -533,19 +483,17 @@ export const useCharacterStore = defineStore('character', () => {
     scriptTreeOrder.value = topLevel;
   }
 
-  /** 把 scriptTreeOrder 树展平写回 tavernHelper.scripts 裸数组：重排 scripts 顺序 + 更新 Script 的
-   *  _gid 等分组字段。ScriptFolder（顶层 folder）原样保留位置——它在树里是顶层 OrderItem，
-   *  sync 时按 identifier 反查原 folder 对象挂回。 */
+  /** 把 scriptTreeOrder 树展平写回 scripts 裸数组：重排 scripts 顺序 + 更新 Script 的 _gid 等分组字段。 */
   function syncScriptsFromOrder() {
-    const scripts = getScriptTrees();
-    if (!scripts) return;
-    const byId = new Map(scripts.map((s) => [s.id, s]));
-    const reordered: ScriptTree[] = [];
+    const list = getScripts();
+    if (!list) return;
+    const byId = new Map(list.map((s) => [s.id, s]));
+    const reordered: Script[] = [];
     scriptTreeOrder.value.forEach((node) => {
       if (isGroup(node)) {
         node.children.forEach((child, cidx) => {
-          const s = byId.get(child.identifier) as Script | undefined;
-          if (!s || s.type !== 'script') return;
+          const s = byId.get(child.identifier);
+          if (!s) return;
           s.enabled = child.enabled;
           s._gid = node._gid;
           s._gname = node.name;
@@ -557,23 +505,17 @@ export const useCharacterStore = defineStore('character', () => {
       } else {
         const s = byId.get(node.identifier);
         if (!s) return;
-        if (s.type === 'folder') {
-          s.enabled = node.enabled;
-          reordered.push(s);
-        } else {
-          const script = s as Script;
-          script.enabled = node.enabled;
-          delete script._gid;
-          delete script._gname;
-          delete script._gcollapsed;
-          delete script._genabled;
-          delete script._gidx;
-          reordered.push(script);
-        }
+        s.enabled = node.enabled;
+        delete s._gid;
+        delete s._gname;
+        delete s._gcollapsed;
+        delete s._genabled;
+        delete s._gidx;
+        reordered.push(s);
       }
     });
-    scripts.length = 0;
-    scripts.push(...reordered);
+    list.length = 0;
+    list.push(...reordered);
   }
 
   function reorderScriptTreeBlock(fromGi: number, toGi: number, after: boolean) {
@@ -599,24 +541,20 @@ export const useCharacterStore = defineStore('character', () => {
   }
 
   /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）——
-   *  浅 watch([tavernHelper.value.scripts], ...) 永不触发原地变异（数组引用没变，只是内部 push/splice/改字段）。 */
-  watch(
-    () => tavernHelper.value.scripts,
-    () => rebuildScriptTreeOrder(),
-    { deep: true, immediate: true }
-  );
+   *  浅 watch 永不触发原地变异（数组引用没变，只是内部 push/splice/改字段）。 */
+  watch(scripts, () => rebuildScriptTreeOrder(), { deep: true, immediate: true });
   watch(scriptTreeOrder, markDirty, { deep: true });
 
   /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import characterStore ======
    *  regex/tavern 是 host-dependent domain，character 域把自己的数据切片暴露给 tabsStore。
    *  scripts 用 getter 函数：响应式追踪在 getter 调用时建立，消费方每次读都拿到最新的、已 unwrap 的数组。 */
   tabsStore.registerDomainAdapter('regex', 'character', {
-    scripts: () => regexScripts.value,
+    scripts: () => regexs.value,
     workspace: 'character',
     t: (key, params) => uiStore.t(key as LocaleKey, params),
   });
   tabsStore.registerDomainAdapter('tavern', 'character', {
-    scripts: () => tavernHelper.value.scripts,
+    scripts: () => scripts.value,
     workspace: 'character',
     t: (key, params) => uiStore.t(key as LocaleKey, params),
   });
@@ -681,10 +619,7 @@ export const useCharacterStore = defineStore('character', () => {
     greetingIds.value = c.greetings.map(() => genGreetingId());
     pendingAvatarFile.value = null;
     tabsStore.closeWorkspace('character');
-    // coerce tavern_helper.scripts 宽松数组成严格 ScriptTree（load 时一次性 mutate，不在 computed getter 里）
-    if (character.value.extensions?.tavern_helper)
-      coerceScriptTrees(character.value.extensions.tavern_helper.scripts);
-    rebuildScriptTreeOrder(); // load 背真数据后显式 rebuild：watch([tavernHelper.value.scripts]) 是浅 watch，load 时 ext.tavern_helper 对象引用没变（只 scripts 属性被替），watch 不触发 → 树空
+    rebuildScriptTreeOrder(); // load 后立即重建树，避免 sidebar 先渲染旧树
     nextTick(() => {
       dirty.value = false;
     });
@@ -859,7 +794,7 @@ export const useCharacterStore = defineStore('character', () => {
     addGreeting,
     deleteGreeting,
     reorderGreeting,
-    regexScripts,
+    regexs,
     addRegexScript,
     deleteRegexScript,
     reorderRegexScript,
@@ -879,8 +814,7 @@ export const useCharacterStore = defineStore('character', () => {
     regexRemoveNode,
     rebuildRegexOrder,
     syncRegexScriptsFromOrder,
-    tavernHelper,
-    getScriptTrees,
+    scripts,
     addScriptTree,
     deleteScriptTree,
     reorderScriptTree,

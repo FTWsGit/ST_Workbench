@@ -26,7 +26,7 @@ export function useRegexScripts(
       replaceString: '',
       trimStrings: [],
       placement: defaultPlacement,
-      disabled: false,
+      enabled: true,
       markdownOnly: false,
       promptOnly: false,
       runOnEdit: false,

@@ -127,7 +127,7 @@ function clearPendingAvatar() {
   }
 }
 
-function field<K extends 'creator' | 'creatorNotes' | 'version' | 'talkativeness' | 'fav'>(key: K) {
+function field<K extends 'talkativeness' | 'fav'>(key: K) {
   return computed({
     get: () => store.character![key],
     set: (v: string | number | boolean) => {
@@ -138,17 +138,31 @@ function field<K extends 'creator' | 'creatorNotes' | 'version' | 'talkativeness
 }
 
 const fav = field('fav');
-const creator = field('creator');
-const version = field('version');
-const creatorNotes = field('creatorNotes');
 const talkativeness = field('talkativeness');
+
+/** creatorMeta 里的纯字符串字段（creator/creatorNotes/version），统一走这一个 helper。 */
+function creatorMetaField<K extends 'creator' | 'creatorNotes' | 'version'>(key: K) {
+  return computed({
+    get: () => store.character?.creatorMeta[key] ?? '',
+    set: (v: string) => {
+      if (store.character) {
+        store.character.creatorMeta[key] = v;
+        store.markDirty();
+      }
+    },
+  });
+}
+
+const creator = creatorMetaField('creator');
+const version = creatorMetaField('version');
+const creatorNotes = creatorMetaField('creatorNotes');
 
 /** tags（string[]）用逗号分隔单行输入（适合短标签直觉），不同于 trimStrings 的按行分割。 */
 const tagsText = computed({
-  get: () => (store.character?.tags || []).join(', '),
+  get: () => (store.character?.creatorMeta.tags || []).join(', '),
   set: (v: string) => {
     if (!store.character) return;
-    store.character.tags = v
+    store.character.creatorMeta.tags = v
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);

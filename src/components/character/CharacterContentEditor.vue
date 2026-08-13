@@ -66,19 +66,19 @@ const contentModel = computed<string>({
 });
 
 const depthPromptDepth = computed<number>({
-  get: () => store.character?.depthPrompt.depth ?? 4,
+  get: () => store.character?.otherPrompts.depthPrompt.depth ?? 4,
   set: (v) => {
     if (store.character) {
-      store.character.depthPrompt.depth = v;
+      store.character.otherPrompts.depthPrompt.depth = v;
       store.markDirty();
     }
   },
 });
 const depthPromptRole = computed<0 | 1 | 2>({
-  get: () => store.character?.depthPrompt.role ?? 0,
+  get: () => store.character?.otherPrompts.depthPrompt.role ?? 0,
   set: (v) => {
     if (store.character) {
-      store.character.depthPrompt.role = v;
+      store.character.otherPrompts.depthPrompt.role = v;
       store.markDirty();
     }
   },

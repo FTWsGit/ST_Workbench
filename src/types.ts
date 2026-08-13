@@ -6,48 +6,29 @@ export type Domain = 'preset' | 'regex' | 'worldbook' | 'character' | 'tavern';
 /** Tab 路由的"归哪份文档所有"维度。 */
 export type Workspace = 'preset' | 'worldbook' | 'character';
 
-export interface PresetBlock {
-  identifier: string;
-  name: string;
-  content: string;
-  role: 'system' | 'user' | 'assistant';
-  system_prompt: boolean;
-  marker: boolean;
-  [k: string]: unknown;
-}
+/* ====== 干净数据结构（工作层契约）====== 见 TODO.md。
+ * 以下是 store/组件操作的"干净"形状。ST 原生结构（v1/v2CharData、STWorldbook 的
+ * Record<uid, entry>、PresetPrompt/prompt_order、ScriptTree 里的 ScriptFolder）在 src/api/*
+ * 边界转换成这些形状——store/组件只认这一层，不接触原生字段名、嵌套或"prompts + prompt_order
+ * 两套数组"的乱七八糟。
+ *
+ * 保真纪律：干净层只建模 workbench 需要编辑的字段；未建模进接口的 ST 原生字段由 store 持有一份
+ * 原生 raw 快照（preset/worldbook 是 store.raw，character 是 store.oldRaw），保存时经 api 的
+ * toNative* 把干净字段写回、未建模字段从 raw 原样透传，保证一次读-改-存不丢数据。 */
 
-export interface OrderItem {
-  identifier: string;
-  enabled: boolean;
-  /** 分组持久化字段：跟 WorldbookEntry 同模式，存成未知字段让 ST 原样忽略。 */
+/** 文件夹式分组的持久化载体。分组是这个工具自创的组织方式，ST 原生没有这个概念，存成未知字段
+ *  让 ST 原样忽略、下次加载时由 api 读回重建分组树。数组内元素的视觉顺序 = 数组顺序，不另设
+ *  index/order 字段。 */
+export interface GroupFields {
   _gid?: string;
   _gname?: string;
   _gcollapsed?: boolean;
   _genabled?: boolean;
   _gidx?: number;
-  [k: string]: unknown;
 }
 
-export interface OrderGroup {
-  id: string;
-  _gid: string;
-  name: string;
-  collapsed: boolean;
-  enabled: boolean;
-  children: OrderItem[];
-}
-
-export type OrderNode = OrderItem | OrderGroup;
-
-export interface FlatNode {
-  ref: OrderNode;
-  parent: OrderNode[];
-  parentIdx: number;
-  depth: number;
-  isGroup: boolean;
-}
-
-export interface PresetData {
+/* ====== 预设（Preset） ====== */
+export interface PresetSettings {
   openai_max_context: number;
   openai_max_tokens: number;
 
@@ -71,15 +52,93 @@ export interface PresetData {
 
   /** 压缩系统消息: 将连续的系统消息合并为一条消息 */
   squash_system_messages: boolean;
+}
 
-  prompts: PresetBlock[];
-  prompt_order: { order: OrderItem[]; [k: string]: unknown }[];
-  extensions?: {
-    regex_scripts?: RegexScript[];
-    tavern_helper?: TavernHelper;
-    [k: string]: unknown;
-  };
-  [k: string]: unknown;
+export interface PromptBlock extends GroupFields {
+  identifier: string;
+  name: string;
+  content: string;
+  role: 'system' | 'user' | 'assistant';
+  system_prompt: boolean;
+  marker: boolean;
+  /** 启用/禁用——从原生 prompt_order 烘入，数组顺序即视觉顺序。 */
+  enabled: boolean;
+  injectionPosition: number;
+  injectionDepth: number;
+  injectionOrder: number;
+}
+
+export interface Preset {
+  name: string;
+  settings: PresetSettings;
+  prompts: PromptBlock[];
+  regexs: RegexScript[];
+  scripts: Script[];
+}
+
+/* ====== 正则脚本 / 酒馆助手脚本 ====== */
+export interface RegexScript extends GroupFields {
+  id: string;
+  scriptName: string;
+  findRegex: string;
+  replaceString: string;
+  trimStrings: string[];
+  placement: number[];
+  /** 工作层统一用 enabled，ST 原生是 disabled，取反转换在 api 边界完成。 */
+  enabled: boolean;
+  markdownOnly: boolean; // 仅影响显示
+  promptOnly: boolean; // 仅影响后端提示词
+  runOnEdit: boolean;
+  substituteRegex: number; // 0 不替换 / 1 替换(原始) / 2 替换(转义)
+  minDepth: number | null;
+  maxDepth: number | null;
+}
+
+/** ScriptButton 的字段名跟上游 Js-Slash-Runner 的 zod schema 一致：name 是按钮显示文字，
+ *  visible 控制是否在工具栏渲染（false 时仍留在 buttons[] 里只是不渲染）。 */
+export interface ScriptButton {
+  name: string;
+  visible: boolean;
+}
+
+/** 酒馆助手脚本（tavern_helper）。工作层是扁平 Script[]，ST 原生的顶层 ScriptFolder 在 api 边界
+ *  按 _gid/_gname/_genabled/_gcollapsed 折叠成一个分组（icon/color 还原时用默认值）。 */
+export interface Script extends GroupFields {
+  enabled: boolean;
+  name: string;
+  id: string;
+  content: string;
+  info: string;
+  button: { enabled: boolean; buttons: ScriptButton[] };
+  data: Record<string, unknown>;
+  export_with: { data: boolean; button: boolean };
+}
+
+/* ====== 分组树视图（内部）======
+ * useGroupedList 操作的树形结构——是"干净数组 + _gid 分组字段"派生出来的运行时视图，
+ * 不是 ST 原生结构，也不是干净数据契约本身。identifier 是唯一跟"内容是什么"沾边的字段。 */
+export interface OrderItem {
+  identifier: string;
+  enabled: boolean;
+}
+
+export interface OrderGroup {
+  id: string;
+  _gid: string;
+  name: string;
+  collapsed: boolean;
+  enabled: boolean;
+  children: OrderItem[];
+}
+
+export type OrderNode = OrderItem | OrderGroup;
+
+export interface FlatNode {
+  ref: OrderNode;
+  parent: OrderNode[];
+  parentIdx: number;
+  depth: number;
+  isGroup: boolean;
 }
 
 export interface PreviewSegment {
@@ -240,82 +299,6 @@ export const SYNTAX_LABEL_KEYS = {
   'hl-sb': 'shared.syntax.hl-sb',
 } as const;
 
-export interface RegexScript {
-  id: string;
-  scriptName: string;
-  findRegex: string;
-  replaceString: string;
-  trimStrings: string[];
-  placement: number[];
-  disabled: boolean;
-  markdownOnly: boolean; // 仅影响显示
-  promptOnly: boolean; // 仅影响后端提示词
-  runOnEdit: boolean;
-  substituteRegex: number; // 0 不替换 / 1 替换(原始) / 2 替换(转义)
-  minDepth: number | null;
-  maxDepth: number | null;
-  /** 分组持久化字段：跟 WorldbookEntry 同模式，存成未知字段让 ST 原样忽略。 */
-  _gid?: string;
-  _gname?: string;
-  _gcollapsed?: boolean;
-  _genabled?: boolean;
-  _gidx?: number;
-  [k: string]: unknown;
-}
-
-/** tavern_helper 脚本树的单条脚本。button.enabled 控制是否随脚本一起导出按钮区，
- *  buttons 是脚本内嵌的快捷按钮列表。data 留给脚本自定义键值数据，export_with 控制导出范围。
- *  分组字段 _gid/_gname/_gcollapsed/_genabled/_gidx 通过 `[k: string]: any` 塞进 script 里
- *  （跟 RegexScript 的分组字段同模式），顶层 folder 不需要分组字段。
- *  ScriptButton 的字段名跟上游 Js-Slash-Runner 的 zod schema 一致：name 是按钮显示文字，
- *  visible 控制是否在工具栏渲染（false 时仍留在 buttons[] 里只是不渲染）。 */
-export interface ScriptButton {
-  name: string;
-  visible: boolean;
-  [k: string]: unknown;
-}
-
-export interface Script {
-  type: 'script';
-  enabled: boolean;
-  name: string;
-  id: string;
-  content: string;
-  info: string;
-  button: { enabled: boolean; buttons: ScriptButton[] };
-  data: Record<string, unknown>;
-  export_with: { data: boolean; button: boolean };
-  /** 分组持久化字段：跟 WorldbookEntry 同模式，存成未知字段让 ST 原样忽略。 */
-  _gid?: string;
-  _gname?: string;
-  _gcollapsed?: boolean;
-  _genabled?: boolean;
-  _gidx?: number;
-  [k: string]: unknown;
-}
-
-/** tavern_helper 脚本树的顶层 folder——本身就是 folder，不参与 _gid 分组（直接挂树顶层）。 */
-export interface ScriptFolder {
-  type: 'folder';
-  enabled: boolean;
-  name: string;
-  id: string;
-  icon: string;
-  color: string;
-  scripts: Script[];
-}
-
-export type ScriptTree = Script | ScriptFolder;
-
-/** tavern_helper 扩展段。注意：Character.extensions.tavern_helper 用 `variables` 字段名，
- *  PresetData.extensions.tavern_helper 用 `variales`（拼写差异按用户给的保留，不统一）。
- *  类型层统一用本 interface，运行时按 workspace 分派读对应字段名（见 useScriptTree/composable
- *  分派逻辑，类型层不体现这拼写差异）。 */
-export interface TavernHelper {
-  scripts: ScriptTree[];
-  variables: Record<string, unknown>;
-}
-
 /**No value 4 here, decided by SillyTavern-v1.18*/
 export const REGEX_PLACEMENT_OPTIONS = [
   { value: 1, labelKey: 'regex.placement.userInput' },
@@ -331,71 +314,56 @@ export const REGEX_SUBSTITUTE_OPTIONS = [
   { value: 2, labelKey: 'regex.substitute.escaped' },
 ] as const;
 
-import defaultPreset from '../default/default_preset.json';
-export const DEFAULT_PRESET = defaultPreset as PresetData;
-
-/* ====== 世界书（Worldbook / Lorebook）====== 见 TODO.md 阶段1「数据结构」。
- * 工作层结构，跟 ST 原生 STWorldbook（entries 是 Record<uid, entry>）双向转换在 api/worldbookApi.ts
- * 里完成——store/组件只认这份数组形状的 WorldbookEntry[]，不知道原生格式长什么样。
- *
- * _gid/_gname/_gcollapsed/_genabled/_gidx 是「文件夹式分组」的持久化载体，跟 preset 域
- * OrderItem 上同名字段是同一个模式（见 PresetStore.ts importOrderWithGroups/exportOrder）：
- * 分组是这个工具自己发明的组织方式，ST 原生 STWorldbookEntry 没有这个概念，存成未知字段让 ST
- * 原样忽略、下次加载时我们自己再读回来重建分组树。 */
-export interface WorldbookEntry {
+/* ====== 世界书（Worldbook / Lorebook） ====== */
+export interface WorldbookEntry extends GroupFields {
   uid: number;
-  comment: string;
+  name: string;
+  enabled: boolean;
   content: string;
-  /** 在 UI 里显示的顺序——由 worldbookStore 在每次保存前根据 order 树（含展开折叠组）重新计算
-   *  写回，不是用户直接编辑的字段。 */
-  displayIndex: number;
 
-  keys: string[];
-  keysecondary: string[];
-  selective: boolean;
-  selectiveLogic: 0 | 1 | 2 | 3;
-
-  /** 三种激活方式互斥：constant=恒定激活，vectorized=向量化激活，两者都 false 时代表关键词激活
-   *  （keyWord，ST 原生没有这个字段，是转换时派生出来的工作层字段，方便设置表单直接三选一）。 */
-  constant: boolean;
-  keyWord: boolean;
-  vectorized: boolean;
-
-  disabled: boolean;
-
-  position: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
-  depth: number;
-  order: number;
-  role: 0 | 1 | 2 | null;
+  /** 激活策略: 条目应该何时激活。type 三选一：keyword（关键词/选择性命中）、constant（恒定）、
+   *  vectorized（向量化） */
+  strategy: {
+    type: 'keyword' | 'constant' | 'vectorized';
+    keys: string[];
+    keysSecondary: { logic: 'and_any' | 'not_all' | 'not_any' | 'and_all'; keys: string[] };
+    /** 'same_as_global' 表示跟随全局扫描深度（ST 原生是 null）。 */
+    scanDepth: 'same_as_global' | number;
+    caseSensitive: boolean | null;
+    matchWholeWords: boolean | null;
+  };
+  position: {
+    type:
+      | 'before_character_definition'
+      | 'after_character_definition'
+      | 'before_author_note'
+      | 'after_author_note'
+      | 'at_depth'
+      | 'before_example_messages'
+      | 'after_example_messages'
+      | 'outlet';
+    role: 'system' | 'user' | 'assistant' | null;
+    depth: number;
+    order: number;
+  };
 
   probability: number;
-  useProbability: boolean;
-  excludeRecursion: boolean;
-  preventRecursion: boolean;
-  delayUntilRecursion: boolean | number;
-
-  scanDepth: number | null;
-  /** null = 跟随全局设置（不是 'same_as_global' 字符串——2026-07 修正，ST 原生就是这么存的，
-   *  工作层直接照抄没有转换）。 */
-  caseSensitive: boolean | null;
-  matchWholeWords: boolean | null;
-
-  group: string;
-  groupPrioritized: boolean;
-  groupWeight: number;
-
-  sticky: number | null;
-  cooldown: number | null;
-  delay: number | null;
-
-  /** 分组持久化字段，见本接口顶部 doc comment。 */
-  _gid?: string;
-  _gname?: string;
-  _gcollapsed?: boolean;
-  _genabled?: boolean;
-  _gidx?: number;
-
-  [k: string]: unknown;
+  recursion: {
+    /** 禁止其他条目递归激活本条目 */
+    preventIncoming: boolean;
+    /** 禁止本条目递归激活其他条目 */
+    preventOutgoing: boolean;
+    /** 延迟到第 n 级递归检查时才能激活本条目 */
+    delayUntil: false | number;
+  };
+  effect: {
+    /** 黏性: 条目激活后, 在之后 n 条消息内始终激活, 无视激活策略、激活概率% */
+    sticky: null | number;
+    /** 冷却: 条目激活后, 在之后 n 条消息内不能再激活 */
+    cooldown: null | number;
+    /** 延迟: 聊天中至少有 n 楼消息时, 才能激活条目 */
+    delay: null | number;
+  };
 }
 
 export interface Worldbook {
@@ -403,92 +371,70 @@ export interface Worldbook {
   entries: WorldbookEntry[];
 }
 
-/** 2026-07 修正：之前这份映射跟 ST 原生 position 枚举值对不上（真实映射见 PROJECT.md「关键设计
- *  要点」第5条），已按正确顺序重排，并补上之前漏掉的 outlet（7）。 */
+/** position.type 枚举值（字符串）与 ST 原生 position 数字 0~7 的映射在 api/worldbookApi.ts 完成。
+ *  枚举书写顺序与数值无关，仅作 UI 下拉的展示顺序（这里按 ST 原生数值序 0~7 排列）。 */
 export const WORLDBOOK_POSITION_OPTIONS = [
-  { value: 0, labelKey: 'worldbook.position.beforeChar' },
-  { value: 1, labelKey: 'worldbook.position.afterChar' },
-  { value: 2, labelKey: 'worldbook.position.beforeAuthorsNote' },
-  { value: 3, labelKey: 'worldbook.position.afterAuthorsNote' },
-  { value: 4, labelKey: 'worldbook.position.atDepth' },
-  { value: 5, labelKey: 'worldbook.position.beforeExample' },
-  { value: 6, labelKey: 'worldbook.position.afterExample' },
-  { value: 7, labelKey: 'worldbook.position.outlet' },
+  { value: 'before_character_definition', labelKey: 'worldbook.position.beforeChar' },
+  { value: 'after_character_definition', labelKey: 'worldbook.position.afterChar' },
+  { value: 'before_author_note', labelKey: 'worldbook.position.beforeAuthorsNote' },
+  { value: 'after_author_note', labelKey: 'worldbook.position.afterAuthorsNote' },
+  { value: 'at_depth', labelKey: 'worldbook.position.atDepth' },
+  { value: 'before_example_messages', labelKey: 'worldbook.position.beforeExample' },
+  { value: 'after_example_messages', labelKey: 'worldbook.position.afterExample' },
+  { value: 'outlet', labelKey: 'worldbook.position.outlet' },
 ] as const;
 
 export const WORLDBOOK_LOGIC_OPTIONS = [
-  { value: 0, labelKey: 'worldbook.logic.andAny' },
-  { value: 1, labelKey: 'worldbook.logic.notAll' },
-  { value: 2, labelKey: 'worldbook.logic.notAny' },
-  { value: 3, labelKey: 'worldbook.logic.andAll' },
+  { value: 'and_any', labelKey: 'worldbook.logic.andAny' },
+  { value: 'not_all', labelKey: 'worldbook.logic.notAll' },
+  { value: 'not_any', labelKey: 'worldbook.logic.notAny' },
+  { value: 'and_all', labelKey: 'worldbook.logic.andAll' },
 ] as const;
 
 export const WORLDBOOK_ROLE_OPTIONS = [
   { value: null as number | null, labelKey: 'worldbook.role.default' },
-  { value: 0, labelKey: 'worldbook.role.system' },
-  { value: 1, labelKey: 'worldbook.role.user' },
-  { value: 2, labelKey: 'worldbook.role.assistant' },
+  { value: 'system', labelKey: 'worldbook.role.system' },
+  { value: 'user', labelKey: 'worldbook.role.user' },
+  { value: 'assistant', labelKey: 'worldbook.role.assistant' },
 ] as const;
 
-/* ====== 角色卡（Character）====== 见 TODO.md 阶段2「数据结构」。
- * ST 原生结构是 v1CharData（外层）嵌套 v2CharData（`data` 字段），字段名在两层之间经常不一致
- * （比如 creatorcomment vs data.creator_notes）。工作层这份 Character 是扁平化之后的结构，
- * 双向转换在 api/characterApi.ts 里完成——store/组件只认这份形状，不知道 v1/v2 原生结构长什么样。
- *
- * `greetings`：工作层把 `first_mes`（index 0）和 `alternate_greetings`（其余）合并成一个数组，
- * 只有这一个字段支持拖拽排序（TODO.md 1.2）——拖到 index 0 就等于把某条候选开场白提升为
- * "正式"开场白，转换回原生格式时按下标 0/其余重新拆回两个字段。
- *
- * `depthPrompt`：对应 v2CharData.extensions.depth_prompt（"角色备注"），跟其它大文本框字段一样
- * 走虚拟字段 tab（key 为 `field:depthPrompt`）编辑 `.prompt`，但 `.depth`/`.role` 是数值/枚举，
- * 不适合塞进纯文本编辑器——CharacterContentEditor.vue 给这一个字段单独加一条 meta 栏承载，
- * 不为此专门开一个 SettingsDock 表单（角色卡故意不接 SettingsDock，见 TODO.md 2.4）。 */
+/* ====== 角色卡（Character） ====== */
 export interface Character {
   /** ST 用来定位这个角色的文件名（不含路径，含 .png 后缀）。新建、还没保存过的角色是空字符串，
-   *  characterStore 用"是否为空"判断这是不是一个待创建的新角色（对应 api/characterApi.ts
-   *  createCharacter() 而不是 editCharacter()）。 */
+   *  characterStore 用"是否为空"判断这是不是一个待创建的新角色。 */
   avatar: string;
   name: string;
 
-  /** 七个"大文本框"虚拟字段，见 TODO.md 1.2、CharacterSidebar.vue 的 CHARACTER_FIELDS 常量
-   *  （固定顺序展示，不可拖拽，跟 greetings 是两种不同的列表语义）。 */
   description: string;
-  scenario: string;
-  mesExample: string;
-  personality: string;
-  systemPrompt: string;
-  postHistoryInstructions: string;
-  depthPrompt: { prompt: string; depth: number; role: 0 | 1 | 2 };
 
-  /** 开场白：index 0 = 正式开场白（原生 first_mes），其余 = 候选开场白（原生
-   *  alternate_greetings）。仅这个数组支持拖拽排序，见本接口顶部 doc comment。 */
+  /** 除 description 外的"大文本框"创作字段。depthPrompt.role 用数字 0/1/2 表示
+   *  system/user/assistant（与 WORLDBOOK_ROLE_OPTIONS 同序），转换在 api 边界完成。 */
+  otherPrompts: {
+    scenario: string;
+    mesExample: string;
+    personality: string;
+    systemPrompt: string;
+    postHistoryInstructions: string;
+    depthPrompt: { prompt: string; depth: number; role: 0 | 1 | 2 };
+  };
+
+  /** 开场白：index 0 = 正式开场白（原生 first_mes），其余 = 候选开场白（原生 alternate_greetings）。 */
   greetings: string[];
 
-  /** 角色 Meta（CharacterMetaForm.vue，见 TODO.md 2.5b）专属字段，跟上面的"创作内容"字段分开
-   *  归类，纯粹是方便阅读——工作层没有强制这种分组，取值都是扁平字段。 */
-  creator: string;
-  creatorNotes: string;
-  version: string;
-  tags: string[];
+  creatorMeta: {
+    creator: string;
+    creatorNotes: string;
+    version: string;
+    tags: string[];
+  };
+
   talkativeness: number;
   fav: boolean;
-  /** 绑定的世界书名字，对应 v2CharData.extensions.world；`null` = 未绑定。CharacterMetaForm 只做
-   *  下拉换绑（见 TODO.md 2.5b），不支持内嵌编辑世界书内容——那是"角色卡内嵌编辑世界书"，TODO.md
-   *  阶段4明确不做。 */
+  /** 绑定的世界书名字；`null` = 未绑定。 */
   worldbook: string | null;
 
-  extensions: {
-    /** 绑定在这张角色卡上的正则脚本，跟预设域 `PresetData.extensions.regex_scripts` 是同一个
-     *  概念、同一个字段名，只是宿主换成了角色卡。characterStore 暴露的 live computed 叫
-     *  `regexScripts`（跟 presetStore.regexScripts 同名同模式），指向这里。 */
-    regex_scripts: RegexScript[];
-    /** 脚本树扩展（tavern_helper）。注意内部变量字段名是 `variables`（跟 PresetData 的
-     *  `variales` 拼写不同，按用户给的保留差异；类型层统一用 TavernHelper，运行时按 workspace
-     *  分派读对应字段名）。必填——characterStore 的 tavernHelper computed 缺则补默认。 */
-    tavern_helper: TavernHelper;
-    [k: string]: unknown;
-  };
-  [k: string]: unknown;
+  regexs: RegexScript[];
+  scripts: Script[];
 }
 
 /** 角色列表下拉框用的轻量条目——不含完整内容，只用来给用户选"要切换到哪个角色"。 */
@@ -497,8 +443,9 @@ export interface CharacterListEntry {
   name: string;
 }
 
-/** CharacterSidebar.vue 固定字段列表的顺序来源（TODO.md 1.2），`key` 拼成虚拟字段 tab 的
- *  `field:${key}`（见 Character 接口顶部 doc comment），EditorShell.vue 按这个前缀路由。 */
+/** CharacterSidebar.vue 固定字段列表的顺序来源，`key` 拼成虚拟字段 tab 的 `field:${key}`。
+ *  `key` 对应 Character 里的字段名（description 在顶层，其余在 otherPrompts 里），
+ *  characterStore 的 currentField/setCurrentFieldValue 按这个映射读写。 */
 export const CHARACTER_FIELDS = [
   { key: 'description', labelKey: 'character.field.description' },
   { key: 'systemPrompt', labelKey: 'character.field.systemPrompt' },

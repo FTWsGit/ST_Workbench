@@ -10,7 +10,7 @@ function mk(findRegex: string, replaceString?: string, trimStrings?: string[]): 
     replaceString: replaceString ?? '',
     trimStrings: trimStrings ?? [],
     placement: [],
-    disabled: false,
+    enabled: true,
     markdownOnly: false,
     promptOnly: false,
     runOnEdit: false,

@@ -9,24 +9,26 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     avatar: 'a.png',
     name: 'Hero',
     description: '',
-    scenario: '',
-    mesExample: '',
-    personality: '',
-    systemPrompt: '',
-    postHistoryInstructions: '',
-    depthPrompt: { prompt: '', depth: 4, role: 0 },
+    otherPrompts: {
+      scenario: '',
+      mesExample: '',
+      personality: '',
+      systemPrompt: '',
+      postHistoryInstructions: '',
+      depthPrompt: { prompt: '', depth: 4, role: 0 },
+    },
     greetings: ['hi'],
-    creator: '',
-    creatorNotes: '',
-    version: '',
-    tags: [],
+    creatorMeta: {
+      creator: '',
+      creatorNotes: '',
+      version: '',
+      tags: [],
+    },
     talkativeness: 0.5,
     fav: false,
     worldbook: null,
-    extensions: {
-      regex_scripts: [],
-      tavern_helper: { type: 'helper', variables: {}, variales: {} },
-    } as unknown as Character['extensions'],
+    regexs: [],
+    scripts: [],
     ...overrides,
   };
 }
@@ -97,16 +99,16 @@ describe('characterApi - fromRaw', () => {
 
   it('systemPrompt 只有 v2，无 v1 兜底', () => {
     const c = fromRaw({ system_prompt: 'v1sp', data: { system_prompt: 'v2sp' } });
-    expect(c.systemPrompt).toBe('v2sp');
+    expect(c.otherPrompts.systemPrompt).toBe('v2sp');
     const c2 = fromRaw({ system_prompt: 'v1sp', data: {} });
-    expect(c2.systemPrompt).toBe('');
+    expect(c2.otherPrompts.systemPrompt).toBe('');
   });
 
   it('creatorNotes ← v2.creator_notes ?? v1.creatorcomment', () => {
     const c = fromRaw({ creatorcomment: 'v1cn', data: {} });
-    expect(c.creatorNotes).toBe('v1cn');
+    expect(c.creatorMeta.creatorNotes).toBe('v1cn');
     const c2 = fromRaw({ creatorcomment: 'v1cn', data: { creator_notes: 'v2cn' } });
-    expect(c2.creatorNotes).toBe('v2cn');
+    expect(c2.creatorMeta.creatorNotes).toBe('v2cn');
   });
 
   it('greetings = [first_mes, ...alternate_greetings]', () => {
@@ -120,12 +122,12 @@ describe('characterApi - fromRaw', () => {
     const c = fromRaw({
       data: { extensions: { depth_prompt: { prompt: 'p', depth: 7, role: 'assistant' } } },
     });
-    expect(c.depthPrompt.prompt).toBe('p');
-    expect(c.depthPrompt.depth).toBe(7);
-    expect(c.depthPrompt.role).toBe(2);
+    expect(c.otherPrompts.depthPrompt.prompt).toBe('p');
+    expect(c.otherPrompts.depthPrompt.depth).toBe(7);
+    expect(c.otherPrompts.depthPrompt.role).toBe(2);
     const c2 = fromRaw({ data: { extensions: { depth_prompt: { prompt: 'p' } } } });
-    expect(c2.depthPrompt.depth).toBe(4);
-    expect(c2.depthPrompt.role).toBe(0);
+    expect(c2.otherPrompts.depthPrompt.depth).toBe(4);
+    expect(c2.otherPrompts.depthPrompt.role).toBe(0);
   });
 
   it('talkativeness：v2 extensions 优先，v1 兜底，可能是字符串用 Number(...)||0.5', () => {
@@ -138,9 +140,9 @@ describe('characterApi - fromRaw', () => {
   });
 
   it('tags：v2.tags 优先，否则 v1.tags，否则 []', () => {
-    expect(fromRaw({ tags: ['v1'], data: {} }).tags).toEqual(['v1']);
-    expect(fromRaw({ tags: ['v1'], data: { tags: ['v2'] } }).tags).toEqual(['v2']);
-    expect(fromRaw({}).tags).toEqual([]);
+    expect(fromRaw({ tags: ['v1'], data: {} }).creatorMeta.tags).toEqual(['v1']);
+    expect(fromRaw({ tags: ['v1'], data: { tags: ['v2'] } }).creatorMeta.tags).toEqual(['v2']);
+    expect(fromRaw({}).creatorMeta.tags).toEqual([]);
   });
 
   it('worldbook ← extensions.world 字符串，无则 null', () => {
@@ -155,15 +157,18 @@ describe('characterApi - fromRaw', () => {
     expect(fromRaw({}).fav).toBe(false);
   });
 
-  it('extensions 用 {...ext} 打底 + 覆盖 regex_scripts', () => {
-    const c = fromRaw({ data: { extensions: { customField: 'x', regex_scripts: [{ id: 'r' }] } } });
-    expect((c.extensions as Record<string, unknown>).customField).toBe('x');
-    expect((c.extensions as Record<string, unknown>).regex_scripts).toEqual([{ id: 'r' }]);
+  it('regex_scripts → regexs（disabled 取反为 enabled）', () => {
+    const c = fromRaw({
+      data: { extensions: { regex_scripts: [{ id: 'r', scriptName: 'R', disabled: true }] } },
+    });
+    expect(c.regexs).toHaveLength(1);
+    expect(c.regexs[0].id).toBe('r');
+    expect(c.regexs[0].enabled).toBe(false);
   });
 
-  it('regex_scripts 非数组时 []', () => {
+  it('regex_scripts 非数组时 regexs=[]', () => {
     const c = fromRaw({ data: { extensions: { regex_scripts: 'no' } } });
-    expect((c.extensions as Record<string, unknown>).regex_scripts).toEqual([]);
+    expect(c.regexs).toEqual([]);
   });
 });
 
@@ -213,7 +218,9 @@ describe('characterApi - buildFormData', () => {
   });
 
   it('tags 逐个 append', () => {
-    const data = makeCharacter({ tags: ['t1', 't2'] });
+    const data = makeCharacter({
+      creatorMeta: { creator: '', creatorNotes: '', version: '', tags: ['t1', 't2'] },
+    });
     const fd = buildFormData(data, null);
     expect(fd.getAll('tags')).toEqual(['t1', 't2']);
   });
@@ -238,7 +245,16 @@ describe('characterApi - buildFormData', () => {
   });
 
   it('depth_prompt.role 经 depthPromptRoleToStr 转字符串', () => {
-    const data = makeCharacter({ depthPrompt: { prompt: 'p', depth: 6, role: 2 } });
+    const data = makeCharacter({
+      otherPrompts: {
+        scenario: '',
+        mesExample: '',
+        personality: '',
+        systemPrompt: '',
+        postHistoryInstructions: '',
+        depthPrompt: { prompt: 'p', depth: 6, role: 2 },
+      },
+    });
     const fd = buildFormData(data, null);
     const ext = JSON.parse(fd.get('extensions') as string) as Record<string, unknown>;
     expect((ext.depth_prompt as Record<string, unknown>).role).toBe('assistant');

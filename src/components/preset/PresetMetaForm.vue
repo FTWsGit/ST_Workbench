@@ -88,18 +88,18 @@
 import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { useUiStore } from '../../stores/uiStore';
-import type { PresetData } from '../../types';
+import type { PresetSettings } from '../../types';
 import AdvancedGroup from '../shared/AdvancedGroup.vue';
 import FormField from '../shared/FormField.vue';
 
 const store = usePresetStore();
 const uiStore = useUiStore();
 
-function field<K extends keyof PresetData>(key: K) {
-  return computed<PresetData[K]>({
-    get: () => store.rawData![key],
+function field<K extends keyof PresetSettings>(key: K) {
+  return computed<PresetSettings[K]>({
+    get: () => store.settings[key],
     set: (v) => {
-      store.rawData![key] = v;
+      store.settings[key] = v;
       store.markDirty();
     },
   });

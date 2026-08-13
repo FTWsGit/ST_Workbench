@@ -50,7 +50,7 @@
         </FormField>
       </div>
 
-      <!-- worldbook/items：批量启用/禁用 + 批量改激活方式（三态互斥：keyWord/constant/vectorized） -->
+      <!-- worldbook/items：批量启用/禁用 + 批量改激活方式（三态互斥：keyword/constant/vectorized） -->
       <div v-else-if="isWorldbookItems" class="wb-tools-section">
         <FormField :label="uiStore.t('toolbox.batch.enableLabel')">
           <div class="wb-btn-surface">
@@ -67,7 +67,7 @@
             <button
               class="wb-btn sm"
               :disabled="!selectedCount"
-              @click="wbSetActivation('keyWord')"
+              @click="wbSetActivation('keyword')"
             >
               {{ uiStore.t('worldbook.activation.keyWord') }}
             </button>
@@ -128,8 +128,9 @@ import type {
   OrderGroup,
   OrderNode,
   FlatNode,
-  PresetBlock,
+  PromptBlock,
   RegexScript,
+  WorldbookEntry,
 } from '../../../types';
 import FormField from '../../shared/FormField.vue';
 
@@ -190,7 +191,7 @@ const worldbookSelectedIds = computed<string[]>(() =>
  *  直接从 store 拿选中 script 对象引用——store 在反查那一刻 flatNodes 还没 stale，拿到的引用是真对象，
  *  改字段直接生效、删也能 splice 掉真对象。 */
 const regexScripts = computed(() =>
-  workspace.value === 'preset' ? presetStore.regexScripts : characterStore.regexScripts
+  workspace.value === 'preset' ? presetStore.regexs : characterStore.regexs
 );
 const regexStore = computed(() => (workspace.value === 'character' ? characterStore : presetStore));
 /** 选中 script 对象引用集合：组展开为子叶子（跟 selectedLeafIds 同模式，但拿的是对象引用不是 id）。 */
@@ -247,7 +248,7 @@ function presetSetRole(role: string) {
   if (!ids.size) return;
   for (const id of ids) {
     const b = presetStore.prompts.find((p) => p.identifier === id);
-    if (b) b.role = role as PresetBlock['role'];
+    if (b) b.role = role as PromptBlock['role'];
   }
   presetStore.markDirty();
   toastApplied(ids.size);
@@ -258,9 +259,9 @@ function regexSetDisabled(disabled: boolean) {
   const scripts = getSelectedRegexScripts();
   if (!scripts.length) return;
   scripts.forEach((s) => {
-    s.disabled = disabled;
+    s.enabled = !disabled;
   });
-  // regex 有双状态（regexScripts 裸数组 + regexOrder 树），浅 watch 永不触发 rebuild——
+  // regex 有双状态（regexs 裸数组 + regexOrder 树），浅 watch 永不触发 rebuild——
   // 改完数据显式调 rebuild 让树同步，否则侧边栏开关视觉不变（"改了不生效"）。
   regexStore.value.rebuildRegexOrder();
   if (workspace.value === 'preset') presetStore.markDirty();
@@ -276,18 +277,16 @@ function wbSelectedEntries() {
 function wbSetDisabled(disabled: boolean) {
   if (!worldbookSelectedIds.value.length) return;
   wbSelectedEntries().forEach((e) => {
-    e.disabled = disabled;
+    e.enabled = !disabled;
   });
   worldbookStore.markDirty();
   toastApplied(worldbookSelectedIds.value.length);
 }
-/** 三态互斥：keyWord / constant / vectorized，设一个时另两个清零。 */
-function wbSetActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
+/** 三态互斥：keyword / constant / vectorized，设一个即覆盖 strategy.type。 */
+function wbSetActivation(mode: WorldbookEntry['strategy']['type']) {
   if (!worldbookSelectedIds.value.length) return;
   wbSelectedEntries().forEach((e) => {
-    e.constant = mode === 'constant';
-    e.vectorized = mode === 'vectorized';
-    e.keyWord = mode === 'keyWord';
+    e.strategy.type = mode;
   });
   worldbookStore.markDirty();
   toastApplied(worldbookSelectedIds.value.length);

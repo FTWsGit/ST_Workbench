@@ -8,11 +8,13 @@ import {
   REGEX_SUBSTITUTE_OPTIONS,
   WORLDBOOK_POSITION_OPTIONS,
   WORLDBOOK_ROLE_OPTIONS,
+  type Character,
+  type WorldbookEntry,
 } from '../../types';
 import './register'; // 注册 Search/Batch 工具到各 scene（幂等）
 
 /** 一个"搜索场景"：当前 (workspace, collection) 下可搜的 items + 字段表 + item 元数据 getter。
- *  items 是各 store 的 live 数据（presetStore.prompts / regexScripts 等），SearchTool 直接喂给
+ *  items 是各 store 的 live 数据（presetStore.prompts / regexs 等），SearchTool 直接喂给
  *  searchFields 纯函数。getItemMeta 负责把每种 item 各自不同的 id/name 取法统一成 SearchHit 形状。 */
 export interface SearchScene {
   items: Record<string, unknown>[];
@@ -50,18 +52,20 @@ const ENUM_CHOICES: Record<string, EnumChoice[]> = {
     value: o.value,
     labelKey: o.labelKey,
   })),
-  disabled: BOOL_CHOICES,
+  enabled: BOOL_CHOICES,
   // worldbook/items
-  position: WORLDBOOK_POSITION_OPTIONS.map((o) => ({
+  positionType: WORLDBOOK_POSITION_OPTIONS.map((o) => ({
     value: o.value,
     labelKey: o.labelKey,
   })),
   depth: [], // 数值字段，候选太分散——SearchTool 退化为只读
   order: [],
   probability: [],
-  constant: BOOL_CHOICES,
-  keyWord: BOOL_CHOICES,
-  vectorized: BOOL_CHOICES,
+  strategyType: [
+    { value: 'keyword', labelKey: 'worldbook.activation.keyWord' },
+    { value: 'constant', labelKey: 'worldbook.activation.constant' },
+    { value: 'vectorized', labelKey: 'worldbook.activation.vectorized' },
+  ],
 };
 
 /** 查某个 enum 字段的候选清单；返回空数组表示该字段无候选 UI（只读展示命中）。
@@ -103,29 +107,130 @@ const REGEX_FIELDS: SearchField[] = [
     labelKey: 'regex.field.substituteRegex',
     kind: 'enum',
   },
-  { key: 'disabled', labelKey: 'regex.field.disabled', kind: 'enum' },
+  { key: 'enabled', labelKey: 'regex.field.enabled', kind: 'enum' },
 ];
 
 const WORLDBOOK_FIELDS: SearchField[] = [
   { key: 'content', labelKey: 'worldbook.field.content', kind: 'text' },
-  { key: 'comment', labelKey: 'worldbook.field.comment', kind: 'text' },
+  { key: 'name', labelKey: 'worldbook.field.name', kind: 'text' },
   { key: 'keys', labelKey: 'worldbook.field.keys', kind: 'list' },
-  {
-    key: 'keysecondary',
-    labelKey: 'worldbook.field.keysecondary',
-    kind: 'list',
-  },
-  { key: 'group', labelKey: 'worldbook.field.group', kind: 'text' },
-  { key: 'position', labelKey: 'worldbook.field.position', kind: 'enum' },
+  { key: 'positionType', labelKey: 'worldbook.field.position', kind: 'enum' },
   { key: 'role', labelKey: 'worldbook.field.role', kind: 'enum' },
   { key: 'depth', labelKey: 'worldbook.field.depth', kind: 'enum' },
   { key: 'order', labelKey: 'worldbook.field.order', kind: 'enum' },
   { key: 'probability', labelKey: 'worldbook.field.probability', kind: 'enum' },
-  { key: 'disabled', labelKey: 'worldbook.field.disabled', kind: 'enum' },
-  { key: 'constant', labelKey: 'worldbook.field.constant', kind: 'enum' },
-  { key: 'keyWord', labelKey: 'worldbook.field.keyWord', kind: 'enum' },
-  { key: 'vectorized', labelKey: 'worldbook.field.vectorized', kind: 'enum' },
+  { key: 'enabled', labelKey: 'worldbook.field.enabled', kind: 'enum' },
+  { key: 'strategyType', labelKey: 'worldbook.field.strategyType', kind: 'enum' },
 ];
+
+/** store 里的严格接口类型数组（无 index signature）→ searchFields 需要的 Record<string, unknown>[]。
+ *  纯编译期断言，运行时仍是原数组引用（applyReplace 就地改真实对象）。 */
+function toSearchItems<T>(items: T[]): Record<string, unknown>[] {
+  return items as unknown as Record<string, unknown>[];
+}
+
+/** CHARACTER_FIELDS 里映射到 otherPrompts 的纯文本字段（description 顶层、depthPrompt 复合对象，另行处理）。 */
+type OtherPromptTextKey = Exclude<keyof Character['otherPrompts'], 'depthPrompt'>;
+
+/** 按字段 key 读 Character 的纯文本：description 读顶层、depthPrompt 读 otherPrompts.depthPrompt.prompt、
+ *  其余读 otherPrompts[key]。与 characterStore.getFieldValue 同一映射。 */
+function readCharacterFieldValue(char: Character, key: string): string | null {
+  if (key === 'description') return char.description;
+  if (key === 'depthPrompt') return char.otherPrompts.depthPrompt.prompt;
+  if (!CHARACTER_FIELDS.some((f) => f.key === key)) return null;
+  return char.otherPrompts[key as OtherPromptTextKey];
+}
+
+/** WorldbookEntry 的嵌套字段摊成一级 key（utils.searchFields 只做 item[field.key] 一级取值）：
+ *  strategy.keys→keys、strategy.type→strategyType、position.type→positionType、position.role→role、
+ *  position.depth→depth、position.order→order；name/content/enabled/probability 顶层直拷，uid 供定位。
+ *  keys 保留 live 数组引用（list 替换就地 mutate 数组元素）。 */
+function flattenWorldbookEntry(e: WorldbookEntry): Record<string, unknown> {
+  return {
+    uid: e.uid,
+    name: e.name,
+    content: e.content,
+    enabled: e.enabled,
+    probability: e.probability,
+    keys: e.strategy.keys,
+    strategyType: e.strategy.type,
+    positionType: e.position.type,
+    role: e.position.role,
+    depth: e.position.depth,
+    order: e.position.order,
+  };
+}
+
+/** 扁平 key → 真实 WorldbookEntry 字段的读取（applyReplace 写回时取原值）。 */
+function readWorldbookField(e: WorldbookEntry, key: string): unknown {
+  switch (key) {
+    case 'name':
+      return e.name;
+    case 'content':
+      return e.content;
+    case 'enabled':
+      return e.enabled;
+    case 'probability':
+      return e.probability;
+    case 'keys':
+      return e.strategy.keys;
+    case 'strategyType':
+      return e.strategy.type;
+    case 'positionType':
+      return e.position.type;
+    case 'role':
+      return e.position.role;
+    case 'depth':
+      return e.position.depth;
+    case 'order':
+      return e.position.order;
+    default:
+      return undefined;
+  }
+}
+
+/** 扁平 key → 真实 WorldbookEntry 字段的写入（applyReplace 把命中改回真实 entry）。 */
+function writeWorldbookField(e: WorldbookEntry, key: string, v: unknown): void {
+  switch (key) {
+    case 'name':
+      e.name = String(v);
+      break;
+    case 'content':
+      e.content = String(v);
+      break;
+    case 'enabled':
+      e.enabled = v === true;
+      break;
+    case 'probability': {
+      const n = Number(v);
+      if (!Number.isNaN(n)) e.probability = n;
+      break;
+    }
+    case 'keys':
+      e.strategy.keys = Array.isArray(v) ? (v as string[]) : [];
+      break;
+    case 'strategyType':
+      e.strategy.type = v as WorldbookEntry['strategy']['type'];
+      break;
+    case 'positionType':
+      e.position.type = v as WorldbookEntry['position']['type'];
+      break;
+    case 'role':
+      e.position.role =
+        v === null || v === '' || v === 'null' ? null : (v as WorldbookEntry['position']['role']);
+      break;
+    case 'depth': {
+      const n = Number(v);
+      if (!Number.isNaN(n)) e.position.depth = n;
+      break;
+    }
+    case 'order': {
+      const n = Number(v);
+      if (!Number.isNaN(n)) e.position.order = n;
+      break;
+    }
+  }
+}
 
 /** character/fields：七个大文本框字段（depthPrompt 取 .prompt）逐条展平成 item，greetings 每条开场白
  *  一个 item（用合成 id 拼成虚拟 tab key）。文本字段共用 key 'value'（kind='text'），开场白共用
@@ -136,7 +241,7 @@ function getCharacterFieldsScene(store: ReturnType<typeof useCharacterStore>): S
   const char = store.character;
   if (char) {
     for (const f of CHARACTER_FIELDS) {
-      const value = f.key === 'depthPrompt' ? char.depthPrompt.prompt : char[f.key];
+      const value = readCharacterFieldValue(char, f.key);
       if (typeof value !== 'string') continue;
       items.push({ key: 'field:' + f.key, labelKey: f.labelKey, value });
     }
@@ -173,13 +278,13 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
     const store = usePresetStore();
     if (collection === 'regex') {
       return {
-        items: store.regexScripts,
+        items: toSearchItems(store.regexs),
         fields: REGEX_FIELDS,
         getItemMeta: (r) => ({ id: r.id, name: r.scriptName || r.id }),
       };
     }
     return {
-      items: store.prompts,
+      items: toSearchItems(store.prompts),
       fields: PRESET_ITEM_FIELDS,
       getItemMeta: (b) => ({ id: b.identifier, name: b.name || b.identifier }),
     };
@@ -187,18 +292,18 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
   if (workspace === 'worldbook') {
     const store = useWorldbookStore();
     return {
-      items: store.entries,
+      items: store.entries.map(flattenWorldbookEntry),
       fields: WORLDBOOK_FIELDS,
       getItemMeta: (e) => ({
         id: String(e.uid),
-        name: e.comment || String(e.uid),
+        name: String(e.name) || String(e.uid),
       }),
     };
   }
   const store = useCharacterStore();
   if (collection === 'regex') {
     return {
-      items: store.regexScripts,
+      items: toSearchItems(store.regexs),
       fields: REGEX_FIELDS,
       getItemMeta: (r) => ({ id: r.id, name: r.scriptName || r.id }),
     };
@@ -273,6 +378,43 @@ export function applyReplace(
         ? spliceStr(current, hit.col, hit.ml, newText)
         : spliceText(current, hit.line, hit.col, hit.ml, newText);
     store.setCurrentFieldValue(newVal);
+    return;
+  }
+
+  // worldbook：items 是扁平副本（flattenWorldbookEntry），嵌套字段在真实 entry 上，需经 writeWorldbookField 写回。
+  if (workspace === 'worldbook') {
+    const entry = useWorldbookStore().entries.find((e) => String(e.uid) === hit.itemId);
+    if (!entry) return;
+    if (field.kind === 'list') {
+      const arr = entry.strategy.keys;
+      if (hit.line >= 0 && hit.line < arr.length) {
+        const el = String(arr[hit.line] ?? '');
+        arr[hit.line] = coerceValue(
+          spliceStr(el, hit.col, hit.ml, newText),
+          arr[hit.line]
+        ) as string;
+      }
+    } else if (field.kind === 'enum') {
+      writeWorldbookField(
+        entry,
+        field.key,
+        coerceValue(newText, readWorldbookField(entry, field.key))
+      );
+    } else {
+      writeWorldbookField(
+        entry,
+        field.key,
+        spliceText(
+          String(readWorldbookField(entry, field.key) ?? ''),
+          hit.line,
+          hit.col,
+          hit.ml,
+          newText
+        )
+      );
+    }
+    sceneMarkDirty(workspace)();
+    jumpToFieldHit(workspace, hit);
     return;
   }
 

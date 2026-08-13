@@ -6,7 +6,7 @@
     :style="{ width: uiStore.settings.sidebarWidth + 'px' }"
   >
     <div class="wb-sidebar-header">
-      <span>{{ uiStore.t('regex.sidebar.title', { count: store.regexScripts.length }) }}</span>
+      <span>{{ uiStore.t('regex.sidebar.title', { count: store.regexs.length }) }}</span>
       <ListToolbar>
         <button class="wb-btn" @click="onAdd">
           {{ uiStore.t('regex.sidebar.newScript') }}
@@ -22,7 +22,7 @@
       </div>
     </div>
     <div class="wb-list" ref="listRef">
-      <p v-if="!store.regexScripts.length" class="wb-list-empty">
+      <p v-if="!store.regexs.length" class="wb-list-empty">
         {{ uiStore.t('regex.sidebar.empty') }}
       </p>
       <template v-for="(node, gi) in store.regexFlatNodes" :key="nodeKey(node, gi)">
@@ -209,7 +209,7 @@ const canUnbind = computed(() => {
 });
 
 function getScript(id: string): RegexScript | undefined {
-  return store.value.regexScripts.find((r: RegexScript) => r.id === id);
+  return store.value.regexs.find((r: RegexScript) => r.id === id);
 }
 
 function nodeKey(node: FlatNode, gi: number) {
@@ -228,7 +228,7 @@ function unbindCurrent() {
   s.regexUnbindGroup(groupGi);
 }
 
-/** 分组名就地编辑（useInlineRename）。提交时同步组名到 regexScripts 的 _gname 字段。 */
+/** 分组名就地编辑（useInlineRename）。提交时同步组名到 regexs 的 _gname 字段。 */
 const {
   editingId: editingGroupGi,
   setInputRef: setGroupNameInputRaw,
@@ -247,7 +247,7 @@ const {
     (node.ref as OrderGroup).name = newName;
     // sync _gname 回所有属于该组的 script
     const gid = (node.ref as OrderGroup)._gid;
-    s.regexScripts.forEach((script: RegexScript) => {
+    s.regexs.forEach((script: RegexScript) => {
       if (script._gid === gid) script._gname = newName;
     });
     s.markDirty();
@@ -306,7 +306,7 @@ function onAdd() {
   const s = store.value;
   const id = s.addRegexScript();
   if (!id) return;
-  const script = s.regexScripts.find((r: RegexScript) => r.id === id);
+  const script = s.regexs.find((r: RegexScript) => r.id === id);
   tabsStore.open({
     domain: 'regex',
     key: id,

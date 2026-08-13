@@ -24,7 +24,7 @@
               {{ uiStore.t('preset.copyPanel.clearAll') }}
             </button>
             <span class="wb-search-count"
-              >{{ sides.left.sel.size }}/{{ sides.left.data.prompts.length }}</span
+              >{{ sides.left.sel.size }}/{{ sides.left.data.preset.prompts.length }}</span
             >
             <span class="wb-spacer"></span>
             <button class="wb-btn accent" :disabled="!sides.left.dirty" @click="saveSide('left')">
@@ -106,7 +106,7 @@
               {{ uiStore.t('preset.copyPanel.clearAll') }}
             </button>
             <span class="wb-search-count"
-              >{{ sides.right.sel.size }}/{{ sides.right.data.prompts.length }}</span
+              >{{ sides.right.sel.size }}/{{ sides.right.data.preset.prompts.length }}</span
             >
             <span class="wb-spacer"></span>
             <button class="wb-btn accent" :disabled="!sides.right.dirty" @click="saveSide('right')">
@@ -155,9 +155,9 @@ import { usePresetStore } from '../../stores/presetStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfirmStore } from '../../stores/confirmStore';
 import { useIsMobile } from '../../composables/hostEnv';
-import * as ST from '../../api/presetApi';
+import * as PS from '../../api/presetApi';
 import type { PresetListEntry } from '../../api/presetApi';
-import type { PresetData, PresetBlock, OrderItem } from '../../types';
+import type { Preset, PromptBlock } from '../../types';
 import { applyMultiSelect, roleClass, esc, orderedPromptsWithHidden } from '../../utils';
 import Icon from '../shared/Icon.vue';
 
@@ -171,7 +171,7 @@ const presetOptions = ref<PresetListEntry[]>([]);
 type Side = 'left' | 'right';
 interface SideState {
   name: string;
-  data: PresetData | null;
+  data: { preset: Preset; raw: Record<string, unknown> } | null;
   sel: Set<string>;
   anchor: string | null;
   dirty: boolean;
@@ -185,17 +185,17 @@ const other = (side: Side): Side => (side === 'left' ? 'right' : 'left');
 
 /** 块按实际生成顺序（prompt_order）排列，隐藏块（不在 order 内）追加到末尾并打标记。 */
 const leftOrdered = computed(() =>
-  sides.left.data ? orderedPromptsWithHidden(sides.left.data) : []
+  sides.left.data ? orderedPromptsWithHidden(sides.left.data.preset) : []
 );
 const rightOrdered = computed(() =>
-  sides.right.data ? orderedPromptsWithHidden(sides.right.data) : []
+  sides.right.data ? orderedPromptsWithHidden(sides.right.data.preset) : []
 );
 
 /** 作为工具箱 tool 每次被激活（KeepAlive 缓存实例，切回时重新激活）都刷新可用预设列表，
  *  不依赖主编辑器的 store.presetList（可能过期或未加载）。 */
 onActivated(() => {
   try {
-    presetOptions.value = ST.listPresets();
+    presetOptions.value = PS.listPresets();
   } catch (e: unknown) {
     uiStore.showToast(
       uiStore.t('preset.toast.listFailedCopyPanel', {
@@ -215,12 +215,12 @@ function loadSide(side: Side) {
   if (!s.name) return;
   const doLoad = () => {
     try {
-      const data = ST.getPresetByName(s.name);
-      if (!data) {
+      const r = PS.getPresetByName(s.name);
+      if (!r) {
         uiStore.showToast(uiStore.t('preset.toast.notFound', { name: s.name }));
         return;
       }
-      s.data = data;
+      s.data = r;
       s.sel = new Set();
       s.anchor = null;
       s.dirty = false;
@@ -264,24 +264,12 @@ function onItemClick(side: Side, id: string, e: MouseEvent) {
 function selectAll(side: Side) {
   const s = sides[side];
   if (!s.data) return;
-  s.sel = new Set(s.data.prompts.map((b) => b.identifier));
+  s.sel = new Set(s.data.preset.prompts.map((b) => b.identifier));
   s.anchor = null;
 }
 function clearSel(side: Side) {
   sides[side].sel = new Set();
   sides[side].anchor = null;
-}
-
-/** 确保 data.prompt_order 中存在 character_id === 100001 的条目及其 order 数组，返回该 order。 */
-function ensureOrder(data: PresetData): OrderItem[] {
-  if (!Array.isArray(data.prompt_order)) data.prompt_order = [];
-  let entry = data.prompt_order.find((p) => p.character_id === 100001);
-  if (!entry) {
-    entry = { character_id: 100001, order: [] };
-    data.prompt_order.push(entry);
-  }
-  if (!Array.isArray(entry.order)) entry.order = [];
-  return entry.order;
 }
 
 /**
@@ -300,20 +288,18 @@ function copy(from: Side) {
     return;
   }
 
-  const dstOrder = ensureOrder(dst.data);
-  const existingIds = new Set(dst.data.prompts.map((p) => p.identifier));
+  const existingIds = new Set(dst.data.preset.prompts.map((p) => p.identifier));
   let n = 0;
   const srcOrdered = from === 'left' ? leftOrdered.value : rightOrdered.value;
   for (const entry of srcOrdered) {
     const b = entry.block;
     if (!src.sel.has(b.identifier)) continue;
-    const clone: PresetBlock = JSON.parse(JSON.stringify(b));
+    const clone: PromptBlock = JSON.parse(JSON.stringify(b));
     let newId = genId();
     while (existingIds.has(newId)) newId = genId();
     clone.identifier = newId;
     existingIds.add(newId);
-    dst.data.prompts.push(clone);
-    dstOrder.push({ identifier: newId, enabled: true });
+    dst.data.preset.prompts.push(clone);
     n++;
   }
   dst.dirty = true;
@@ -328,7 +314,7 @@ function copy(from: Side) {
 function removeBlock(side: Side, id: string) {
   const s = sides[side];
   if (!s.data) return;
-  const block = s.data.prompts.find((p) => p.identifier === id);
+  const block = s.data.preset.prompts.find((p) => p.identifier === id);
   confirmStore.ask({
     title: uiStore.t('preset.confirm.removeBlock.title'),
     message: uiStore.t('preset.confirm.removeBlock.message', {
@@ -338,11 +324,8 @@ function removeBlock(side: Side, id: string) {
     cancelText: uiStore.t('common.cancel'),
     onConfirm: () => {
       const data = s.data!;
-      const pi = data.prompts.findIndex((p) => p.identifier === id);
-      if (pi >= 0) data.prompts.splice(pi, 1);
-      const order = ensureOrder(data);
-      for (let i = order.length - 1; i >= 0; i--)
-        if (order[i].identifier === id) order.splice(i, 1);
+      const pi = data.preset.prompts.findIndex((p) => p.identifier === id);
+      if (pi >= 0) data.preset.prompts.splice(pi, 1);
       if (s.sel.has(id)) {
         const next = new Set(s.sel);
         next.delete(id);
@@ -359,7 +342,7 @@ async function saveSide(side: Side) {
   const s = sides[side];
   if (!s.data || !s.name) return;
   try {
-    await ST.savePresetAs(s.name, JSON.parse(JSON.stringify(s.data)));
+    await PS.savePresetAs(s.name, s.data.preset, JSON.parse(JSON.stringify(s.data.raw)));
     s.dirty = false;
     store.refreshPresetList();
     uiStore.showToast(uiStore.t('preset.toast.saved', { name: s.name }));

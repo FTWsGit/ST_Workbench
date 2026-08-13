@@ -1,7 +1,7 @@
 <template>
   <div class="wb-editor-panel wb-regex-editor" v-if="entry">
     <div class="wb-editor-meta">
-      <span class="wb-regex-editor-name">{{ entry.comment || uiStore.t('common.unnamed') }}</span>
+      <span class="wb-regex-editor-name">{{ entry.name || uiStore.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
       <button
         class="wb-btn sm"

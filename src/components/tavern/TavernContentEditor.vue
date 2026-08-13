@@ -29,7 +29,7 @@ import { useTabsStore } from '../../stores/tabsStore';
 import { useUiStore } from '../../stores/uiStore';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
 import Icon from '../shared/Icon.vue';
-import type { Script, ScriptTree } from '../../types';
+import type { Script } from '../../types';
 import type { TavernContentEditorProps } from './tavernProps';
 
 const props = defineProps<TavernContentEditorProps>();
@@ -38,12 +38,9 @@ const tabsStore = useTabsStore();
 const uiStore = useUiStore();
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>();
 
-/** 当前选中 tavern 脚本（按 activeTab.key 匹配 id，只取 type='script'，folder 不进编辑器）。 */
+/** 当前选中 tavern 脚本（按 activeTab.key 匹配 id）。 */
 const script = computed(
-  () =>
-    props.scripts.find(
-      (s: ScriptTree) => s.id === tabsStore.activeTab?.key && s.type === 'script'
-    ) as Script | undefined
+  () => props.scripts.find((s: Script) => s.id === tabsStore.activeTab?.key) as Script | undefined
 );
 /** 当前选中脚本 content 的 v-model 桥接；切换标签时 getter 返回值变化，编辑器自动重渲染。 */
 const contentModel = computed<string>({

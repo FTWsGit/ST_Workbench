@@ -19,6 +19,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
 
   /* ====== Core State ====== */
   const entries = ref<WorldbookEntry[]>([]);
+  const raw = ref<Record<string, Record<string, unknown>>>({});
   const order = ref<OrderNode[]>([]);
   const worldbookName = ref('');
   const worldbookList = ref<string[]>([]);
@@ -123,38 +124,39 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     return topLevel;
   }
 
-  /** 把 order 树压平成 identifier → 分组元数据的映射，写回每个 entry。
-   *  displayIndex 用数组下标隐式维护。 */
+  /** 把 order 树展平 → 写回每个 entry 的分组字段，并重排 entries 数组顺序（数组顺序 = 显示顺序）。 */
   function syncEntriesFromOrder() {
-    let idx = 0;
     const byId = new Map(entries.value.map((e) => [String(e.uid), e]));
+    const ordered: WorldbookEntry[] = [];
     order.value.forEach((node) => {
       if (isGroup(node)) {
         node.children.forEach((child, cidx) => {
           const e = byId.get(child.identifier);
           if (!e) return;
-          e.displayIndex = idx++;
           e._gid = node._gid;
           e._gname = node.name;
           e._gcollapsed = node.collapsed;
           e._genabled = node.enabled;
           e._gidx = cidx;
+          ordered.push(e);
         });
       } else {
         const e = byId.get(node.identifier);
         if (!e) return;
-        e.displayIndex = idx++;
         delete e._gid;
         delete e._gname;
         delete e._gcollapsed;
         delete e._genabled;
         delete e._gidx;
+        ordered.push(e);
       }
     });
+    entries.value = ordered;
   }
 
-  function applyLoaded(wb: Worldbook) {
+  function applyLoaded(wb: Worldbook, rawSnap: Record<string, Record<string, unknown>>) {
     entries.value = wb.entries;
+    raw.value = rawSnap;
     order.value = importOrderWithGroups(wb.entries);
     clearSelection();
     worldbookName.value = wb.name;
@@ -177,20 +179,20 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   }
 
   async function loadWorldbookByName(name: string, opts: { silent?: boolean } = {}) {
-    let data: Worldbook | null;
+    let r: Awaited<ReturnType<typeof WB.getWorldbookByName>>;
     try {
-      data = await WB.getWorldbookByName(name);
+      r = await WB.getWorldbookByName(name);
     } catch (e: unknown) {
       showToast(
         t('worldbook.toast.loadFailed', { msg: e instanceof Error ? e.message : String(e) })
       );
       return;
     }
-    if (!data) {
+    if (!r) {
       showToast(t('worldbook.toast.notFound', { name }));
       return;
     }
-    applyLoaded(data);
+    applyLoaded(r.worldbook, r.raw);
     if (!opts.silent) showToast(t('worldbook.toast.loaded', { name }));
   }
 
@@ -214,10 +216,13 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     }
     syncEntriesFromOrder();
     try {
-      await WB.saveWorldbook({
-        name: worldbookName.value,
-        entries: entries.value,
-      });
+      await WB.saveWorldbook(
+        {
+          name: worldbookName.value,
+          entries: entries.value,
+        },
+        raw.value
+      );
       refreshWorldbookList();
       dirty.value = false;
       showToast(t('worldbook.toast.saved', { name: worldbookName.value }));
@@ -239,7 +244,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
       refreshWorldbookList();
       // 写入后用 ST 返回的权威数据重新加载进 store，不假设刚建的一定是空的。
       const loaded = await WB.getWorldbookByName(name).catch(() => null);
-      applyLoaded(loaded ?? { name, entries: [] });
+      applyLoaded(loaded?.worldbook ?? { name, entries: [] }, loaded?.raw ?? {});
       showToast(t('worldbook.toast.created', { name }));
     } catch (e: unknown) {
       showToast(
@@ -267,7 +272,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
       await WB.importCharacterBook(name, book);
       refreshWorldbookList();
       const loaded = await WB.getWorldbookByName(name).catch(() => null);
-      applyLoaded(loaded ?? { name, entries: [] });
+      applyLoaded(loaded?.worldbook ?? { name, entries: [] }, loaded?.raw ?? {});
       showToast(
         t('worldbook.toast.imported', {
           name,
@@ -291,6 +296,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
       if (next) await loadWorldbookByName(next, { silent: true });
       else {
         entries.value = [];
+        raw.value = {};
         order.value = [];
         worldbookName.value = '';
         tabsStore.closeWorkspace('worldbook');
@@ -312,35 +318,26 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     const uid = entries.value.reduce((m, e) => Math.max(m, e.uid), -1) + 1;
     const entry: WorldbookEntry = {
       uid,
-      comment: '',
+      name: '',
+      enabled: true,
       content: '',
-      displayIndex: entries.value.length,
-      keys: [],
-      keysecondary: [],
-      selective: false,
-      selectiveLogic: 0,
-      constant: false,
-      keyWord: true,
-      vectorized: false,
-      disabled: false,
-      position: 0,
-      depth: 4,
-      order: 100,
-      role: null,
+      strategy: {
+        type: 'keyword',
+        keys: [],
+        keysSecondary: { logic: 'and_any', keys: [] },
+        scanDepth: 'same_as_global',
+        caseSensitive: null,
+        matchWholeWords: null,
+      },
+      position: {
+        type: 'before_character_definition',
+        role: null,
+        depth: 4,
+        order: 100,
+      },
       probability: 100,
-      useProbability: true,
-      excludeRecursion: false,
-      preventRecursion: false,
-      delayUntilRecursion: false,
-      scanDepth: null,
-      caseSensitive: null,
-      matchWholeWords: null,
-      group: '',
-      groupPrioritized: false,
-      groupWeight: 100,
-      sticky: null,
-      cooldown: null,
-      delay: null,
+      recursion: { preventIncoming: false, preventOutgoing: false, delayUntil: false },
+      effect: { sticky: null, cooldown: null, delay: null },
     };
     entries.value.push(entry);
     const activeId = tabsStore.activeTab?.domain === 'worldbook' ? tabsStore.activeTab.key : null;
@@ -348,7 +345,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     tabsStore.open({
       domain: 'worldbook',
       key: String(uid),
-      label: entry.comment || t('common.unnamed'),
+      label: entry.name || t('common.unnamed'),
       workspace: 'worldbook',
     });
     showToast(t('worldbook.toast.created2'));
@@ -359,7 +356,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     if (!node) return;
     const name = node.isGroup
       ? (node.ref as OrderGroup).name || t('common.unnamed')
-      : entries.value.find((e) => String(e.uid) === (node.ref as OrderItem).identifier)?.comment ||
+      : entries.value.find((e) => String(e.uid) === (node.ref as OrderItem).identifier)?.name ||
         t('common.new');
     const wasGroup = node.isGroup;
     confirmStore.ask({
@@ -384,7 +381,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   }
 
   function toggleEntryDisabled(entry: WorldbookEntry) {
-    entry.disabled = !entry.disabled;
+    entry.enabled = !entry.enabled;
     markDirty();
   }
 
@@ -403,7 +400,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     tabsStore.open({
       domain: 'worldbook',
       key: String(entry.uid),
-      label: entry.comment || t('common.unnamed'),
+      label: entry.name || t('common.unnamed'),
       workspace: 'worldbook',
     });
   }

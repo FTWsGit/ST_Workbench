@@ -1,5 +1,11 @@
 import type { Character, CharacterListEntry } from '../types';
 import { deepClonePlain } from './apiUtils';
+import {
+  fromNativeRegex,
+  toNativeRegex,
+  fromNativeScripts,
+  toNativeScripts,
+} from './scriptConvert';
 
 /** 角色卡头像缩略图 URL——和 ST 自己的 getThumbnailUrl('avatar', file) 同一个端点。
  *  带 `&t=<ts>` 是为了让保存后换头能强刷浏览器缓存。 */
@@ -77,45 +83,48 @@ export function depthPromptRoleToStr(role: 0 | 1 | 2): string {
  *     v1 字段名是历史遗留）。
  *   - talkativeness：v2 存在 `extensions.talkativeness`，v1 顶层也有一份同名旧字段（可能是
  *     字符串），两者不一致时以 v2 extensions 为准。
- *   - greetings：`[data.first_mes, ...data.alternate_greetings]`，见 types.ts Character 接口
- *     顶部 doc comment。
+ *   - greetings：`[data.first_mes, ...data.alternate_greetings]`。
  *   - worldbook：对应 `extensions.world`（字符串世界书名字），无绑定时是 `undefined`，工作层
  *     统一转成 `null`。
- * 其余没有专门转换的字段（`extensions` 除 regex_scripts/talkativeness/fav/world/depth_prompt
- * 外的部分）用 `{ ...extensions }` 打底透传，避免第三方扩展塞进 extensions 里的未知字段被
- * 一次读-改-存悄悄丢掉。 */
+ * 其余没有专门转换的字段（`extensions` 除 regex_scripts/talkativeness/fav/world/depth_prompt/
+ * tavern_helper 外的部分）由 store 的 oldRaw 打底透传，避免第三方扩展字段被一次读-改-存悄悄丢掉。 */
 export function fromRaw(raw: Record<string, unknown>): Character {
   const v2 = (raw?.data ?? {}) as Record<string, unknown>;
   const ext = (v2.extensions ?? {}) as Record<string, unknown>;
   const dp = (ext.depth_prompt ?? {}) as Record<string, unknown>;
+  const th = (ext.tavern_helper ?? {}) as Record<string, unknown>;
   const alternates = Array.isArray(v2.alternate_greetings) ? v2.alternate_greetings : [];
   const talkativeness = ext.talkativeness ?? raw?.talkativeness;
   return {
     avatar: (raw?.avatar ?? '') as string,
     name: (v2.name || raw?.name || '') as string,
     description: (v2.description ?? raw?.description ?? '') as string,
-    scenario: (v2.scenario ?? raw?.scenario ?? '') as string,
-    mesExample: (v2.mes_example ?? raw?.mes_example ?? '') as string,
-    personality: (v2.personality ?? raw?.personality ?? '') as string,
-    systemPrompt: (v2.system_prompt ?? '') as string,
-    postHistoryInstructions: (v2.post_history_instructions ?? '') as string,
-    depthPrompt: {
-      prompt: (dp.prompt ?? '') as string,
-      depth: typeof dp.depth === 'number' ? dp.depth : 4,
-      role: depthPromptRoleToNum(dp.role),
+    otherPrompts: {
+      scenario: (v2.scenario ?? raw?.scenario ?? '') as string,
+      mesExample: (v2.mes_example ?? raw?.mes_example ?? '') as string,
+      personality: (v2.personality ?? raw?.personality ?? '') as string,
+      systemPrompt: (v2.system_prompt ?? '') as string,
+      postHistoryInstructions: (v2.post_history_instructions ?? '') as string,
+      depthPrompt: {
+        prompt: (dp.prompt ?? '') as string,
+        depth: typeof dp.depth === 'number' ? dp.depth : 4,
+        role: depthPromptRoleToNum(dp.role),
+      },
     },
     greetings: [(v2.first_mes ?? raw?.first_mes ?? '') as string, ...alternates],
-    creator: (v2.creator ?? raw?.creator ?? '') as string,
-    creatorNotes: (v2.creator_notes ?? raw?.creatorcomment ?? '') as string,
-    version: (v2.character_version ?? '') as string,
-    tags: Array.isArray(v2.tags) ? [...v2.tags] : Array.isArray(raw?.tags) ? [...raw.tags] : [],
+    creatorMeta: {
+      creator: (v2.creator ?? raw?.creator ?? '') as string,
+      creatorNotes: (v2.creator_notes ?? raw?.creatorcomment ?? '') as string,
+      version: (v2.character_version ?? '') as string,
+      tags: Array.isArray(v2.tags) ? [...v2.tags] : Array.isArray(raw?.tags) ? [...raw.tags] : [],
+    },
     talkativeness: typeof talkativeness === 'number' ? talkativeness : Number(talkativeness) || 0.5,
     fav: !!(ext.fav ?? raw?.fav),
     worldbook: typeof ext.world === 'string' && ext.world ? ext.world : null,
-    extensions: {
-      ...ext,
-      regex_scripts: Array.isArray(ext.regex_scripts) ? ext.regex_scripts : [],
-    } as Character['extensions'],
+    regexs: Array.isArray(ext.regex_scripts)
+      ? ext.regex_scripts.map((r) => fromNativeRegex(r as Record<string, unknown>))
+      : [],
+    scripts: fromNativeScripts(th.scripts),
   };
 }
 
@@ -138,36 +147,40 @@ export function buildFormData(
     if (oldRaw.create_date) fd.append('create_date', oldRaw.create_date as string);
   }
   fd.append('description', data.description);
-  fd.append('personality', data.personality);
-  fd.append('scenario', data.scenario);
-  fd.append('mes_example', data.mesExample);
+  fd.append('personality', data.otherPrompts.personality);
+  fd.append('scenario', data.otherPrompts.scenario);
+  fd.append('mes_example', data.otherPrompts.mesExample);
   fd.append('first_mes', data.greetings[0] ?? '');
   for (const g of data.greetings.slice(1)) fd.append('alternate_greetings', g);
-  fd.append('creatorcomment', data.creatorNotes);
-  fd.append('creator_notes', data.creatorNotes);
-  fd.append('creator', data.creator);
-  fd.append('character_version', data.version);
-  fd.append('system_prompt', data.systemPrompt);
-  fd.append('post_history_instructions', data.postHistoryInstructions);
-  for (const tag of data.tags) fd.append('tags', tag);
+  fd.append('creatorcomment', data.creatorMeta.creatorNotes);
+  fd.append('creator_notes', data.creatorMeta.creatorNotes);
+  fd.append('creator', data.creatorMeta.creator);
+  fd.append('character_version', data.creatorMeta.version);
+  fd.append('system_prompt', data.otherPrompts.systemPrompt);
+  fd.append('post_history_instructions', data.otherPrompts.postHistoryInstructions);
+  for (const tag of data.creatorMeta.tags) fd.append('tags', tag);
   fd.append('talkativeness', String(data.talkativeness));
   fd.append('fav', data.fav ? 'true' : 'false');
   if (data.worldbook) fd.append('world', data.worldbook);
 
   // extensions 打包：旧数据打底（保留没建模进 Character 接口的第三方扩展字段），工作层已知字段
-  // 覆盖上去——跟 worldbookApi.ts toSTEntry() 的"{...rest} 打底再覆盖"是同一个纪律。
+  // 覆盖上去——跟 worldbookApi.ts toSTEntry() 的 raw 透传是同一个纪律。
   const oldExt = (oldData.extensions ?? {}) as Record<string, unknown>;
+  const oldTH = (oldExt.tavern_helper ?? {}) as Record<string, unknown>;
   const extensions = deepClonePlain({
     ...oldExt,
-    ...data.extensions,
     talkativeness: data.talkativeness,
     fav: data.fav,
     world: data.worldbook ?? undefined,
-    regex_scripts: data.extensions?.regex_scripts ?? [],
+    regex_scripts: data.regexs.map(toNativeRegex),
     depth_prompt: {
-      prompt: data.depthPrompt.prompt,
-      depth: data.depthPrompt.depth,
-      role: depthPromptRoleToStr(data.depthPrompt.role),
+      prompt: data.otherPrompts.depthPrompt.prompt,
+      depth: data.otherPrompts.depthPrompt.depth,
+      role: depthPromptRoleToStr(data.otherPrompts.depthPrompt.role),
+    },
+    tavern_helper: {
+      ...oldTH,
+      scripts: toNativeScripts(data.scripts),
     },
   });
   fd.append('extensions', JSON.stringify(extensions));

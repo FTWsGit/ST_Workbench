@@ -6,7 +6,6 @@ import type { Script } from '../types';
 /** 构造最小可测脚本对象 */
 function makeScript(id: string): Script {
   return {
-    type: 'script',
     enabled: true,
     name: 'n',
     id,

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { useVarNav } from './useVarNav';
-import type { Character, OrderNode, PresetBlock, WorldbookEntry, VarOp } from '../types';
+import type { Character, OrderNode, PromptBlock, WorldbookEntry, VarOp } from '../types';
 
 /* ---------- fixture builders ---------- */
 
@@ -8,7 +8,7 @@ function leaf(identifier: string, enabled = true): OrderNode {
   return { identifier, enabled };
 }
 
-function block(identifier: string, content: string): PresetBlock {
+function block(identifier: string, content: string): PromptBlock {
   return {
     identifier,
     name: identifier,
@@ -16,42 +16,47 @@ function block(identifier: string, content: string): PresetBlock {
     role: 'system',
     system_prompt: false,
     marker: false,
+    enabled: true,
+    injectionPosition: 0,
+    injectionDepth: 0,
+    injectionOrder: 0,
   };
 }
 
-function wbEntry(uid: number, content: string, opts: Partial<WorldbookEntry> = {}): WorldbookEntry {
+interface WbEntryOpts {
+  enabled?: boolean;
+  name?: string;
+  strategyType?: WorldbookEntry['strategy']['type'];
+  keys?: string[];
+  positionOrder?: number;
+  role?: WorldbookEntry['position']['role'];
+  depth?: number;
+  probability?: number;
+}
+
+function wbEntry(uid: number, content: string, opts: WbEntryOpts = {}): WorldbookEntry {
   return {
     uid,
-    comment: `entry${uid}`,
+    name: opts.name ?? `entry${uid}`,
+    enabled: opts.enabled ?? true,
     content,
-    displayIndex: 0,
-    keys: [],
-    keysecondary: [],
-    selective: false,
-    selectiveLogic: 0,
-    constant: false,
-    keyWord: true,
-    vectorized: false,
-    disabled: false,
-    position: 0,
-    depth: 4,
-    order: 100,
-    role: null,
-    probability: 100,
-    useProbability: true,
-    excludeRecursion: false,
-    preventRecursion: false,
-    delayUntilRecursion: false,
-    scanDepth: null,
-    caseSensitive: null,
-    matchWholeWords: null,
-    group: '',
-    groupPrioritized: false,
-    groupWeight: 100,
-    sticky: null,
-    cooldown: null,
-    delay: null,
-    ...opts,
+    strategy: {
+      type: opts.strategyType ?? 'keyword',
+      keys: opts.keys ?? [],
+      keysSecondary: { logic: 'and_any', keys: [] },
+      scanDepth: 'same_as_global',
+      caseSensitive: null,
+      matchWholeWords: null,
+    },
+    position: {
+      type: 'before_character_definition',
+      role: opts.role ?? null,
+      depth: opts.depth ?? 4,
+      order: opts.positionOrder ?? 100,
+    },
+    probability: opts.probability ?? 100,
+    recursion: { preventIncoming: false, preventOutgoing: false, delayUntil: false },
+    effect: { sticky: null, cooldown: null, delay: null },
   };
 }
 
@@ -60,29 +65,26 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     avatar: 'a.png',
     name: 'Hero',
     description: '',
-    scenario: '',
-    mesExample: '',
-    personality: '',
-    systemPrompt: '',
-    postHistoryInstructions: '',
-    depthPrompt: { prompt: '', depth: 4, role: 0 },
+    otherPrompts: {
+      scenario: '',
+      mesExample: '',
+      personality: '',
+      systemPrompt: '',
+      postHistoryInstructions: '',
+      depthPrompt: { prompt: '', depth: 4, role: 0 },
+    },
     greetings: [],
-    creator: '',
-    creatorNotes: '',
-    version: '',
-    tags: [],
+    creatorMeta: { creator: '', creatorNotes: '', version: '', tags: [] },
     talkativeness: 0.5,
     fav: false,
     worldbook: null,
-    extensions: {
-      regex_scripts: [],
-      tavern_helper: { type: 'helper', variables: {}, variales: {} },
-    } as unknown as Character['extensions'],
+    regexs: [],
+    scripts: [],
     ...overrides,
   };
 }
 
-const CHAR_FIELDS: readonly { field: keyof Character | 'greeting'; labelKey: string }[] = [
+const CHAR_FIELDS: readonly { field: string; labelKey: string }[] = [
   { field: 'description', labelKey: 'char.description' },
   { field: 'personality', labelKey: 'char.personality' },
   { field: 'scenario', labelKey: 'char.scenario' },
@@ -99,7 +101,7 @@ const CHAR_FIELDS: readonly { field: keyof Character | 'greeting'; labelKey: str
 describe('useVarNav - 三域扫描与 sortByAssembly', () => {
   it('preset 域扫描：enabled 决定 certain', () => {
     const order: OrderNode[] = [leaf('b1', true), leaf('b2', false)];
-    const prompts: PresetBlock[] = [block('b1', '{{setvar::x::v}}'), block('b2', '{{getvar::y}}')];
+    const prompts: PromptBlock[] = [block('b1', '{{setvar::x::v}}'), block('b2', '{{getvar::y}}')];
     const u = useVarNav(
       {
         preset: { order: () => order, prompts: () => prompts, presetName: () => 'P' },
@@ -131,7 +133,7 @@ describe('useVarNav - 三域扫描与 sortByAssembly', () => {
         children: [{ identifier: 'inner', enabled: true }],
       },
     ];
-    const prompts: PresetBlock[] = [block('inner', '{{setvar::z::v}}')];
+    const prompts: PromptBlock[] = [block('inner', '{{setvar::z::v}}')];
     const u = useVarNav(
       {
         preset: { order: () => order, prompts: () => prompts, presetName: () => 'P' },
@@ -209,11 +211,11 @@ describe('useVarNav - 三域扫描与 sortByAssembly', () => {
     expect(u.localRefs.value.find((o) => o.varName === 'cnt')).toBeUndefined();
   });
 
-  it('worldbook 域扫描：disabled 跳过，constant 决定 certain，按 order 降序 intraOrder', () => {
+  it('worldbook 域扫描：禁用条目跳过，constant 策略决定 certain，按 position.order 降序 intraOrder', () => {
     const entries: WorldbookEntry[] = [
-      wbEntry(1, '{{setvar::a::v}}', { order: 50, constant: true }),
-      wbEntry(2, '{{getvar::b}}', { order: 100, constant: false }),
-      wbEntry(3, '{{setvar::c::v}}', { order: 10, disabled: true }), // disabled 跳过
+      wbEntry(1, '{{setvar::a::v}}', { positionOrder: 50, strategyType: 'constant' }),
+      wbEntry(2, '{{getvar::b}}', { positionOrder: 100 }),
+      wbEntry(3, '{{setvar::c::v}}', { positionOrder: 10, enabled: false }), // 禁用跳过
     ];
     const u = useVarNav(
       {
@@ -225,23 +227,23 @@ describe('useVarNav - 三域扫描与 sortByAssembly', () => {
     );
     u.rebuildVarIndex();
     const all = [...u.localRefs.value, ...u.globalRefs.value];
-    expect(all.find((o) => o.varName === 'c')).toBeUndefined(); // disabled 跳过
+    expect(all.find((o) => o.varName === 'c')).toBeUndefined(); // 禁用跳过
     const opB = all.find((o) => o.varName === 'b')!;
     expect(opB.source.domain).toBe('worldbook');
     expect(opB.certain).toBe(false); // 非 constant
     const opA = all.find((o) => o.varName === 'a')!;
     expect(opA.certain).toBe(true); // constant
-    // order=100 > 50 → intraOrder=0 < 1
+    // position.order=100 > 50 → intraOrder=0 < 1
     expect(opB.assemblyOrder.intraOrder).toBe(0);
     expect(opA.assemblyOrder.intraOrder).toBe(1);
   });
 
   it('sortByAssembly：worldbook → character → preset 装配顺序', () => {
     const char = makeCharacter({ description: '{{setvar::mid::v}}' });
-    const prompts: PresetBlock[] = [block('p1', '{{setvar::late::v}}')];
+    const prompts: PromptBlock[] = [block('p1', '{{setvar::late::v}}')];
     const order: OrderNode[] = [leaf('p1', true)];
     const entries: WorldbookEntry[] = [
-      wbEntry(1, '{{setvar::early::v}}', { order: 100, constant: true }),
+      wbEntry(1, '{{setvar::early::v}}', { positionOrder: 100, strategyType: 'constant' }),
     ];
     const u = useVarNav(
       {
@@ -265,7 +267,7 @@ describe('useVarNav - 三域扫描与 sortByAssembly', () => {
   });
 
   it('sortByAssembly 同 layer 内按 intraOrder 升序', () => {
-    const prompts: PresetBlock[] = [
+    const prompts: PromptBlock[] = [
       block('b1', '{{setvar::z::v}}'), // intraOrder=0
       block('b2', '{{setvar::a::v}}'), // intraOrder=1
     ];
@@ -286,7 +288,7 @@ describe('useVarNav - 三域扫描与 sortByAssembly', () => {
   });
 
   it('sortByAssembly 同 layer 同 intraOrder 按 varName localeCompare 赛定', () => {
-    const prompts: PresetBlock[] = [block('b1', '{{setvar::apple::v}}{{setvar::zebra::v}}')];
+    const prompts: PromptBlock[] = [block('b1', '{{setvar::apple::v}}{{setvar::zebra::v}}')];
     const order: OrderNode[] = [leaf('b1', true)];
     const u = useVarNav(
       {
@@ -304,7 +306,7 @@ describe('useVarNav - 三域扫描与 sortByAssembly', () => {
 
 describe('useVarNav - filterVarNav', () => {
   function setupBasic(): ReturnType<typeof useVarNav> {
-    const prompts: PresetBlock[] = [block('b1', '{{setvar::apple::v}}{{setvar::banana::v}}')];
+    const prompts: PromptBlock[] = [block('b1', '{{setvar::apple::v}}{{setvar::banana::v}}')];
     const order: OrderNode[] = [leaf('b1', true)];
     return useVarNav(
       {
@@ -347,7 +349,7 @@ describe('useVarNav - filterVarNav', () => {
   });
 
   it('global 域同步过滤', () => {
-    const prompts: PresetBlock[] = [block('b1', '{{setglobalvar::g1::v}}{{setglobalvar::g2::v}}')];
+    const prompts: PromptBlock[] = [block('b1', '{{setglobalvar::g1::v}}{{setglobalvar::g2::v}}')];
     const order: OrderNode[] = [leaf('b1', true)];
     const u = useVarNav(
       {
@@ -367,7 +369,7 @@ describe('useVarNav - filterVarNav', () => {
 describe('useVarNav - navVar / jumpToVarOp', () => {
   it('navVar 在 filtered 列表上循环跳转并调 onJump', () => {
     const onJump = vi.fn();
-    const prompts: PresetBlock[] = [
+    const prompts: PromptBlock[] = [
       block('b1', '{{setvar::a::v}}{{setvar::b::v}}{{setvar::c::v}}'),
     ];
     const order: OrderNode[] = [leaf('b1', true)];

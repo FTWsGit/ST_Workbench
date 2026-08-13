@@ -94,7 +94,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useTabsStore } from '../../stores/tabsStore';
-import type { Script, ScriptTree } from '../../types';
+import type { Script } from '../../types';
 import type { TavernSettingsFormProps } from './tavernProps';
 import FormField from '../shared/FormField.vue';
 import Icon from '../shared/Icon.vue';
@@ -103,12 +103,9 @@ const props = defineProps<TavernSettingsFormProps>();
 
 const tabsStore = useTabsStore();
 
-/** 当前选中 tavern 脚本（按 activeTab.key 匹配 id，只取 type='script'）。 */
+/** 当前选中 tavern 脚本（按 activeTab.key 匹配 id）。 */
 const script = computed(
-  () =>
-    props.scripts.find(
-      (s: ScriptTree) => s.id === tabsStore.activeTab?.key && s.type === 'script'
-    ) as Script | undefined
+  () => props.scripts.find((s: Script) => s.id === tabsStore.activeTab?.key) as Script | undefined
 );
 
 /** enabled 直绑（script.enabled 是布尔，不需要像 regex 的 disabled 那样取反）。 */

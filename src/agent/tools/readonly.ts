@@ -6,12 +6,24 @@
 import { registerAgentTool, type AgentToolResult } from '../toolRegistry';
 import { searchFields, type SearchHit } from '../../utils';
 import { LIST_TOOLS_MAX_ITEMS, TOOL_RESULT_TRUNCATE_BYTES } from '../constants';
+import type { Character } from '../../types';
 
 /** order 树遍历用宽松结构（OrderNode 可赋值到它，避免显式 any）。 */
 type OrderWalkNode = {
   identifier?: unknown;
   children?: OrderWalkNode[];
 };
+
+/** CHARACTER_FIELDS 里映射到 otherPrompts 的纯文本字段（description 顶层、depthPrompt 复合对象，另行处理）。 */
+type OtherPromptTextKey = Exclude<keyof Character['otherPrompts'], 'depthPrompt'>;
+
+/** 按字段 key 读 Character 的纯文本：description 读顶层、depthPrompt 读 otherPrompts.depthPrompt.prompt、
+ *  其余读 otherPrompts[key]。与 characterStore.getFieldValue 同一映射。 */
+function charFieldText(char: Character, key: string): string {
+  if (key === 'description') return char.description;
+  if (key === 'depthPrompt') return char.otherPrompts.depthPrompt.prompt;
+  return char.otherPrompts[key as OtherPromptTextKey] ?? '';
+}
 
 /* ====== 工具 description 集中管理（英文，atomcode 风格） ====== */
 
@@ -125,7 +137,7 @@ registerAgentTool({
         identifier: id,
         name: String(b.name ?? ''),
         role: String(b.role ?? ''),
-        disabled: !!b.disable,
+        disabled: !b.enabled,
         hidden: false,
       });
     }
@@ -137,7 +149,7 @@ registerAgentTool({
         identifier: b.identifier,
         name: String(b.name ?? ''),
         role: String(b.role ?? ''),
-        disabled: !!b.disable,
+        disabled: !b.enabled,
         hidden: true,
       });
     }
@@ -187,11 +199,10 @@ registerAgentTool({
         identifier: b.identifier,
         name: b.name,
         role: b.role,
-        disable: !!b.disable,
-        injection_position: b.injection_position,
-        injection_depth: b.injection_depth,
-        temperature: b.temperature,
-        ...(b.extensions ? { extensions: b.extensions } : {}),
+        enabled: b.enabled,
+        injectionPosition: b.injectionPosition,
+        injectionDepth: b.injectionDepth,
+        injectionOrder: b.injectionOrder,
       },
       null,
       2
@@ -265,23 +276,23 @@ registerAgentTool({
     const entries = store.entries;
     type Row = {
       uid: number;
-      comment: string;
+      name: string;
       keys: string[];
-      disabled: boolean;
-      position: number;
+      enabled: boolean;
+      position: string;
     };
     const rows: Row[] = entries.map((e) => ({
       uid: Number(e.uid),
-      comment: String(e.comment ?? ''),
-      keys: Array.isArray(e.keys) ? e.keys : [],
-      disabled: !!e.disabled,
-      position: Number(e.position ?? 0),
+      name: String(e.name ?? ''),
+      keys: e.strategy.keys,
+      enabled: !!e.enabled,
+      position: e.position.type,
     }));
     const capped = capItems(rows);
     let text = capped.items
       .map(
         (r) =>
-          `- uid=${r.uid} | comment=${r.comment} | keys=[${r.keys.join(',')}] | disabled=${r.disabled} | position=${r.position}`
+          `- uid=${r.uid} | name=${r.name} | keys=[${r.keys.join(',')}] | enabled=${r.enabled} | position=${r.position}`
       )
       .join('\n');
     if (capped.truncated) text += `\n…[showing first ${capped.items.length} of ${capped.total}]`;
@@ -322,11 +333,10 @@ registerAgentTool({
     const meta = JSON.stringify(
       {
         uid: e.uid,
-        comment: e.comment,
-        keys: e.keys,
-        disabled: !!e.disabled,
+        name: e.name,
+        keys: e.strategy.keys,
+        enabled: !!e.enabled,
         position: e.position,
-        ...(e.extensions ? { extensions: e.extensions } : {}),
       },
       null,
       2
@@ -361,15 +371,22 @@ registerAgentTool({
         kind: 'text' as const,
       },
       {
-        key: 'comment',
-        labelKey: 'worldbook.field.comment',
+        key: 'name',
+        labelKey: 'worldbook.field.name',
         kind: 'text' as const,
       },
       { key: 'keys', labelKey: 'worldbook.field.keys', kind: 'list' as const },
     ];
-    const hits: SearchHit[] = searchFields(store.entries, WB_FIELDS, query, (e) => ({
+    // keys 现在嵌套在 strategy 里，摊成一级 key 再喂给 searchFields（只读搜索，无回写）。
+    const flat: Record<string, unknown>[] = store.entries.map((e) => ({
+      uid: e.uid,
+      name: e.name,
+      content: e.content,
+      keys: e.strategy.keys,
+    }));
+    const hits: SearchHit[] = searchFields(flat, WB_FIELDS, query, (e) => ({
       id: String(e.uid),
-      name: e.comment || String(e.uid),
+      name: String(e.name) || String(e.uid),
     }));
     if (hits.length === 0) return { text: frame(`no hits for "${query}"`) };
     const capped = capItems(hits);
@@ -406,7 +423,7 @@ registerAgentTool({
     ];
     const rows: string[] = [];
     for (const f of fields) {
-      const v = String(c[f.key] ?? '');
+      const v = charFieldText(c, f.key);
       rows.push(`- ${f.label}: len=${v.length}, preview=${v.slice(0, 100).replace(/\n/g, ' ')}`);
     }
     rows.push(`- greetings: count=${c.greetings.length}`);
@@ -447,7 +464,7 @@ registerAgentTool({
     const c = store.character;
     let value: string;
     if (key === 'depthPrompt') {
-      value = c.depthPrompt.prompt;
+      value = c.otherPrompts.depthPrompt.prompt;
     } else if (key.startsWith('greeting:')) {
       const idx = Number(key.slice('greeting:'.length));
       if (!Number.isFinite(idx) || idx < 0 || idx >= c.greetings.length) {
@@ -464,7 +481,7 @@ registerAgentTool({
         'postHistoryInstructions',
       ].includes(key)
     ) {
-      value = String(c[key] ?? '');
+      value = charFieldText(c, key);
     } else {
       return { text: frame(`unknown field_key: ${key}`), isError: true };
     }

@@ -13,7 +13,7 @@ import {
   applyMultiSelect,
   searchFields,
 } from './utils';
-import type { PresetData, PresetBlock } from './types';
+import type { Preset, PromptBlock } from './types';
 import type { SearchField } from './utils';
 
 // ===== esc / span / escRe =====
@@ -70,84 +70,61 @@ describe('escRe', () => {
 
 // ===== orderedPromptsWithHidden =====
 
-function mkBlock(identifier: string, name = identifier): PresetBlock {
-  return { identifier, name, content: '', role: 'system', system_prompt: false, marker: false };
+function mkBlock(identifier: string, name = identifier): PromptBlock {
+  return {
+    identifier,
+    name,
+    content: '',
+    role: 'system',
+    system_prompt: false,
+    marker: false,
+    enabled: true,
+    injectionPosition: 0,
+    injectionDepth: 0,
+    injectionOrder: 0,
+  };
 }
 
-function mkData(prompts: PresetBlock[], order: string[][]): PresetData {
+function mkData(prompts: PromptBlock[]): Preset {
   return {
-    openai_max_context: 0,
-    openai_max_tokens: 0,
-    chat_prompt: '',
-    chat_prompt_prefix: '',
-    chat_prompt_suffix: '',
+    name: 'test',
+    settings: {
+      openai_max_context: 0,
+      openai_max_tokens: 0,
+      n: 1,
+      stream_openai: false,
+      temperature: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      top_p: 1,
+      repetition_penalty: 1,
+      min_p: 0,
+      top_k: 0,
+      top_a: 0,
+      seed: -1,
+      squash_system_messages: false,
+    },
     prompts,
-    prompt_order: order.map((arr) => ({
-      order: arr.map((id) => ({ identifier: id, enabled: true })),
-      character_id: 100001,
-    })),
-  } as unknown as PresetData;
+    regexs: [],
+    scripts: [],
+  };
 }
 
 describe('orderedPromptsWithHidden', () => {
-  it('按 marker order 条目展开视觉顺序', () => {
+  it('按 prompts 数组顺序返回，hidden 恒 false', () => {
     const a = mkBlock('a');
     const b = mkBlock('b');
     const c = mkBlock('c');
-    const data = mkData([a, b, c], [['c', 'a']]);
-    const out = orderedPromptsWithHidden(data);
-    expect(out.map((e) => [e.block.identifier, e.hidden])).toEqual([
-      ['c', false],
-      ['a', false],
-      ['b', true],
-    ]);
-  });
-
-  it('悬空 order 条目（引用已删除 prompt）静默跳过', () => {
-    const a = mkBlock('a');
-    const data = mkData([a], [['ghost', 'a']]);
-    const out = orderedPromptsWithHidden(data);
-    expect(out.map((e) => [e.block.identifier, e.hidden])).toEqual([['a', false]]);
-  });
-
-  it('同一 identifier 重复条目只在首次位置出现', () => {
-    const a = mkBlock('a');
-    const b = mkBlock('b');
-    const data = mkData([a, b], [['a', 'b', 'a']]);
-    const out = orderedPromptsWithHidden(data);
+    const out = orderedPromptsWithHidden(mkData([a, b, c]));
     expect(out.map((e) => [e.block.identifier, e.hidden])).toEqual([
       ['a', false],
       ['b', false],
+      ['c', false],
     ]);
   });
 
-  it('无 marker (character_id===100001) 条目 → rawOrder 空 → 全部 hidden', () => {
-    const a = mkBlock('a');
-    const data = mkData([a], [[]]);
-    data.prompt_order[0].character_id = 999;
-    const out = orderedPromptsWithHidden(data);
-    expect(out.map((e) => [e.block.identifier, e.hidden])).toEqual([['a', true]]);
-  });
-
-  it('prompt_order 非数组 → 全 hidden', () => {
-    const a = mkBlock('a');
-    const data = mkData([a], []) as PresetData;
-    data.prompt_order = undefined as unknown as PresetData['prompt_order'];
-    const out = orderedPromptsWithHidden(data);
-    expect(out.map((e) => [e.block.identifier, e.hidden])).toEqual([['a', true]]);
-  });
-
-  it('prompt_order 空 → 全 hidden', () => {
-    const a = mkBlock('a');
-    const data = mkData([a], []);
-    data.prompt_order = [];
-    const out = orderedPromptsWithHidden(data);
-    expect(out.map((e) => [e.block.identifier, e.hidden])).toEqual([['a', true]]);
-  });
-
-  it('prompts 空且 order 空 → �数组', () => {
-    const data = mkData([], []);
-    expect(orderedPromptsWithHidden(data)).toEqual([]);
+  it('空 prompts → 空数组', () => {
+    expect(orderedPromptsWithHidden(mkData([]))).toEqual([]);
   });
 });
 

@@ -1,4 +1,4 @@
-import type { PresetData, PresetBlock } from './types';
+import type { Preset, PromptBlock } from './types';
 import type { LocaleKey } from './i18n';
 
 export function esc(t: string): string {
@@ -44,32 +44,14 @@ export function roleClass(role: string | undefined, prefix = ''): string {
 }
 
 export interface OrderedBlockEntry {
-  block: PresetBlock;
+  block: PromptBlock;
   hidden: boolean;
 }
 
-/** 把 prompt_order 展开成视觉顺序的 block 列表（忽略 group 边界）。
- *  存在于 prompts 但未在 prompt_order 中引用的 hidden block 追加在末尾，标记 hidden: true。
- *  指向已删除 prompt 的悬空 order 条目静默跳过；同一 identifier 的重复条目只在首次位置出现。 */
-export function orderedPromptsWithHidden(data: PresetData): OrderedBlockEntry[] {
-  const byId = new Map(data.prompts.map((p) => [p.identifier, p]));
-  const seen = new Set<string>();
-  const out: OrderedBlockEntry[] = [];
-  const rawOrder =
-    Array.isArray(data.prompt_order) && data.prompt_order.length
-      ? (data.prompt_order.find((p) => p.character_id === 100001)?.order ?? [])
-      : [];
-  for (const item of rawOrder) {
-    if (seen.has(item.identifier)) continue;
-    const b = byId.get(item.identifier);
-    if (!b) continue;
-    seen.add(item.identifier);
-    out.push({ block: b, hidden: false });
-  }
-  for (const b of data.prompts) {
-    if (!seen.has(b.identifier)) out.push({ block: b, hidden: true });
-  }
-  return out;
+/** 把预设的 prompts 数组按视觉顺序返回（干净层 prompts 数组顺序 = 视觉顺序，enabled 已烘入）。
+ *  干净层没有「hidden block」概念（隐藏块由 store 单独持有、不进 Preset.prompts），hidden 恒 false。 */
+export function orderedPromptsWithHidden(data: Preset): OrderedBlockEntry[] {
+  return data.prompts.map((block) => ({ block, hidden: false }));
 }
 
 export function debounce<T extends (...a: never[]) => void>(fn: T, ms: number): T {

@@ -14,8 +14,12 @@
  */
 import { registerAgentTool, type AgentToolResult, type AgentToolContext } from '../toolRegistry';
 import { useAgentStore } from '../agentStore';
-import type { PresetBlock, OrderItem, OrderNode } from '../../types';
+import type { PromptBlock, OrderItem, OrderNode, Character } from '../../types';
+import { WORLDBOOK_POSITION_OPTIONS } from '../../types';
 import { TOOL_RESULT_TRUNCATE_BYTES } from '../constants';
+
+/** CHARACTER_FIELDS 里映射到 otherPrompts 的纯文本字段（description 顶层、depthPrompt 复合对象，另行处理）。 */
+type OtherPromptTextKey = Exclude<keyof Character['otherPrompts'], 'depthPrompt'>;
 
 /** order 树删除遍历用宽松结构（OrderNode 可赋值到它，避免显式 any）。 */
 type OrderTreeNode = {
@@ -94,7 +98,7 @@ registerAgentTool({
       fields: {
         type: 'object',
         description:
-          "Key-value map of fields to change: content, name, role, injection_position, injection_depth, temperature, disable, etc. 'identifier' is not allowed.",
+          "Key-value map of fields to change: content, name, role, enabled, injectionPosition, injectionDepth, injectionOrder, etc. 'identifier' is not allowed.",
       },
     },
     required: ['identifier', 'fields'],
@@ -132,9 +136,10 @@ registerAgentTool({
     }
 
     // 应用字段修改
+    const target = block as unknown as Record<string, unknown>;
     for (const [k, v] of Object.entries(fields)) {
       if (k === 'identifier') continue; // 不允许改 identifier
-      block[k] = v;
+      target[k] = v;
     }
     store.markDirty();
     return { text: frame(`block "${id}" 已修改，需调 preset_save 持久化`) };
@@ -191,12 +196,15 @@ registerAgentTool({
     store.prompts.push({
       identifier: id,
       name,
-      role,
+      role: role as PromptBlock['role'],
       content,
       system_prompt: false,
       enabled: true,
       marker: false,
-    } as PresetBlock);
+      injectionPosition: 0,
+      injectionDepth: 0,
+      injectionOrder: 0,
+    });
     // 插入到 order 末尾
     const order = store.order;
     order.push({ identifier: id, enabled: true });
@@ -425,11 +433,13 @@ registerAgentTool({
     const entries = store.entries;
     const newEntry = entries[entries.length - 1];
     if (newEntry) {
-      newEntry.comment = comment;
+      newEntry.name = comment;
       newEntry.content = String(args?.content ?? '');
-      newEntry.keys = Array.isArray(args?.keys) ? args.keys : [];
-      if (typeof args?.position === 'number')
-        newEntry.position = args.position as typeof newEntry.position;
+      newEntry.strategy.keys = Array.isArray(args?.keys) ? args.keys : [];
+      if (typeof args?.position === 'number') {
+        const opt = WORLDBOOK_POSITION_OPTIONS[args.position];
+        if (opt) newEntry.position.type = opt.value;
+      }
     }
     store.markDirty();
     return {
@@ -534,7 +544,7 @@ registerAgentTool({
       ctx.uiStore.t('agent.approval.title'),
       ctx.uiStore.t('agent.approval.wbDelete', {
         uid,
-        comment: entry.comment || '',
+        comment: entry.name || '',
       })
     );
     if (!approved)
@@ -663,15 +673,17 @@ registerAgentTool({
 
     // 通过 tabsStore.open + setCurrentFieldValue 修改字段
     if (key === 'depthPrompt') {
-      store.character.depthPrompt.prompt = value;
+      store.character.otherPrompts.depthPrompt.prompt = value;
     } else if (isGreeting) {
       const idx = Number(key.slice('greeting:'.length));
       if (!Number.isFinite(idx) || idx < 0 || idx >= store.character.greetings.length) {
         return { text: frame(`invalid greeting index: ${key}`), isError: true };
       }
       store.character.greetings[idx] = value;
+    } else if (key === 'description') {
+      store.character.description = value;
     } else {
-      store.character[key] = value;
+      store.character.otherPrompts[key as OtherPromptTextKey] = value;
     }
     store.markDirty();
     return {

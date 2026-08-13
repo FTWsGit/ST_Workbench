@@ -333,6 +333,7 @@ export default {
   'regex.field.placement': '作用范围',
   'regex.field.trimStrings': '修剪文本',
   'regex.field.substituteRegex': '替换宏',
+  'regex.field.enabled': '启用',
   'regex.field.disabled': '已禁用',
 
   // ---- 确认弹窗 ----
@@ -457,6 +458,7 @@ export default {
 
   // ---- 字段标签（工具箱搜索用）----
   'worldbook.field.content': '内容',
+  'worldbook.field.name': '名称',
   'worldbook.field.comment': '标题/备注',
   'worldbook.field.keys': '主要关键词',
   'worldbook.field.keysecondary': '次要关键词',
@@ -466,10 +468,12 @@ export default {
   'worldbook.field.depth': '深度',
   'worldbook.field.order': '插入顺序',
   'worldbook.field.probability': '触发概率',
+  'worldbook.field.enabled': '启用',
   'worldbook.field.disabled': '已禁用',
   'worldbook.field.constant': '恒定激活',
   'worldbook.field.keyWord': '关键词激活',
   'worldbook.field.vectorized': '向量化激活',
+  'worldbook.field.strategyType': '激活策略',
 
   // ---- 编辑器 ----
   'worldbook.editor.placeholder': '在这里编辑世界书条目的内容…',

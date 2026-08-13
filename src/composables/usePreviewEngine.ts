@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import type { OrderNode, PresetBlock, PreviewBlockGroup } from '../types';
+import type { OrderNode, PromptBlock, PreviewBlockGroup } from '../types';
 import { isGroupNode } from './useGroupedList';
 import { macroAwareDiff } from '../utils';
 import * as ST from '../api/presetApi';
@@ -18,7 +18,7 @@ import * as ST from '../api/presetApi';
  */
 export function usePreviewEngine(
   getOrder: () => OrderNode[],
-  getPrompts: () => PresetBlock[],
+  getPrompts: () => PromptBlock[],
   options: {
     showToast: (msg: string) => void;
     t: (key: string, params?: Record<string, string | number>) => string;

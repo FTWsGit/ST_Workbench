@@ -8,9 +8,9 @@
     <FormField :label="uiStore.t('worldbook.settings.commentLabel')">
       <input
         class="wb-form-input"
-        v-model="entry.comment"
+        v-model="entry.name"
         :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')"
-        @input="onCommentInput"
+        @input="onNameInput"
       />
     </FormField>
 
@@ -54,11 +54,7 @@
           ></textarea>
         </FormField>
 
-        <label class="wb-form-check"
-          ><input type="checkbox" v-model="entry.selective" />
-          {{ uiStore.t('worldbook.settings.selective') }}</label
-        >
-        <template v-if="entry.selective">
+        <template v-if="entry.strategy.type === 'keyword'">
           <FormField :label="uiStore.t('worldbook.settings.keysSecondaryLabel')">
             <textarea
               class="wb-form-textarea"
@@ -68,7 +64,7 @@
             ></textarea>
           </FormField>
           <FormField :label="uiStore.t('worldbook.settings.logicLabel')" inline>
-            <select v-model.number="entry.selectiveLogic">
+            <select v-model="entry.strategy.keysSecondary.logic">
               <option v-for="o in LOGIC_OPTIONS" :key="o.value" :value="o.value">
                 {{ uiStore.t(o.labelKey) }}
               </option>
@@ -78,31 +74,22 @@
       </template>
 
       <FormField inline>
-        <label class="wb-form-check">
-          <input type="checkbox" v-model="entry.useProbability" />
-          {{ uiStore.t('worldbook.settings.probabilityLabel') }}
-        </label>
-        <NumberInput
-          v-if="entry.useProbability"
-          v-model="entry.probability"
-          :min="0"
-          :max="100"
-          :nullable="false"
-        />
+        <label class="wb-form-label">{{ uiStore.t('worldbook.settings.probabilityLabel') }}</label>
+        <NumberInput v-model="entry.probability" :min="0" :max="100" :nullable="false" />
       </FormField>
     </AdvancedGroup>
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupPosition')">
       <FormField :label="uiStore.t('worldbook.settings.positionLabel')" inline>
-        <select v-model.number="entry.position">
+        <select v-model="entry.position.type">
           <option v-for="o in POSITION_OPTIONS" :key="o.value" :value="o.value">
             {{ uiStore.t(o.labelKey) }}
           </option>
         </select>
       </FormField>
-      <div v-if="entry.position === 4" class="wb-row">
+      <div v-if="entry.position.type === 'at_depth'" class="wb-row">
         <label class="wb-form-label">{{ uiStore.t('worldbook.settings.depthLabel') }}</label>
-        <NumberInput v-model="entry.depth" :nullable="false" />
+        <NumberInput v-model="entry.position.depth" :nullable="false" />
         <label class="wb-form-label">{{ uiStore.t('worldbook.settings.roleLabel') }}</label>
         <select v-model="roleModel">
           <option v-for="o in ROLE_OPTIONS" :key="String(o.value)" :value="o.value">
@@ -111,23 +98,23 @@
         </select>
       </div>
       <FormField :label="uiStore.t('worldbook.settings.orderLabel')" inline>
-        <NumberInput v-model="entry.order" :nullable="false" />
+        <NumberInput v-model="entry.position.order" :nullable="false" />
       </FormField>
     </AdvancedGroup>
 
     <AdvancedGroup :title="uiStore.t('worldbook.settings.groupRecursion')">
       <label class="wb-form-check"
-        ><input type="checkbox" v-model="entry.excludeRecursion" />
+        ><input type="checkbox" v-model="entry.recursion.preventIncoming" />
         {{ uiStore.t('worldbook.settings.excludeRecursion') }}</label
       >
       <label class="wb-form-check"
-        ><input type="checkbox" v-model="entry.preventRecursion" />
+        ><input type="checkbox" v-model="entry.recursion.preventOutgoing" />
         {{ uiStore.t('worldbook.settings.preventRecursion') }}</label
       >
-      <label class="wb-form-check"
-        ><input type="checkbox" v-model="delayUntilRecursionModel" />
-        {{ uiStore.t('worldbook.settings.delayUntilRecursion') }}</label
-      >
+
+      <FormField :label="uiStore.t('worldbook.settings.delayUntilRecursion')" inline>
+        <NumberInput v-model="delayUntilRecursionModel" placeholder="1" />
+      </FormField>
 
       <FormField :label="uiStore.t('worldbook.settings.scanDepthLabel')" inline>
         <NumberInput
@@ -156,18 +143,6 @@
         <label class="wb-form-label">{{ uiStore.t('worldbook.settings.delayLabel') }}</label>
         <NumberInput v-model="delayModel" />
       </div>
-
-      <FormField :label="uiStore.t('worldbook.settings.groupLabel')">
-        <input
-          class="wb-form-input"
-          v-model="entry.group"
-          :placeholder="uiStore.t('worldbook.settings.groupPlaceholder')"
-        />
-      </FormField>
-      <label class="wb-form-check"
-        ><input type="checkbox" v-model="entry.groupPrioritized" />
-        {{ uiStore.t('worldbook.settings.groupPrioritized') }}</label
-      >
     </AdvancedGroup>
   </div>
 </template>
@@ -200,10 +175,10 @@ const uiStore = useUiStore();
 const entry = computed(() => store.currentEntry);
 
 const enabled = computed({
-  get: () => !entry.value?.disabled,
+  get: () => entry.value?.enabled ?? false,
   set: (v: boolean) => {
     if (entry.value) {
-      entry.value.disabled = !v;
+      entry.value.enabled = v;
       store.markDirty();
     }
   },
@@ -211,23 +186,21 @@ const enabled = computed({
 
 const activationMode = computed(() => {
   if (!entry.value) return 'keyWord';
-  if (entry.value.constant) return 'constant';
-  if (entry.value.vectorized) return 'vectorized';
+  if (entry.value.strategy.type === 'constant') return 'constant';
+  if (entry.value.strategy.type === 'vectorized') return 'vectorized';
   return 'keyWord';
 });
 function setActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
   if (!entry.value) return;
-  entry.value.constant = mode === 'constant';
-  entry.value.vectorized = mode === 'vectorized';
-  entry.value.keyWord = mode === 'keyWord';
+  entry.value.strategy.type = mode === 'keyWord' ? 'keyword' : mode;
   store.markDirty();
 }
 
 const keysText = computed({
-  get: () => (entry.value?.keys || []).join(', '),
+  get: () => (entry.value?.strategy.keys || []).join(', '),
   set: (v: string) => {
     if (entry.value) {
-      entry.value.keys = v
+      entry.value.strategy.keys = v
         .replace(/[\n\t]/g, ',')
         .split(',')
         .map((s) => s.trim())
@@ -237,10 +210,10 @@ const keysText = computed({
   },
 });
 const keysSecondaryText = computed({
-  get: () => (entry.value?.keysecondary || []).join(', '),
+  get: () => (entry.value?.strategy.keysSecondary.keys || []).join(', '),
   set: (v: string) => {
     if (entry.value) {
-      entry.value.keysecondary = v
+      entry.value.strategy.keysSecondary.keys = v
         .replace(/[\n\t]/g, ',')
         .split(',')
         .map((s) => s.trim())
@@ -251,29 +224,36 @@ const keysSecondaryText = computed({
 });
 
 const roleModel = computed({
-  get: () => entry.value?.role ?? null,
+  get: () => entry.value?.position.role ?? null,
   set: (v: unknown) => {
     if (entry.value) {
-      entry.value.role = v === '' ? null : (Number(v) as 0 | 1 | 2);
+      entry.value.position.role =
+        v === '' || v == null ? null : (v as 'system' | 'user' | 'assistant');
       store.markDirty();
     }
   },
 });
 
 const delayUntilRecursionModel = computed({
-  get: () => !!entry.value?.delayUntilRecursion,
-  set: (v: boolean) => {
+  get: () => {
+    const v = entry.value?.recursion.delayUntil;
+    return typeof v === 'number' ? v : null;
+  },
+  set: (v: number | null) => {
     if (entry.value) {
-      entry.value.delayUntilRecursion = v;
+      entry.value.recursion.delayUntil = typeof v === 'number' ? v : false;
       store.markDirty();
     }
   },
 });
 const scanDepthModel = computed({
-  get: () => entry.value?.scanDepth ?? null,
+  get: () => {
+    const v = entry.value?.strategy.scanDepth;
+    return typeof v === 'number' ? v : null;
+  },
   set: (v: number | null) => {
     if (entry.value) {
-      entry.value.scanDepth = v === null || Number.isNaN(v) ? null : v;
+      entry.value.strategy.scanDepth = v === null || Number.isNaN(v) ? 'same_as_global' : v;
       store.markDirty();
     }
   },
@@ -288,14 +268,14 @@ const tristateOptions = computed(() => [
 function tristateModel(field: 'caseSensitive' | 'matchWholeWords') {
   return computed<string>({
     get: () => {
-      const v = entry.value?.[field];
+      const v = entry.value?.strategy[field];
       if (v === true) return 'true';
       if (v === false) return 'false';
       return 'same';
     },
     set: (v: string) => {
       if (!entry.value) return;
-      entry.value[field] = v === 'same' ? null : v === 'true';
+      entry.value.strategy[field] = v === 'same' ? null : v === 'true';
       store.markDirty();
     },
   });
@@ -305,10 +285,10 @@ const matchWholeWordsModel = tristateModel('matchWholeWords');
 
 function nullableNumberModel(field: 'sticky' | 'cooldown' | 'delay') {
   return computed({
-    get: () => entry.value?.[field] ?? null,
+    get: () => entry.value?.effect[field] ?? null,
     set: (v: number | null) => {
       if (entry.value) {
-        entry.value[field] = v === null || Number.isNaN(v) ? null : v;
+        entry.value.effect[field] = v === null || Number.isNaN(v) ? null : v;
         store.markDirty();
       }
     },
@@ -318,12 +298,12 @@ const stickyModel = nullableNumberModel('sticky');
 const cooldownModel = nullableNumberModel('cooldown');
 const delayModel = nullableNumberModel('delay');
 
-/** comment 改动同步标签栏文字，不调用 open() 以避免逐字触发 sidebar scrollIntoView。 */
-function onCommentInput() {
+/** name 改动同步标签栏文字，不调用 open() 以避免逐字触发 sidebar scrollIntoView。 */
+function onNameInput() {
   store.markDirty();
 }
 watch(
-  () => entry.value?.comment,
+  () => entry.value?.name,
   (name) => {
     if (entry.value)
       tabsStore.renameTab(

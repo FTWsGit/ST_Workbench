@@ -1,4 +1,10 @@
-import type { PresetData } from '../types';
+import type { Preset, PresetSettings, PromptBlock } from '../types';
+import {
+  fromNativeRegex,
+  toNativeRegex,
+  fromNativeScripts,
+  toNativeScripts,
+} from './scriptConvert';
 import { getCtx } from './hostContext';
 import { deepClonePlain } from './apiUtils';
 
@@ -39,9 +45,224 @@ export function getSelectedPresetName(): string {
   return pm.getSelectedPresetName?.() || '';
 }
 
+/* ====== ST 原生预设 ⇄ 干净 Preset 双向转换 ======
+ * 原生形状见 `.doc/reference/spec/preset.mdc`。关键差异：
+ *   - 原生 `prompts` + `prompt_order`（按 character_id=100001 定位、order 元素带 enabled）两套数组，
+ *     干净层合并成一份 `prompts`（数组顺序 = 视觉顺序，enabled + 分组字段烘进每条 block）。
+ *   - 原生 `extensions.regex_scripts` → 干净 `regexs`（disabled ⇄ enabled 取反）。
+ *   - 原生 `extensions.tavern_helper.scripts`（ScriptTree，含 ScriptFolder）→ 干净 `scripts`
+ *     （扁平 Script[]，ScriptFolder 按 _gid/_gname/_genabled/_gcollapsed 折叠成组）。
+ *   - settings 只建模 14 个采样参数，其余（模型名、formats 等）从 raw 透传。
+ * 未建模字段一律从调用方传入的 `raw` 透传，见 toNativePreset。 */
+
+const SETTINGS_KEYS: (keyof PresetSettings)[] = [
+  'openai_max_context',
+  'openai_max_tokens',
+  'n',
+  'stream_openai',
+  'temperature',
+  'frequency_penalty',
+  'presence_penalty',
+  'top_p',
+  'repetition_penalty',
+  'min_p',
+  'top_k',
+  'top_a',
+  'seed',
+  'squash_system_messages',
+];
+
+const SETTINGS_DEFAULTS: Record<keyof PresetSettings, number | boolean> = {
+  openai_max_context: 4095,
+  openai_max_tokens: 300,
+  n: 1,
+  stream_openai: true,
+  temperature: 1,
+  frequency_penalty: 0,
+  presence_penalty: 0,
+  top_p: 1,
+  repetition_penalty: 1,
+  min_p: 0,
+  top_k: 0,
+  top_a: 0,
+  seed: -1,
+  squash_system_messages: false,
+};
+
+function settingsFromNative(raw: Record<string, unknown>): PresetSettings {
+  const s: Record<string, unknown> = {};
+  for (const k of SETTINGS_KEYS) {
+    const v = raw[k];
+    const d = SETTINGS_DEFAULTS[k];
+    s[k] = typeof v === 'number' || typeof v === 'boolean' ? v : (d as number | boolean);
+  }
+  return s as unknown as PresetSettings;
+}
+
+function settingsToNative(s: PresetSettings): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of SETTINGS_KEYS) out[k] = s[k];
+  return out;
+}
+
+/* ====== prompt 转换 ====== */
+function fromNativePrompt(
+  raw: Record<string, unknown>,
+  orderItem?: Record<string, unknown>
+): PromptBlock {
+  return {
+    identifier: (raw.identifier ?? '') as string,
+    name: (raw.name ?? '') as string,
+    content: (raw.content ?? '') as string,
+    role: (raw.role ?? 'system') as PromptBlock['role'],
+    system_prompt: !!raw.system_prompt,
+    marker: !!raw.marker,
+    enabled: orderItem ? !!orderItem.enabled : false,
+    injectionPosition: typeof raw.injection_position === 'number' ? raw.injection_position : 0,
+    injectionDepth: typeof raw.injection_depth === 'number' ? raw.injection_depth : 0,
+    injectionOrder: typeof raw.injection_order === 'number' ? raw.injection_order : 0,
+    _gid: orderItem?._gid as string | undefined,
+    _gname: orderItem?._gname as string | undefined,
+    _gcollapsed: orderItem?._gcollapsed as boolean | undefined,
+    _genabled: orderItem?._genabled as boolean | undefined,
+    _gidx: orderItem?._gidx as number | undefined,
+  };
+}
+
+function toNativePrompt(
+  block: PromptBlock,
+  rawPrompt?: Record<string, unknown>
+): Record<string, unknown> {
+  return {
+    ...(rawPrompt ?? {}),
+    identifier: block.identifier,
+    name: block.name,
+    content: block.content,
+    role: block.role,
+    system_prompt: block.system_prompt,
+    marker: block.marker,
+    injection_position: block.injectionPosition,
+    injection_depth: block.injectionDepth,
+    injection_order: block.injectionOrder,
+  };
+}
+
+/** 原生预设 → 干净 Preset。prompts 按 prompt_order 顺序烘出（enabled + 分组字段），
+ *  未在 prompt_order 中引用的 hidden block 不进入干净层（由 store 用 raw 恢复）。 */
+export function fromNativePreset(raw: Record<string, unknown>): Preset {
+  const promptsRaw = Array.isArray(raw.prompts) ? (raw.prompts as Record<string, unknown>[]) : [];
+  const promptOrder =
+    Array.isArray(raw.prompt_order) && raw.prompt_order.length
+      ? ((raw.prompt_order as Record<string, unknown>[]).find((p) => p.character_id === 100001)
+          ?.order ?? [])
+      : [];
+  const orderItems = Array.isArray(promptOrder) ? (promptOrder as Record<string, unknown>[]) : [];
+  const byId = new Map(promptsRaw.map((p) => [p.identifier, p]));
+  const seen = new Set<string>();
+  const prompts: PromptBlock[] = [];
+  for (const item of orderItems) {
+    const id = item?.identifier as string | undefined;
+    if (!id || seen.has(id)) continue;
+    const p = byId.get(id);
+    if (!p) continue;
+    seen.add(id);
+    prompts.push(fromNativePrompt(p, item));
+  }
+  const extensions = (raw.extensions ?? {}) as Record<string, unknown>;
+  const tavernHelper = (extensions.tavern_helper ?? {}) as Record<string, unknown>;
+  return {
+    name: (raw.name ?? '') as string,
+    settings: settingsFromNative(raw),
+    prompts,
+    regexs: Array.isArray(extensions.regex_scripts)
+      ? extensions.regex_scripts.map((r) => fromNativeRegex(r as Record<string, unknown>))
+      : [],
+    scripts: fromNativeScripts(tavernHelper.scripts),
+  };
+}
+
+/** 取原生预设里「未进 prompt_order」的隐藏 block（干净 PromptBlock[]）。fromNativePreset 只产出
+ *  顺序内可见的 prompts，隐藏块由调用方（presetStore）用本函数单独取回，保存时再经 toNativePreset
+ *  的 hiddenBlocks 参数写回。 */
+export function extractHiddenPromptBlocks(raw: Record<string, unknown>): PromptBlock[] {
+  const promptsRaw = Array.isArray(raw.prompts) ? (raw.prompts as Record<string, unknown>[]) : [];
+  const promptOrder =
+    Array.isArray(raw.prompt_order) && raw.prompt_order.length
+      ? ((raw.prompt_order as Record<string, unknown>[]).find((p) => p.character_id === 100001)
+          ?.order ?? [])
+      : [];
+  const orderIds = new Set(
+    (promptOrder as Record<string, unknown>[]).map((o) => o?.identifier as string)
+  );
+  return promptsRaw
+    .filter((p) => !orderIds.has(p.identifier as string))
+    .map((p) => fromNativePrompt(p));
+}
+
+/** 干净 Preset → 原生预设。`raw` 是最近一次读到的原生快照：未建模字段（模型名、formats、
+ *  tavern_helper 的 variales 等）从 raw 透传，已知字段由干净层覆盖，保证不丢数据。
+ *  `hiddenBlocks` 是工作层隐藏块（编辑后又从顺序里摘掉的 block）——它们不进 prompt_order，
+ *  但数据要写回原生 prompts，否则 raw 里是编辑前的旧数据。 */
+export function toNativePreset(
+  preset: Preset,
+  raw: Record<string, unknown>,
+  hiddenBlocks?: PromptBlock[]
+): Record<string, unknown> {
+  const rawPrompts = Array.isArray(raw.prompts) ? (raw.prompts as Record<string, unknown>[]) : [];
+  const rawPromptById = new Map(rawPrompts.map((p) => [p.identifier, p]));
+  const nativePrompts: Record<string, unknown>[] = [];
+  const order: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+  preset.prompts.forEach((block) => {
+    seen.add(block.identifier);
+    nativePrompts.push(toNativePrompt(block, rawPromptById.get(block.identifier)));
+    const oi: Record<string, unknown> = { identifier: block.identifier, enabled: block.enabled };
+    if (block._gid) {
+      oi._gid = block._gid;
+      oi._gname = block._gname;
+      oi._gcollapsed = block._gcollapsed;
+      oi._genabled = block._genabled;
+      oi._gidx = block._gidx;
+    }
+    order.push(oi);
+  });
+  // 工作层隐藏块：干净数据写回（覆盖 raw 里的旧数据），但不进 prompt_order
+  for (const hb of hiddenBlocks ?? []) {
+    if (seen.has(hb.identifier)) continue;
+    seen.add(hb.identifier);
+    nativePrompts.push(toNativePrompt(hb, rawPromptById.get(hb.identifier)));
+  }
+
+  const rawExtensions = (raw.extensions ?? {}) as Record<string, unknown>;
+  const rawTavernHelper = (rawExtensions.tavern_helper ?? {}) as Record<string, unknown>;
+  const extensions: Record<string, unknown> = {
+    ...rawExtensions,
+    regex_scripts: preset.regexs.map(toNativeRegex),
+    tavern_helper: {
+      ...rawTavernHelper,
+      scripts: toNativeScripts(preset.scripts),
+    },
+  };
+
+  return {
+    ...raw,
+    ...settingsToNative(preset.settings),
+    prompts: nativePrompts,
+    prompt_order: [{ character_id: 100001, order }],
+    extensions,
+  };
+}
+
+/* ====== 新建预设的默认模板（ST 原生格式，供 createPreset 打底） ====== */
+import defaultPreset from '../../default/default_preset.json';
+export const DEFAULT_NATIVE_PRESET = defaultPreset as Record<string, unknown>;
+
 /** 按名字读取指定预设的完整数据，可以是任意一个预设。优先用 `getCompletionPresetByName`，
- *  拿不到时从 `getPresetList()` 按名字查下标取元素。 */
-export function getPresetByName(name: string): PresetData | null {
+ *  拿不到时从 `getPresetList()` 按名字查下标取元素。
+ *  返回 `{ preset: 干净 Preset, raw: 原生深拷贝快照 }`——raw 供 store 保存时字段级透传。 */
+export function getPresetByName(
+  name: string
+): { preset: Preset; raw: Record<string, unknown> } | null {
   const pm = getPresetManager();
   let preset: Record<string, unknown> | null =
     typeof pm.getCompletionPresetByName === 'function' ? pm.getCompletionPresetByName(name) : null;
@@ -54,12 +275,12 @@ export function getPresetByName(name: string): PresetData | null {
   // Deep-clone into a plain object before handing it back — both lookup paths above can return
   // ST's own live (possibly Vue-reactive) object, and we never want to hold or pass around
   // someone else's reactive reference (see savePresetAs() below for why that specifically bites).
-  return deepClonePlain(preset) as PresetData;
+  const raw = deepClonePlain(preset) as Record<string, unknown>;
+  return { preset: fromNativePreset(raw), raw };
 }
 
 /** 切换 ST 当前选中的预设。不切换的话外部函数（如 window.SillyTavern.generate()）会沿用旧的
  *  选中预设生成，但切换本身较慢。 */
-
 export function selectPresetByName(name: string): boolean {
   const pm = getPresetManager();
   try {
@@ -74,14 +295,18 @@ export function selectPresetByName(name: string): boolean {
 
 /** 保存到指定名字的预设——不要求是当前选中的那个。
  *
- * `data` 必须是纯对象，不能是 Pinia/Vue 的活跃响应式引用：`structuredClone()` 克隆不了 Vue
- * 的 Proxy，且 ST 可能在克隆前就把引用赋值进自身状态导致 Proxy 残留。调用方应先
- * `deepClonePlain()`，这里再断言一次双重保险。 */
-export async function savePresetAs(name: string, data: PresetData): Promise<void> {
+ *  `raw` 必须是纯对象（store 持有的原生快照），不能是 Pinia/Vue 响应式引用：`structuredClone()`
+ *  克隆不了 Vue 的 Proxy。调用方应先 `deepClonePlain()`，这里再断言一次双重保险。 */
+export async function savePresetAs(
+  name: string,
+  preset: Preset,
+  raw: Record<string, unknown>,
+  hiddenBlocks?: PromptBlock[]
+): Promise<void> {
   const pm = getPresetManager();
   if (typeof pm.savePreset !== 'function')
     throw new Error('SillyTavern context 不可用（savePreset 缺失）');
-  const plain = deepClonePlain(data);
+  const plain = deepClonePlain(toNativePreset(preset, raw, hiddenBlocks));
   await Promise.resolve(pm.savePreset(name, plain));
 }
 
@@ -176,10 +401,6 @@ export async function getFinalRequestMessages(): Promise<RawRequestMessage[]> {
     const handler = (completion: Record<string, unknown>) => {
       if (settled) return;
       settled = true;
-      // Cut the real generation off right away — we only wanted the outgoing request payload,
-      // not to actually spend API time/tokens on a completion nobody asked for. Whatever
-      // rejection this causes on the ctx.generate() promise below is harmless: `settled` is
-      // already true by the time it lands, so that .catch() is a no-op.
       try {
         ctx.stopGeneration?.();
       } catch {

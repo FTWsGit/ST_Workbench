@@ -1,12 +1,13 @@
-import type { ScriptTree, Script } from '../types';
+import type { Script } from '../types';
 import { useScriptList } from './useScriptList';
 
 /**
- * tavern_helper 脚本树 CRUD 的薄包装，委托给泛型 useScriptList。
+ * tavern_helper 脚本 CRUD 的薄包装，委托给泛型 useScriptList。
  * 保留旧接口（addScriptTree / deleteScriptTree / reorderScriptTree）以兼容现有调用方。
+ * 干净层是扁平 Script[]（ScriptFolder 已在 api 边界折叠成组），新建脚本直接就是一条 Script。
  */
 export function useScriptTree(
-  getScripts: () => ScriptTree[] | null | undefined,
+  getScripts: () => Script[] | null | undefined,
   options: {
     markDirty?: () => void;
     showToast: (msg: string) => void;
@@ -17,10 +18,9 @@ export function useScriptTree(
 ) {
   const { t } = options;
 
-  const list = useScriptList<ScriptTree>(getScripts, {
+  const list = useScriptList<Script>(getScripts, {
     idPrefix: 'th_',
     createScript: (id): Script => ({
-      type: 'script',
       enabled: true,
       name: t('tavern.sidebar.defaultScriptName'),
       id,

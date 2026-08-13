@@ -87,7 +87,7 @@
           class="wb-tree-item"
           :class="{
             selected: store.selectedGi.has(gi),
-            disabled: getEntry((node.ref as OrderItem).identifier)?.disabled,
+            disabled: !getEntry((node.ref as OrderItem).identifier)?.enabled,
             dragging: dragIdx === gi,
             'drag-over-top': dragOverIdx === gi && dragOverPos === 'top',
             'drag-over-bottom': dragOverIdx === gi && dragOverPos === 'bottom',
@@ -101,7 +101,7 @@
           <span
             class="wb-toggle-sw"
             :class="{
-              on: !getEntry((node.ref as OrderItem).identifier)?.disabled,
+              on: getEntry((node.ref as OrderItem).identifier)?.enabled,
             }"
             @click.stop="onToggleEntry((node.ref as OrderItem).identifier)"
           ></span>
@@ -110,15 +110,13 @@
             class="wb-tree-name"
             @dblclick.stop="startEditBlockName(gi)"
           >
-            {{
-              getEntry((node.ref as OrderItem).identifier)?.comment || uiStore.t('common.unnamed')
-            }}
+            {{ getEntry((node.ref as OrderItem).identifier)?.name || uiStore.t('common.unnamed') }}
           </span>
           <input
             v-else
             :ref="(el) => setBlockNameInput(el, gi)"
             class="wb-tree-name-input"
-            :value="getEntry((node.ref as OrderItem).identifier)?.comment || ''"
+            :value="getEntry((node.ref as OrderItem).identifier)?.name || ''"
             @blur="finishEditBlockName(gi, $event)"
             @keydown.enter.prevent="finishEditBlockName(gi, $event)"
             @keydown.esc.prevent="cancelEditBlockName()"
@@ -193,8 +191,8 @@ function getEntry(id: string): WorldbookEntry | undefined {
 }
 function activationLabel(entry: WorldbookEntry | undefined) {
   if (!entry) return '';
-  if (entry.constant) return uiStore.t('worldbook.activation.constant');
-  if (entry.vectorized) return uiStore.t('worldbook.activation.vectorized');
+  if (entry.strategy.type === 'constant') return uiStore.t('worldbook.activation.constant');
+  if (entry.strategy.type === 'vectorized') return uiStore.t('worldbook.activation.vectorized');
   return uiStore.t('worldbook.activation.keyWord');
 }
 function onToggleEntry(id: string) {
@@ -239,7 +237,7 @@ function startEditGroupName(gi: number) {
   if (node && node.isGroup) startEditGroupNameRaw(gi);
 }
 
-/** 内联重命名——条目名（entry.comment，提交时同步 renameTab） */
+/** 内联重命名——条目名（entry.name，提交时同步 renameTab） */
 const {
   editingId: editingBlockGi,
   setInputRef: setBlockNameInputRaw,
@@ -250,14 +248,14 @@ const {
   getCurrentName: (gi) => {
     const node = store.flatNodes[gi];
     if (!node || node.isGroup) return '';
-    return getEntry((node.ref as OrderItem).identifier)?.comment || '';
+    return getEntry((node.ref as OrderItem).identifier)?.name || '';
   },
   onCommit: (gi, newName) => {
     const node = store.flatNodes[gi];
     if (!node || node.isGroup) return;
     const e = getEntry((node.ref as OrderItem).identifier);
     if (!e) return;
-    e.comment = newName;
+    e.name = newName;
     store.markDirty();
     tabsStore.renameTab('worldbook', e.uid + '', newName);
   },
@@ -324,7 +322,7 @@ const listSelection = useListSelection<number>({
       tabsStore.open({
         domain: 'worldbook',
         key: item.identifier,
-        label: entry?.comment || uiStore.t('common.unnamed'),
+        label: entry?.name || uiStore.t('common.unnamed'),
         workspace: 'worldbook',
       });
     }
