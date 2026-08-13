@@ -11,12 +11,12 @@
       <span class="wb-vp-varname">{{ uiStore.varPopupVarName }}</span>
       <span class="wb-vp-scope">{{
         uiStore.t(
-          uiStore.varPopupScope === 'local' ? 'preset.varPopup.local' : 'preset.varPopup.global'
+          uiStore.varPopupScope === 'local' ? 'shared.varPopup.local' : 'shared.varPopup.global'
         )
       }}</span>
       <span class="wb-vp-count">{{
         uiStore.t(
-          uiStore.varPopupOps.length !== 1 ? 'preset.varPopup.hit' : 'preset.varPopup.hitSingle',
+          uiStore.varPopupOps.length !== 1 ? 'shared.varPopup.hit' : 'shared.varPopup.hitSingle',
           { count: uiStore.varPopupOps.length }
         )
       }}</span>

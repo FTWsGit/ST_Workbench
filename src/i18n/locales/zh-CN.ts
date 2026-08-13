@@ -90,6 +90,36 @@ export default {
   'shared.panelMode.ariaLabel': '面板形态切换',
   'shared.highlightedEditor.cursor': '行 {line}，列 {col}',
 
+  // ---- 变量导航面板 ----
+  'shared.varPanel.title': '变量',
+  'shared.varPanel.filter': '筛选…',
+  'shared.varPanel.prev': '上',
+  'shared.varPanel.next': '下',
+  'shared.varPanel.local': 'LOCAL',
+  'shared.varPanel.global': 'GLOBAL',
+
+  // ---- 预览面板 ----
+  'shared.preview.title': '提示词预览',
+  'shared.preview.collapseExpand': '折叠/展开全部',
+  'shared.preview.modeBlocks': '逐块',
+  'shared.preview.modeRaw': '最终请求',
+  'shared.preview.hintBlocks':
+    '来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。',
+  'shared.preview.hintRaw':
+    'SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。',
+  'shared.preview.generate': '生成',
+  'shared.preview.copy': '复制',
+  'shared.preview.generating': '生成中…',
+  'shared.preview.collapseExpandSingle': '折叠/展开',
+  'shared.preview.emptyBlocks': '点击"生成"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。',
+  'shared.preview.emptyRaw': '点击"生成"捕获最终请求——这会短暂启动一次真实生成并立即取消。',
+
+  // ---- 变量弹窗 ----
+  'shared.varPopup.hit': '{count} 处匹配',
+  'shared.varPopup.hitSingle': '{count} 处匹配',
+  'shared.varPopup.local': 'LOCAL',
+  'shared.varPopup.global': 'GLOBAL',
+
   // ---- 语法高亮标签 ----
   'shared.syntax.hl-b': '花括号 {{ }}',
   'shared.syntax.hl-k': '关键字',
@@ -203,36 +233,6 @@ export default {
   'preset.role.system': 'system',
   'preset.role.user': 'user',
   'preset.role.assistant': 'assistant',
-
-  // ---- 变量导航面板 ----
-  'preset.varPanel.title': '变量',
-  'preset.varPanel.filter': '筛选…',
-  'preset.varPanel.prev': '上',
-  'preset.varPanel.next': '下',
-  'preset.varPanel.local': 'LOCAL',
-  'preset.varPanel.global': 'GLOBAL',
-
-  // ---- 预览面板 ----
-  'preset.preview.title': '提示词预览',
-  'preset.preview.collapseExpand': '折叠/展开全部',
-  'preset.preview.modeBlocks': '逐块',
-  'preset.preview.modeRaw': '最终请求',
-  'preset.preview.hintBlocks':
-    '来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。',
-  'preset.preview.hintRaw':
-    'SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。',
-  'preset.preview.generate': '生成',
-  'preset.preview.copy': '复制',
-  'preset.preview.generating': '生成中…',
-  'preset.preview.collapseExpandSingle': '折叠/展开',
-  'preset.preview.emptyBlocks': '点击"生成"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。',
-  'preset.preview.emptyRaw': '点击"生成"捕获最终请求——这会短暂启动一次真实生成并立即取消。',
-
-  // ---- 变量弹窗 ----
-  'preset.varPopup.hit': '{count} 处匹配',
-  'preset.varPopup.hitSingle': '{count} 处匹配',
-  'preset.varPopup.local': 'LOCAL',
-  'preset.varPopup.global': 'GLOBAL',
 
   // ---- 跨预设复制面板 ----
   'preset.copyPanel.selectPreset': '选择预设…',

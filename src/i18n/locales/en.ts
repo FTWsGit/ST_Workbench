@@ -87,6 +87,38 @@ export default {
   'shared.panelMode.ariaLabel': 'Panel mode switch',
   'shared.highlightedEditor.cursor': 'Line {line}, Col {col}',
 
+  // ---- 变量导航面板 ----
+  'shared.varPanel.title': 'Variables',
+  'shared.varPanel.filter': 'Filter…',
+  'shared.varPanel.prev': 'Prev',
+  'shared.varPanel.next': 'Next',
+  'shared.varPanel.local': 'LOCAL',
+  'shared.varPanel.global': 'GLOBAL',
+
+  // ---- 预览面板 ----
+  'shared.preview.title': 'Prompt Preview',
+  'shared.preview.collapseExpand': 'Collapse/Expand All',
+  'shared.preview.modeBlocks': 'Per Block',
+  'shared.preview.modeRaw': 'Final Request',
+  'shared.preview.hintBlocks':
+    "Real per-block rendering from SillyTavern's prompt manager. Highlighted text is substituted in (macros/regex etc.)—not literal in block source.",
+  'shared.preview.hintRaw':
+    'Exact messages array SillyTavern is about to send to the API—captured via a real generation that is immediately cancelled, so nothing is actually sent.',
+  'shared.preview.generate': 'Generate',
+  'shared.preview.copy': 'Copy',
+  'shared.preview.generating': 'Generating…',
+  'shared.preview.collapseExpandSingle': 'Collapse/Expand',
+  'shared.preview.emptyBlocks':
+    'Click "Generate" for a real per-block render (this runs an actual dry-run generation).',
+  'shared.preview.emptyRaw':
+    'Click "Generate" to capture the final request—this briefly starts a real generation then immediately cancels it.',
+
+  // ---- 变量弹窗 ----
+  'shared.varPopup.hit': '{count} matches',
+  'shared.varPopup.hitSingle': '{count} match',
+  'shared.varPopup.local': 'LOCAL',
+  'shared.varPopup.global': 'GLOBAL',
+
   // ---- 语法高亮标签 ----
   'shared.syntax.hl-b': 'Braces {{ }}',
   'shared.syntax.hl-k': 'Keyword',
@@ -206,38 +238,6 @@ export default {
   'preset.role.system': 'system',
   'preset.role.user': 'user',
   'preset.role.assistant': 'assistant',
-
-  // ---- 变量导航面板 ----
-  'preset.varPanel.title': 'Variables',
-  'preset.varPanel.filter': 'Filter…',
-  'preset.varPanel.prev': 'Prev',
-  'preset.varPanel.next': 'Next',
-  'preset.varPanel.local': 'LOCAL',
-  'preset.varPanel.global': 'GLOBAL',
-
-  // ---- 预览面板 ----
-  'preset.preview.title': 'Prompt Preview',
-  'preset.preview.collapseExpand': 'Collapse/Expand All',
-  'preset.preview.modeBlocks': 'Per Block',
-  'preset.preview.modeRaw': 'Final Request',
-  'preset.preview.hintBlocks':
-    "Real per-block rendering from SillyTavern's prompt manager. Highlighted text is substituted in (macros/regex etc.)—not literal in block source.",
-  'preset.preview.hintRaw':
-    'Exact messages array SillyTavern is about to send to the API—captured via a real generation that is immediately cancelled, so nothing is actually sent.',
-  'preset.preview.generate': 'Generate',
-  'preset.preview.copy': 'Copy',
-  'preset.preview.generating': 'Generating…',
-  'preset.preview.collapseExpandSingle': 'Collapse/Expand',
-  'preset.preview.emptyBlocks':
-    'Click "Generate" for a real per-block render (this runs an actual dry-run generation).',
-  'preset.preview.emptyRaw':
-    'Click "Generate" to capture the final request—this briefly starts a real generation then immediately cancels it.',
-
-  // ---- 变量弹窗 ----
-  'preset.varPopup.hit': '{count} matches',
-  'preset.varPopup.hitSingle': '{count} match',
-  'preset.varPopup.local': 'LOCAL',
-  'preset.varPopup.global': 'GLOBAL',
 
   // ---- 跨预设复制面板 ----
   'preset.copyPanel.selectPreset': 'Select preset…',

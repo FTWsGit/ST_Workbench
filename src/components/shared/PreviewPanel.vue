@@ -2,7 +2,7 @@
   <!-- 完全悬浮态：FloatingPanelShell 接管（桌面可拖拽/缩放，移动端自动变 bottom sheet）。 -->
   <FloatingPanelShell
     v-if="mode === 'float'"
-    :title="uiStore.t('preset.preview.title')"
+    :title="uiStore.t('shared.preview.title')"
     :close-title="uiStore.t('common.close')"
     :width="uiStore.settings.previewWidth"
     :min-width="350"
@@ -11,13 +11,13 @@
     <template #title>
       <span class="wb-preview-float-title">
         <span class="wb-preview-float-name"
-          ><Icon name="eye" /> {{ uiStore.t('preset.preview.title') }}</span
+          ><Icon name="eye" /> {{ uiStore.t('shared.preview.title') }}</span
         >
         <button
           v-if="uiStore.previewMode === 'blocks'"
           class="wb-btn icon-btn"
-          :title="uiStore.t('preset.preview.collapseExpand')"
-          :aria-label="uiStore.t('preset.preview.collapseExpand')"
+          :title="uiStore.t('shared.preview.collapseExpand')"
+          :aria-label="uiStore.t('shared.preview.collapseExpand')"
           @click="uiStore.toggleAllPreviewBlocks()"
         >
           <Icon name="chevronDown" />
@@ -33,33 +33,33 @@
             :class="{ active: uiStore.previewMode === 'blocks' }"
             @click="uiStore.previewMode = 'blocks'"
           >
-            {{ uiStore.t('preset.preview.modeBlocks') }}
+            {{ uiStore.t('shared.preview.modeBlocks') }}
           </button>
           <button
             class="wb-preview-tab"
             :class="{ active: uiStore.previewMode === 'raw' }"
             @click="uiStore.previewMode = 'raw'"
           >
-            {{ uiStore.t('preset.preview.modeRaw') }}
+            {{ uiStore.t('shared.preview.modeRaw') }}
           </button>
         </div>
         <p class="wb-pp-mode-hint">
           <template v-if="uiStore.previewMode === 'blocks'">{{
-            uiStore.t('preset.preview.hintBlocks')
+            uiStore.t('shared.preview.hintBlocks')
           }}</template>
-          <template v-else>{{ uiStore.t('preset.preview.hintRaw') }}</template>
+          <template v-else>{{ uiStore.t('shared.preview.hintRaw') }}</template>
         </p>
         <div class="wb-row-mt">
           <button class="wb-btn accent" :disabled="uiStore.previewLoading" @click="generate()">
             <template v-if="uiStore.previewLoading">
-              <Icon name="wait" /> {{ uiStore.t('preset.preview.generating') }}</template
+              <Icon name="wait" /> {{ uiStore.t('shared.preview.generating') }}</template
             >
             <template v-else
-              ><Icon name="play" /> {{ uiStore.t('preset.preview.generate') }}</template
+              ><Icon name="play" /> {{ uiStore.t('shared.preview.generate') }}</template
             >
           </button>
           <button class="wb-btn" @click="copyPreview()">
-            <Icon name="clipboard" /> {{ uiStore.t('preset.preview.copy') }}
+            <Icon name="clipboard" /> {{ uiStore.t('shared.preview.copy') }}
           </button>
         </div>
         <p v-if="uiStore.previewError" class="wb-pp-error">
@@ -83,7 +83,7 @@
                 >
                 <button
                   class="wb-pb-toggle"
-                  :title="uiStore.t('preset.preview.collapseExpandSingle')"
+                  :title="uiStore.t('shared.preview.collapseExpandSingle')"
                 >
                   <Icon name="chevronDown" :size="12" />
                 </button>
@@ -105,13 +105,13 @@
             </div>
           </template>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
-            {{ uiStore.t('preset.preview.emptyBlocks') }}
+            {{ uiStore.t('shared.preview.emptyBlocks') }}
           </p>
         </template>
         <template v-else>
           <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{ uiStore.previewRawText }}</pre>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
-            {{ uiStore.t('preset.preview.emptyRaw') }}
+            {{ uiStore.t('shared.preview.emptyRaw') }}
           </p>
         </template>
       </div>
@@ -131,13 +131,13 @@
       @pointerdown="resize.onPointerDown"
     ></div>
     <div class="wb-rp-header">
-      <span><Icon name="eye" /> {{ uiStore.t('preset.preview.title') }}</span>
+      <span><Icon name="eye" /> {{ uiStore.t('shared.preview.title') }}</span>
       <div class="wb-row-tight">
         <button
           v-if="uiStore.previewMode === 'blocks'"
           class="wb-btn icon-btn"
-          :title="uiStore.t('preset.preview.collapseExpand')"
-          :aria-label="uiStore.t('preset.preview.collapseExpand')"
+          :title="uiStore.t('shared.preview.collapseExpand')"
+          :aria-label="uiStore.t('shared.preview.collapseExpand')"
           @click="uiStore.toggleAllPreviewBlocks()"
         >
           <Icon name="chevronDown" />
@@ -160,33 +160,33 @@
             :class="{ active: uiStore.previewMode === 'blocks' }"
             @click="uiStore.previewMode = 'blocks'"
           >
-            {{ uiStore.t('preset.preview.modeBlocks') }}
+            {{ uiStore.t('shared.preview.modeBlocks') }}
           </button>
           <button
             class="wb-preview-tab"
             :class="{ active: uiStore.previewMode === 'raw' }"
             @click="uiStore.previewMode = 'raw'"
           >
-            {{ uiStore.t('preset.preview.modeRaw') }}
+            {{ uiStore.t('shared.preview.modeRaw') }}
           </button>
         </div>
         <p class="wb-pp-mode-hint">
           <template v-if="uiStore.previewMode === 'blocks'">{{
-            uiStore.t('preset.preview.hintBlocks')
+            uiStore.t('shared.preview.hintBlocks')
           }}</template>
-          <template v-else>{{ uiStore.t('preset.preview.hintRaw') }}</template>
+          <template v-else>{{ uiStore.t('shared.preview.hintRaw') }}</template>
         </p>
         <div class="wb-row-mt">
           <button class="wb-btn accent" :disabled="uiStore.previewLoading" @click="generate()">
             <template v-if="uiStore.previewLoading">
-              <Icon name="wait" /> {{ uiStore.t('preset.preview.generating') }}</template
+              <Icon name="wait" /> {{ uiStore.t('shared.preview.generating') }}</template
             >
             <template v-else
-              ><Icon name="play" /> {{ uiStore.t('preset.preview.generate') }}</template
+              ><Icon name="play" /> {{ uiStore.t('shared.preview.generate') }}</template
             >
           </button>
           <button class="wb-btn" @click="copyPreview()">
-            <Icon name="clipboard" /> {{ uiStore.t('preset.preview.copy') }}
+            <Icon name="clipboard" /> {{ uiStore.t('shared.preview.copy') }}
           </button>
         </div>
         <p v-if="uiStore.previewError" class="wb-pp-error">
@@ -210,7 +210,7 @@
                 >
                 <button
                   class="wb-pb-toggle"
-                  :title="uiStore.t('preset.preview.collapseExpandSingle')"
+                  :title="uiStore.t('shared.preview.collapseExpandSingle')"
                 >
                   <Icon name="chevronDown" :size="12" />
                 </button>
@@ -232,13 +232,13 @@
             </div>
           </template>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
-            {{ uiStore.t('preset.preview.emptyBlocks') }}
+            {{ uiStore.t('shared.preview.emptyBlocks') }}
           </p>
         </template>
         <template v-else>
           <pre v-if="uiStore.previewRawText" class="wb-pp-raw">{{ uiStore.previewRawText }}</pre>
           <p v-else-if="!uiStore.previewLoading" class="wb-muted">
-            {{ uiStore.t('preset.preview.emptyRaw') }}
+            {{ uiStore.t('shared.preview.emptyRaw') }}
           </p>
         </template>
       </div>

@@ -3967,6 +3967,28 @@ var Js = {
 		"shared.panelMode.tooltip.float": "完全悬浮：可拖拽、可缩放，移动端变底部弹层",
 		"shared.panelMode.ariaLabel": "面板形态切换",
 		"shared.highlightedEditor.cursor": "行 {line}，列 {col}",
+		"shared.varPanel.title": "变量",
+		"shared.varPanel.filter": "筛选…",
+		"shared.varPanel.prev": "上",
+		"shared.varPanel.next": "下",
+		"shared.varPanel.local": "LOCAL",
+		"shared.varPanel.global": "GLOBAL",
+		"shared.preview.title": "提示词预览",
+		"shared.preview.collapseExpand": "折叠/展开全部",
+		"shared.preview.modeBlocks": "逐块",
+		"shared.preview.modeRaw": "最终请求",
+		"shared.preview.hintBlocks": "来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。",
+		"shared.preview.hintRaw": "SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。",
+		"shared.preview.generate": "生成",
+		"shared.preview.copy": "复制",
+		"shared.preview.generating": "生成中…",
+		"shared.preview.collapseExpandSingle": "折叠/展开",
+		"shared.preview.emptyBlocks": "点击\"生成\"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。",
+		"shared.preview.emptyRaw": "点击\"生成\"捕获最终请求——这会短暂启动一次真实生成并立即取消。",
+		"shared.varPopup.hit": "{count} 处匹配",
+		"shared.varPopup.hitSingle": "{count} 处匹配",
+		"shared.varPopup.local": "LOCAL",
+		"shared.varPopup.global": "GLOBAL",
 		"shared.syntax.hl-b": "花括号 {{ }}",
 		"shared.syntax.hl-k": "关键字",
 		"shared.syntax.hl-s": "分隔符 (::)",
@@ -4056,28 +4078,6 @@ var Js = {
 		"preset.role.system": "system",
 		"preset.role.user": "user",
 		"preset.role.assistant": "assistant",
-		"preset.varPanel.title": "变量",
-		"preset.varPanel.filter": "筛选…",
-		"preset.varPanel.prev": "上",
-		"preset.varPanel.next": "下",
-		"preset.varPanel.local": "LOCAL",
-		"preset.varPanel.global": "GLOBAL",
-		"preset.preview.title": "提示词预览",
-		"preset.preview.collapseExpand": "折叠/展开全部",
-		"preset.preview.modeBlocks": "逐块",
-		"preset.preview.modeRaw": "最终请求",
-		"preset.preview.hintBlocks": "来自 SillyTavern 提示词管理器的真实逐块渲染。高亮文本是被替换进来的（宏/正则等）——并非块源码中的字面量。",
-		"preset.preview.hintRaw": "SillyTavern 即将发送给 API 的精确 messages 数组——通过真实生成捕获，并在之后立即取消，因此不会实际发送任何内容。",
-		"preset.preview.generate": "生成",
-		"preset.preview.copy": "复制",
-		"preset.preview.generating": "生成中…",
-		"preset.preview.collapseExpandSingle": "折叠/展开",
-		"preset.preview.emptyBlocks": "点击\"生成\"进行真实的逐块渲染（这会运行一次实际的 dry-run 生成）。",
-		"preset.preview.emptyRaw": "点击\"生成\"捕获最终请求——这会短暂启动一次真实生成并立即取消。",
-		"preset.varPopup.hit": "{count} 处匹配",
-		"preset.varPopup.hitSingle": "{count} 处匹配",
-		"preset.varPopup.local": "LOCAL",
-		"preset.varPopup.global": "GLOBAL",
 		"preset.copyPanel.selectPreset": "选择预设…",
 		"preset.copyPanel.selectAll": "全部",
 		"preset.copyPanel.clearAll": "无",
@@ -4519,6 +4519,28 @@ var Js = {
 		"shared.panelMode.tooltip.float": "Fully floating: draggable/resizable, bottom sheet on mobile",
 		"shared.panelMode.ariaLabel": "Panel mode switch",
 		"shared.highlightedEditor.cursor": "Line {line}, Col {col}",
+		"shared.varPanel.title": "Variables",
+		"shared.varPanel.filter": "Filter…",
+		"shared.varPanel.prev": "Prev",
+		"shared.varPanel.next": "Next",
+		"shared.varPanel.local": "LOCAL",
+		"shared.varPanel.global": "GLOBAL",
+		"shared.preview.title": "Prompt Preview",
+		"shared.preview.collapseExpand": "Collapse/Expand All",
+		"shared.preview.modeBlocks": "Per Block",
+		"shared.preview.modeRaw": "Final Request",
+		"shared.preview.hintBlocks": "Real per-block rendering from SillyTavern's prompt manager. Highlighted text is substituted in (macros/regex etc.)—not literal in block source.",
+		"shared.preview.hintRaw": "Exact messages array SillyTavern is about to send to the API—captured via a real generation that is immediately cancelled, so nothing is actually sent.",
+		"shared.preview.generate": "Generate",
+		"shared.preview.copy": "Copy",
+		"shared.preview.generating": "Generating…",
+		"shared.preview.collapseExpandSingle": "Collapse/Expand",
+		"shared.preview.emptyBlocks": "Click \"Generate\" for a real per-block render (this runs an actual dry-run generation).",
+		"shared.preview.emptyRaw": "Click \"Generate\" to capture the final request—this briefly starts a real generation then immediately cancels it.",
+		"shared.varPopup.hit": "{count} matches",
+		"shared.varPopup.hitSingle": "{count} match",
+		"shared.varPopup.local": "LOCAL",
+		"shared.varPopup.global": "GLOBAL",
 		"shared.syntax.hl-b": "Braces {{ }}",
 		"shared.syntax.hl-k": "Keyword",
 		"shared.syntax.hl-s": "Separator (::)",
@@ -4608,28 +4630,6 @@ var Js = {
 		"preset.role.system": "system",
 		"preset.role.user": "user",
 		"preset.role.assistant": "assistant",
-		"preset.varPanel.title": "Variables",
-		"preset.varPanel.filter": "Filter…",
-		"preset.varPanel.prev": "Prev",
-		"preset.varPanel.next": "Next",
-		"preset.varPanel.local": "LOCAL",
-		"preset.varPanel.global": "GLOBAL",
-		"preset.preview.title": "Prompt Preview",
-		"preset.preview.collapseExpand": "Collapse/Expand All",
-		"preset.preview.modeBlocks": "Per Block",
-		"preset.preview.modeRaw": "Final Request",
-		"preset.preview.hintBlocks": "Real per-block rendering from SillyTavern's prompt manager. Highlighted text is substituted in (macros/regex etc.)—not literal in block source.",
-		"preset.preview.hintRaw": "Exact messages array SillyTavern is about to send to the API—captured via a real generation that is immediately cancelled, so nothing is actually sent.",
-		"preset.preview.generate": "Generate",
-		"preset.preview.copy": "Copy",
-		"preset.preview.generating": "Generating…",
-		"preset.preview.collapseExpandSingle": "Collapse/Expand",
-		"preset.preview.emptyBlocks": "Click \"Generate\" for a real per-block render (this runs an actual dry-run generation).",
-		"preset.preview.emptyRaw": "Click \"Generate\" to capture the final request—this briefly starts a real generation then immediately cancels it.",
-		"preset.varPopup.hit": "{count} matches",
-		"preset.varPopup.hitSingle": "{count} match",
-		"preset.varPopup.local": "LOCAL",
-		"preset.varPopup.global": "GLOBAL",
 		"preset.copyPanel.selectPreset": "Select preset…",
 		"preset.copyPanel.selectAll": "All",
 		"preset.copyPanel.clearAll": "None",
@@ -8837,7 +8837,7 @@ var Ul = /*#__PURE__*/ zl(Bl, [["render", Hl]]), Wl = ["width", "height"], Gl = 
 				class: j(["wb-right-resize-handle", { active: F(n).active.value }]),
 				onPointerdown: i[0] ||= (...e) => F(n).onPointerDown && F(n).onPointerDown(...e)
 			}, null, 34),
-			G("div", pu, [G("span", null, [K(Z, { name: "chart" }), q(" " + M(F(t).t("preset.varPanel.title")), 1)]), G("div", mu, [G("button", {
+			G("div", pu, [G("span", null, [K(Z, { name: "chart" }), q(" " + M(F(t).t("shared.varPanel.title")), 1)]), G("div", mu, [G("button", {
 				class: j(["wb-btn icon-btn", { active: F(t).settings.varPanelFloat }]),
 				title: F(t).t("shared.floatingPanel.toggleFloat"),
 				"aria-label": F(t).t("shared.floatingPanel.toggleFloat"),
@@ -8850,7 +8850,7 @@ var Ul = /*#__PURE__*/ zl(Bl, [["render", Hl]]), Wl = ["width", "height"], Gl = 
 			G("div", _u, [L(G("input", {
 				type: "text",
 				"onUpdate:modelValue": i[2] ||= (e) => F(t).varFilterQ = e,
-				placeholder: F(t).t("preset.varPanel.filter")
+				placeholder: F(t).t("shared.varPanel.filter")
 			}, null, 8, vu), [[zo, F(t).varFilterQ]]), G("button", {
 				class: "wb-btn sm",
 				onClick: i[3] ||= (e) => F(t).rebuildVarIndex()
@@ -8859,15 +8859,15 @@ var Ul = /*#__PURE__*/ zl(Bl, [["render", Hl]]), Wl = ["width", "height"], Gl = 
 				G("button", {
 					class: "wb-btn",
 					onClick: i[4] ||= (e) => F(t).navVar(-1, "local")
-				}, [K(Z, { name: "arrowUp" }), q(" " + M(F(t).t("preset.varPanel.prev")), 1)]),
+				}, [K(Z, { name: "arrowUp" }), q(" " + M(F(t).t("shared.varPanel.prev")), 1)]),
 				G("button", {
 					class: "wb-btn",
 					onClick: i[5] ||= (e) => F(t).navVar(1, "local")
-				}, [K(Z, { name: "arrowDown" }), q(" " + M(F(t).t("preset.varPanel.next")), 1)]),
+				}, [K(Z, { name: "arrowDown" }), q(" " + M(F(t).t("shared.varPanel.next")), 1)]),
 				G("span", bu, M(F(t).localFiltered.length) + "/" + M(F(t).localRefs.length) + " · G" + M(F(t).globalFiltered.length) + "/" + M(F(t).globalRefs.length), 1)
 			]),
 			G("div", xu, [
-				G("div", Su, M(F(t).t("preset.varPanel.local")), 1),
+				G("div", Su, M(F(t).t("shared.varPanel.local")), 1),
 				(H(!0), U(V, null, B(F(t).localFiltered, (e, n) => (H(), U(V, { key: "l" + n }, [n === 0 || e.varName !== F(t).localFiltered[n - 1].varName ? (H(), U("div", Cu, M(e.varName), 1)) : J("", !0), G("div", {
 					class: j(["wb-vr-item", {
 						active: n === F(t).varIdx,
@@ -8879,7 +8879,7 @@ var Ul = /*#__PURE__*/ zl(Bl, [["render", Hl]]), Wl = ["width", "height"], Gl = 
 					G("span", Tu, M(e.varName), 1),
 					G("span", Eu, "[" + M(e.source.blockLabel) + "]", 1)
 				], 10, wu)], 64))), 128)),
-				G("div", Du, M(F(t).t("preset.varPanel.global")), 1),
+				G("div", Du, M(F(t).t("shared.varPanel.global")), 1),
 				(H(!0), U(V, null, B(F(t).globalFiltered, (e, n) => (H(), U(V, { key: "g" + n }, [n === 0 || e.varName !== F(t).globalFiltered[n - 1].varName ? (H(), U("div", Ou, M(e.varName), 1)) : J("", !0), G("div", {
 					class: j(["wb-vr-item", {
 						active: "g" + n === String(F(t).varIdx),
@@ -9129,19 +9129,19 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 		}
 		return (e, t) => i.value === "float" ? (H(), W(Ru, {
 			key: 0,
-			title: F(r).t("preset.preview.title"),
+			title: F(r).t("shared.preview.title"),
 			"close-title": F(r).t("common.close"),
 			width: F(r).settings.previewWidth,
 			"min-width": 350,
 			onClose: t[5] ||= (e) => F(r).previewOpen = !1
 		}, {
 			title: I(() => [G("span", Gu, [
-				G("span", Ku, [K(Z, { name: "eye" }), q(" " + M(F(r).t("preset.preview.title")), 1)]),
+				G("span", Ku, [K(Z, { name: "eye" }), q(" " + M(F(r).t("shared.preview.title")), 1)]),
 				F(r).previewMode === "blocks" ? (H(), U("button", {
 					key: 0,
 					class: "wb-btn icon-btn",
-					title: F(r).t("preset.preview.collapseExpand"),
-					"aria-label": F(r).t("preset.preview.collapseExpand"),
+					title: F(r).t("shared.preview.collapseExpand"),
+					"aria-label": F(r).t("shared.preview.collapseExpand"),
 					onClick: t[0] ||= (e) => F(r).toggleAllPreviewBlocks()
 				}, [K(Z, { name: "chevronDown" })], 8, qu)) : J("", !0),
 				K(Wu, {
@@ -9153,19 +9153,19 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 				G("div", Xu, [G("button", {
 					class: j(["wb-preview-tab", { active: F(r).previewMode === "blocks" }]),
 					onClick: t[1] ||= (e) => F(r).previewMode = "blocks"
-				}, M(F(r).t("preset.preview.modeBlocks")), 3), G("button", {
+				}, M(F(r).t("shared.preview.modeBlocks")), 3), G("button", {
 					class: j(["wb-preview-tab", { active: F(r).previewMode === "raw" }]),
 					onClick: t[2] ||= (e) => F(r).previewMode = "raw"
-				}, M(F(r).t("preset.preview.modeRaw")), 3)]),
-				G("p", Zu, [F(r).previewMode === "blocks" ? (H(), U(V, { key: 0 }, [q(M(F(r).t("preset.preview.hintBlocks")), 1)], 64)) : (H(), U(V, { key: 1 }, [q(M(F(r).t("preset.preview.hintRaw")), 1)], 64))]),
+				}, M(F(r).t("shared.preview.modeRaw")), 3)]),
+				G("p", Zu, [F(r).previewMode === "blocks" ? (H(), U(V, { key: 0 }, [q(M(F(r).t("shared.preview.hintBlocks")), 1)], 64)) : (H(), U(V, { key: 1 }, [q(M(F(r).t("shared.preview.hintRaw")), 1)], 64))]),
 				G("div", Qu, [G("button", {
 					class: "wb-btn accent",
 					disabled: F(r).previewLoading,
 					onClick: t[3] ||= (e) => l()
-				}, [F(r).previewLoading ? (H(), U(V, { key: 0 }, [K(Z, { name: "wait" }), q(" " + M(F(r).t("preset.preview.generating")), 1)], 64)) : (H(), U(V, { key: 1 }, [K(Z, { name: "play" }), q(" " + M(F(r).t("preset.preview.generate")), 1)], 64))], 8, $u), G("button", {
+				}, [F(r).previewLoading ? (H(), U(V, { key: 0 }, [K(Z, { name: "wait" }), q(" " + M(F(r).t("shared.preview.generating")), 1)], 64)) : (H(), U(V, { key: 1 }, [K(Z, { name: "play" }), q(" " + M(F(r).t("shared.preview.generate")), 1)], 64))], 8, $u), G("button", {
 					class: "wb-btn",
 					onClick: t[4] ||= (e) => u()
-				}, [K(Z, { name: "clipboard" }), q(" " + M(F(r).t("preset.preview.copy")), 1)])]),
+				}, [K(Z, { name: "clipboard" }), q(" " + M(F(r).t("shared.preview.copy")), 1)])]),
 				F(r).previewError ? (H(), U("p", ed, [K(Z, {
 					name: "warning",
 					size: 14
@@ -9182,7 +9182,7 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 				e.messages.length > 1 ? (H(), U("span", ad, M(e.messages.length) + " " + M(F(r).t("common.messages")), 1)) : J("", !0),
 				G("button", {
 					class: "wb-pb-toggle",
-					title: F(r).t("preset.preview.collapseExpandSingle")
+					title: F(r).t("shared.preview.collapseExpandSingle")
 				}, [K(Z, {
 					name: "chevronDown",
 					size: 12
@@ -9193,7 +9193,7 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 			}, [G("div", cd, [G("span", { class: j(["wb-pb-role", s(e.role)]) }, M(e.role.toUpperCase()), 3), G("span", ld, M(e.tokens) + " " + M(F(r).t("common.tokens")), 1)]), G("pre", {
 				class: "wb-pb-msg-text",
 				innerHTML: c(e.segments)
-			}, null, 8, ud)]))), 128))])], 2))), 128)) : F(r).previewLoading ? J("", !0) : (H(), U("p", dd, M(F(r).t("preset.preview.emptyBlocks")), 1))], 64)) : (H(), U(V, { key: 1 }, [F(r).previewRawText ? (H(), U("pre", fd, M(F(r).previewRawText), 1)) : F(r).previewLoading ? J("", !0) : (H(), U("p", pd, M(F(r).t("preset.preview.emptyRaw")), 1))], 64))])])]),
+			}, null, 8, ud)]))), 128))])], 2))), 128)) : F(r).previewLoading ? J("", !0) : (H(), U("p", dd, M(F(r).t("shared.preview.emptyBlocks")), 1))], 64)) : (H(), U(V, { key: 1 }, [F(r).previewRawText ? (H(), U("pre", fd, M(F(r).previewRawText), 1)) : F(r).previewLoading ? J("", !0) : (H(), U("p", pd, M(F(r).t("shared.preview.emptyRaw")), 1))], 64))])])]),
 			_: 1
 		}, 8, [
 			"title",
@@ -9208,12 +9208,12 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 				class: j(["wb-right-resize-handle", { active: F(o).active.value }]),
 				onPointerdown: t[6] ||= (...e) => F(o).onPointerDown && F(o).onPointerDown(...e)
 			}, null, 34),
-			G("div", md, [G("span", null, [K(Z, { name: "eye" }), q(" " + M(F(r).t("preset.preview.title")), 1)]), G("div", hd, [
+			G("div", md, [G("span", null, [K(Z, { name: "eye" }), q(" " + M(F(r).t("shared.preview.title")), 1)]), G("div", hd, [
 				F(r).previewMode === "blocks" ? (H(), U("button", {
 					key: 0,
 					class: "wb-btn icon-btn",
-					title: F(r).t("preset.preview.collapseExpand"),
-					"aria-label": F(r).t("preset.preview.collapseExpand"),
+					title: F(r).t("shared.preview.collapseExpand"),
+					"aria-label": F(r).t("shared.preview.collapseExpand"),
 					onClick: t[7] ||= (e) => F(r).toggleAllPreviewBlocks()
 				}, [K(Z, { name: "chevronDown" })], 8, gd)) : J("", !0),
 				K(Wu, {
@@ -9230,19 +9230,19 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 				G("div", bd, [G("button", {
 					class: j(["wb-preview-tab", { active: F(r).previewMode === "blocks" }]),
 					onClick: t[9] ||= (e) => F(r).previewMode = "blocks"
-				}, M(F(r).t("preset.preview.modeBlocks")), 3), G("button", {
+				}, M(F(r).t("shared.preview.modeBlocks")), 3), G("button", {
 					class: j(["wb-preview-tab", { active: F(r).previewMode === "raw" }]),
 					onClick: t[10] ||= (e) => F(r).previewMode = "raw"
-				}, M(F(r).t("preset.preview.modeRaw")), 3)]),
-				G("p", xd, [F(r).previewMode === "blocks" ? (H(), U(V, { key: 0 }, [q(M(F(r).t("preset.preview.hintBlocks")), 1)], 64)) : (H(), U(V, { key: 1 }, [q(M(F(r).t("preset.preview.hintRaw")), 1)], 64))]),
+				}, M(F(r).t("shared.preview.modeRaw")), 3)]),
+				G("p", xd, [F(r).previewMode === "blocks" ? (H(), U(V, { key: 0 }, [q(M(F(r).t("shared.preview.hintBlocks")), 1)], 64)) : (H(), U(V, { key: 1 }, [q(M(F(r).t("shared.preview.hintRaw")), 1)], 64))]),
 				G("div", Sd, [G("button", {
 					class: "wb-btn accent",
 					disabled: F(r).previewLoading,
 					onClick: t[11] ||= (e) => l()
-				}, [F(r).previewLoading ? (H(), U(V, { key: 0 }, [K(Z, { name: "wait" }), q(" " + M(F(r).t("preset.preview.generating")), 1)], 64)) : (H(), U(V, { key: 1 }, [K(Z, { name: "play" }), q(" " + M(F(r).t("preset.preview.generate")), 1)], 64))], 8, Cd), G("button", {
+				}, [F(r).previewLoading ? (H(), U(V, { key: 0 }, [K(Z, { name: "wait" }), q(" " + M(F(r).t("shared.preview.generating")), 1)], 64)) : (H(), U(V, { key: 1 }, [K(Z, { name: "play" }), q(" " + M(F(r).t("shared.preview.generate")), 1)], 64))], 8, Cd), G("button", {
 					class: "wb-btn",
 					onClick: t[12] ||= (e) => u()
-				}, [K(Z, { name: "clipboard" }), q(" " + M(F(r).t("preset.preview.copy")), 1)])]),
+				}, [K(Z, { name: "clipboard" }), q(" " + M(F(r).t("shared.preview.copy")), 1)])]),
 				F(r).previewError ? (H(), U("p", wd, [K(Z, {
 					name: "warning",
 					size: 14
@@ -9259,7 +9259,7 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 				e.messages.length > 1 ? (H(), U("span", kd, M(e.messages.length) + " " + M(F(r).t("common.messages")), 1)) : J("", !0),
 				G("button", {
 					class: "wb-pb-toggle",
-					title: F(r).t("preset.preview.collapseExpandSingle")
+					title: F(r).t("shared.preview.collapseExpandSingle")
 				}, [K(Z, {
 					name: "chevronDown",
 					size: 12
@@ -9270,7 +9270,7 @@ var Fu = { class: "wb-float-title" }, Iu = ["title", "aria-label"], Lu = { class
 			}, [G("div", Md, [G("span", { class: j(["wb-pb-role", s(e.role)]) }, M(e.role.toUpperCase()), 3), G("span", Nd, M(e.tokens) + " " + M(F(r).t("common.tokens")), 1)]), G("pre", {
 				class: "wb-pb-msg-text",
 				innerHTML: c(e.segments)
-			}, null, 8, Pd)]))), 128))])], 2))), 128)) : F(r).previewLoading ? J("", !0) : (H(), U("p", Fd, M(F(r).t("preset.preview.emptyBlocks")), 1))], 64)) : (H(), U(V, { key: 1 }, [F(r).previewRawText ? (H(), U("pre", Id, M(F(r).previewRawText), 1)) : F(r).previewLoading ? J("", !0) : (H(), U("p", Ld, M(F(r).t("preset.preview.emptyRaw")), 1))], 64))])])
+			}, null, 8, Pd)]))), 128))])], 2))), 128)) : F(r).previewLoading ? J("", !0) : (H(), U("p", Fd, M(F(r).t("shared.preview.emptyBlocks")), 1))], 64)) : (H(), U(V, { key: 1 }, [F(r).previewRawText ? (H(), U("pre", Id, M(F(r).previewRawText), 1)) : F(r).previewLoading ? J("", !0) : (H(), U("p", Ld, M(F(r).t("shared.preview.emptyRaw")), 1))], 64))])])
 		], 6));
 	}
 }), zd = {};
@@ -10408,8 +10408,8 @@ var em = { class: "wb-vp-header" }, tm = { class: "wb-vp-varname" }, nm = { clas
 			})
 		}, [G("div", em, [
 			G("span", tm, M(F(t).varPopupVarName), 1),
-			G("span", nm, M(F(t).t(F(t).varPopupScope === "local" ? "preset.varPopup.local" : "preset.varPopup.global")), 1),
-			G("span", rm, M(F(t).t(F(t).varPopupOps.length === 1 ? "preset.varPopup.hitSingle" : "preset.varPopup.hit", { count: F(t).varPopupOps.length })), 1),
+			G("span", nm, M(F(t).t(F(t).varPopupScope === "local" ? "shared.varPopup.local" : "shared.varPopup.global")), 1),
+			G("span", rm, M(F(t).t(F(t).varPopupOps.length === 1 ? "shared.varPopup.hitSingle" : "shared.varPopup.hit", { count: F(t).varPopupOps.length })), 1),
 			n[3] ||= G("span", { class: "wb-vp-spacer" }, null, -1),
 			G("button", {
 				class: "wb-vp-btn",
