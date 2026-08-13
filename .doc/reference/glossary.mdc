@@ -16,8 +16,8 @@ alwaysApply: false
 | `workspace` | 字符串路由轴，决定"这个标签页归哪份文档所有"，取值 `preset`/`worldbook`/`character`；跟 `domain` 正交——顶栏两行分别控制 `activeWorkspace` 和 `sidebarCollection` |
 | `gi` | grouped index，侧边栏选中/拖拽/跳转用的稳定坐标；跟 `order` 数组下标没 group 时碰巧相等，一有 group 就完全不一样 |
 | `flatNodes` | computed，`order` 或 group 的 `collapsed` 变化时重建的可视节点数组，preset 域所有选中/跳转/拖拽都基于它的索引 |
-| `shadow tree`（影子树） | regex/tavern 段维护裸数组（`regexScripts`/`tavernHelper.scripts`）+ 侧边栏渲染树（`regexOrder`/`scriptTreeOrder`）两份状态，靠显式 rebuild + deep watch 桥接 |
-| `marker` | `PresetBlock.marker` 为 `true` 的块是 ST 内部生成的占位块（比如聊天历史插入点），受保护：不能删、不能隐藏、内容 readonly |
+| `shadow tree`（影子树） | regex/tavern 段维护裸数组（`regexs`/`scripts`）+ 侧边栏渲染树（`regexOrder`/`scriptTreeOrder`）两份状态，靠显式 rebuild + deep watch 桥接 |
+| `marker` | `PromptBlock.marker` 为 `true` 的块是 ST 内部生成的占位块（比如聊天历史插入点），受保护：不能删、不能隐藏、内容 readonly |
 | `PresetManager` | ST 上游给的 preset 增删查存入口 |
 | `dirty` | 脏标记，来自 `composables/useDirtyFlag()` 的 `{ dirty, markDirty }`，三 store 共用，追踪未保存改动 |
 | `settings` | 用户偏好（字体/颜色/面板宽度/语言/FAB 位置），存 `localStorage('st-wb-settings')`，新设置项只改 `types.ts` 的 `Settings` + `DEFAULT_SETTINGS` |

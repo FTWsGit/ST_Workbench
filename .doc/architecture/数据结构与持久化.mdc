@@ -9,6 +9,8 @@ alwaysApply: false
 
 ## 各 store 内部数据结构
 
+**raw 快照 + 干净结构双轨**：三个 store 都持有「原生 raw 快照 + 干净结构」两份——presetStore 是 `rawData`（原生预设快照）+ `settings`/`prompts`/`regexs`/`scripts`（干净），worldbookStore 是 `raw`（原生 entries 快照）+ `entries`（干净），characterStore 是 `oldRaw`（原生 v1CharData）+ `character`（干净）。干净层只建模可编辑字段，未建模的原生字段保存时经 api 的 `toNative*` 从 raw 透传（见「API层」）。字段级映射与原生形状见「API层」与 types.ts。
+
 ### 核心架构：flatNodes + gi 坐标系
 
 放弃直接用 `order` 数组下标做选中/拖拽/跳转坐标，每次渲染动态构建 `flatNodes`。`gi` 和 `order` 下标没有 group 时碰巧相等，一有 group 就完全不一样。要点：
@@ -21,11 +23,11 @@ alwaysApply: false
 
 ### presetStore
 
-- **`prompts` / `order`**：`prompts` 是所有提示词块（含禁用/隐藏）。`order` 是当前生效的顺序+启用状态，元素是 `OrderItem` 或 `OrderGroup`。
+- **`prompts` / `order`**：干净层把原生 `prompts` + `prompt_order` 两套数组合并成一份 `prompts`（`PromptBlock[]`，数组顺序 = 视觉顺序，每条烘入 `enabled` + 分组字段 `_gid` 等）；`order` 是从 `prompts` 派生的分组树视图（元素 `OrderItem`/`OrderGroup`），不再有独立的 prompt_order。隐藏块单独存 `hiddenBlocks` ref（不进 `prompts`），保存时经 `savePresetAs` 的 hiddenBlocks 参数写回。
 - **`selectedGi` / `anchorGi`**：多选集合（gi 的 Set）和多选锚点（Shift+范围选的起点）。侧边栏所有高亮完全对应 `selectedGi`，表面和逻辑 100% 统一，没有两套系统打架。**没有 `selIdx` 这个字段**——"编辑器现在显示哪个块"完全由 `tabsStore.activeTab.key` 决定，跟侧边栏的选中/高亮状态本来是两件独立的事，只通过 `identifierToGi()` 单向换算；但两者**不能真的完全脱钩**——见下面 `revealAndFindGi` 条目里那段 `watch(() => tabsStore.activeTab, ...)`，"active tab 变了"这件事需要单向驱动"高亮跟着变"，否则会出现"点了 tab 但侧边栏没高亮/没展开折叠组"这个 bug（细节见下面两条）。
 - **`currentBlock`**：computed，直接从 `tabsStore.activeTab.key`（block identifier，仅当 `activeTab.domain === 'preset'` 时）→ `prompts` 解出的活引用，完全不依赖任何数组下标。`PresetContentEditor`/`PresetSettingsForm` 直接改它的字段就同步进 `prompts`/dirty 追踪，不需要维护本地 ref（name/role 不是高频输入的热路径，没那个必要）。
 - **`identifierToGi(identifier)`**：辅助函数，把 block identifier 反查成 flatNodes 里的 gi，供侧边栏高亮/滚动/`addBlock()` 决定插入位置这类场景使用——是 `currentBlock` 那条主链路的补充，不是它的依赖。
-- **`regexScripts`**：live computed，指向 `rawData.extensions.regex_scripts`，`push`/`splice` 直接生效并落进 dirty 追踪，不需要单独 setter。CRUD（add/delete/reorder）走 `useRegexScripts`——presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`reorderRegexScript` 都从 `useRegexScripts(getScripts, { markDirty, showToast, t, ... })` 拿同一份实现，调用方只喂"怎么拿当前 scripts 数组的 getter"和几个 domain 无关的依赖，底层垫着泛型底座 `composables/useScriptList.ts`（`useRegexScripts`/`useScriptTree` 都是它的薄包装）；改码纪律/坑（可变数组引用/显式 rebuild/deep watch）。
+- **`regexs`**（原名 regexScripts）：干净 ref，来自 `Preset.regexs`（`RegexScript[]`，`enabled` 取代 `disabled`），`push`/`splice` 直接生效并落进 dirty 追踪，不需要单独 setter。CRUD（add/delete/reorder）走 `useRegexScripts`——presetStore 和 characterStore 各自的 `addRegexScript`/`deleteRegexScript`/`reorderRegexScript` 都从 `useRegexScripts(getScripts, { markDirty, showToast, t, ... })` 拿同一份实现，调用方只喂"怎么拿当前 scripts 数组的 getter"和几个 domain 无关的依赖，底层垫着泛型底座 `composables/useScriptList.ts`（`useRegexScripts`/`useScriptTree` 都是它的薄包装）；改码纪律/坑（可变数组引用/显式 rebuild/deep watch）。
 - **`flatNodes`**：computed，`order` 或 group 的 `collapsed` 变化时重建，preset 域所有选中/跳转/拖拽都基于这个数组的索引。
 - **`selectPresetByName(name)`**：见上面"为什么需要切换 ST 主菜单选中项"，只被 `PreviewPanel.vue` 生成前调用，不是通用的预设切换入口——那是 `switchPreset()` 的事，两者不要混。
 - **`revealAndFindGi(identifier)`**：跳转专用，先自动展开目标所在的折叠组，再查 gi，避免折叠组里的块跳不过去。**不由各跳转函数各自手动调用**——紧挨着它下面有一个 `watch(() => tabsStore.activeTab, (tab) => {...}, { immediate: true, flush: 'sync' })`，是"标签驱动侧边栏"这件事**唯一**的实现：只要 `activeTab` 变成了某个 block（不管是变量导航点击、TabBar 点击、还是侧边栏自己点击触发的），这个 watcher 就会 `revealAndFindGi()` 展开折叠组、然后把 `selectedGi`/`anchorGi` 重置成只选中这一行。`jumpToVarOp`/`jumpToPopupVar` 只需要 `tabsStore.open({domain:'preset', key, label})` + `requestEditorJump(...)`——`flush: 'sync'` 是为了保证这个 watcher 先于 `useListScrollSync.ts` 那个监听同一个 token 的 watcher 跑完，否则会有"组还没展开就去 `scrollIntoView`，滚到一个还不存在的行"的竞态。工具箱 SearchTool 的 `selectSide()` 把命中同步到 `selectedGi` 时也调 `revealAndFindGi` 展开每个命中所在组，但**不**走那个 watcher——它要的是多选态，watcher 会把 `selectedGi` 重置成单行，所以 `selectSide` 先脉冲 `selectBlock(anchor)` 触发 `requestListScroll` 滚到 anchor，再覆写 `selectedGi` 为完整命中集合。`jumpToVarOp`/`jumpToPopupVar` 和变量弹窗整套（`showVarPopup`/`hideVarPopup`/`rebuildVarIndex` 等）已抽到 `composables/useVarNav.ts`——uiStore setup 时解构调用、store return 继续导出（状态机宿主已从 presetStore 迁到 uiStore，跨 workspace 通用），UI 不变。**变量追踪已升级为跨三域扫描**（preset/character/worldbook 三域 + 13 种宏 + 装配序排序 + `VarOp.source.domain` 跨域跳转分派 + var-click 协议）。
@@ -91,7 +93,7 @@ regex/tavern 段维护裸数组 + 影子树两份状态，靠显式 rebuild + de
 
 `dirty` + `markDirty` 已抽成 `composables/useDirtyFlag.ts`，三个 store 共用同一对 `{ dirty, markDirty }`；watch 列表（哪些 ref 触发脏、deep 还是 shallow）仍各 store 自己写，因为每域的浅/深 watch 选择背后是性能权衡（如 presetStore 的 `prompts` 浅监听防打字卡顿）。
 
-presetStore 的 `dirty` 是四条 watch 打出来的：`watch([order, regexScripts], markDirty, {deep:true})` + `watch(prompts, markDirty)`（**浅**）+ `watch(regexOrder, markDirty, {deep:true})` + `watch(scriptTreeOrder, markDirty, {deep:true})`。`prompts` 特意浅监听（内容高频编辑，深监听每字遍历打字卡顿）——所以 `prompts` 里的嵌套字段改动（content/name/role 这种字段级变异）浅 watch 捕获不到，改动入口必须**显式 `markDirty()`**（`PresetContentEditor.vue` 的 content v-model setter、`PresetSettingsForm.vue` 的字段 setter、`PresetSidebar.vue` 的重命名 commit 都已这么做）；`order`/`regexOrder`/`scriptTreeOrder` 走深监听自动覆盖。代价是"加载新预设"本身也会触发，所以 `applyLoadedPreset()` 加载完之后用 `nextTick()` 把它拨回 `false`。同时 `applyLoadedPreset()` 会调用 `tabsStore.closeWorkspace('preset')`——`regex_scripts` 也活在同一份被替换掉的 `rawData` 里，所有旧标签都是悬空的，切预设/重新加载时一起清。模型参数等 `PresetMetaForm.vue` 直接改的字段不在这些 watch 的监听范围内（它们是 `rawData` 上的散字段，不是 `prompts`/`order`/`regexScripts` 这几个专门的 ref），所以 `PresetMetaForm.vue` 每个字段的 setter 里都手动调一次 `store.markDirty()`。
+presetStore 的 `dirty` 是四条 watch 打出来的：`watch([order, regexs], markDirty, {deep:true})` + `watch(prompts, markDirty)`（**浅**）+ `watch(regexOrder, markDirty, {deep:true})` + `watch(scriptTreeOrder, markDirty, {deep:true})`。`prompts` 特意浅监听（内容高频编辑，深监听每字遍历打字卡顿）——所以 `prompts` 里的嵌套字段改动（content/name/role 这种字段级变异）浅 watch 捕获不到，改动入口必须**显式 `markDirty()`**（`PresetContentEditor.vue` 的 content v-model setter、`PresetSettingsForm.vue` 的字段 setter、`PresetSidebar.vue` 的重命名 commit 都已这么做）；`order`/`regexOrder`/`scriptTreeOrder` 走深监听自动覆盖。代价是"加载新预设"本身也会触发，所以 `applyLoadedPreset()` 加载完之后用 `nextTick()` 把它拨回 `false`。同时 `applyLoadedPreset()` 会调用 `tabsStore.closeWorkspace('preset')`——regex/tavern 数据也活在同一份被替换掉的状态里，所有旧标签都是悬空的，切预设/重新加载时一起清。模型参数在 `settings` ref（`PresetSettings`）上，`PresetMetaForm.vue` 直接改 `store.settings` 字段，setter 里手动调一次 `store.markDirty()`。
 
 worldbookStore 的 `dirty` 同理：`watch([order, entries], ...)`，order 深监听（量小），entries 浅监听（高频编辑热路径，跟 presetStore 的 prompts 同一个理由），加载完用 `nextTick()` 拨回 `false`。
 

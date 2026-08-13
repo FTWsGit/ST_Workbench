@@ -43,7 +43,7 @@ alwaysApply: false
 4. `tabsStore` 的 `domain`/`workspace` 联合类型加新值。
 5. `EditorShell.vue` 的 `EDITOR_COMPONENTS` 路由表加一条 `xxx: XxxContentEditor`（`<component :is>` 挂载，不再写 `<XxxContentEditor v-if="domain === 'xxx'">` 模板分支）；`SettingsDock.vue` 的 `FORMS` 表加一条 `xxx: XxxSettingsForm`；如果新 domain 有"整份文档级别"的元信息字段，`MetaPanel.vue` 的 `META_FORMS` 表加一条，并在顶栏/工具栏加触发 `uiStore.metaPanelOpen = true` 的按钮（参考 `PresetSidebar`/`CharacterSidebar` 的 toolbar）。
 6. 新增 `XxxSidebar.vue`（参考 `PresetSidebar`/`WorldbookSidebar` 的模式：`useGroupedList`/`useDragReorder`/`useListScrollSync`/`useInlineRename`/`useListSelection`），在 App.vue 挂载点按 `activeWorkspace`/`sidebarCollection` 分派。
-7. watcher 幂等 + 按 id 预索引：`watch(() => tabsStore.activeTab, ...)` 这类 watcher 抄 `presetStore` 的幂等守卫——`if (anchorGi === gi && selectedGi.size === 1 && selectedGi.has(gi)) return`，gi 没变就不换新 Set 引用；模板按 id 查节点的辅助函数用 `Map<id, ScriptTree>` 预索引 computed 做成 O(1) 查表，不要每次渲染都线性扫全数组（`scriptsById` computed 依赖数据源数组，数组变时自动重建 Map）。
+7. watcher 幂等 + 按 id 预索引：`watch(() => tabsStore.activeTab, ...)` 这类 watcher 抄 `presetStore` 的幂等守卫——`if (anchorGi === gi && selectedGi.size === 1 && selectedGi.has(gi)) return`，gi 没变就不换新 Set 引用；模板按 id 查节点的辅助函数用 `Map<id, Script>` 预索引 computed 做成 O(1) 查表，不要每次渲染都线性扫全数组（`scriptsById` computed 依赖数据源数组，数组变时自动重建 Map）。
 8. 若数据源是 computed 返回同一数组引用（regex/tavern 的数据就是），重建树不能只靠 shallow watch，必须显式 rebuild + deep watch——按现有 regex/tavern 段模式实现（纪律见下方「改既有 store/持久化代码的现状与坑」）。
 9. i18n：`zh-CN.ts` 加键，`en.ts` 跟着加，`LocaleKey` 类型会自动收进去，`npm run typecheck` 卡得住漏译。
 
@@ -55,7 +55,7 @@ alwaysApply: false
 | --- | --- |
 | CRUD（add/delete/load）改了 regex/tavern 段的裸数组 | 之后必须显式调 `rebuildRegexOrder()`/`rebuildScriptTreeOrder()`——deep watch 只兜字段级变异，不能替代显式 rebuild |
 | 侧边栏改 regex/tavern 树上的字段（如 toggle enabled） | 走写回包装函数（如 `regexToggleBlock`），不要只改树——不写回 raw 数据，保存时会被树覆盖丢改动 |
-| 在 computed getter 里处理宽松类型转严格类型（如 `tavernHelper` 的 coerce） | 放 load 段一次性做，不要放进 getter——getter 里原地 mutate 触发响应式重算，会死循环卡死 |
+| 在 computed getter 里处理宽松类型转严格类型 | 放 load 段一次性做，不要放进 getter——getter 里原地 mutate 触发响应式重算，会死循环卡死 |
 | 改 `prompts`/`entries` 里嵌套字段（content/name/role 这类） | 改动入口必须显式调 `markDirty()`——这两个 ref 是浅监听（防打字卡顿），字段级变异浅 watch 捕获不到 |
 | 读/存预设、世界书、角色卡 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts`，不要绕开它们直接摸 ST 的 `ctx` |
 | 传对象给 ST 自己的 API | 先深拷贝（`JSON.parse(JSON.stringify(...))`——`structuredClone()` 克隆不了 Vue 的 Proxy 会直接抛错） |

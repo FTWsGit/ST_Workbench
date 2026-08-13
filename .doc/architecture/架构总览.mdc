@@ -38,10 +38,10 @@ alwaysApply: true
 | domain | 一句话（组件 / 数据源 / 设计注） |
 |---|---|
 | `preset` | `PresetContentEditor` + `PresetSettingsForm`（FORMS 表）+ `PresetMetaForm`（整份文档级字段走悬浮窗）；`currentBlock` 直接从 `activeTab.key` 解析，侧边栏展开/高亮/滚动统一由 `presetStore` 一个 `watch(activeTab)` |
-| `regex` | 完全参数化三件套（`components/regex/regexProps.ts`），组件不自己 `usePresetStore()`；数据源是调用方喂的 `store.regexScripts` live computed（preset/character 两工作区各指一份，改字段落宿主文档自己的 dirty 追踪，不需要单独持久化） |
+| `regex` | 完全参数化三件套（`components/regex/regexProps.ts`），组件不自己 `usePresetStore()`；数据源是调用方喂的 `store.regexs`（preset/character 两工作区各指一份，改字段落宿主文档自己的 dirty 追踪，不需要单独持久化） |
 | `worldbook` | 独立工作区 + 自己的 store；`WorldbookContentEditor`/`WorldbookSettingsForm`/`WorldbookSidebar`；批量操作在工具箱 BatchTool 的 worldbook/items scene；**故意不接 MetaPanel**（没有整份文档级的元信息需要单独编辑） |
 | `character` | 独立工作区 + 自己的 store；`CharacterContentEditor` 走虚拟字段 key 路由（`field:xxx`/`field:greeting:<id>`）；整份卡级字段走 `CharacterMetaForm`（悬浮窗） |
-| `tavern` | 同 regex 属 host-dependent domain；预设/角色卡各自的 tavern_helper 脚本树（ScriptTree/ScriptFolder）复用同一套三件套；数据源经 `tabsStore.getDomainAdapter('tavern', tab.workspace)` 拿 |
+| `tavern` | 同 regex 属 host-dependent domain；预设/角色卡各自的酒馆助手脚本（干净层扁平 `Script[]`）复用同一套三件套；数据源经 `tabsStore.getDomainAdapter('tavern', tab.workspace)` 拿 |
 
 
 ## MetaPanel：整份文档级别的元信息悬浮窗

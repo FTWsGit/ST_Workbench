@@ -1,6 +1,6 @@
 ---
 name: "worldbook"
-description: "查 ST 世界书条目原生形状、list/get/create/edit/delete 读写签名时读"
+description: "查 ST 世界书条目原生形状、角色卡内嵌书（character_book）结构与导入转换、list/get/create/edit/delete 读写签名时读"
 kind: "spec"
 alwaysApply: false
 ---
@@ -66,18 +66,97 @@ type WorldbookEntry = {
 
 > 注意：Tavern Helper **不**向世界书/条目注入 `tavern_helper` 字段（只有 preset 和 character 有）。世界书条目的扩展数据槽位是 `extensions`（原样透传）。权威字段一律是顶层扁平字段（扫描/渲染/编辑器都读顶层）；`extensions.*` 只是角色卡转世界书时保留的 snake_case 镜像副本，ST 不会在读取时从 extensions.* 回填顶层字段。
 
+## 角色卡内嵌书（CharacterBook）
+
+角色卡 V2 规范 `data.character_book` 的形状（snake_case 规范字段）。导入成独立世界书文件时，经 `api/worldbookApi.ts` 的 `characterBookToNative` 归一化成 ST 原生条目形状，再复用 `fromSTEntry` 转成干净 WorldbookEntry。
+
+```ts
+type CharacterBook = {
+  name?: string;
+  description?: string;
+  scan_depth?: number;
+  token_budget?: number;
+  recursive_scanning?: boolean;
+  extensions: Record<string, any>;
+  entries: CharacterBookEntry[];
+};
+
+type CharacterBookEntry = {
+  id?: number;                  // 导入时优先用作 uid；缺失时用数组下标兜底
+  keys?: string[];              // 触发词（导入时非数组置 []）
+  secondary_keys?: string[];    // 次要触发词
+  comment?: string;             // 缺失置 ''
+  content?: string;             // 缺失置 ''
+  constant?: boolean;
+  selective?: boolean;
+  insertion_order?: number;     // 排序，回退链 ext.order → insertion_order → 100
+  enabled?: boolean;            // enabled === false 或 ext.disable 时为禁用
+  position?: string;            // 'before_char' | 'after_char'，规范只有两档
+  use_regex?: boolean;          // ST 导出时恒为 true，经 ...raw 透传
+  extensions?: Record<string, unknown>;   // ST 导出时保留的 snake_case 镜像 + 精确数值
+  [k: string]: unknown;         // 其余字段经 ...raw 原样透传
+};
+```
+
+### 导入转换
+
+`importCharacterBook(name, book)` = `createWorldbook(name)` + 条目转换 + `saveWorldbook`。条目先经 `characterBookToNative` 归一化成 ST 原生条目形状，再复用 `fromSTEntry` 转成干净 WorldbookEntry；干净层未建模的原生字段（useProbability/group/triggers/match* 等）由 `characterBookToNative` 产物按 uid 当 raw 传给 `saveWorldbook` 透传保活。
+
+映射规则（`extensions.*` 里的精确数值**优先于**顶层规范字段；输出是白名单，`keys`/`insertion_order`/`enabled`/`id` 等书格式字段不泄漏进原生条目）：
+
+| 规范字段 / extensions 键 | 规则 | → 原生字段 |
+| --- | --- | --- |
+| `comment` | `raw.comment ?? ''` | `comment`（同时派生 `addMemo = !!comment`） |
+| `content` | `raw.content ?? ''` | `content` |
+| `keys` / `secondary_keys` | 非数组置 `[]` | `key` / `keysecondary` |
+| `constant` | `ext.constant ?? raw.constant` | `constant` |
+| `vectorized` | `!!ext.vectorized` | `vectorized` |
+| `selective` | `ext.selective ?? raw.selective` | `selective` |
+| `selectiveLogic` | `ext.selectiveLogic`，非数字置 0 | `selectiveLogic` |
+| `enabled` / `disable` | `raw.enabled === false` 或 `!!ext.disable` | `disable` |
+| `position` | `ext.position`（数字）优先；否则 `'after_char'`→1、`'before_char'`→0 | `position` |
+| `insertion_order` | `ext.order` → `insertion_order` → 100 | `order` |
+| `depth` | `ext.depth`，默认 4 | `depth` |
+| `role` | `ext.role` 仅接受 0/1/2，否则 null | `role` |
+| `probability` | `ext.probability`，默认 100 | `probability` |
+| `useProbability` | `ext.useProbability ?? true` | `useProbability` |
+| `exclude_recursion` | `!!ext.exclude_recursion` | `excludeRecursion` |
+| `prevent_recursion` | `!!ext.prevent_recursion` | `preventRecursion` |
+| `delay_until_recursion` | `ext.delay_until_recursion ?? false` | `delayUntilRecursion` |
+| `scan_depth` | `ext.scan_depth`，非数字置 null | `scanDepth` |
+| `case_sensitive` | `ext.case_sensitive`，非 boolean 置 null | `caseSensitive` |
+| `match_whole_words` | `ext.match_whole_words`，非 boolean 置 null | `matchWholeWords` |
+| `sticky` / `cooldown` / `delay` | 非数字置 null | `sticky` / `cooldown` / `delay` |
+| `display_index` | `ext.display_index`，非数字置 undefined | `displayIndex` |
+| `outlet_name` | 非 string 置 `''` | `outletName` |
+| `group` | 非 string 置 `''` | `group` |
+| `group_override` | `!!ext.group_override` | `groupOverride` |
+| `group_weight` | 非数字置 100 | `groupWeight` |
+| `use_group_scoring` | 非 boolean 置 null | `useGroupScoring` |
+| `automation_id` | 非 string 置 `''` | `automationId` |
+| `triggers` | 非数组置 `[]` | `triggers` |
+| `ignore_budget` | `!!ext.ignore_budget` | `ignoreBudget` |
+| `match_persona_description` | `!!ext.match_persona_description` | `matchPersonaDescription` |
+| `match_character_description` | `!!ext.match_character_description` | `matchCharacterDescription` |
+| `match_character_personality` | `!!ext.match_character_personality` | `matchCharacterPersonality` |
+| `match_character_depth_prompt` | `!!ext.match_character_depth_prompt` | `matchCharacterDepthPrompt` |
+| `match_scenario` | `!!ext.match_scenario` | `matchScenario` |
+| `match_creator_notes` | `!!ext.match_creator_notes` | `matchCreatorNotes` |
+| `extensions` | 原样透传（第三方扩展数据槽位） | `extensions` |
+
+> 默认值与 ST 前端 `convertCharacterBook`（`/scripts/world-info.js`）一致：useProbability 默认 true、groupWeight 默认 100、role 默认 null（ST 原生默认是 SYSTEM=0，工作层刻意保留 null 由调用方决定）。
+
 ## 工作层派生字段
 
-以下字段不在 ST 原生 `WorldbookEntry` 上，由工作层（`api/worldbookApi.ts`）在读写转换时经顶层宽松槽位 `[k: string]: any` 附加/回填，ST 原样忽略、下次加载时由工作层读回重建：
+以下字段不在 ST 原生 `WorldbookEntry` 上，由工作层在读写转换时附加/回填，ST 原样忽略：
 
 | 字段 | 类型 | 语义 |
 | --- | --- | --- |
-| `characterFilter` | `{ isExclude: boolean; names: string[]; tags: string[] } \| undefined` | 加载时给每条回填 |
-| `displayIndex` | `number` | 渲染排序用，工作层总填好（必填） |
-| `keyWord` | `boolean` | `constant` 与 `vectorized` 都 false 时为 true（"关键词"激活模式） |
-| `_gid` / `_gname` | `string` | 文件夹式分组持久化：组 id / 组名 |
-| `_gcollapsed` / `_genabled` | `boolean` | 文件夹式分组持久化：折叠态 / 启用态 |
-| `_gidx` | `number` | 文件夹式分组持久化：组内序号 |
+| `characterFilter` | `{ isExclude: boolean; names: string[]; tags: string[] } \| undefined` | 加载时给每条回填（未建模进干净层，走 raw 透传） |
+| `displayIndex` | `number` | 渲染排序用，api 持久化字段——保存时按数组顺序写回，干净层 WorldbookEntry 不暴露 |
+| `_gid` / `_gname` / `_gcollapsed` / `_genabled` / `_gidx` | string / boolean / number | 文件夹式分组持久化，干净层 WorldbookEntry 上显式建模（见「API层」） |
+
+> 干净层 WorldbookEntry 把激活方式三选一收进 `strategy.type`（'keyword'/'constant'/'vectorized'），旧的工作层派生字段 `keyWord` 已并入 `strategy.type`（constant 与 vectorized 都 false 时为 'keyword'），不再单独存在。字段映射见「API层」。
 
 ## 读写
 

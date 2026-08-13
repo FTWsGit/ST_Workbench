@@ -7,45 +7,76 @@ alwaysApply: false
 
 # 工作层 api 契约
 
-`src/api/` 三个文件是对 ST 原生模块的封装层。函数签名直接读 `.ts` 源码即可——本篇只记录类型表达不了的 boundary gotcha 与字段重命名表。
+`src/api/` 三个文件是对 ST 原生模块的封装层，也是「原生 ⇄ 干净」的**唯一转换边界**。函数签名直接读 `.ts` 源码；本篇只记录类型表达不了的 boundary gotcha 与字段映射表。
+
+干净层类型见 `types.ts`（`Preset`/`PresetSettings`/`PromptBlock`/`RegexScript`/`Script`/`Character`/`Worldbook`/`WorldbookEntry`）。干净层只建模 workbench 需要编辑的字段；未建模的 ST 原生字段由 store 持有一份原生 raw 快照（preset/worldbook 是 `store.rawData`，character 是 `store.oldRaw`），保存时经 `toNative*` 的 raw 参数原样透传，保证读-改-存不丢数据。
 
 ## characterApi.ts
 
-- 写侧是 HTTP multipart 表单 POST `/api/characters/create|edit`，用顶层窗口 `fetch()` 发起——iframe 自己的 fetch 会按假 origin 解析相对路径。
-- 读侧经顶层窗口 import `/script.js` 拿 `characters` 活引用（ESM live binding）。
-- `buildFormData` 的 `oldRaw` 必须是 `getCharacterByAvatar()` 返回的那份 raw，不能凭空构造——编辑时（`oldRaw` 非 null）回传 `oldRaw.chat`/`oldRaw.create_date`；新建时（`oldRaw=null`）不传。
-- `avatar` 字段只在头像真的更换时携带。
-- `extensions` 以 `oldRaw.extensions` 打底、工作层已知字段覆盖写入。
-- 删除角色：参数 `avatar` 是文件名而非角色名。
+- 写侧 HTTP multipart POST `/api/characters/create|edit`，顶层窗口 `fetch()` 发起（iframe 自己的 fetch 会按假 origin 解析相对路径）。
+- 读侧顶层窗口 import `/script.js` 拿 `characters` 活引用（ESM live binding）。
+- `buildFormData` 的 `oldRaw` 必须是 `getCharacterByAvatar()` 返回的 raw，不能凭空构造——编辑时回传 `oldRaw.chat`/`oldRaw.create_date`；新建时（`oldRaw=null`）不传。
+- `avatar` 只在头像真换时携带。
+- `extensions` 以 `oldRaw.extensions` 打底、工作层已知字段覆盖；`tavern_helper.variables` 不建模，`{ ...oldTH }` 原样透传。
+- `fromRaw` 产出新 Character（`description` 顶层 + `otherPrompts`/`creatorMeta` 嵌套 + `regexs`/`scripts`）。
 
 ## presetApi.ts
 
-- 统一走 ST 的 `PresetManager`，显式请求 `'openai'`——ST 按 API 类型维护独立的 PresetManager，无参版本解析到当前 UI 主 API，可能不是 chat-completion。
-- 读取具名预设的正确入口是 `getCompletionPresetByName`（ST 原生 `getPresetSettings` 对 openai 返回空对象）。
-- `getPresetByName` 返回纯对象深拷贝，不持有 ST 的 Vue 响应式引用。
-- `savePresetAs` 的 `data` 须为纯对象，不能是 Pinia/Vue 响应式引用。
+- 统一走 `PresetManager('openai')`（无参版本解析到当前 UI 主 API，可能不是 chat-completion）。
+- `getPresetByName(name)` 返回 `{ preset: 干净 Preset, raw: 原生快照 } | null`——raw 供保存时字段级透传。
+- `savePresetAs(name, preset, raw, hiddenBlocks?)`：`preset` 是干净 Preset，`raw` 是原生快照（透传未建模字段），`hiddenBlocks` 是工作层隐藏块（不进 prompt_order 但数据写回，覆盖 raw 里的旧数据）。
+- 干净层把原生 `prompts` + `prompt_order` 两套数组合并成一份 `prompts`（数组顺序 = 视觉顺序，enabled + 分组字段烘进每条 block）；隐藏块（原生 prompts 里、prompt_order 未引用的）由 `extractHiddenPromptBlocks(raw)` 单独取回。
 
 ## worldbookApi.ts
 
-- 经顶层窗口 import `/scripts/world-info.js`，状态在模块实例内部，不发 HTTP 请求。
-- 字段转换全部在边界发生：读时 `fromSTEntry` 改名 + 派生 `keyWord`，写时 `toSTEntry` 还原原生名 + 丢弃派生字段；store/组件只认工作层名字。
-- `listWorldbooks` 返回普通数组拷贝，不是 ST 内部 `world_names` 的活引用。
-- 按名字读完整书：ST 名字不存在时 `loadWorldInfo` 通常返回对象、entries 为空，封装层返回 null。
+- 顶层窗口 import `/scripts/world-info.js`，状态在模块实例内部，不发 HTTP。
+- `getWorldbookByName(name)` 返回 `{ worldbook: 干净 Worldbook, raw: 原生 entries 快照 } | null`；`saveWorldbook(wb, raw?)`。
+- 字段转换在边界：`fromSTEntry` 把原生扁平字段重组成 strategy/position/recursion/effect；`toSTEntry` 反向 + raw 透传未建模字段。
+- `displayIndex` 仍作为原生持久化字段写回（数组顺序 → displayIndex），但不进干净层。
 
 ## 工作层字段重命名与转换
 
-工作层与 ST 原生之间的字段名差异只在 `src/api/` 边界转换，store/组件只认工作层名字。
+干净层与 ST 原生之间的字段名/结构差异只在 `src/api/` 边界转换，store/组件只认干净层。
 
-| 工作层 | ST 原生 | 说明 |
+### 世界书（WorldbookEntry：原生扁平 → 干净嵌套）
+
+| 干净层 | ST 原生 | 说明 |
 | --- | --- | --- |
-| `keys` | `key` | 触发词（string[]） |
-| `disabled` | `disable` | 语义相同 |
-| `groupPrioritized` | `groupOverride` | 组内优先 |
-| `keyWord` | （无对应字段） | 工作层派生：`constant` 与 `vectorized` 都 false 时为 true（"关键词"激活模式）；写回 ST 时丢弃 |
-| `depthPrompt.role` | `depth_prompt.role` | ST 字符串 `'system'\|'user'\|'assistant'` ⇄ 工作层数字 `0/1/2`（与 WORLDBOOK_ROLE_OPTIONS 同序），转换在 `api/characterApi.ts` |
+| `name` | `comment` | |
+| `enabled` | `disable` | 取反 |
+| `strategy.type` | `constant`/`vectorized`/`selective` 三 bool | 'constant' ⇄ constant=true；'vectorized' ⇄ vectorized=true；'keyword' ⇄ selective=true（三选一，keyword 是兜底） |
+| `strategy.keys` | `key` | |
+| `strategy.keysSecondary.keys` | `keysecondary` | |
+| `strategy.keysSecondary.logic` | `selectiveLogic` | 0=and_any / 1=not_all / 2=not_any / 3=and_all |
+| `strategy.scanDepth` | `scanDepth` | 原生 null ⇄ 'same_as_global' |
+| `strategy.caseSensitive`/`matchWholeWords` | 同名 | boolean \| null |
+| `position.type` | `position` | 数字 0~7 ⇄ 字符串枚举（见 types.ts WORLDBOOK_POSITION_OPTIONS） |
+| `position.role` | `role` | system/user/assistant/null ⇄ 0/1/2/null |
+| `position.depth`/`order` | 同名 | |
+| `recursion.preventIncoming` | `excludeRecursion` | |
+| `recursion.preventOutgoing` | `preventRecursion` | |
+| `recursion.delayUntil` | `delayUntilRecursion` | 数字透传；布尔 → null |
+| `effect.sticky`/`cooldown`/`delay` | 同名 | |
 
-其余字段（`scanDepth`/`position`/`role`/`sticky`/`cooldown`/`delay`/`group`/`groupWeight`/`probability` 等）字段名完全一致，用 `{ ...raw }`（读）/ `{ ...rest }`（写）打底再覆盖不一致字段——未建模进接口的字段原样透传，不丢。
+未建模字段（`group`/`groupOverride`/`groupWeight`/`useProbability`/`ignoreBudget`/`addMemo`/`outletName`/`automationId`/`triggers`/`match*` 等）经 raw 透传。
 
-世界书工作层附加字段：`displayIndex`（渲染排序用，工作层必填；原生加载默认 0，角色卡内嵌书导入从 `extensions.display_index` 回填兜底下标，保存前由 worldbookStore 重算）；`keyWord` 与分组持久化字段（`_gid`/`_gname`/`_gcollapsed`/`_genabled`/`_gidx`，跟 RegexScript/Script 同模式）经 `[k: string]: any` 透传槽位承载。
+### 预设（Preset）
 
-角色卡内嵌书条目转换（`fromCharacterBookEntry`）同纪律：`keys` ← `keys`，`disabled` ← `enabled === false` 或 `extensions.disable`，`groupPrioritized` ← `extensions.groupOverride`；`position` 规范字段只有 `before_char`/`after_char` 两档，`extensions.position` 有 ST 精确数值 0~7 时优先。
+| 干净层 | ST 原生 | 说明 |
+| --- | --- | --- |
+| `preset.prompts`（单数组，顺序=视觉顺序） | `prompts` + `prompt_order` 两套 | 每条 PromptBlock 烘入 `enabled` + 分组字段（来自 prompt_order 条目）；injection_position/depth/order → injectionPosition/injectionDepth/injectionOrder |
+| `preset.settings` | 顶层散字段 | 只建模 14 个采样参数；其余（模型名/formats/names_behavior 等）raw 透传 |
+| `preset.regexs` | `extensions.regex_scripts` | `disabled` ⇄ `enabled` 取反 |
+| `preset.scripts` | `extensions.tavern_helper.scripts` | 扁平 Script[]，原生 ScriptFolder 折叠成组（_gid=folder.id，写回重建 folder，icon/color 用默认） |
+
+### 角色卡（Character）
+
+| 干净层 | ST 原生 | 说明 |
+| --- | --- | --- |
+| `description`（顶层） | v2.description / v1.description | |
+| `otherPrompts.*` | v2 同名字段 | scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt；depthPrompt.role 字符串 ⇄ 0/1/2 |
+| `creatorMeta.*` | v2.creator / creator_notes / character_version / tags | creatorNotes 兜底 v1.creatorcomment |
+| `regexs`/`scripts` | extensions.regex_scripts / tavern_helper.scripts | 同预设 |
+| `worldbook` | extensions.world | undefined → null |
+
+分组持久化字段（`_gid`/`_gname`/`_gcollapsed`/`_genabled`/`_gidx`）在干净层 PromptBlock/RegexScript/Script/WorldbookEntry 上显式建模，是分组树的持久化载体（ST 原生忽略这些未知字段）。
