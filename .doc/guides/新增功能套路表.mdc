@@ -54,8 +54,8 @@ alwaysApply: false
 | 要做什么 | 怎么做 |
 | --- | --- |
 | CRUD（add/delete/load）改了 regex/tavern 段的裸数组 | 之后必须显式调 `rebuildRegexOrder()`/`rebuildScriptTreeOrder()`——deep watch 只兜字段级变异，不能替代显式 rebuild |
-| 侧边栏改 regex/tavern 树上的字段（如 toggle enabled） | 走写回包装函数（如 `regexToggleBlock`），不要只改树——不写回 raw 数据，保存时会被树覆盖丢改动 |
+| 侧边栏改分组树上的字段/结构（toggle enabled、bind/unbind、reorder） | 走写回包装函数（preset 包 `exportOrder`、worldbook 包 `syncEntriesFromOrder`、regex/tavern 包 `syncRegexScriptsFromOrder`/`syncScriptsFromOrder`），不要只改树——不写回内容数组，保存时会被树覆盖丢改动，per-item dirty 也抓不到 |
 | 在 computed getter 里处理宽松类型转严格类型 | 放 load 段一次性做，不要放进 getter——getter 里原地 mutate 触发响应式重算，会死循环卡死 |
-| 改 `prompts`/`entries` 里嵌套字段（content/name/role 这类） | 改动入口必须显式调 `markDirty()`——这两个 ref 是浅监听（防打字卡顿），字段级变异浅 watch 捕获不到 |
+| 改 `prompts`/`entries`/`character` 里嵌套字段（content/name/role 这类） | 直接改字段即可，无需逐入口打标——三个数据源都 deep watch，`syncFromValues` 按基线重算 per-item 脏 |
 | 读/存预设、世界书、角色卡 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts`，不要绕开它们直接摸 ST 的 `ctx` |
 | 传对象给 ST 自己的 API | 先深拷贝（`JSON.parse(JSON.stringify(...))`——`structuredClone()` 克隆不了 Vue 的 Proxy 会直接抛错） |

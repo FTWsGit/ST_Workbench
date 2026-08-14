@@ -41,5 +41,5 @@ FAB 长按拖拽整套机制抽成了 domain-agnostic 的 `useFabDrag(opts)` com
 `MetaPanel` 这类"不占用主面板布局、独立浮在上面"的窗口，以及 `ToolBoxPanel`/`PreviewPanel`/`AgentPanel` 的完全悬浮（float）形态，共用同一套 domain-agnostic 的拖拽定位/resize/多开置顶机制——`useFloatingPanel.ts` 只管"这个矩形框在哪、多大、盖在最上面与否"，不知道自己里面装的是元信息表单还是预览内容；`FloatingPanelShell.vue` 是薄壳，只渲染 header（标题+拖拽发起区+✕ 关闭）/body（`v-slot`）/右下角 resize 手柄，业务内容整个通过默认 slot 塞进去。
 
 - **坐标系**：`x`/`y` 是面板左上角相对于 `.wb-panel`（`inset:0` 铺满整个宿主视口）的像素偏移，跟 pointer 事件的 `clientX`/`clientY` 直接可比，不需要额外换算——前提是 `.wb-panel` 本身相对宿主视口没有偏移，这个前提目前成立。跟 `usePanelResize.ts`/FAB 拖拽一样，所有 pointer 监听挂在 `getHostWindow()` 上而不是裸 `window`。
-- **多开叠放**：所有悬浮窗实例共享**同一个模块级递增计数器**（不是数组/Set）做"点哪个哪个到最上层"，初始值 `100010`（common.css 的 z-index 序列：`.wb-panel` 100000 / `..wb-var-popup` 200000 / `.wb-modal-overlay` 300000 / `.wb-toast` 300001）——悬浮窗盖在主面板之上，但 var-popup/modal/toast 仍能盖过悬浮窗；新加一个悬浮窗不需要去核对现有 z-index 数字，直接复用这套机制即可。
+- **多开叠放**：所有悬浮窗实例共享**同一个模块级递增计数器**（不是数组/Set）做"点哪个哪个到最上层"，初始值 `100010`（common.css 的 z-index 序列：`.wb-panel` 100000 / `.wb-var-popup` 200000 / `.wb-modal-overlay` 300000 / `.wb-toast` 300001）——悬浮窗盖在主面板之上，但 var-popup/modal/toast 仍能盖过悬浮窗；新加一个悬浮窗不需要去核对现有 z-index 数字，直接复用这套机制即可。
 - **调用方只需要**：`useFloatingPanel({...})` 的参数/返回形状与 `FloatingPanelShell.vue` 的 props（`title`/`close-title`/`width`/`height`/`min-width`/`min-height`）+ `@close` 事件，壳包办剩下的接线——`MetaPanel.vue` 就是这么接的，没有自己碰任何拖拽/resize 逻辑。

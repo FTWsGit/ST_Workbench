@@ -93,10 +93,10 @@ regex/tavern 段维护裸数组 + 影子树两份状态，靠显式 rebuild + de
 
 脏状态分两层，store 的 `dirty` 是两者的聚合 computed：
 
-- **结构性 dirty**：`composables/useDirtyFlag.ts`（各 store 里叫 `structuralDirty` + `markDirty()`），管 order 变化、item 增删重排、绑定/拆组、以及整份文档级字段（`PresetMetaForm`/`CharacterMetaForm` 这类没有对应 tab 的字段）。watch 列表（哪些 ref 触发、deep 还是 shallow）仍各 store 自己写，因为每域的浅/深 watch 选择背后是性能权衡（如 presetStore 的 `prompts` 浅监听防打字卡顿）。
+- **结构性 dirty**：`composables/useDirtyFlag.ts`（各 store 里叫 `structuralDirty` + `markDirty()`），管 order 变化、item 增删重排、绑定/拆组、以及整份文档级字段（`PresetMetaForm`/`CharacterMetaForm` 这类没有对应 tab 的字段）。preset/worldbook 的侧边栏树操作（启停/绑定/解绑/重排）会同步写回内容数组（`exportOrder`/`syncEntriesFromOrder`），per-item dirty 与结构 dirty 都会触发；折叠与增删仍靠 `watch(order, markDirty, { deep: true })` 兜底——presetStore/worldbookStore 用 `watch(order, markDirty, { deep: true })`，character 没有分组树、由增删/重排入口显式 `markDirty()`。
 - **per-item dirty**：`composables/useItemDirty.ts`（各 store 按 item 池各建一个 tracker），每个 block/entry/script/greeting 单独记一份基线快照，内容改动只打对应 id 的脏。
 
-per-item 脏的两种入口并存：**事件驱动**（block/entry/character 字段/greeting 的改动入口显式调 `markXxxDirty(id)`，如 `store.markBlockDirty(identifier)`）和**深比对**（regex/tavern 叶子脚本没有逐个 v-model 的显式打标点，靠既有 deep watch 触发时跑 `syncFromValues(pairs)` 按基线重算，对那几个编辑组件零改动）。新建 item 只 `markDirty(id)` 不设基线（保持"新建未保存"态），真删除调 `remove(id)` 清簿记；load（`applyLoaded*`）和整份保存（`doSave*`）之后对全部 tracker `resetAll` 重建基线、清 dirty。
+per-item 脏统一为 **deep watch + 深比对**：三个 store 各自 deep watch 一个数据源（preset 的 `prompts`、worldbook 的 `entries`、character 的 `character`），触发时跑 `syncFromValues(pairs)` 把每个 item 当前值与基线 JSON 字符串比较，不等则标脏——任何字段变异（编辑入口、agent 工具）都自动打标，无需逐入口显式调 mark。新建 item 无基线即判脏（保持"新建未保存"态），真删除调 `remove(id)` 清簿记；load（`applyLoaded*`）和整份保存（`doSave*`）之后对全部 tracker `resetAll` 重建基线、清 dirty。
 
 真正的能力在 **Discard**：关一个脏 tab 时，TabBar 把 tab 的 × 换成圆点，点击弹"保存/不保存/取消"（`confirmStore.askSaveDiscard`），选"不保存"只把这一个 item revert 回它自己的基线（经 `workspaceRegistry` 的 `discardTab(domain, key)` 分派到对应 store），新建未保存的 item 走"删除"分支——不碰其它还开着、还脏着的 tab，也不发网络请求。**保存分两级**：顶栏 Save 走整份 `doSave*`（成功后 `resetAll` 清全部 dirty）；block/tab 级 Save 走 `saveItem(domain, key)`（经 `workspaceRegistry.saveTab` / 各 store 的 `saveItem`）——因为 ST 没有单 item 保存接口，实现是「拿 `raw` 快照当磁盘基线 → 只把这一个 item 的当前内容覆盖上去 → 整份 save → 只 `setBaseline` 这一个 item」，新建 item（isNew）退化成整份 `doSave*`。侧边栏的 item 脏标（桌面端 `*` 替代拖拽手柄）、tab 圆点、`isXxxDirty`/`isTabDirty` 查询都读同一套 per-item tracker，给后续 agent 操作可视化留了读取点。
 

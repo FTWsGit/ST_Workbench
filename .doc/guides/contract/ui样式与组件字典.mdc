@@ -69,4 +69,4 @@ agent 侧：`AgentPanel.vue` 同支持三态，形态存 `settings.agentMode`，
 | `LONG_PRESS_MS` | 200 ms | `useListSelection.ts` 移动端触屏长按多选的延迟（`pointerType !== 'mouse'` 且落点不在 `.wb-drag-handle` 上时启动计时器） |
 | tap target | ~40px | 移动端触摸目标舒适下限：桌面 20~24px 的小图标按钮用 padding 撑大可点击区域、内容居中，视觉尺寸不变、命中区域变大 |
 | 数字拖拽 Shift 步进 | 0.1× step | 按住 Shift 精细调整时每像素位移映射为 0.1×step |
-| z-index 序列 | 100000→300001 | 唯一来源 `common.css`：`.wb-panel` 100000 / `..wb-var-popup` 200000 / `.wb-modal-overlay` 300000 / `.wb-toast` 300001；悬浮窗模块级递增计数器初始值 100010（useFloatingPanel.ts），高于 `.wb-panel` 但低于 var-popup/modal/toast |
+| z-index 序列 | 100000→300001 | 唯一来源 `common.css`：`.wb-panel` 100000 / `.wb-var-popup` 200000 / `.wb-modal-overlay` 300000 / `.wb-toast` 300001；悬浮窗模块级递增计数器初始值 100010（useFloatingPanel.ts），高于 `.wb-panel` 但低于 var-popup/modal/toast |
