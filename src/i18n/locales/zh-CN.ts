@@ -33,6 +33,8 @@ export default {
   'common.disable': '禁用',
   'common.list': '列表',
   'common.enum': '枚举',
+  'common.dontSave': '不保存',
+  'common.unsavedChanges': '未保存',
 
   // ========================================
   // shared：跨域通用组件/逻辑
@@ -76,6 +78,9 @@ export default {
   'shared.confirm.closePanel.title': '还有未保存的更改',
   'shared.confirm.closePanel.message':
     '以下工作区还有未保存的更改。关闭面板只是隐藏界面，这些更改仍留在内存里，下次打开会自动恢复——但如果之后刷新或关闭了 SillyTavern 页面，它们就会丢失，记得先保存：',
+  'shared.confirm.unsavedTab.title': '关闭标签？',
+  'shared.confirm.unsavedTab.message': '「{name}」有未保存的更改。',
+  'shared.editor.saveItem': '保存当前条目',
 
   // ---- 通用组件 ----
   'shared.settingsDock.title': '设置',

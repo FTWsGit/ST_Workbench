@@ -17,6 +17,7 @@ import { useUiStore } from './uiStore';
 import { useRegexScripts } from '../composables/useRegexScripts';
 import { useScriptTree } from '../composables/useScriptTree';
 import { useDirtyFlag } from '../composables/useDirtyFlag';
+import { useItemDirty } from '../composables/useItemDirty';
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList';
 import type { LocaleKey } from '../i18n';
 function genLocalId(prefix: string): string {
@@ -60,6 +61,9 @@ function emptyCharacter(name: string): Character {
 /** CHARACTER_FIELDS 里映射到 otherPrompts 的"文本字段"子集（description 在顶层、depthPrompt 是对象，单独处理）。 */
 type OtherPromptTextKey = Exclude<keyof Character['otherPrompts'], 'depthPrompt'>;
 
+/** 字段基线的值类型：普通文本字段是 string，depthPrompt 是整个复合对象。 */
+type FieldBaseline = string | { prompt: string; depth: number; role: 0 | 1 | 2 };
+
 /** 按 CHARACTER_FIELDS key 从 Character 取虚拟字段的值：description 读顶层，depthPrompt 读
  *  otherPrompts.depthPrompt.prompt，其余读 otherPrompts[key]。非字段 key 返回 null。 */
 function getFieldValue(char: Character, key: string): string | null {
@@ -82,6 +86,14 @@ function setFieldValue(char: Character, key: string, value: string): boolean {
   if (!CHARACTER_FIELDS.some((f) => f.key === key)) return false;
   char.otherPrompts[key as OtherPromptTextKey] = value;
   return true;
+}
+
+/** 取字段的完整基线值（depthPrompt 返回整个对象，description 读顶层，其余读 otherPrompts）。 */
+function fieldSnapshot(char: Character, key: string): FieldBaseline {
+  if (key === 'description') return char.description;
+  if (key === 'depthPrompt') return char.otherPrompts.depthPrompt;
+  if (!CHARACTER_FIELDS.some((f) => f.key === key)) return '';
+  return char.otherPrompts[key as OtherPromptTextKey];
 }
 
 /** 独立文档 store：角色卡工作区。跟 worldbook 的区别：
@@ -107,9 +119,30 @@ export const useCharacterStore = defineStore('character', () => {
    *  doSaveCharacter() 保存成功后清空。 */
   const pendingAvatarFile = ref<File | Blob | null>(null);
 
-  const { dirty, markDirty } = useDirtyFlag();
+  const { dirty: structuralDirty, markDirty } = useDirtyFlag();
+
+  const fieldDirty = useItemDirty<FieldBaseline>(); // key = CHARACTER_FIELDS key（7 个）
+  const greetingDirty = useItemDirty<string>(); // key = greetingIds 的合成 id
+  const regexDirty = useItemDirty<RegexScript>(); // key = script.id
+  const scriptDirty = useItemDirty<Script>(); // key = script.id
 
   const hasData = computed(() => character.value !== null);
+
+  const dirty = computed(
+    () =>
+      structuralDirty.value ||
+      fieldDirty.anyDirty.value ||
+      greetingDirty.anyDirty.value ||
+      regexDirty.anyDirty.value ||
+      scriptDirty.anyDirty.value
+  );
+
+  function markFieldDirty(fieldKey: string) {
+    fieldDirty.markDirty(fieldKey);
+  }
+  function markGreetingDirty(gid: string) {
+    greetingDirty.markDirty(gid);
+  }
 
   /* ====== greetings 的合成 id ====== */
   const greetingIds = ref<string[]>([]);
@@ -135,12 +168,17 @@ export const useCharacterStore = defineStore('character', () => {
     if (!tab || tab.domain !== 'character' || !character.value) return;
     const key = tab.key;
     if (key.startsWith('field:greeting:')) {
-      const idx = greetingIds.value.indexOf(key.slice('field:greeting:'.length));
-      if (idx >= 0) character.value.greetings[idx] = value;
-    } else if (!setFieldValue(character.value, key.slice('field:'.length), value)) {
-      return; // 非法字段直接忽略，避免污染对象
+      const gid = key.slice('field:greeting:'.length);
+      const idx = greetingIds.value.indexOf(gid);
+      if (idx >= 0) {
+        character.value.greetings[idx] = value;
+        greetingDirty.markDirty(gid);
+      }
+    } else {
+      const fieldKey = key.slice('field:'.length);
+      if (!setFieldValue(character.value, fieldKey, value)) return;
+      fieldDirty.markDirty(fieldKey);
     }
-    markDirty();
   }
 
   /** 工具箱 Search 的通用"跳到命中"出口：itemId 就是虚拟字段 tab key（'field:xxx' / 'field:greeting:<id>'），
@@ -234,11 +272,15 @@ export const useCharacterStore = defineStore('character', () => {
    *  （computed getter 返回同一数组引用）——不 rebuild 则 sidebar 不显示新建项/删后 stale。 */
   function addRegexScript(): string | null {
     const id = addRegexScriptRaw();
-    if (id) rebuildRegexOrder();
+    if (id) {
+      rebuildRegexOrder();
+      regexDirty.markDirty(id);
+    }
     return id;
   }
   function deleteRegexScript(id: string) {
     deleteRegexScriptRaw(id);
+    regexDirty.remove(id);
     rebuildRegexOrder();
   }
 
@@ -363,11 +405,17 @@ export const useCharacterStore = defineStore('character', () => {
 
   /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）——
    *  浅 watch([regexs], ...) 只追踪 computed 重新求值，push/splice/改字段都不触发。 */
-  watch(regexs, () => rebuildRegexOrder(), {
-    deep: true,
-    immediate: true,
-  });
-  watch(regexOrder, markDirty, { deep: true });
+  watch(
+    regexs,
+    () => {
+      rebuildRegexOrder();
+      regexDirty.syncFromValues(regexs.value.map((s): [string, RegexScript] => [s.id, s]));
+    },
+    {
+      deep: true,
+      immediate: true,
+    }
+  );
 
   /* ====== Bound Tavern Helper（照 regex 段模式，宿主换成 character）====== */
   const scripts = computed<Script[]>(() => character.value?.scripts ?? []);
@@ -413,11 +461,15 @@ export const useCharacterStore = defineStore('character', () => {
    *  不 rebuild 则 sidebar 不显示新建项/删后 stale。 */
   function addScriptTree(): string | null {
     const id = addScriptTreeRaw();
-    if (id) rebuildScriptTreeOrder();
+    if (id) {
+      rebuildScriptTreeOrder();
+      scriptDirty.markDirty(id);
+    }
     return id;
   }
   function deleteScriptTree(id: string) {
     deleteScriptTreeRaw(id);
+    scriptDirty.remove(id);
     rebuildScriptTreeOrder();
   }
 
@@ -542,8 +594,14 @@ export const useCharacterStore = defineStore('character', () => {
 
   /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）——
    *  浅 watch 永不触发原地变异（数组引用没变，只是内部 push/splice/改字段）。 */
-  watch(scripts, () => rebuildScriptTreeOrder(), { deep: true, immediate: true });
-  watch(scriptTreeOrder, markDirty, { deep: true });
+  watch(
+    scripts,
+    () => {
+      rebuildScriptTreeOrder();
+      scriptDirty.syncFromValues(scripts.value.map((s): [string, Script] => [s.id, s]));
+    },
+    { deep: true, immediate: true }
+  );
 
   /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import characterStore ======
    *  regex/tavern 是 host-dependent domain，character 域把自己的数据切片暴露给 tabsStore。
@@ -552,11 +610,19 @@ export const useCharacterStore = defineStore('character', () => {
     scripts: () => regexs.value,
     workspace: 'character',
     t: (key, params) => uiStore.t(key as LocaleKey, params),
+    isDirty: (id) => regexDirty.isDirty(id),
+    saveItem: (id) => {
+      saveItem('regex', id);
+    },
   });
   tabsStore.registerDomainAdapter('tavern', 'character', {
     scripts: () => scripts.value,
     workspace: 'character',
     t: (key, params) => uiStore.t(key as LocaleKey, params),
+    isDirty: (id) => scriptDirty.isDirty(id),
+    saveItem: (id) => {
+      saveItem('tavern', id);
+    },
   });
 
   /* ====== Greetings：增删拖拽 ====== */
@@ -568,6 +634,7 @@ export const useCharacterStore = defineStore('character', () => {
     character.value.greetings.push('');
     const id = genGreetingId();
     greetingIds.value.push(id);
+    greetingDirty.markDirty(id);
     markDirty();
     tabsStore.open({
       domain: 'character',
@@ -594,6 +661,7 @@ export const useCharacterStore = defineStore('character', () => {
       onConfirm: () => {
         character.value!.greetings.splice(idx, 1);
         greetingIds.value.splice(idx, 1);
+        greetingDirty.remove(id);
         tabsStore.close('character', 'field:greeting:' + id);
         markDirty();
         showToast(t('character.toast.greetingDeleted'));
@@ -621,7 +689,15 @@ export const useCharacterStore = defineStore('character', () => {
     tabsStore.closeWorkspace('character');
     rebuildScriptTreeOrder(); // load 后立即重建树，避免 sidebar 先渲染旧树
     nextTick(() => {
-      dirty.value = false;
+      structuralDirty.value = false;
+      fieldDirty.resetAll(
+        CHARACTER_FIELDS.map((f): [string, FieldBaseline] => [f.key, fieldSnapshot(c, f.key)])
+      );
+      greetingDirty.resetAll(
+        greetingIds.value.map((gid, i): [string, string] => [gid, c.greetings[i] ?? ''])
+      );
+      regexDirty.resetAll(c.regexs.map((s): [string, RegexScript] => [s.id, s]));
+      scriptDirty.resetAll(c.scripts.map((s): [string, Script] => [s.id, s]));
     });
   }
 
@@ -769,12 +845,172 @@ export const useCharacterStore = defineStore('character', () => {
       }
       pendingAvatarFile.value = null;
       refreshCharacterList();
-      dirty.value = false;
+      structuralDirty.value = false;
+      if (character.value) {
+        fieldDirty.resetAll(
+          CHARACTER_FIELDS.map((f): [string, FieldBaseline] => [
+            f.key,
+            fieldSnapshot(character.value!, f.key),
+          ])
+        );
+        greetingDirty.resetAll(
+          greetingIds.value.map((gid, i): [string, string] => [
+            gid,
+            character.value!.greetings[i] ?? '',
+          ])
+        );
+        regexDirty.resetAll(character.value.regexs.map((s): [string, RegexScript] => [s.id, s]));
+        scriptDirty.resetAll(character.value.scripts.map((s): [string, Script] => [s.id, s]));
+      }
       showToast(t('character.toast.saved', { name: character.value?.name || avatar }));
     } catch (e: unknown) {
       showToast(
         t('character.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) })
       );
+    }
+  }
+
+  /** 单字段/单条问候语/单条脚本粒度的保存：以 oldRaw 为基线，只覆盖目标 item 一项后 edit，
+   *  再重读刷新 oldRaw 并重设该 item 基线。新建项（isNew）回退到 doSaveCharacter 全量保存。 */
+  async function saveItem(domain: string, key: string) {
+    if (!character.value || !oldRaw.value) {
+      showToast(t('character.toast.noDataToSave'));
+      return;
+    }
+    const disk = CH.fromRaw(oldRaw.value as Record<string, unknown>);
+    let target: Character;
+    if (domain === 'character') {
+      if (key.startsWith('field:greeting:')) {
+        const gid = key.slice('field:greeting:'.length);
+        const idx = greetingIds.value.indexOf(gid);
+        if (idx < 0) return;
+        if (greetingDirty.isNew(gid)) {
+          await doSaveCharacter();
+          return;
+        }
+        target = {
+          ...disk,
+          greetings: disk.greetings.map((g, i) =>
+            i === idx ? character.value!.greetings[idx] : g
+          ),
+        };
+      } else {
+        const fieldKey = key.slice('field:'.length);
+        target = { ...disk };
+        const snapshot = fieldSnapshot(character.value, fieldKey);
+        if (fieldKey === 'description') {
+          target.description = snapshot as string;
+        } else if (fieldKey === 'depthPrompt') {
+          target.otherPrompts.depthPrompt = snapshot as Character['otherPrompts']['depthPrompt'];
+        } else if (CHARACTER_FIELDS.some((f) => f.key === fieldKey)) {
+          target.otherPrompts[fieldKey as OtherPromptTextKey] = snapshot as string;
+        } else {
+          return;
+        }
+      }
+    } else if (domain === 'regex') {
+      const cur = regexs.value.find((s) => s.id === key);
+      if (!cur) return;
+      if (regexDirty.isNew(key)) {
+        await doSaveCharacter();
+        return;
+      }
+      target = { ...disk, regexs: disk.regexs.map((s) => (s.id === key ? cur : s)) };
+    } else if (domain === 'tavern') {
+      const cur = scripts.value.find((s) => s.id === key);
+      if (!cur) return;
+      if (scriptDirty.isNew(key)) {
+        await doSaveCharacter();
+        return;
+      }
+      target = { ...disk, scripts: disk.scripts.map((s) => (s.id === key ? cur : s)) };
+    } else {
+      return;
+    }
+    try {
+      await CH.editCharacter(target, oldRaw.value);
+      const latest = await CH.getCharacterByAvatar(character.value.avatar);
+      if (latest) oldRaw.value = latest.raw;
+      if (domain === 'character') {
+        if (key.startsWith('field:greeting:')) {
+          const gid = key.slice('field:greeting:'.length);
+          const idx = greetingIds.value.indexOf(gid);
+          if (idx >= 0) greetingDirty.setBaseline(gid, character.value.greetings[idx]);
+        } else {
+          const fieldKey = key.slice('field:'.length);
+          fieldDirty.setBaseline(fieldKey, fieldSnapshot(character.value, fieldKey));
+        }
+      } else if (domain === 'regex') {
+        const s = regexs.value.find((x) => x.id === key);
+        if (s) regexDirty.setBaseline(key, s);
+      } else {
+        const s = scripts.value.find((x) => x.id === key);
+        if (s) scriptDirty.setBaseline(key, s);
+      }
+      refreshCharacterList();
+      showToast(
+        t('character.toast.saved', { name: character.value?.name || character.value?.avatar })
+      );
+    } catch (e) {
+      showToast(
+        t('character.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) })
+      );
+    }
+  }
+
+  function isTabDirty(domain: string, key: string): boolean {
+    if (domain === 'character') {
+      if (key.startsWith('field:greeting:'))
+        return greetingDirty.isDirty(key.slice('field:greeting:'.length));
+      return fieldDirty.isDirty(key.slice('field:'.length));
+    }
+    if (domain === 'regex') return regexDirty.isDirty(key);
+    if (domain === 'tavern') return scriptDirty.isDirty(key);
+    return false;
+  }
+  function discardTab(domain: string, key: string): void {
+    if (domain === 'character') {
+      if (key.startsWith('field:greeting:')) {
+        const gid = key.slice('field:greeting:'.length);
+        const baseline = greetingDirty.discard(gid);
+        const idx = greetingIds.value.indexOf(gid);
+        if (baseline === undefined) {
+          if (character.value && idx >= 0 && character.value.greetings.length > 1) {
+            character.value.greetings.splice(idx, 1);
+            greetingIds.value.splice(idx, 1);
+          }
+        } else if (character.value && idx >= 0) {
+          character.value.greetings[idx] = baseline;
+        }
+      } else {
+        const fieldKey = key.slice('field:'.length);
+        const baseline = fieldDirty.discard(fieldKey);
+        if (character.value && baseline !== undefined) {
+          if (fieldKey === 'depthPrompt' && typeof baseline === 'object') {
+            character.value.otherPrompts.depthPrompt = baseline;
+          } else if (typeof baseline === 'string') {
+            setFieldValue(character.value, fieldKey, baseline);
+          }
+        }
+      }
+    } else if (domain === 'regex') {
+      const baseline = regexDirty.discard(key);
+      const i = regexs.value.findIndex((s) => s.id === key);
+      if (baseline === undefined) {
+        if (i >= 0) character.value?.regexs.splice(i, 1);
+      } else if (i >= 0) {
+        character.value?.regexs.splice(i, 1, baseline);
+      }
+      rebuildRegexOrder();
+    } else if (domain === 'tavern') {
+      const baseline = scriptDirty.discard(key);
+      const i = scripts.value.findIndex((s) => s.id === key);
+      if (baseline === undefined) {
+        if (i >= 0) character.value?.scripts.splice(i, 1);
+      } else if (i >= 0) {
+        character.value?.scripts.splice(i, 1, baseline);
+      }
+      rebuildScriptTreeOrder();
     }
   }
 
@@ -789,6 +1025,10 @@ export const useCharacterStore = defineStore('character', () => {
     hasData,
     currentField,
     setCurrentFieldValue,
+    markFieldDirty,
+    markGreetingDirty,
+    isTabDirty,
+    discardTab,
     jumpToFieldHit,
     greetingIds,
     addGreeting,
@@ -843,5 +1083,6 @@ export const useCharacterStore = defineStore('character', () => {
     createNewCharacter,
     removeCurrentCharacter,
     doSaveCharacter,
+    saveItem,
   };
 });

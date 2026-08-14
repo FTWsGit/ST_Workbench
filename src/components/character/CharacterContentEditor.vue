@@ -2,6 +2,15 @@
   <div class="wb-editor-panel wb-regex-editor" v-if="field">
     <div class="wb-editor-meta">
       <span class="wb-regex-editor-name">{{ fieldLabel }}</span>
+      <span class="wb-spacer"></span>
+      <button
+        v-if="field && store.isTabDirty('character', field.key)"
+        class="wb-btn sm accent"
+        :title="uiStore.t('shared.editor.saveItem')"
+        @click="store.saveItem('character', field.key)"
+      >
+        <Icon name="save" /> {{ uiStore.t('common.save') }}
+      </button>
     </div>
     <!-- depthPrompt（角色备注）独有 depth/role 两个数值/枚举字段，角色卡未接 SettingsDock，在此 meta 栏单独承载。 -->
     <div v-if="isDepthPrompt" class="wb-editor-meta">
@@ -39,6 +48,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { CHARACTER_FIELDS, CHARACTER_DEPTH_ROLE_OPTIONS } from '../../types';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
+import Icon from '../shared/Icon.vue';
 
 const store = useCharacterStore();
 const uiStore = useUiStore();
@@ -70,7 +80,7 @@ const depthPromptDepth = computed<number>({
   set: (v) => {
     if (store.character) {
       store.character.otherPrompts.depthPrompt.depth = v;
-      store.markDirty();
+      store.markFieldDirty('depthPrompt');
     }
   },
 });
@@ -79,7 +89,7 @@ const depthPromptRole = computed<0 | 1 | 2>({
   set: (v) => {
     if (store.character) {
       store.character.otherPrompts.depthPrompt.role = v;
-      store.markDirty();
+      store.markFieldDirty('depthPrompt');
     }
   },
 });

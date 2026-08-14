@@ -45,13 +45,13 @@ const tabsStore = useTabsStore();
 function onNameInput(e: Event) {
   if (!store.currentBlock) return;
   store.currentBlock.name = (e.target as HTMLInputElement).value;
-  store.markDirty();
+  store.markBlockDirty(store.currentBlock.identifier);
 }
 function onRoleChange(e: Event) {
   if (!store.currentBlock) return;
   store.currentBlock.role = (e.target as HTMLSelectElement).value as
     'system' | 'user' | 'assistant';
-  store.markDirty();
+  store.markBlockDirty(store.currentBlock.identifier);
 }
 
 /** block 改名时同步标签栏文字；用 renameTab() 而非 open()，避免逐字触发侧边栏 scrollIntoView。 */

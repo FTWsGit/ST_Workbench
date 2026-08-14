@@ -16,6 +16,8 @@ export interface TavernTrioProps {
 export interface TavernContentEditorProps extends TavernTrioProps {
   editorFontSize: number;
   editorFontFamily: string;
+  isDirty: (id: string) => boolean;
+  onSave: (id: string) => void;
 }
 
 export type TavernSettingsFormProps = TavernTrioProps;

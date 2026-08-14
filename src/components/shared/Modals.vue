@@ -164,6 +164,34 @@
     </div>
   </div>
 
+  <!-- 通用三态确认框（confirmStore）：关闭脏 tab 时"保存 / 不保存 / 取消"。 -->
+  <div
+    v-if="confirmStore.saveDiscardOpen"
+    class="wb-modal-overlay"
+    @click.self="confirmStore.cancelSaveDiscard()"
+  >
+    <div class="wb-modal sm">
+      <h3>{{ confirmStore.saveDiscardTitle }}</h3>
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <p class="wb-confirm-text" v-html="confirmStore.saveDiscardMessage"></p>
+      <div class="wb-modal-footer">
+        <button class="wb-btn" @click="confirmStore.cancelSaveDiscard()">
+          {{ confirmStore.saveDiscardCancelText }}
+        </button>
+        <button
+          class="wb-btn accent"
+          :class="{ 'wb-confirm-danger': true }"
+          @click="confirmStore.confirmSaveDiscardDiscard()"
+        >
+          {{ confirmStore.saveDiscardDiscardText }}
+        </button>
+        <button class="wb-btn accent" @click="confirmStore.confirmSaveDiscardSave()">
+          {{ confirmStore.saveDiscardSaveText }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="wb-toast" :class="{ show: uiStore.toastVisible }">
     {{ uiStore.toastMsg }}

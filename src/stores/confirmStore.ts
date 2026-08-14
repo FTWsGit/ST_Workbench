@@ -52,6 +52,17 @@ export interface PromptOptions {
   onConfirm: (value: string) => void;
 }
 
+export interface SaveDiscardOptions {
+  title: string;
+  message: string; // 允许简单 HTML，调用方自己转义插入的用户数据
+  saveText?: string; // 默认 'OK'（调用方传 common.save 之类）
+  discardText?: string; // 默认 'OK'
+  cancelText?: string; // 默认 'Cancel'
+  onSave: () => void;
+  onDiscard: () => void;
+  onCancel?: () => void;
+}
+
 export const useConfirmStore = defineStore('confirm', () => {
   /* ====== Confirm ====== */
   const open = ref(false);
@@ -161,6 +172,54 @@ export const useConfirmStore = defineStore('confirm', () => {
     cb?.();
   }
 
+  /* ====== Save / Discard / Cancel（三态确认，关闭脏 tab 时用）====== */
+  const saveDiscardOpen = ref(false);
+  const saveDiscardTitle = ref('');
+  const saveDiscardMessage = ref('');
+  const saveDiscardSaveText = ref('OK');
+  const saveDiscardDiscardText = ref('OK');
+  const saveDiscardCancelText = ref('Cancel');
+  let onSaveDiscardSaveCb: (() => void) | null = null;
+  let onSaveDiscardDiscardCb: (() => void) | null = null;
+  let onSaveDiscardCancelCb: (() => void) | null = null;
+
+  function askSaveDiscard(opts: SaveDiscardOptions) {
+    ifAnyOpenCancel();
+    saveDiscardTitle.value = opts.title;
+    saveDiscardMessage.value = opts.message;
+    saveDiscardSaveText.value = opts.saveText ?? 'OK';
+    saveDiscardDiscardText.value = opts.discardText ?? 'OK';
+    saveDiscardCancelText.value = opts.cancelText ?? 'Cancel';
+    onSaveDiscardSaveCb = opts.onSave;
+    onSaveDiscardDiscardCb = opts.onDiscard;
+    onSaveDiscardCancelCb = opts.onCancel ?? null;
+    saveDiscardOpen.value = true;
+  }
+  function confirmSaveDiscardSave() {
+    saveDiscardOpen.value = false;
+    const cb = onSaveDiscardSaveCb;
+    onSaveDiscardSaveCb = null;
+    onSaveDiscardDiscardCb = null;
+    onSaveDiscardCancelCb = null;
+    cb?.();
+  }
+  function confirmSaveDiscardDiscard() {
+    saveDiscardOpen.value = false;
+    const cb = onSaveDiscardDiscardCb;
+    onSaveDiscardSaveCb = null;
+    onSaveDiscardDiscardCb = null;
+    onSaveDiscardCancelCb = null;
+    cb?.();
+  }
+  function cancelSaveDiscard() {
+    saveDiscardOpen.value = false;
+    const cb = onSaveDiscardCancelCb;
+    onSaveDiscardSaveCb = null;
+    onSaveDiscardDiscardCb = null;
+    onSaveDiscardCancelCb = null;
+    cb?.();
+  }
+
   /**
    * 并发闸门：任一 flow 已 open 时，强制 cancel 当前 flow（触发其 onCancel 让调用方回退 UI 状态），
    * 再让新进入的 ask/askInput/askMulti 开自己。三个 flow 的 cancel 都会清回自己的 open 标记，
@@ -173,6 +232,8 @@ export const useConfirmStore = defineStore('confirm', () => {
       cancelPrompt();
     } else if (multiOpen.value) {
       cancelMulti();
+    } else if (saveDiscardOpen.value) {
+      cancelSaveDiscard();
     }
   }
 
@@ -206,5 +267,15 @@ export const useConfirmStore = defineStore('confirm', () => {
     askMulti,
     confirmMulti,
     cancelMulti,
+    saveDiscardOpen,
+    saveDiscardTitle,
+    saveDiscardMessage,
+    saveDiscardSaveText,
+    saveDiscardDiscardText,
+    saveDiscardCancelText,
+    askSaveDiscard,
+    confirmSaveDiscardSave,
+    confirmSaveDiscardDiscard,
+    cancelSaveDiscard,
   };
 });

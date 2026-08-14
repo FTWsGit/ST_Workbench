@@ -274,7 +274,13 @@ describe('tabsStore', () => {
   describe('registerDomainAdapter / getDomainAdapter', () => {
     it('按 domain:workspace 存取', () => {
       const s = useTabsStore();
-      const adapter = { scripts: () => [], workspace: 'preset' as const, t: () => '' };
+      const adapter = {
+        scripts: () => [],
+        workspace: 'preset' as const,
+        t: () => '',
+        isDirty: () => false,
+        saveItem: () => {},
+      };
       s.registerDomainAdapter('regex', 'preset', adapter);
       const got = s.getDomainAdapter('regex', 'preset');
       expect(got).toBeDefined();

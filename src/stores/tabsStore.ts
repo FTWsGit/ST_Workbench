@@ -30,6 +30,10 @@ export interface DomainAdapter {
   scripts: () => unknown[];
   workspace: Workspace;
   t: (key: LocaleKey, params?: Record<string, string | number>) => string;
+  /** 当前工作区某个脚本 id 是否脏（供 regex/tavern content editor 的保存按钮）。 */
+  isDirty: (id: string) => boolean;
+  /** 保存当前工作区里某个脚本（id）——per-item save；ST 无局部保存接口，内部做基线+覆盖。 */
+  saveItem: (id: string) => void;
 }
 
 export const useTabsStore = defineStore('tabs', () => {

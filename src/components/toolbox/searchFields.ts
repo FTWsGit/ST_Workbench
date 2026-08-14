@@ -284,7 +284,7 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
       };
     }
     return {
-      items: toSearchItems(store.prompts),
+      items: toSearchItems(store.prompts.filter((b) => !b.hidden)),
       fields: PRESET_ITEM_FIELDS,
       getItemMeta: (b) => ({ id: b.identifier, name: b.name || b.identifier }),
     };

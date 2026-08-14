@@ -78,6 +78,8 @@ const editorProps = computed<Record<string, unknown>>(() => {
       t: adapter.t,
       'editor-font-size': uiStore.settings.editorFontSize,
       'editor-font-family': uiStore.settings.editorFontFamily,
+      isDirty: adapter.isDirty,
+      onSave: adapter.saveItem,
     };
   }
   return {};

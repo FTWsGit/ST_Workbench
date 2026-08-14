@@ -14,6 +14,9 @@ const presetStub = {
   doSavePreset: vi.fn(),
   createPreset: vi.fn(),
   removeCurrentPreset: vi.fn(),
+  isTabDirty: vi.fn(),
+  discardTab: vi.fn(),
+  saveItem: vi.fn(),
 };
 const worldbookStub = {
   worldbookName: 'MyWB',
@@ -23,6 +26,9 @@ const worldbookStub = {
   doSaveWorldbook: vi.fn(),
   createNewWorldbook: vi.fn(),
   removeCurrentWorldbook: vi.fn(),
+  isTabDirty: vi.fn(),
+  discardTab: vi.fn(),
+  saveItem: vi.fn(),
 };
 const characterStub = {
   character: { avatar: 'a.png', name: 'Hero' },
@@ -36,6 +42,9 @@ const characterStub = {
   doSaveCharacter: vi.fn(),
   createNewCharacter: vi.fn(),
   removeCurrentCharacter: vi.fn(),
+  isTabDirty: vi.fn(),
+  discardTab: vi.fn(),
+  saveItem: vi.fn(),
 };
 
 vi.mock('../stores/presetStore', () => ({
@@ -102,6 +111,20 @@ describe('workspaceRegistry - createWorkspaceRegistry', () => {
         messageKey: 'preset.confirm.newPreset.message',
       });
     });
+
+    it('isTabDirty / discardTab 转接', () => {
+      const r = createWorkspaceRegistry();
+      r.preset.isTabDirty('preset', 'blockId');
+      expect(presetStub.isTabDirty).toHaveBeenCalledWith('preset', 'blockId');
+      r.preset.discardTab('regex', 'scriptId');
+      expect(presetStub.discardTab).toHaveBeenCalledWith('regex', 'scriptId');
+    });
+
+    it('saveTab 转接 saveItem', () => {
+      const r = createWorkspaceRegistry();
+      r.preset.saveTab('regex', 'scriptId');
+      expect(presetStub.saveItem).toHaveBeenCalledWith('regex', 'scriptId');
+    });
   });
 
   describe('worldbook adapter', () => {
@@ -134,6 +157,20 @@ describe('workspaceRegistry - createWorkspaceRegistry', () => {
       expect(r.worldbook.confirmCreateIfDirty).toEqual({
         messageKey: 'worldbook.confirm.newWorldbook.message',
       });
+    });
+
+    it('isTabDirty / discardTab 转接', () => {
+      const r = createWorkspaceRegistry();
+      r.worldbook.isTabDirty('worldbook', 'entryId');
+      expect(worldbookStub.isTabDirty).toHaveBeenCalledWith('worldbook', 'entryId');
+      r.worldbook.discardTab('worldbook', 'entryId');
+      expect(worldbookStub.discardTab).toHaveBeenCalledWith('worldbook', 'entryId');
+    });
+
+    it('saveTab 转接 saveItem', () => {
+      const r = createWorkspaceRegistry();
+      r.worldbook.saveTab('worldbook', 'entryId');
+      expect(worldbookStub.saveItem).toHaveBeenCalledWith('worldbook', 'entryId');
     });
   });
 
@@ -174,6 +211,20 @@ describe('workspaceRegistry - createWorkspaceRegistry', () => {
       expect(r.character.confirmCreateIfDirty).toEqual({
         messageKey: 'character.confirm.newCharacter.message',
       });
+    });
+
+    it('isTabDirty / discardTab 转接', () => {
+      const r = createWorkspaceRegistry();
+      r.character.isTabDirty('tavern', 'scriptId');
+      expect(characterStub.isTabDirty).toHaveBeenCalledWith('tavern', 'scriptId');
+      r.character.discardTab('regex', 'scriptId');
+      expect(characterStub.discardTab).toHaveBeenCalledWith('regex', 'scriptId');
+    });
+
+    it('saveTab 转接 saveItem', () => {
+      const r = createWorkspaceRegistry();
+      r.character.saveTab('tavern', 'scriptId');
+      expect(characterStub.saveItem).toHaveBeenCalledWith('tavern', 'scriptId');
     });
   });
 

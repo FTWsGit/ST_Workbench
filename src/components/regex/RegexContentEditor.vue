@@ -3,6 +3,14 @@
     <div class="wb-editor-meta">
       <span class="wb-regex-editor-name">{{ script.scriptName || props.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
+      <button
+        v-if="script && props.isDirty(script.id)"
+        class="wb-btn sm accent"
+        :title="props.t('shared.editor.saveItem')"
+        @click="props.onSave(script.id)"
+      >
+        <Icon name="save" /> {{ props.t('common.save') }}
+      </button>
       <button class="wb-btn sm" :class="{ active: mode === 'edit' }" @click="mode = 'edit'">
         <Icon name="edit" /> {{ props.t('regex.editor.edit') }}
       </button>

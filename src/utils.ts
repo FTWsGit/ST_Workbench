@@ -49,9 +49,9 @@ export interface OrderedBlockEntry {
 }
 
 /** 把预设的 prompts 数组按视觉顺序返回（干净层 prompts 数组顺序 = 视觉顺序，enabled 已烘入）。
- *  干净层没有「hidden block」概念（隐藏块由 store 单独持有、不进 Preset.prompts），hidden 恒 false。 */
+ *  隐藏块现在也在 Preset.prompts 里（hidden 字段标记），由调用方决定要不要过滤。 */
 export function orderedPromptsWithHidden(data: Preset): OrderedBlockEntry[] {
-  return data.prompts.map((block) => ({ block, hidden: false }));
+  return data.prompts.map((block) => ({ block, hidden: !!block.hidden }));
 }
 
 export function debounce<T extends (...a: never[]) => void>(fn: T, ms: number): T {

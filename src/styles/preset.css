@@ -107,6 +107,15 @@
 .wb-drag-handle:active {
   cursor: grabbing;
 }
+.wb-item-dirty-mark {
+  color: var(--wb-ac);
+  font-size: var(--wb-fs-2);
+  font-weight: var(--wb-fw-b);
+  line-height: 1;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
 .wb-toggle-sw {
   width: 28px;
   height: 14px;

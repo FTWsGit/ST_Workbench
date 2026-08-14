@@ -12,6 +12,14 @@
       >
       <span class="wb-spacer"></span>
       <button
+        v-if="store.currentBlock && store.isBlockDirty(store.currentBlock.identifier)"
+        class="wb-btn sm accent"
+        :title="uiStore.t('shared.editor.saveItem')"
+        @click="store.saveItem('preset', store.currentBlock.identifier)"
+      >
+        <Icon name="save" /> {{ uiStore.t('common.save') }}
+      </button>
+      <button
         class="wb-btn sm"
         :class="{ active: uiStore.settingsDockOpen }"
         @click="uiStore.toggleSettingsDock()"
@@ -55,7 +63,7 @@ const content = computed<string>({
   set: (v) => {
     if (store.currentBlock) {
       store.currentBlock.content = v;
-      store.markDirty();
+      store.markBlockDirty(store.currentBlock.identifier);
     }
   },
 });

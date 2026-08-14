@@ -4,6 +4,14 @@
       <span class="wb-regex-editor-name">{{ entry.name || uiStore.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
       <button
+        v-if="entry && store.isEntryDirty(String(entry.uid))"
+        class="wb-btn sm accent"
+        :title="uiStore.t('shared.editor.saveItem')"
+        @click="store.saveItem('worldbook', String(entry.uid))"
+      >
+        <Icon name="save" /> {{ uiStore.t('common.save') }}
+      </button>
+      <button
         class="wb-btn sm"
         :class="{ active: uiStore.settingsDockOpen }"
         @click="uiStore.toggleSettingsDock()"
@@ -50,7 +58,7 @@ const contentModel = computed<string>({
   set: (v) => {
     if (entry.value) {
       entry.value.content = v;
-      store.markDirty();
+      store.markEntryDirty(String(entry.value.uid));
     }
   },
 });

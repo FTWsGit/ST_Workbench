@@ -19,6 +19,7 @@ import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupe
 import { useRegexScripts } from '../composables/useRegexScripts';
 import { useScriptTree } from '../composables/useScriptTree';
 import { useDirtyFlag } from '../composables/useDirtyFlag';
+import { useItemDirty } from '../composables/useItemDirty';
 import { useTabsStore } from './tabsStore';
 import { useConfirmStore } from './confirmStore';
 import { useCharacterStore } from './characterStore';
@@ -62,7 +63,6 @@ export const usePresetStore = defineStore('main', () => {
   const regexs = ref<RegexScript[]>([]);
   const scripts = ref<Script[]>([]);
   const order = ref<OrderNode[]>([]);
-  const hiddenBlocks = ref<PromptBlock[]>([]);
   const presetName = ref('');
   const presetList = ref<PresetListEntry[]>([]);
 
@@ -146,7 +146,11 @@ export const usePresetStore = defineStore('main', () => {
   /* ====== Dirty flag ====== useDirtyFlag() 在 setup 最早期调用——regex/tavern 段的 useRegexScripts/useScriptTree
    *  要把 markDirty 传进 options，必须在它们声明前解构出 markDirty。watch 列表（哪些 ref 触发脏、deep 还是
    *  shallow）仍由各域自己写在下面，因为每域的浅/深 watch 选择背后是性能权衡注释（如 prompts 浅 watch 防打字卡顿）。 */
-  const { dirty, markDirty } = useDirtyFlag();
+  const { dirty: structuralDirty, markDirty } = useDirtyFlag();
+
+  const blockDirty = useItemDirty<PromptBlock>(); // key = identifier
+  const regexDirty = useItemDirty<RegexScript>(); // key = script.id
+  const scriptDirty = useItemDirty<Script>(); // key = script.id
 
   /* ====== Bound Regex Scripts（干净层 regexs ref） ====== */
   function getRegexScripts(): RegexScript[] | null {
@@ -195,12 +199,16 @@ export const usePresetStore = defineStore('main', () => {
   /** add/delete 后显式 rebuild 树：useRegexScripts 改裸数组，watch 不触发原地变异。 */
   function addRegexScript(): string | null {
     const id = addRegexScriptRaw();
-    if (id) rebuildRegexOrder();
+    if (id) {
+      rebuildRegexOrder();
+      regexDirty.markDirty(id);
+    }
     return id;
   }
   function deleteRegexScript(id: string) {
     deleteRegexScriptRaw(id);
     rebuildRegexOrder();
+    regexDirty.remove(id);
   }
 
   /** regex 单条开关包装：toggle 改树后 sync 回 regexs 的 script.enabled（修双状态镜像 seam——
@@ -376,12 +384,16 @@ export const usePresetStore = defineStore('main', () => {
   /** add/delete 后显式 rebuild 树：同 regex 段修法。 */
   function addScriptTree(): string | null {
     const id = addScriptTreeRaw();
-    if (id) rebuildScriptTreeOrder();
+    if (id) {
+      rebuildScriptTreeOrder();
+      scriptDirty.markDirty(id);
+    }
     return id;
   }
   function deleteScriptTree(id: string) {
     deleteScriptTreeRaw(id);
     rebuildScriptTreeOrder();
+    scriptDirty.remove(id);
   }
 
   /** tavern 单条开关包装：toggle 改树后 sync 回 scripts 的 script.enabled。 */
@@ -505,10 +517,14 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   /** deep watch 监听数组元素字段变异（settings 表单改 script.enabled 后 sidebar 联动）。 */
-  watch(scripts, () => rebuildScriptTreeOrder(), {
-    deep: true,
-    immediate: true,
-  });
+  watch(
+    scripts,
+    () => {
+      rebuildScriptTreeOrder();
+      scriptDirty.syncFromValues(scripts.value.map((s): [string, Script] => [s.id, s]));
+    },
+    { deep: true, immediate: true }
+  );
 
   /* ====== 适配器注册：让路由容器（EditorShell/SettingsDock）拿数据时不直接 import presetStore ======
    *  regex/tavern 是 host-dependent domain，数据切片由 host store 暴露。scripts 用 getter 函数：
@@ -517,11 +533,19 @@ export const usePresetStore = defineStore('main', () => {
     scripts: () => regexs.value,
     workspace: 'preset',
     t: (key, params) => uiStore.t(key, params),
+    isDirty: (id) => regexDirty.isDirty(id),
+    saveItem: (id) => {
+      saveItem('regex', id);
+    },
   });
   tabsStore.registerDomainAdapter('tavern', 'preset', {
     scripts: () => scripts.value,
     workspace: 'preset',
     t: (key, params) => uiStore.t(key, params),
+    isDirty: (id) => scriptDirty.isDirty(id),
+    saveItem: (id) => {
+      saveItem('tavern', id);
+    },
   });
 
   /* ====== 脏标记（驱动 header Save 按钮上的 `*`） ======
@@ -534,10 +558,15 @@ export const usePresetStore = defineStore('main', () => {
    *   PresetSidebar.vue 的 inline rename commit。
    * 加载新预设时对 prompts/order 的赋值看起来像"变更"会触发 watch 标脏——applyLoadedPreset()
    *   在 nextTick 里清回 false（Vue 在该 nextTick 回调前 flush 掉这次赋值排入的 watcher）。 */
-  watch([order, regexs], markDirty, { deep: true });
+  watch(order, markDirty, { deep: true });
+  watch(
+    regexs,
+    () => {
+      regexDirty.syncFromValues(regexs.value.map((s): [string, RegexScript] => [s.id, s]));
+    },
+    { deep: true }
+  );
   watch(prompts, markDirty);
-  watch(regexOrder, markDirty, { deep: true });
-  watch(scriptTreeOrder, markDirty, { deep: true });
 
   /* ====== Modals ====== */
   const hiddenOpen = ref(false);
@@ -555,7 +584,7 @@ export const usePresetStore = defineStore('main', () => {
   const currentBlock = computed<PromptBlock | null>(() => {
     const tab = tabsStore.activeTab;
     if (!tab || tab.domain !== 'preset') return null;
-    return prompts.value.find((p) => p.identifier === tab.key) ?? null;
+    return prompts.value.find((p) => p.identifier === tab.key && !p.hidden) ?? null;
   });
 
   const hasData = computed(() => rawData.value !== null);
@@ -568,6 +597,7 @@ export const usePresetStore = defineStore('main', () => {
 
   /** 从干净的 prompts 数组重建 order 分组树——读每条 PromptBlock 的 enabled + _gid 等分组字段。 */
   function importOrderWithGroups(blocks: PromptBlock[]): OrderNode[] {
+    blocks = blocks.filter((b) => !b.hidden);
     const groups = new Map<
       string,
       {
@@ -645,6 +675,10 @@ export const usePresetStore = defineStore('main', () => {
         reordered.push(b);
       }
     });
+    // 隐藏块不在 order 树里，原样追加到末尾，避免丢数据
+    for (const b of prompts.value) {
+      if (b.hidden && !reordered.some((r) => r.identifier === b.identifier)) reordered.push(b);
+    }
     prompts.value = reordered;
   }
 
@@ -654,7 +688,6 @@ export const usePresetStore = defineStore('main', () => {
     prompts.value = preset.prompts;
     regexs.value = preset.regexs;
     scripts.value = preset.scripts;
-    hiddenBlocks.value = PS.extractHiddenPromptBlocks(raw);
     order.value = importOrderWithGroups(preset.prompts);
     clearSelection();
     presetName.value = name;
@@ -663,7 +696,10 @@ export const usePresetStore = defineStore('main', () => {
     rebuildRegexOrder(); // load 背真数据后显式 rebuild（deep watch 的 immediate 已跑过，此处保险）
     rebuildScriptTreeOrder();
     nextTick(() => {
-      dirty.value = false;
+      structuralDirty.value = false;
+      blockDirty.resetAll(prompts.value.map((p): [string, PromptBlock] => [p.identifier, p]));
+      regexDirty.resetAll(regexs.value.map((s): [string, RegexScript] => [s.id, s]));
+      scriptDirty.resetAll(scripts.value.map((s): [string, Script] => [s.id, s]));
     });
   }
 
@@ -748,17 +784,77 @@ export const usePresetStore = defineStore('main', () => {
       // rawData.value 是 Vue 响应式 Proxy，ST 的 savePreset 内部 structuredClone 不了它，
       // 且若 ST 先把传入对象赋进自己的 live state 再 clone，我们的 Proxy 会泄漏进 ST 内部。
       // 约束：永远交给 ST 一个纯 plain、非响应式的深拷贝。
-      await PS.savePresetAs(
-        name,
-        preset,
-        JSON.parse(JSON.stringify(rawData.value)),
-        hiddenBlocks.value
-      );
+      const native = await PS.savePresetAs(name, preset, JSON.parse(JSON.stringify(rawData.value)));
+      rawData.value = native;
       presetName.value = name;
       refreshPresetList(); // 新名保存会新增条目，保持 picker 同步
-      dirty.value = false;
+      structuralDirty.value = false;
+      blockDirty.resetAll(prompts.value.map((p): [string, PromptBlock] => [p.identifier, p]));
+      regexDirty.resetAll(regexs.value.map((s): [string, RegexScript] => [s.id, s]));
+      scriptDirty.resetAll(scripts.value.map((s): [string, Script] => [s.id, s]));
       showToast(t('preset.toast.saved', { name }));
     } catch (e: unknown) {
+      showToast(t('preset.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) }));
+    }
+  }
+
+  /** 单条 item 保存：从 raw 重建磁盘基线，只覆盖这一条的内容再整体保存，然后仅重置该条的脏。
+   *  新建（isNew）的条目没有基线可覆盖，退回全量 doSavePreset()。 */
+  async function saveItem(domain: string, key: string) {
+    if (!rawData.value) {
+      showToast(t('preset.toast.noDataToSave'));
+      return;
+    }
+    const disk = PS.fromNativePreset(rawData.value);
+    let target: Preset;
+    if (domain === 'preset') {
+      const cur = prompts.value.find((p) => p.identifier === key && !p.hidden);
+      if (!cur) return;
+      if (blockDirty.isNew(key)) {
+        await doSavePreset();
+        return;
+      }
+      target = {
+        ...disk,
+        prompts: disk.prompts.map((p) =>
+          p.identifier === key ? { ...p, name: cur.name, content: cur.content, role: cur.role } : p
+        ),
+      };
+    } else if (domain === 'regex') {
+      const cur = regexs.value.find((s) => s.id === key);
+      if (!cur) return;
+      if (regexDirty.isNew(key)) {
+        await doSavePreset();
+        return;
+      }
+      target = { ...disk, regexs: disk.regexs.map((s) => (s.id === key ? cur : s)) };
+    } else if (domain === 'tavern') {
+      const cur = scripts.value.find((s) => s.id === key);
+      if (!cur) return;
+      if (scriptDirty.isNew(key)) {
+        await doSavePreset();
+        return;
+      }
+      target = { ...disk, scripts: disk.scripts.map((s) => (s.id === key ? cur : s)) };
+    } else {
+      return;
+    }
+    try {
+      const native = await PS.savePresetAs(presetName.value, target, rawData.value);
+      rawData.value = native;
+      if (domain === 'preset') {
+        const b = prompts.value.find((p) => p.identifier === key);
+        if (b) blockDirty.setBaseline(key, b);
+      } else if (domain === 'regex') {
+        const s = regexs.value.find((x) => x.id === key);
+        if (s) regexDirty.setBaseline(key, s);
+      } else {
+        const s = scripts.value.find((x) => x.id === key);
+        if (s) scriptDirty.setBaseline(key, s);
+      }
+      refreshPresetList();
+      showToast(t('preset.toast.saved', { name: presetName.value }));
+    } catch (e) {
       showToast(t('preset.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) }));
     }
   }
@@ -828,6 +924,7 @@ export const usePresetStore = defineStore('main', () => {
     });
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null;
     insertAfterActive({ identifier: id, enabled: true }, activeId);
+    blockDirty.markDirty(id);
     // 直接打开新块的标签——编辑器内容由标签驱动
     tabsStore.open({
       domain: 'preset',
@@ -867,12 +964,17 @@ export const usePresetStore = defineStore('main', () => {
         if (!wasGroup) {
           const pi = prompts.value.findIndex((p) => p.identifier === removed.identifiers[0]);
           if (pi >= 0) prompts.value.splice(pi, 1);
+          blockDirty.remove(removed.identifiers[0]);
         } else {
           for (const id of removed.identifiers) {
-            const pi = prompts.value.findIndex((p) => p.identifier === id);
-            if (pi >= 0) {
-              const [b] = prompts.value.splice(pi, 1);
-              hiddenBlocks.value.push(b);
+            const b = prompts.value.find((p) => p.identifier === id);
+            if (b) {
+              b.hidden = true;
+              delete b._gid;
+              delete b._gname;
+              delete b._gcollapsed;
+              delete b._genabled;
+              delete b._gidx;
             }
           }
         }
@@ -898,26 +1000,24 @@ export const usePresetStore = defineStore('main', () => {
     // 隐藏组：把整个组（含子块）从 order 摘掉，子块移入隐藏块列表，不关子块标签。
     // 隐藏单个叶子块时才关它自己的标签。
     for (const id of removed.identifiers) {
-      const pi = prompts.value.findIndex((p) => p.identifier === id);
-      if (pi >= 0) {
-        const [b] = prompts.value.splice(pi, 1);
+      const b = prompts.value.find((p) => p.identifier === id);
+      if (b) {
+        b.hidden = true;
         delete b._gid;
         delete b._gname;
         delete b._gcollapsed;
         delete b._genabled;
         delete b._gidx;
-        hiddenBlocks.value.push(b);
       }
     }
     if (!wasGroup) tabsStore.close('preset', removed.identifiers[0]);
     showToast(t('preset.toast.blockHidden'));
   }
   function addHiddenBlock(identifier: string) {
-    const hi = hiddenBlocks.value.findIndex((b) => b.identifier === identifier);
-    if (hi < 0) return;
-    const [b] = hiddenBlocks.value.splice(hi, 1);
+    const b = prompts.value.find((p) => p.identifier === identifier && p.hidden);
+    if (!b) return;
+    b.hidden = false;
     b.enabled = true;
-    prompts.value.push(b);
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null;
     insertAfterActive({ identifier, enabled: true }, activeId);
     // 打开新加块的标签
@@ -996,6 +1096,69 @@ export const usePresetStore = defineStore('main', () => {
     if (!PS.selectPresetByName(name)) showToast(t('preset.toast.selectPresetFailed'));
   }
 
+  /* ====== Per-item dirty ======
+   * structuralDirty 追踪结构变更（增删/分组/重排/启停，仍走 markDirty()），三个 useItemDirty
+   * tracker 按 id 追踪各条内容的脏状态。`dirty` 聚合两者供 header Save 按钮的 `*` 使用。 */
+  const dirty = computed(
+    () =>
+      structuralDirty.value ||
+      blockDirty.anyDirty.value ||
+      regexDirty.anyDirty.value ||
+      scriptDirty.anyDirty.value
+  );
+
+  function markBlockDirty(id: string) {
+    blockDirty.markDirty(id);
+  }
+
+  function isBlockDirty(id: string): boolean {
+    return blockDirty.isDirty(id);
+  }
+  function isGroupDirty(gi: number): boolean {
+    const node = flatNodes.value[gi];
+    if (!node || !node.isGroup) return false;
+    return (node.ref as OrderGroup).children.some((c) => isBlockDirty(c.identifier));
+  }
+  function isTabDirty(domain: string, key: string): boolean {
+    if (domain === 'preset') return blockDirty.isDirty(key);
+    if (domain === 'regex') return regexDirty.isDirty(key);
+    if (domain === 'tavern') return scriptDirty.isDirty(key);
+    return false;
+  }
+  function discardTab(domain: string, key: string): void {
+    if (domain === 'preset') {
+      const baseline = blockDirty.discard(key);
+      const i = prompts.value.findIndex((p) => p.identifier === key);
+      if (baseline === undefined) {
+        // isNew：真删除
+        const gi = revealAndFindGi(key);
+        if (gi >= 0) removeNode(gi);
+        if (i >= 0) prompts.value.splice(i, 1);
+      } else if (i >= 0) {
+        prompts.value.splice(i, 1, baseline);
+      }
+      uiStore.rebuildVarIndex();
+    } else if (domain === 'regex') {
+      const baseline = regexDirty.discard(key);
+      const i = regexs.value.findIndex((s) => s.id === key);
+      if (baseline === undefined) {
+        if (i >= 0) regexs.value.splice(i, 1);
+      } else if (i >= 0) {
+        regexs.value.splice(i, 1, baseline);
+      }
+      rebuildRegexOrder();
+    } else if (domain === 'tavern') {
+      const baseline = scriptDirty.discard(key);
+      const i = scripts.value.findIndex((s) => s.id === key);
+      if (baseline === undefined) {
+        if (i >= 0) scripts.value.splice(i, 1);
+      } else if (i >= 0) {
+        scripts.value.splice(i, 1, baseline);
+      }
+      rebuildScriptTreeOrder();
+    }
+  }
+
   return {
     rawData,
     settings,
@@ -1052,13 +1215,18 @@ export const usePresetStore = defineStore('main', () => {
     hiddenOpen,
     dirty,
     markDirty,
+    markBlockDirty,
+    isBlockDirty,
+    isGroupDirty,
+    isTabDirty,
+    discardTab,
     currentBlock,
     hasData,
-    hiddenBlocks,
     editorJump,
     requestEditorJump,
     loadFromContext,
     doSavePreset,
+    saveItem,
     refreshPresetList,
     switchPreset,
     createPreset,

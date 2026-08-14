@@ -55,6 +55,7 @@
               />
             </svg>
           </span>
+          <span class="wb-item-dirty-mark">{{ store.isGroupDirty(gi) ? '*' : '' }}</span>
           <span
             v-if="editingGroupGi !== gi"
             class="wb-tree-name"
@@ -98,7 +99,10 @@
           @pointerdown="onItemMouseDown(gi, $event)"
           @click="onItemClick(gi, $event)"
         >
-          <span class="wb-drag-handle">⠿</span>
+          <span v-if="isMobile" class="wb-drag-handle">⠿</span>
+          <span v-else class="wb-item-dirty-mark">{{
+            store.isBlockDirty((node.ref as OrderItem).identifier) ? '*' : ''
+          }}</span>
           <span
             class="wb-toggle-sw"
             :class="{ on: (node.ref as OrderItem).enabled }"
@@ -162,6 +166,7 @@ import { useListScrollSync } from '../../composables/useListScrollSync';
 import { useDragReorder } from '../../composables/useDragReorder';
 import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
+import { useIsMobile } from '../../composables/hostEnv';
 import ListToolbar from '../shared/ListToolbar.vue';
 import Icon from '../shared/Icon.vue';
 
@@ -174,6 +179,7 @@ const props = defineProps<{ mobileDrawerOpen?: boolean }>();
 const tabsStore = useTabsStore();
 const store = usePresetStore();
 const uiStore = useUiStore();
+const isMobile = useIsMobile();
 const listRef = ref<HTMLElement>();
 
 /**
@@ -272,7 +278,7 @@ const {
     const p = store.prompts.find((pp) => pp.identifier === item.identifier);
     if (!p) return;
     p.name = newName;
-    store.markDirty(); // 嵌套字段变更，浅层 prompts watch 捕获不到
+    store.markBlockDirty(item.identifier); // 嵌套字段变更，浅层 prompts watch 捕获不到
     tabsStore.renameTab('preset', item.identifier, newName || item.identifier);
   },
 });

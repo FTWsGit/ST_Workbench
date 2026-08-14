@@ -148,7 +148,7 @@ function toNativePrompt(
 }
 
 /** 原生预设 → 干净 Preset。prompts 按 prompt_order 顺序烘出（enabled + 分组字段），
- *  未在 prompt_order 中引用的 hidden block 不进入干净层（由 store 用 raw 恢复）。 */
+ *  未在 prompt_order 中引用的 hidden block 追加到 prompts 末尾、标 hidden:true。 */
 export function fromNativePreset(raw: Record<string, unknown>): Preset {
   const promptsRaw = Array.isArray(raw.prompts) ? (raw.prompts as Record<string, unknown>[]) : [];
   const promptOrder =
@@ -168,6 +168,13 @@ export function fromNativePreset(raw: Record<string, unknown>): Preset {
     seen.add(id);
     prompts.push(fromNativePrompt(p, item));
   }
+  // 隐藏块：在原生 prompts 里、但没被 prompt_order 引用——追加到 prompts 末尾，标 hidden:true。
+  for (const p of promptsRaw) {
+    const id = p?.identifier as string | undefined;
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    prompts.push({ ...fromNativePrompt(p), hidden: true });
+  }
   const extensions = (raw.extensions ?? {}) as Record<string, unknown>;
   const tavernHelper = (extensions.tavern_helper ?? {}) as Record<string, unknown>;
   return {
@@ -181,41 +188,20 @@ export function fromNativePreset(raw: Record<string, unknown>): Preset {
   };
 }
 
-/** 取原生预设里「未进 prompt_order」的隐藏 block（干净 PromptBlock[]）。fromNativePreset 只产出
- *  顺序内可见的 prompts，隐藏块由调用方（presetStore）用本函数单独取回，保存时再经 toNativePreset
- *  的 hiddenBlocks 参数写回。 */
-export function extractHiddenPromptBlocks(raw: Record<string, unknown>): PromptBlock[] {
-  const promptsRaw = Array.isArray(raw.prompts) ? (raw.prompts as Record<string, unknown>[]) : [];
-  const promptOrder =
-    Array.isArray(raw.prompt_order) && raw.prompt_order.length
-      ? ((raw.prompt_order as Record<string, unknown>[]).find((p) => p.character_id === 100001)
-          ?.order ?? [])
-      : [];
-  const orderIds = new Set(
-    (promptOrder as Record<string, unknown>[]).map((o) => o?.identifier as string)
-  );
-  return promptsRaw
-    .filter((p) => !orderIds.has(p.identifier as string))
-    .map((p) => fromNativePrompt(p));
-}
-
 /** 干净 Preset → 原生预设。`raw` 是最近一次读到的原生快照：未建模字段（模型名、formats、
  *  tavern_helper 的 variales 等）从 raw 透传，已知字段由干净层覆盖，保证不丢数据。
- *  `hiddenBlocks` 是工作层隐藏块（编辑后又从顺序里摘掉的 block）——它们不进 prompt_order，
- *  但数据要写回原生 prompts，否则 raw 里是编辑前的旧数据。 */
+ *  隐藏块由 `block.hidden` 标记，不进 prompt_order。 */
 export function toNativePreset(
   preset: Preset,
-  raw: Record<string, unknown>,
-  hiddenBlocks?: PromptBlock[]
+  raw: Record<string, unknown>
 ): Record<string, unknown> {
   const rawPrompts = Array.isArray(raw.prompts) ? (raw.prompts as Record<string, unknown>[]) : [];
   const rawPromptById = new Map(rawPrompts.map((p) => [p.identifier, p]));
   const nativePrompts: Record<string, unknown>[] = [];
   const order: Record<string, unknown>[] = [];
-  const seen = new Set<string>();
   preset.prompts.forEach((block) => {
-    seen.add(block.identifier);
     nativePrompts.push(toNativePrompt(block, rawPromptById.get(block.identifier)));
+    if (block.hidden) return; // 隐藏块不进 prompt_order
     const oi: Record<string, unknown> = { identifier: block.identifier, enabled: block.enabled };
     if (block._gid) {
       oi._gid = block._gid;
@@ -226,12 +212,6 @@ export function toNativePreset(
     }
     order.push(oi);
   });
-  // 工作层隐藏块：干净数据写回（覆盖 raw 里的旧数据），但不进 prompt_order
-  for (const hb of hiddenBlocks ?? []) {
-    if (seen.has(hb.identifier)) continue;
-    seen.add(hb.identifier);
-    nativePrompts.push(toNativePrompt(hb, rawPromptById.get(hb.identifier)));
-  }
 
   const rawExtensions = (raw.extensions ?? {}) as Record<string, unknown>;
   const rawTavernHelper = (rawExtensions.tavern_helper ?? {}) as Record<string, unknown>;
@@ -300,14 +280,14 @@ export function selectPresetByName(name: string): boolean {
 export async function savePresetAs(
   name: string,
   preset: Preset,
-  raw: Record<string, unknown>,
-  hiddenBlocks?: PromptBlock[]
-): Promise<void> {
+  raw: Record<string, unknown>
+): Promise<Record<string, unknown>> {
   const pm = getPresetManager();
   if (typeof pm.savePreset !== 'function')
     throw new Error('SillyTavern context 不可用（savePreset 缺失）');
-  const plain = deepClonePlain(toNativePreset(preset, raw, hiddenBlocks));
+  const plain = deepClonePlain(toNativePreset(preset, raw));
   await Promise.resolve(pm.savePreset(name, plain));
+  return plain;
 }
 
 export async function deletePreset(name: string): Promise<void> {

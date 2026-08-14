@@ -8,11 +8,11 @@
     <div class="wb-modal">
       <h3>{{ uiStore.t('preset.sidebar.hiddenBlock') }}</h3>
       <div class="wb-modal-list">
-        <div v-if="!presetStore.hiddenBlocks.length" class="wb-empty-note">
+        <div v-if="!hiddenBlocks.length" class="wb-empty-note">
           {{ uiStore.t('preset.copyPanel.noBlocks') }}
         </div>
         <div
-          v-for="p in presetStore.hiddenBlocks"
+          v-for="p in hiddenBlocks"
           :key="p.identifier"
           class="wb-modal-item"
           @click="(presetStore.addHiddenBlock(p.identifier), (presetStore.hiddenOpen = false))"
@@ -31,10 +31,14 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { useUiStore } from '../../stores/uiStore';
 import { roleClass } from '../../utils';
 
 const presetStore = usePresetStore();
 const uiStore = useUiStore();
+
+// 隐藏块现在就在 prompts 里（hidden 标记），这里按标记过滤出可找回的列表。
+const hiddenBlocks = computed(() => presetStore.prompts.filter((p) => p.hidden));
 </script>

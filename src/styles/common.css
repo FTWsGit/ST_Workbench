@@ -1267,6 +1267,26 @@
   background: var(--wb-dg-d);
   color: var(--wb-dg);
 }
+.wb-tab-dirty-dot {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--wb-radius-0);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.wb-tab-dirty-dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wb-ac);
+}
+.wb-tab-dirty-dot:hover {
+  background: var(--wb-dg-d);
+}
 
 .wb-form {
   display: flex;

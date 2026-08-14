@@ -29,6 +29,8 @@ export default {
   'common.disable': 'Disable',
   'common.list': 'List',
   'common.enum': 'Enum',
+  'common.dontSave': "Don't Save",
+  'common.unsavedChanges': 'Unsaved',
 
   // ========================================
   // shared：跨域通用组件/逻辑
@@ -73,6 +75,9 @@ export default {
   'shared.confirm.closePanel.title': 'Unsaved changes remain',
   'shared.confirm.closePanel.message':
     'The following workspaces have unsaved changes. Closing the panel only hides it—changes stay in memory and will be restored next time you open it, but they will be lost if you refresh or close SillyTavern before saving:',
+  'shared.confirm.unsavedTab.title': 'Close tab?',
+  'shared.confirm.unsavedTab.message': '"{name}" has unsaved changes.',
+  'shared.editor.saveItem': 'Save current item',
 
   // ---- 通用组件 ----
   'shared.settingsDock.title': 'Settings',

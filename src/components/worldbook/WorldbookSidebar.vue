@@ -56,6 +56,7 @@
               />
             </svg>
           </span>
+          <span class="wb-item-dirty-mark">{{ store.isGroupDirty(gi) ? '*' : '' }}</span>
           <span
             v-if="editingGroupGi !== gi"
             class="wb-tree-name"
@@ -97,7 +98,10 @@
           @pointerdown="onItemMouseDown(gi, $event)"
           @click="onItemClick(gi, $event)"
         >
-          <span class="wb-drag-handle">⠿</span>
+          <span v-if="isMobile" class="wb-drag-handle">⠿</span>
+          <span v-else class="wb-item-dirty-mark">{{
+            store.isEntryDirty((node.ref as OrderItem).identifier) ? '*' : ''
+          }}</span>
           <span
             class="wb-toggle-sw"
             :class="{
@@ -156,6 +160,7 @@ import { useListScrollSync } from '../../composables/useListScrollSync';
 import { useDragReorder } from '../../composables/useDragReorder';
 import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
+import { useIsMobile } from '../../composables/hostEnv';
 import ListToolbar from '../shared/ListToolbar.vue';
 import Icon from '../shared/Icon.vue';
 
@@ -165,6 +170,7 @@ const tabsStore = useTabsStore();
 const store = useWorldbookStore();
 const uiStore = useUiStore();
 const listRef = ref<HTMLElement>();
+const isMobile = useIsMobile();
 
 const {
   dragIdx,
@@ -256,7 +262,7 @@ const {
     const e = getEntry((node.ref as OrderItem).identifier);
     if (!e) return;
     e.name = newName;
-    store.markDirty();
+    store.markEntryDirty(String(e.uid));
     tabsStore.renameTab('worldbook', e.uid + '', newName);
   },
 });

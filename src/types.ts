@@ -63,6 +63,8 @@ export interface PromptBlock extends GroupFields {
   marker: boolean;
   /** 启用/禁用——从原生 prompt_order 烘入，数组顺序即视觉顺序。 */
   enabled: boolean;
+  /** true = 隐藏块（在原生 prompts 里但不在 prompt_order 里，不参与装配/渲染）。 */
+  hidden?: boolean;
   injectionPosition: number;
   injectionDepth: number;
   injectionOrder: number;

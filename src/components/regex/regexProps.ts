@@ -16,6 +16,8 @@ export interface RegexTrioProps {
 export interface RegexContentEditorProps extends RegexTrioProps {
   editorFontSize: number;
   editorFontFamily: string;
+  isDirty: (id: string) => boolean;
+  onSave: (id: string) => void;
 }
 
 export type RegexSettingsFormProps = RegexTrioProps;

@@ -4,6 +4,7 @@ import type { Worldbook, WorldbookEntry, OrderNode, OrderGroup, OrderItem } from
 import * as WB from '../api/worldbookApi';
 import { useGroupedList, isGroupNode as isGroup } from '../composables/useGroupedList';
 import { useDirtyFlag } from '../composables/useDirtyFlag';
+import { useItemDirty } from '../composables/useItemDirty';
 import { useTabsStore } from './tabsStore';
 import { useConfirmStore } from './confirmStore';
 import { useUiStore } from './uiStore';
@@ -62,9 +63,14 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   /* ====== Dirty tracking ======
    * entries 包含每条 entry 的内容字段（高频编辑），深监听开销大，所以浅监听 + markDirty() 显式打标。
    * order 是分组结构，量小，深监听无问题。 */
-  const { dirty, markDirty } = useDirtyFlag();
+  const { dirty: structuralDirty, markDirty } = useDirtyFlag();
+  const entryDirty = useItemDirty<WorldbookEntry>(); // key = String(uid)
   watch(order, markDirty, { deep: true });
   watch(entries, markDirty);
+
+  function markEntryDirty(uid: string) {
+    entryDirty.markDirty(uid);
+  }
 
   const currentEntry = computed<WorldbookEntry | null>(() => {
     const tab = tabsStore.activeTab;
@@ -162,7 +168,8 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     worldbookName.value = wb.name;
     tabsStore.closeWorkspace('worldbook');
     nextTick(() => {
-      dirty.value = false;
+      structuralDirty.value = false;
+      entryDirty.resetAll(entries.value.map((e): [string, WorldbookEntry] => [String(e.uid), e]));
     });
   }
 
@@ -224,9 +231,53 @@ export const useWorldbookStore = defineStore('worldbook', () => {
         raw.value
       );
       refreshWorldbookList();
-      dirty.value = false;
+      structuralDirty.value = false;
+      entryDirty.resetAll(entries.value.map((e): [string, WorldbookEntry] => [String(e.uid), e]));
       showToast(t('worldbook.toast.saved', { name: worldbookName.value }));
     } catch (e: unknown) {
+      showToast(
+        t('worldbook.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) })
+      );
+    }
+  }
+
+  /** 单条目保存：只把当前 entry 覆盖写回 ST，不动其他条目。新建条目（isNew）没有基线可比，
+   *  回退到全量 doSaveWorldbook()。 */
+  async function saveItem(domain: string, key: string) {
+    if (domain !== 'worldbook') return;
+    if (!hasData.value) {
+      showToast(t('worldbook.toast.noDataToSave'));
+      return;
+    }
+    const entry = entries.value.find((e) => String(e.uid) === key);
+    if (!entry) return;
+    if (entryDirty.isNew(key)) {
+      await doSaveWorldbook();
+      return;
+    }
+    const disk = WB.fromSTWorldbook(worldbookName.value, raw.value);
+    const target: Worldbook = {
+      name: worldbookName.value,
+      entries: disk.entries.map((e) =>
+        String(e.uid) === key
+          ? {
+              ...entry,
+              _gid: e._gid,
+              _gname: e._gname,
+              _gcollapsed: e._gcollapsed,
+              _genabled: e._genabled,
+              _gidx: e._gidx,
+            }
+          : e
+      ),
+    };
+    try {
+      const saved = await WB.saveWorldbook(target, raw.value);
+      raw.value = saved;
+      entryDirty.setBaseline(key, entry);
+      refreshWorldbookList();
+      showToast(t('worldbook.toast.saved', { name: worldbookName.value }));
+    } catch (e) {
       showToast(
         t('worldbook.toast.saveFailed', { msg: e instanceof Error ? e.message : String(e) })
       );
@@ -340,6 +391,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
       effect: { sticky: null, cooldown: null, delay: null },
     };
     entries.value.push(entry);
+    entryDirty.markDirty(String(uid));
     const activeId = tabsStore.activeTab?.domain === 'worldbook' ? tabsStore.activeTab.key : null;
     insertAfterActive({ identifier: String(uid), enabled: true }, activeId);
     tabsStore.open({
@@ -371,9 +423,11 @@ export const useWorldbookStore = defineStore('worldbook', () => {
         if (!wasGroup) {
           const ei = entries.value.findIndex((e) => String(e.uid) === removed.identifiers[0]);
           if (ei >= 0) entries.value.splice(ei, 1);
+          entryDirty.remove(removed.identifiers[0]);
         } else {
           // 组内条目一起真删（世界书没有"隐藏条目"这个中间态，删组即删光其下的条目和数据）
           entries.value = entries.value.filter((e) => !removed.identifiers.includes(String(e.uid)));
+          for (const id of removed.identifiers) entryDirty.remove(id);
         }
         showToast(t('worldbook.toast.entryDeleted'));
       },
@@ -382,7 +436,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
 
   function toggleEntryDisabled(entry: WorldbookEntry) {
     entry.enabled = !entry.enabled;
-    markDirty();
+    markEntryDirty(String(entry.uid));
   }
 
   /** 工具箱 Search 的通用"跳到命中"出口：展开折叠组 + 打开条目标签。世界书编辑器（HighlightedEditor）
@@ -417,6 +471,34 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     if (unbindGroupNode(gi)) showToast(t('preset.toast.unbound'));
   }
 
+  /* ====== 按条目脏状态查询/丢弃（供侧边栏 tab 点、内容编辑器保存按钮、settings 表单接线） ====== */
+  function isEntryDirty(id: string): boolean {
+    return entryDirty.isDirty(id);
+  }
+  function isGroupDirty(gi: number): boolean {
+    const node = flatNodes.value[gi];
+    if (!node || !node.isGroup) return false;
+    return (node.ref as OrderGroup).children.some((c) => isEntryDirty(c.identifier));
+  }
+  function isTabDirty(domain: string, key: string): boolean {
+    return domain === 'worldbook' && entryDirty.isDirty(key);
+  }
+  function discardTab(domain: string, key: string): void {
+    if (domain !== 'worldbook') return;
+    const baseline = entryDirty.discard(key);
+    const i = entries.value.findIndex((e) => String(e.uid) === key);
+    if (baseline === undefined) {
+      // isNew：真删除
+      const gi = revealAndFindGi(key);
+      if (gi >= 0) removeNode(gi);
+      if (i >= 0) entries.value.splice(i, 1);
+    } else if (i >= 0) {
+      entries.value.splice(i, 1, baseline);
+    }
+  }
+
+  const dirty = computed(() => structuralDirty.value || entryDirty.anyDirty.value);
+
   return {
     entries,
     order,
@@ -436,6 +518,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     switchWorldbook,
     reloadWorldbook,
     doSaveWorldbook,
+    saveItem,
     createNewWorldbook,
     removeCurrentWorldbook,
     importFromCharacterBook,
@@ -448,5 +531,10 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     reorderBlock,
     bindSelected,
     unbindGroup,
+    markEntryDirty,
+    isEntryDirty,
+    isGroupDirty,
+    isTabDirty,
+    discardTab,
   };
 });

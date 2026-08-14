@@ -235,18 +235,21 @@ export async function createWorldbook(name: string): Promise<void> {
 }
 
 /** 保存（覆盖写）到指定名字。`raw` 是按 uid 的原生条目快照，用于未建模字段透传；
- *  两者都必须是纯对象，不能是 Pinia/Vue 响应式引用——用 deepClonePlain() 兜底。 */
+ *  两者都必须是纯对象，不能是 Pinia/Vue 响应式引用——用 deepClonePlain() 兜底。
+ *  返回写入的原生 entries 记录（纯对象、非响应式），调用方可保留为更新后的 raw 快照。 */
 export async function saveWorldbook(
   wb: Worldbook,
   raw?: Record<string, Record<string, unknown>>
-): Promise<void> {
+): Promise<Record<string, Record<string, unknown>>> {
   const mod = await getWorldInfoModule();
   if (typeof mod.saveWorldInfo !== 'function') {
     throw new Error('SillyTavern 世界书模块不可用（saveWorldInfo 缺失）');
   }
   const plain = deepClonePlain(wb);
   const plainRaw = raw ? deepClonePlain(raw) : undefined;
-  await mod.saveWorldInfo(plain.name, { entries: toSTEntries(plain, plainRaw) });
+  const entries = toSTEntries(plain, plainRaw) as Record<string, Record<string, unknown>>;
+  await mod.saveWorldInfo(plain.name, { entries });
+  return entries;
 }
 
 export async function deleteWorldbook(name: string): Promise<void> {

@@ -36,6 +36,10 @@ export interface DocumentWorkspaceAdapter {
    *  丢弃的东西不一样，没法共用一句话）。三个 workspace 都有——新建后紧接着的 load/switch
    *  会覆盖当前那份未保存改动，破坏面一致。 */
   confirmCreateIfDirty?: { messageKey: string };
+  isTabDirty: (domain: string, key: string) => boolean;
+  discardTab: (domain: string, key: string) => void;
+  /** per-item save：只保存 (domain, key) 这一个 item（ST 无局部保存，store 内部做基线+覆盖）。 */
+  saveTab: (domain: string, key: string) => void;
 }
 
 export function createWorkspaceRegistry(): Record<
@@ -61,6 +65,9 @@ export function createWorkspaceRegistry(): Record<
       confirmCreateIfDirty: {
         messageKey: 'preset.confirm.newPreset.message',
       },
+      isTabDirty: (domain, key) => preset.isTabDirty(domain, key),
+      discardTab: (domain, key) => preset.discardTab(domain, key),
+      saveTab: (domain, key) => preset.saveItem(domain, key),
     },
     worldbook: {
       key: 'worldbook',
@@ -76,6 +83,9 @@ export function createWorkspaceRegistry(): Record<
       confirmCreateIfDirty: {
         messageKey: 'worldbook.confirm.newWorldbook.message',
       },
+      isTabDirty: (domain, key) => worldbook.isTabDirty(domain, key),
+      discardTab: (domain, key) => worldbook.discardTab(domain, key),
+      saveTab: (domain, key) => worldbook.saveItem(domain, key),
     },
     character: {
       key: 'character',
@@ -91,6 +101,9 @@ export function createWorkspaceRegistry(): Record<
       confirmCreateIfDirty: {
         messageKey: 'character.confirm.newCharacter.message',
       },
+      isTabDirty: (domain, key) => character.isTabDirty(domain, key),
+      discardTab: (domain, key) => character.discardTab(domain, key),
+      saveTab: (domain, key) => character.saveItem(domain, key),
     },
   };
 }

@@ -4,6 +4,14 @@
       <span class="wb-tavern-editor-name">{{ script.name || props.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
       <button
+        v-if="script && props.isDirty(script.id)"
+        class="wb-btn sm accent"
+        :title="props.t('shared.editor.saveItem')"
+        @click="props.onSave(script.id)"
+      >
+        <Icon name="save" /> {{ props.t('common.save') }}
+      </button>
+      <button
         class="wb-btn sm"
         :class="{ active: uiStore.settingsDockOpen }"
         @click="uiStore.toggleSettingsDock()"
