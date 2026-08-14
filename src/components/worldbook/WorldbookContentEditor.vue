@@ -52,13 +52,12 @@ const editorRef = ref<InstanceType<typeof HighlightedEditor>>();
 
 const entry = computed(() => store.currentEntry);
 
-/** entry.content 的 v-model 桥接；entries 浅监听，nested 字段变化需显式 markDirty()。 */
+/** entry.content 的 v-model 桥接；字段变异由 worldbookStore 的 entries 深 watch 自动标脏。 */
 const contentModel = computed<string>({
   get: () => entry.value?.content ?? '',
   set: (v) => {
     if (entry.value) {
       entry.value.content = v;
-      store.markEntryDirty(String(entry.value.uid));
     }
   },
 });

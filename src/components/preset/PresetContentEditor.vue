@@ -57,13 +57,12 @@ const uiStore = useUiStore();
 const tabsStore = useTabsStore();
 const editorRef = ref<InstanceType<typeof HighlightedEditor>>();
 
-/** store.currentBlock.content 的 v-model 桥接；set 里显式 markDirty()，prompts 改为浅监听以避免每字遍历。 */
+/** store.currentBlock.content 的 v-model 桥接；字段变异由 presetStore 的 prompts 深 watch 自动标脏。 */
 const content = computed<string>({
   get: () => store.currentBlock?.content ?? '',
   set: (v) => {
     if (store.currentBlock) {
       store.currentBlock.content = v;
-      store.markBlockDirty(store.currentBlock.identifier);
     }
   },
 });

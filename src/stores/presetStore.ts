@@ -112,9 +112,9 @@ export const usePresetStore = defineStore('main', () => {
     revealAndFindGi,
     clearSelection,
     selectBlock,
-    toggleBlock,
+    toggleBlock: toggleBlockRaw,
     toggleGroupCollapse,
-    reorderBlock,
+    reorderBlock: reorderBlockRaw,
     insertAfterActive,
     removeNode,
     bindSelected: bindSelectedNodes,
@@ -144,8 +144,8 @@ export const usePresetStore = defineStore('main', () => {
   );
 
   /* ====== Dirty flag ====== useDirtyFlag() 在 setup 最早期调用——regex/tavern 段的 useRegexScripts/useScriptTree
-   *  要把 markDirty 传进 options，必须在它们声明前解构出 markDirty。watch 列表（哪些 ref 触发脏、deep 还是
-   *  shallow）仍由各域自己写在下面，因为每域的浅/深 watch 选择背后是性能权衡注释（如 prompts 浅 watch 防打字卡顿）。 */
+   *  要把 markDirty 传进 options，必须在它们声明前解构出 markDirty。结构轴（order 深 watch）与内容轴
+   *  （prompts/regexs 深 watch + syncFromValues）分开接线，见下方 Dirty tracking 段。 */
   const { dirty: structuralDirty, markDirty } = useDirtyFlag();
 
   const blockDirty = useItemDirty<PromptBlock>(); // key = identifier
@@ -549,15 +549,11 @@ export const usePresetStore = defineStore('main', () => {
   });
 
   /* ====== 脏标记（驱动 header Save 按钮上的 `*`） ======
-   * `order`/`regexs` 深度 watch：两者数组都很小，全量 traverse 成本可忽略。
-   * `prompts` 浅 watch：holds 每个 block 的完整内容字符串，深 watch 会在每次嵌套字段
-   *   变更时全量重遍历——而 block 内容是逐字符编辑的，这是打字卡顿的真正成因。浅 watch
-   *   仍能捕获顶层变异（push/splice/重赋值），即 add/delete/duplicate block。
-   * 嵌套字段（content/name/role）变更不在浅 watch 范围内，相关调用点显式 markDirty()：
-   *   PresetContentEditor.vue 的 content setter、PresetSettingsForm.vue 的 name/role 处理、
-   *   PresetSidebar.vue 的 inline rename commit。
-   * 加载新预设时对 prompts/order 的赋值看起来像"变更"会触发 watch 标脏——applyLoadedPreset()
-   *   在 nextTick 里清回 false（Vue 在该 nextTick 回调前 flush 掉这次赋值排入的 watcher）。 */
+   * `order` 深 watch 记结构轴脏（重排/分组/折叠/启停只改 order 树，syncFromValues 抓不到）。
+   * `prompts`/`regexs` 深 watch 记内容轴脏：任何字段变异（编辑入口、agent 工具）都由
+   *   syncFromValues 按基线重算 per-item 脏，无需逐入口打标。
+   * 加载新预设时对 prompts/order 的赋值会触发 watch 标脏——applyLoadedPreset() 在 nextTick 里
+   *   resetAll 清回（Vue 在该 nextTick 回调前 flush 掉这次赋值排入的 watcher）。 */
   watch(order, markDirty, { deep: true });
   watch(
     regexs,
@@ -566,7 +562,13 @@ export const usePresetStore = defineStore('main', () => {
     },
     { deep: true }
   );
-  watch(prompts, markDirty);
+  watch(
+    prompts,
+    () => {
+      blockDirty.syncFromValues(prompts.value.map((p): [string, PromptBlock] => [p.identifier, p]));
+    },
+    { deep: true }
+  );
 
   /* ====== Modals ====== */
   const hiddenOpen = ref(false);
@@ -900,10 +902,21 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   /* ====== Block Ops ======
-   * selectBlock/toggleBlock/toggleGroupCollapse/reorderBlock 是 useGroupedList() 返回的纯树操作，
-   * 原样导出，无 preset 特化逻辑，这里不再重新定义。
+   * selectBlock/toggleGroupCollapse 是 useGroupedList() 返回的纯树操作，原样导出。
+   * toggleBlock/reorderBlock 包一层 exportOrder()（同 Group Ops 段的 bind/unbind）：树改完必须同步回
+   * prompts 数组（enabled/_gid 等字段），blockDirty 的 deep watch + syncFromValues 才能抓到 per-item 变更。
    * addBlock/deleteBlock/hideBlock/addHiddenBlock 留在这里，因为它们要触碰 useGroupedList
    * 故意不碰的东西：`prompts`（后端数据数组）、tabsStore（开/关标签）、confirmStore（删除确认）。 */
+  /** block 单条开关：翻 order 树后写回 prompts，让该 block 的 per-item dirty 生效。 */
+  function toggleBlock(gi: number) {
+    toggleBlockRaw(gi);
+    exportOrder();
+  }
+  /** block 拖拽重排：改 order 树后写回 prompts（数组顺序 = 视觉顺序）。 */
+  function reorderBlock(fromGi: number, toGi: number, after: boolean) {
+    reorderBlockRaw(fromGi, toGi, after);
+    exportOrder();
+  }
   function addBlock() {
     if (!rawData.value) {
       showToast(t('preset.toast.loadFirst'));
@@ -924,7 +937,6 @@ export const usePresetStore = defineStore('main', () => {
     });
     const activeId = tabsStore.activeTab?.domain === 'preset' ? tabsStore.activeTab.key : null;
     insertAfterActive({ identifier: id, enabled: true }, activeId);
-    blockDirty.markDirty(id);
     // 直接打开新块的标签——编辑器内容由标签驱动
     tabsStore.open({
       domain: 'preset',
@@ -1031,17 +1043,20 @@ export const usePresetStore = defineStore('main', () => {
   }
 
   /* ====== Group Ops ======
-   * useGroupedList() 的 bindSelected()/unbindGroup() 外包一层 toast。 */
+   * useGroupedList() 的 bindSelected()/unbindGroup() 外包一层 toast + exportOrder() 同步回 prompts
+   *（分组字段 _gid/_gidx 等存在 prompts 数组上，树改完必须写回，blockDirty 才能抓到 per-item 变更）。 */
   function bindSelected() {
     const result = bindSelectedNodes();
     if (!result) {
       showToast(t('preset.toast.select2PlusBlocks'));
       return;
     }
+    exportOrder();
     showToast(t('preset.toast.boundBlocks', { count: result.itemCount }));
   }
   function unbindGroup(gi: number) {
     if (!unbindGroupNode(gi)) return;
+    exportOrder();
     showToast(t('preset.toast.unbound'));
   }
 
@@ -1106,10 +1121,6 @@ export const usePresetStore = defineStore('main', () => {
       regexDirty.anyDirty.value ||
       scriptDirty.anyDirty.value
   );
-
-  function markBlockDirty(id: string) {
-    blockDirty.markDirty(id);
-  }
 
   function isBlockDirty(id: string): boolean {
     return blockDirty.isDirty(id);
@@ -1215,7 +1226,6 @@ export const usePresetStore = defineStore('main', () => {
     hiddenOpen,
     dirty,
     markDirty,
-    markBlockDirty,
     isBlockDirty,
     isGroupDirty,
     isTabDirty,

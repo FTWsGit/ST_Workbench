@@ -257,7 +257,7 @@ function startEditGroupName(gi: number) {
   startEditGroupNameRaw(gi);
 }
 
-/** block 名就地编辑。重命名需要同步 markDirty 并更新 tabsStore 标签名。 */
+/** block 名就地编辑。重命名改动由 prompts 深 watch 自动标脏，这里只需同步 tabsStore 标签名。 */
 const {
   editingId: editingBlockGi,
   setInputRef: setBlockNameInputRaw,
@@ -278,7 +278,6 @@ const {
     const p = store.prompts.find((pp) => pp.identifier === item.identifier);
     if (!p) return;
     p.name = newName;
-    store.markBlockDirty(item.identifier); // 嵌套字段变更，浅层 prompts watch 捕获不到
     tabsStore.renameTab('preset', item.identifier, newName || item.identifier);
   },
 });

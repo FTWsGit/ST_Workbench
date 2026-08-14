@@ -137,15 +137,27 @@ export const useCharacterStore = defineStore('character', () => {
       scriptDirty.anyDirty.value
   );
 
-  function markFieldDirty(fieldKey: string) {
-    fieldDirty.markDirty(fieldKey);
-  }
-  function markGreetingDirty(gid: string) {
-    greetingDirty.markDirty(gid);
-  }
-
   /* ====== greetings 的合成 id ====== */
   const greetingIds = ref<string[]>([]);
+
+  /* 内容轴脏：character 深 watch 触发 fieldDirty/greetingDirty 按基线重算（任何字段变异、agent 工具
+   *   写入都自动打标，无需逐入口 markFieldDirty/markGreetingDirty）。greetingIds 与 character.greetings
+   *   在增删/重排入口同步 splice，watch 于下一 tick flush 时两者已一致。 */
+  watch(
+    character,
+    () => {
+      const c = character.value;
+      fieldDirty.syncFromValues(
+        c
+          ? CHARACTER_FIELDS.map((f): [string, FieldBaseline] => [f.key, fieldSnapshot(c, f.key)])
+          : []
+      );
+      greetingDirty.syncFromValues(
+        c ? greetingIds.value.map((gid, i): [string, string] => [gid, c.greetings[i] ?? '']) : []
+      );
+    },
+    { deep: true }
+  );
 
   /* ====== 虚拟字段路由：EditorShell.vue 只需要 activeTab.key 就能拿到/改当前字段的值，
    * 不用自己解析 `field:xxx` / `field:greeting:<id>` 这套 key 格式——解析逻辑集中在这里一处，
@@ -172,12 +184,10 @@ export const useCharacterStore = defineStore('character', () => {
       const idx = greetingIds.value.indexOf(gid);
       if (idx >= 0) {
         character.value.greetings[idx] = value;
-        greetingDirty.markDirty(gid);
       }
     } else {
       const fieldKey = key.slice('field:'.length);
       if (!setFieldValue(character.value, fieldKey, value)) return;
-      fieldDirty.markDirty(fieldKey);
     }
   }
 
@@ -634,7 +644,6 @@ export const useCharacterStore = defineStore('character', () => {
     character.value.greetings.push('');
     const id = genGreetingId();
     greetingIds.value.push(id);
-    greetingDirty.markDirty(id);
     markDirty();
     tabsStore.open({
       domain: 'character',
@@ -1025,8 +1034,6 @@ export const useCharacterStore = defineStore('character', () => {
     hasData,
     currentField,
     setCurrentFieldValue,
-    markFieldDirty,
-    markGreetingDirty,
     isTabDirty,
     discardTab,
     jumpToFieldHit,

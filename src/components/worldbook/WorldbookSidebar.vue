@@ -262,7 +262,6 @@ const {
     const e = getEntry((node.ref as OrderItem).identifier);
     if (!e) return;
     e.name = newName;
-    store.markEntryDirty(String(e.uid));
     tabsStore.renameTab('worldbook', e.uid + '', newName);
   },
 });

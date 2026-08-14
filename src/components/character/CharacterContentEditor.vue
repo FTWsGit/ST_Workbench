@@ -80,7 +80,6 @@ const depthPromptDepth = computed<number>({
   set: (v) => {
     if (store.character) {
       store.character.otherPrompts.depthPrompt.depth = v;
-      store.markFieldDirty('depthPrompt');
     }
   },
 });
@@ -89,7 +88,6 @@ const depthPromptRole = computed<0 | 1 | 2>({
   set: (v) => {
     if (store.character) {
       store.character.otherPrompts.depthPrompt.role = v;
-      store.markFieldDirty('depthPrompt');
     }
   },
 });

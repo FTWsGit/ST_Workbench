@@ -37,7 +37,7 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     clearSelection,
     selectBlock,
     toggleGroupCollapse,
-    reorderBlock,
+    reorderBlock: reorderBlockRaw,
     insertAfterActive,
     removeNode,
     bindSelected: bindSelectedNodes,
@@ -61,16 +61,20 @@ export const useWorldbookStore = defineStore('worldbook', () => {
   );
 
   /* ====== Dirty tracking ======
-   * entries 包含每条 entry 的内容字段（高频编辑），深监听开销大，所以浅监听 + markDirty() 显式打标。
-   * order 是分组结构，量小，深监听无问题。 */
+   * `order` 深 watch 记结构轴脏（重排/分组/折叠）；`entries` 深 watch 触发 syncFromValues
+   *   按基线重算 per-item 脏，任何字段变异（编辑入口、启停）都自动打标。 */
   const { dirty: structuralDirty, markDirty } = useDirtyFlag();
   const entryDirty = useItemDirty<WorldbookEntry>(); // key = String(uid)
   watch(order, markDirty, { deep: true });
-  watch(entries, markDirty);
-
-  function markEntryDirty(uid: string) {
-    entryDirty.markDirty(uid);
-  }
+  watch(
+    entries,
+    () => {
+      entryDirty.syncFromValues(
+        entries.value.map((e): [string, WorldbookEntry] => [String(e.uid), e])
+      );
+    },
+    { deep: true }
+  );
 
   const currentEntry = computed<WorldbookEntry | null>(() => {
     const tab = tabsStore.activeTab;
@@ -391,7 +395,6 @@ export const useWorldbookStore = defineStore('worldbook', () => {
       effect: { sticky: null, cooldown: null, delay: null },
     };
     entries.value.push(entry);
-    entryDirty.markDirty(String(uid));
     const activeId = tabsStore.activeTab?.domain === 'worldbook' ? tabsStore.activeTab.key : null;
     insertAfterActive({ identifier: String(uid), enabled: true }, activeId);
     tabsStore.open({
@@ -436,7 +439,6 @@ export const useWorldbookStore = defineStore('worldbook', () => {
 
   function toggleEntryDisabled(entry: WorldbookEntry) {
     entry.enabled = !entry.enabled;
-    markEntryDirty(String(entry.uid));
   }
 
   /** 工具箱 Search 的通用"跳到命中"出口：展开折叠组 + 打开条目标签。世界书编辑器（HighlightedEditor）
@@ -459,16 +461,24 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     });
   }
 
+  /** entry 重排：改 order 树后写回 entries（数组顺序 = 显示顺序），让 per-item dirty 生效。 */
+  function reorderBlock(fromGi: number, toGi: number, after: boolean) {
+    reorderBlockRaw(fromGi, toGi, after);
+    syncEntriesFromOrder();
+  }
   function bindSelected() {
     const result = bindSelectedNodes();
     if (!result) {
       showToast(t('preset.toast.select2PlusBlocks'));
       return;
     }
+    syncEntriesFromOrder();
     showToast(t('preset.toast.boundBlocks', { count: result.itemCount }));
   }
   function unbindGroup(gi: number) {
-    if (unbindGroupNode(gi)) showToast(t('preset.toast.unbound'));
+    if (!unbindGroupNode(gi)) return;
+    syncEntriesFromOrder();
+    showToast(t('preset.toast.unbound'));
   }
 
   /* ====== 按条目脏状态查询/丢弃（供侧边栏 tab 点、内容编辑器保存按钮、settings 表单接线） ====== */
@@ -531,7 +541,6 @@ export const useWorldbookStore = defineStore('worldbook', () => {
     reorderBlock,
     bindSelected,
     unbindGroup,
-    markEntryDirty,
     isEntryDirty,
     isGroupDirty,
     isTabDirty,

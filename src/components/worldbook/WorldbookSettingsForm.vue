@@ -1,5 +1,5 @@
 <template>
-  <div v-if="entry" class="wb-form" @change="markDirty" @input="markDirty">
+  <div v-if="entry" class="wb-form">
     <FormField inline>
       <span class="wb-form-label">{{ uiStore.t('worldbook.settings.enabled') }}</span>
       <span class="wb-toggle-sw" :class="{ on: enabled }" @click="enabled = !enabled"></span>
@@ -10,7 +10,6 @@
         class="wb-form-input"
         v-model="entry.name"
         :placeholder="uiStore.t('worldbook.settings.commentPlaceholder')"
-        @input="onNameInput"
       />
     </FormField>
 
@@ -151,8 +150,7 @@
 /**
  * 世界书条目设置表单：直接 useWorldbookStore()（不参数化）。
  * 主表单只放 comment / enabled，其余字段按语义分到 4 个 AdvancedGroup。
- * markDirty 由 .wb-form 根节点 @change/@input 事件委托兜底；SegmentedControl/NumberInput
- * 通过各自 computed setter 手动 markDirty（按钮点击/拖拽不触发原生 change/input，NumberInput 内部在拖拽结束时派发 input 事件）。
+ * 字段改动直接写 entry，由 worldbookStore 的 entries 深 watch 自动标脏。
  */
 import { computed, watch } from 'vue';
 import { useTabsStore } from '../../stores/tabsStore';
@@ -174,18 +172,11 @@ const uiStore = useUiStore();
 
 const entry = computed(() => store.currentEntry);
 
-/** 表单改动的统一打脏出口：事件委托兜底 + 各 computed setter 都走这里，路由到当前条目的按 id 脏标记。 */
-function markDirty() {
-  const e = entry.value;
-  if (e) store.markEntryDirty(String(e.uid));
-}
-
 const enabled = computed({
   get: () => entry.value?.enabled ?? false,
   set: (v: boolean) => {
     if (entry.value) {
       entry.value.enabled = v;
-      markDirty();
     }
   },
 });
@@ -199,7 +190,6 @@ const activationMode = computed(() => {
 function setActivation(mode: 'keyWord' | 'constant' | 'vectorized') {
   if (!entry.value) return;
   entry.value.strategy.type = mode === 'keyWord' ? 'keyword' : mode;
-  markDirty();
 }
 
 const keysText = computed({
@@ -211,7 +201,6 @@ const keysText = computed({
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
-      markDirty();
     }
   },
 });
@@ -224,7 +213,6 @@ const keysSecondaryText = computed({
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
-      markDirty();
     }
   },
 });
@@ -235,7 +223,6 @@ const roleModel = computed({
     if (entry.value) {
       entry.value.position.role =
         v === '' || v == null ? null : (v as 'system' | 'user' | 'assistant');
-      markDirty();
     }
   },
 });
@@ -248,7 +235,6 @@ const delayUntilRecursionModel = computed({
   set: (v: number | null) => {
     if (entry.value) {
       entry.value.recursion.delayUntil = typeof v === 'number' ? v : false;
-      markDirty();
     }
   },
 });
@@ -260,7 +246,6 @@ const scanDepthModel = computed({
   set: (v: number | null) => {
     if (entry.value) {
       entry.value.strategy.scanDepth = v === null || Number.isNaN(v) ? 'same_as_global' : v;
-      markDirty();
     }
   },
 });
@@ -282,7 +267,6 @@ function tristateModel(field: 'caseSensitive' | 'matchWholeWords') {
     set: (v: string) => {
       if (!entry.value) return;
       entry.value.strategy[field] = v === 'same' ? null : v === 'true';
-      markDirty();
     },
   });
 }
@@ -295,7 +279,6 @@ function nullableNumberModel(field: 'sticky' | 'cooldown' | 'delay') {
     set: (v: number | null) => {
       if (entry.value) {
         entry.value.effect[field] = v === null || Number.isNaN(v) ? null : v;
-        markDirty();
       }
     },
   });
@@ -305,9 +288,6 @@ const cooldownModel = nullableNumberModel('cooldown');
 const delayModel = nullableNumberModel('delay');
 
 /** name 改动同步标签栏文字，不调用 open() 以避免逐字触发 sidebar scrollIntoView。 */
-function onNameInput() {
-  markDirty();
-}
 watch(
   () => entry.value?.name,
   (name) => {
