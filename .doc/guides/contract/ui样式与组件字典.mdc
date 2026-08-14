@@ -23,7 +23,7 @@ alwaysApply: false
 
 ### 可选中的列表行
 
-`.wb-tree-item` + `.selected` + `.wb-tree-name` + `.wb-tree-role`（角色色由 `roleClass()` 动态拼 `.sys`/`.user`/`.asst`）+ `.wb-tree-act`/`.del`。五个工作区 Sidebar + `CopyPanel` 共用同一套（preset.css）。
+`.wb-tree-item` + `.selected` + `.wb-tree-name` + `.wb-tree-role`（角色色由 `roleClass()` 动态拼 `.sys`/`.user`/`.asst`）+ `.wb-tree-act`/`.del`。五个工作区 Sidebar + `CopyPanel` 共用同一套（preset.css）。桌面端 item 的"未保存"脏标是 `.wb-item-dirty-mark`（非移动端替换掉 `.wb-drag-handle` 六点手柄，显示 `*`）；tab 栏的未保存圆点是 `.wb-tab-dirty-dot`（替代 `.wb-tab-close` ×，点击弹"保存/不保存/取消"）。
 
 ### 徽标
 

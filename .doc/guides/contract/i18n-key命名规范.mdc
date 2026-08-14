@@ -10,9 +10,10 @@ alwaysApply: false
 ## 域划分
 
 - `common.*`：跨域原子词，所有域通用、文字不随上下文变化的按钮/标签（保存/取消/删除/关闭/确认/创建/切换/新建/加载等）
-- `shared.*`：跨域复用的通用组件/逻辑文案，按组件分块：header、mobile、settings、toast、confirm、floatingPanel、listToolbar、highlightedEditor、syntax
+- `shared.*`：跨域复用的通用组件/逻辑文案，按组件分块：header、mobile、settings、toast、confirm、floatingPanel、listToolbar、highlightedEditor、editor、syntax
 - `preset.*`：预设域专属文案
 - `regex.*`：正则域专属文案
+- `tavern.*`：酒馆助手脚本域专属文案
 - `worldbook.*`：世界书域专属文案
 - `character.*`：角色卡域专属文案
 

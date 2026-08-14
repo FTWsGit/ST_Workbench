@@ -23,7 +23,7 @@ alwaysApply: false
 
 ### presetStore
 
-- **`prompts` / `order`**：干净层把原生 `prompts` + `prompt_order` 两套数组合并成一份 `prompts`（`PromptBlock[]`，数组顺序 = 视觉顺序，每条烘入 `enabled` + 分组字段 `_gid` 等）；`order` 是从 `prompts` 派生的分组树视图（元素 `OrderItem`/`OrderGroup`），不再有独立的 prompt_order。隐藏块单独存 `hiddenBlocks` ref（不进 `prompts`），保存时经 `savePresetAs` 的 hiddenBlocks 参数写回。
+- **`prompts` / `order`**：干净层把原生 `prompts` + `prompt_order` 两套数组合并成一份 `prompts`（`PromptBlock[]`，数组顺序 = 视觉顺序，每条烘入 `enabled` + 分组字段 `_gid` 等）；`order` 是从 `prompts` 派生的分组树视图（元素 `OrderItem`/`OrderGroup`），不再有独立的 prompt_order。隐藏块也在这份 `prompts` 里（`hidden: true` 标记，排在 active 块之后）——`importOrderWithGroups` 跳过它们、`exportOrder` 把它们原样追加回末尾，不再单独维护 `hiddenBlocks` ref。
 - **`selectedGi` / `anchorGi`**：多选集合（gi 的 Set）和多选锚点（Shift+范围选的起点）。侧边栏所有高亮完全对应 `selectedGi`，表面和逻辑 100% 统一，没有两套系统打架。**没有 `selIdx` 这个字段**——"编辑器现在显示哪个块"完全由 `tabsStore.activeTab.key` 决定，跟侧边栏的选中/高亮状态本来是两件独立的事，只通过 `identifierToGi()` 单向换算；但两者**不能真的完全脱钩**——见下面 `revealAndFindGi` 条目里那段 `watch(() => tabsStore.activeTab, ...)`，"active tab 变了"这件事需要单向驱动"高亮跟着变"，否则会出现"点了 tab 但侧边栏没高亮/没展开折叠组"这个 bug（细节见下面两条）。
 - **`currentBlock`**：computed，直接从 `tabsStore.activeTab.key`（block identifier，仅当 `activeTab.domain === 'preset'` 时）→ `prompts` 解出的活引用，完全不依赖任何数组下标。`PresetContentEditor`/`PresetSettingsForm` 直接改它的字段就同步进 `prompts`/dirty 追踪，不需要维护本地 ref（name/role 不是高频输入的热路径，没那个必要）。
 - **`identifierToGi(identifier)`**：辅助函数，把 block identifier 反查成 flatNodes 里的 gi，供侧边栏高亮/滚动/`addBlock()` 决定插入位置这类场景使用——是 `currentBlock` 那条主链路的补充，不是它的依赖。
@@ -89,15 +89,16 @@ regex/tavern 段维护裸数组 + 影子树两份状态，靠显式 rebuild + de
 
 字体/颜色是通过 `uiStore.cssVars` 挂在 `.st-wb` 根节点上的 CSS 变量（`--wb-fs`/`--wb-ff`/`--hl-*`），所有后代自然继承——所以设置弹窗改字体对所有域的编辑器同时生效，不需要逐组件接线（唯一要手动做的是触发重新测量）。
 
-### "未保存"标记：三个 store 的 dirty 机制不一样
+### "未保存"标记：结构性 dirty + 每 item 独立的 per-item dirty
 
-`dirty` + `markDirty` 已抽成 `composables/useDirtyFlag.ts`，三个 store 共用同一对 `{ dirty, markDirty }`；watch 列表（哪些 ref 触发脏、deep 还是 shallow）仍各 store 自己写，因为每域的浅/深 watch 选择背后是性能权衡（如 presetStore 的 `prompts` 浅监听防打字卡顿）。
+脏状态分两层，store 的 `dirty` 是两者的聚合 computed：
 
-presetStore 的 `dirty` 是四条 watch 打出来的：`watch([order, regexs], markDirty, {deep:true})` + `watch(prompts, markDirty)`（**浅**）+ `watch(regexOrder, markDirty, {deep:true})` + `watch(scriptTreeOrder, markDirty, {deep:true})`。`prompts` 特意浅监听（内容高频编辑，深监听每字遍历打字卡顿）——所以 `prompts` 里的嵌套字段改动（content/name/role 这种字段级变异）浅 watch 捕获不到，改动入口必须**显式 `markDirty()`**（`PresetContentEditor.vue` 的 content v-model setter、`PresetSettingsForm.vue` 的字段 setter、`PresetSidebar.vue` 的重命名 commit 都已这么做）；`order`/`regexOrder`/`scriptTreeOrder` 走深监听自动覆盖。代价是"加载新预设"本身也会触发，所以 `applyLoadedPreset()` 加载完之后用 `nextTick()` 把它拨回 `false`。同时 `applyLoadedPreset()` 会调用 `tabsStore.closeWorkspace('preset')`——regex/tavern 数据也活在同一份被替换掉的状态里，所有旧标签都是悬空的，切预设/重新加载时一起清。模型参数在 `settings` ref（`PresetSettings`）上，`PresetMetaForm.vue` 直接改 `store.settings` 字段，setter 里手动调一次 `store.markDirty()`。
+- **结构性 dirty**：`composables/useDirtyFlag.ts`（各 store 里叫 `structuralDirty` + `markDirty()`），管 order 变化、item 增删重排、绑定/拆组、以及整份文档级字段（`PresetMetaForm`/`CharacterMetaForm` 这类没有对应 tab 的字段）。watch 列表（哪些 ref 触发、deep 还是 shallow）仍各 store 自己写，因为每域的浅/深 watch 选择背后是性能权衡（如 presetStore 的 `prompts` 浅监听防打字卡顿）。
+- **per-item dirty**：`composables/useItemDirty.ts`（各 store 按 item 池各建一个 tracker），每个 block/entry/script/greeting 单独记一份基线快照，内容改动只打对应 id 的脏。
 
-worldbookStore 的 `dirty` 同理：`watch([order, entries], ...)`，order 深监听（量小），entries 浅监听（高频编辑热路径，跟 presetStore 的 prompts 同一个理由），加载完用 `nextTick()` 拨回 `false`。
+per-item 脏的两种入口并存：**事件驱动**（block/entry/character 字段/greeting 的改动入口显式调 `markXxxDirty(id)`，如 `store.markBlockDirty(identifier)`）和**深比对**（regex/tavern 叶子脚本没有逐个 v-model 的显式打标点，靠既有 deep watch 触发时跑 `syncFromValues(pairs)` 按基线重算，对那几个编辑组件零改动）。新建 item 只 `markDirty(id)` 不设基线（保持"新建未保存"态），真删除调 `remove(id)` 清簿记；load（`applyLoaded*`）和整份保存（`doSave*`）之后对全部 tracker `resetAll` 重建基线、清 dirty。
 
-characterStore 的 `dirty` 主字段编辑**不是** watch 出来的，是每个改动函数（`setCurrentFieldValue`/`addGreeting`/`deleteGreeting`/`reorderGreeting`/`CharacterMetaForm.vue` 每个字段的 setter）显式调用 `markDirty()`——角色卡的字段结构比预设/世界书松散得多（七个大文本框 + greetings 数组 + regex_scripts + 一堆 meta 散字段），没有一两个能覆盖所有改动入口的顶层 ref 可以整体 watch，跟 CopyPanel 的 `dirty` 是同一个理由。例外是 regex/tavern 树：`watch(regexOrder, markDirty, {deep:true})` + `watch(scriptTreeOrder, markDirty, {deep:true})` 两条 deep watch 捕获这两个树的脏改（`rebuildRegexOrder`/`rebuildScriptTreeOrder` 更新树视图时自动标脏），对应 CRUD 不用手动打标。
+真正的能力在 **Discard**：关一个脏 tab 时，TabBar 把 tab 的 × 换成圆点，点击弹"保存/不保存/取消"（`confirmStore.askSaveDiscard`），选"不保存"只把这一个 item revert 回它自己的基线（经 `workspaceRegistry` 的 `discardTab(domain, key)` 分派到对应 store），新建未保存的 item 走"删除"分支——不碰其它还开着、还脏着的 tab，也不发网络请求。**保存分两级**：顶栏 Save 走整份 `doSave*`（成功后 `resetAll` 清全部 dirty）；block/tab 级 Save 走 `saveItem(domain, key)`（经 `workspaceRegistry.saveTab` / 各 store 的 `saveItem`）——因为 ST 没有单 item 保存接口，实现是「拿 `raw` 快照当磁盘基线 → 只把这一个 item 的当前内容覆盖上去 → 整份 save → 只 `setBaseline` 这一个 item」，新建 item（isNew）退化成整份 `doSave*`。侧边栏的 item 脏标（桌面端 `*` 替代拖拽手柄）、tab 圆点、`isXxxDirty`/`isTabDirty` 查询都读同一套 per-item tracker，给后续 agent 操作可视化留了读取点。
 
 
 
