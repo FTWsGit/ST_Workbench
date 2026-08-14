@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="uiStore.varPopupOpen"
-    class=".wb-var-popup"
+    class="wb-var-popup"
     :style="{
       top: uiStore.varPopupPos.top + 'px',
       left: uiStore.varPopupPos.left + 'px',
@@ -61,11 +61,11 @@ import Icon from './Icon.vue';
 
 const uiStore = useUiStore();
 
-/** 点击弹窗外或编辑器内另一个 {{var}} 时关闭弹窗：排除 ..wb-var-popup 本身与 .wb-editor-ta（让点别的 var 重新定位弹窗正常工作）。ESC 也关闭。 */
+/** 点击弹窗外或编辑器内另一个 {{var}} 时关闭弹窗：排除 .wb-var-popup 本身与 .wb-editor-ta（让点别的 var 重新定位弹窗正常工作）。ESC 也关闭。 */
 function onDocClick(e: MouseEvent) {
   if (!uiStore.varPopupOpen) return;
   const target = e.target as HTMLElement;
-  if (target.closest('..wb-var-popup') || target.closest('.wb-editor-ta')) return;
+  if (target.closest('.wb-var-popup') || target.closest('.wb-editor-ta')) return;
   uiStore.hideVarPopup();
 }
 function onKeydown(e: KeyboardEvent) {
