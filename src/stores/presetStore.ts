@@ -20,6 +20,7 @@ import { useRegexScripts } from '../composables/useRegexScripts';
 import { useScriptTree } from '../composables/useScriptTree';
 import { useDirtyFlag } from '../composables/useDirtyFlag';
 import { useItemDirty } from '../composables/useItemDirty';
+import { debounce } from '../utils';
 import { useTabsStore } from './tabsStore';
 import { useConfirmStore } from './confirmStore';
 import { useCharacterStore } from './characterStore';
@@ -45,6 +46,9 @@ const EMPTY_SETTINGS: PresetSettings = {
   squash_system_messages: false,
 };
 
+/** 跨域变量索引重建的防抖窗口：重建是全库扫描，连续输入时每键触发代价高，停顿这么久后再重扫一次。 */
+const REBUILD_VARINDEX_DEBOUNCE_MS = 300;
+
 // export 名为 usePresetStore，Pinia store id 仍为 'main'（改动会废弃已持久化的 devtools 状态）
 export const usePresetStore = defineStore('main', () => {
   const tabsStore = useTabsStore();
@@ -66,8 +70,9 @@ export const usePresetStore = defineStore('main', () => {
   const presetName = ref('');
   const presetList = ref<PresetListEntry[]>([]);
 
-  /* 跨域变量重扫 watch：origin 深扫捕捉 block 增删/启用切换/重排序；prompts 浅扫兜底（content 改字不触发，避打字卡顿）；
-   * character/worldbook 域数据变化各自 deep watch 触发（跨域扫描器读的是三域当前数据）。
+  /* 跨域变量重扫 watch：origin/character/worldbook 三域数据变化都重建变量索引（deep watch 捕捉字段级
+   * 变异，含 content 改字）。重建本身是全库扫描，连续输入时每键触发代价高，故统一 debounce——
+   * 输入停顿后才重扫一次，语义仍是"数据变了索引跟着变"，只是从每键变成停顿后一次。
    * 刻意放在 presetStore 而非 uiStore：`watch(getter, cb)` 注册时立即求值 getter，会触发 useCharacterStore()/
    * useWorldbookStore() 实例化——若放在 uiStore.setup，那两个 store 顶部 `const showToast = uiStore.showToast`
    * 会在 uiStore 尚未 return（proxy 上无任何属性）时求值，捕获 undefined，运行时报 is not a function。
@@ -76,23 +81,28 @@ export const usePresetStore = defineStore('main', () => {
    * 同时必须在 order/prompts ref 声明之后：watch 注册时立即求值 getter，会访问 order.value/prompts.value。 */
   const characterStore = useCharacterStore();
   const worldbookStore = useWorldbookStore();
+  const rebuildVarIndexDebounced = debounce(
+    () => uiStore.rebuildVarIndex(),
+    REBUILD_VARINDEX_DEBOUNCE_MS
+  );
   watch(
     () => order.value,
-    () => uiStore.rebuildVarIndex(),
+    () => rebuildVarIndexDebounced(),
     { deep: true }
   );
   watch(
     () => prompts.value,
-    () => uiStore.rebuildVarIndex()
+    () => rebuildVarIndexDebounced(),
+    { deep: true }
   );
   watch(
     () => characterStore.character,
-    () => uiStore.rebuildVarIndex(),
+    () => rebuildVarIndexDebounced(),
     { deep: true }
   );
   watch(
     () => worldbookStore.entries,
-    () => uiStore.rebuildVarIndex(),
+    () => rebuildVarIndexDebounced(),
     { deep: true }
   );
 
