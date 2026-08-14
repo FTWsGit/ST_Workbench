@@ -78,6 +78,28 @@ describe('useItemDirty', () => {
     expect(tracker.isDirty('a')).toBe(false);
   });
 
+  it('syncFromValues 成员没变时保持同一引用（不整体赋值 ref）', () => {
+    const tracker = useItemDirty<{ x: number }>();
+    tracker.resetAll([['a', { x: 1 }]]);
+    const ref = tracker.dirtyIds.value;
+
+    tracker.syncFromValues([['a', { x: 1 }]]);
+
+    expect(tracker.dirtyIds.value).toBe(ref);
+    expect(tracker.isDirty('a')).toBe(false);
+  });
+
+  it('syncFromValues 成员变化时也原地更新（引用不变）', () => {
+    const tracker = useItemDirty<{ x: number }>();
+    tracker.resetAll([['a', { x: 1 }]]);
+    const ref = tracker.dirtyIds.value;
+
+    tracker.syncFromValues([['a', { x: 9 }]]);
+
+    expect(tracker.dirtyIds.value).toBe(ref);
+    expect(tracker.isDirty('a')).toBe(true);
+  });
+
   it('resetAll 整体重建基线并清空脏集合', () => {
     const tracker = useItemDirty<{ x: number }>();
     tracker.markDirty('a');

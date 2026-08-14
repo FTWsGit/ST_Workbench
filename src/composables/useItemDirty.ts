@@ -42,10 +42,7 @@ export function useItemDirty<T>(): ItemDirtyTracker<T> {
   const baselineObj = new Map<string, T>();
 
   function clearDirty(id: string): void {
-    if (!dirtyIds.value.has(id)) return;
-    const next = new Set(dirtyIds.value);
-    next.delete(id);
-    dirtyIds.value = next;
+    dirtyIds.value.delete(id);
   }
 
   const anyDirty = computed(() => dirtyIds.value.size > 0);
@@ -63,10 +60,7 @@ export function useItemDirty<T>(): ItemDirtyTracker<T> {
   }
 
   function markDirty(id: string): void {
-    if (dirtyIds.value.has(id)) return;
-    const next = new Set(dirtyIds.value);
-    next.add(id);
-    dirtyIds.value = next;
+    dirtyIds.value.add(id);
   }
 
   function setBaseline(id: string, value: T): void {
@@ -84,7 +78,26 @@ export function useItemDirty<T>(): ItemDirtyTracker<T> {
         next.add(id);
       }
     }
-    dirtyIds.value = next;
+    // 成员没变时不替换引用：整体赋值 ref 会触发所有消费 dirtyIds 的 effect 重跑（侧边栏每行、
+    // anyDirty、tab 圆点等），打字连续输入时脏集合通常不变，纯属浪费。原地增删只影响相关 key。
+    const cur = dirtyIds.value;
+    if (next.size === cur.size) {
+      let same = true;
+      for (const id of next) {
+        if (!cur.has(id)) {
+          same = false;
+          break;
+        }
+      }
+      if (same) return;
+    }
+    // 有变化才落地：先删不在 next 的，再加新的。
+    for (const id of cur) {
+      if (!next.has(id)) cur.delete(id);
+    }
+    for (const id of next) {
+      if (!cur.has(id)) cur.add(id);
+    }
   }
 
   function discard(id: string): T | undefined {
