@@ -24,7 +24,5 @@ dist-ssr
 *.local
 
 # agent
-.atomcode/*
-!.atomcode/skills
-.atomcode/skills/submail/log
+.atomcode
 .temp

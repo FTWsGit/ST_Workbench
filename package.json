@@ -10,9 +10,9 @@
     "lint-fix": "eslint src --fix && stylelint src/**/*.css --fix",
     "format": "prettier --write src",
     "test": "vitest run",
-    "docs:get_always": "node .atomcode/skills/ws-doc-read/scripts/print_always.mjs",
-    "docs:list": "node .atomcode/skills/ws-doc-read/scripts/list_docs.mjs",
-    "docs:create": "node .atomcode/skills/ws-doc-read/scripts/create_docs.mjs"
+    "docs:get_always": "node .agents/skills/ws-doc-read/scripts/print_always.mjs",
+    "docs:list": "node .agents/skills/ws-doc-read/scripts/list_docs.mjs",
+    "docs:create": "node .agents/skills/ws-doc-read/scripts/create_docs.mjs"
   },
   "dependencies": {
     "pinia": "^2.1.7",
