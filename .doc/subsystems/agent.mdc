@@ -111,7 +111,7 @@ UI（`AgentPanel.vue`）的发送按钮在 busy 时变"停止"，不禁用、不
 
 ### 统一 tools（不分 workspace）
 
-所有工具一次性全导进 `tools` 数组发给模型，不按当前 workspace 过滤。`AgentToolDef.availableIn` 字段、\agent 跨 preset/worldbook/character 三个 store 运维，工具全集常驻一次到位，避免按 ws 分导致的 provider 端 tools 缓存不命中
+所有工具一次性全导进 `tools` 数组发给模型，不按当前 workspace 过滤。agent 跨 preset/worldbook/character 三个 store 运维，工具全集常驻一次到位，避免按 ws 分导致的 provider 端 tools 缓存不命中
 
 ### 分页语义
 
