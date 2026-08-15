@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## 宏前缀字典
 
-`utils.ts` 的 `VAR_MACRO_PREFIXES`（L106-120）逐条前缀匹配，分隔符统一 `::`：
+`lib/variables.ts` 的 `VAR_MACRO_PREFIXES` 逐条前缀匹配，分隔符统一 `::`：
 
 | 宏前缀 | kind | scope | 带值 |
 |---|---|---|---|

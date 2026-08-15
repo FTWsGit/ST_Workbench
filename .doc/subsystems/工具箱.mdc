@@ -19,7 +19,7 @@ alwaysApply: false
 
 ## Search 的 LLM-friendly 形状
 
-`utils.ts` 抽出的 `searchFields(items, fields, query, getItemMeta)` 是纯函数，不碰 Vue 响应式；签名、`SearchField.kind` 三态语义、`SearchHit` 形状直接看 `utils.ts` 里 `SearchField`/`SearchHit` 的 JSDoc——那是这两个类型的唯一权威来源，不在这里复述。
+`lib/search.ts` 的 `searchFields(items, fields, query, getItemMeta)` 是纯函数，不碰 Vue 响应式；签名、`SearchField.kind` 三态语义、`SearchHit` 形状直接看 `lib/search.ts` 里 `SearchField`/`SearchHit` 的 JSDoc——那是这两个类型的唯一权威来源，不在这里复述。
 
 ## BatchTool：批量操作与影子树双状态
 

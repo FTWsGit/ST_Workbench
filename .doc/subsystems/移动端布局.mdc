@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## 断点判定
 
-`composables/hostEnv.ts` 的 `useIsMobile()` 提供一个响应式 `isMobile` ref，断点是同文件导出的 `MOBILE_BREAKPOINT = 720`（px，宿主窗口宽度）。**优先用 `matchMedia` 监听断点跨越**，不支持时退化成 `resize` 监听——监听 `getHostWindow()`（hostEnv 接口保留，标准扩展下天然退化为裸 `window`，见 decision 0010）。
+`lib/hostEnv.ts` 的 `useIsMobile()` 提供一个响应式 `isMobile` ref，断点是同文件导出的 `MOBILE_BREAKPOINT = 720`（px，宿主窗口宽度）。**优先用 `matchMedia` 监听断点跨越**，不支持时退化成 `resize` 监听——监听 `getHostWindow()`（hostEnv 接口保留，标准扩展下天然退化为裸 `window`，见 decision 0010）。
 
 > 注意：CSS 里 `@media (max-width: 720px)` 手写了同一个数字——两处改一处必须跟着改，CSS 读不到 TS 里的常量。
 

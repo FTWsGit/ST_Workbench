@@ -27,8 +27,8 @@ alwaysApply: false
 
 ### 徽标
 
-- 角色徽标 class：`utils.ts` 的 `roleClass(role, prefix?)`，不要手写三元表达式。
-- `{{setvar}}`/`{{addvar}}`/`{{getvar}}` 徽标：`utils.ts` 的 `varOpBadge(type)`。
+- 角色徽标 class：`lib/display.ts` 的 `roleClass(role, prefix?)`，不要手写三元表达式。
+- `{{setvar}}`/`{{addvar}}`/`{{getvar}}` 徽标：`lib/display.ts` 的 `varOpBadge(type)`。
 
 ### 布局工具类
 

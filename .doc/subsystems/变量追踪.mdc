@@ -11,7 +11,7 @@ alwaysApply: false
 
 ## 扫描器：scanVariableMacros
 
-`scanVariableMacros`（`utils.ts` L124，旧名 `findVarOps` 保留为别名；返回 `VarOpMatch[]`）是字符级扫描器，不是单一正则：
+`scanVariableMacros`（`lib/variables.ts`，旧名 `findVarOps` 保留为别名；返回 `VarOpMatch[]`）是字符级扫描器，不是单一正则：
 
 1. 找 `{{`，用 `findMacroEnd`（深度计数 `{{`/`}}`）找到真正的闭合 `}}`，正确处理嵌套花括号。
 2. inner 与 13 个前缀逐条 `startsWith` 比对。

@@ -20,7 +20,7 @@
 - 项目不应该一味追求最小改动，假如需要抽象，那就抽象；需要统一接口，那就统一接口；需要创造复用逻辑，那就复用
 
 ## 项目测试纪律
-- 凡是能用独立脚本先验证正确性/复现 bug 再合并的改动，都应该这么做（纯函数如 `utils.ts` / `regexEngine.ts` / `useHighlight.ts` 用 `npx tsx <file>` 跑）。
+- 凡是能用独立脚本先验证正确性/复现 bug 再合并的改动，都应该这么做（纯函数如 `lib/` 下 `diff.ts` / `variables.ts` / `regexEngine.ts` 或 `useHighlight.ts` 用 `npx tsx <file>` 跑）。
 - 改完代码使用 `npm run lint` 来检查是否有风格错误，
 - 最后一定使用 `npm run typecheck`、`npm run build` 和 `npm run test` 来验证代码
 - 收尾的时候永远使用 `npm run format` 来整理代码format

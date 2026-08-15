@@ -19,17 +19,17 @@ alwaysApply: false
 | 加一个"可能挤开编辑器也可能悬浮"的右侧面板 | 抄 `PreviewPanel`/`ToolBoxPanel`/`AgentPanel` 的三态写法：`settings.xxxMode: PanelMode` + 共享 `PanelModeSwitch.vue`，float 形态借 `FloatingPanelShell` |
 | 加一个跨 workspace 通用的工具（按 scene 派工具） | 新增工具只在自己的 `register.ts` 调一次 `registerTool(workspace, collection, def)`，不用改容器 |
 | 加一个新的可编辑 domain | 按下方「新增一个 domain 的完整流程」9 步执行 |
-| 加一个"列表 + 点击选中"交互 | `utils.ts` 的 `applyMultiSelect()` |
+| 加一个"列表 + 点击选中"交互 | `lib/multiSelect.ts` 的 `applyMultiSelect()` |
 | 加一个"列表 + 拖拽排序"交互（支持触屏） | `composables/useDragReorder.ts`（Pointer Events），自己只写 `onDrop` 回调里的排序逻辑，把手元素记得加 `touch-action: none` |
-| 加一个"按 role/type 出徽标 class 名"的地方 | `utils.ts` 的 `roleClass()`/`varOpBadge()` |
+| 加一个"按 role/type 出徽标 class 名"的地方 | `lib/display.ts` 的 `roleClass()`/`varOpBadge()` |
 | 加一个新的 locale key | 先加 `i18n/locales/zh-CN.ts`，再在 `en.ts` 对应位置加英文翻译（两文件顺序保持一致）；key 归属哪个域见「i18n-key命名规范」；如果 key 属于 `types.ts` 选项表，把 `label` 改成 `labelKey: LocaleKey` 并在 locale 文件里补文案 |
 | 加一个设置弹窗里"拖动时连续触发"的控件（滑块/色盘） | 抄 `Modals.vue` 的 draft 模式：拖动中只改组件本地 draft，松手（`@change`）才 commit 进 store + localStorage——**不要**直接绑 store |
 | 加一个"按住左右拖改数值"的输入框 | `components/shared/NumberInput.vue` + `composables/useNumberDragScrub.ts`，原数 number input + 拖拽手柄共存，数字拖拽微调机制走 useNumberDragScrub.ts |
 | 加一个对三个 domain store 的"新建/删除/切换/重载/保存"统一入口 | 走 `stores/workspaceRegistry.ts` 的 `DocumentWorkspaceAdapter` 表，App.vue 顶栏/Save/Reload/关面板/移动端工具抽屉都查这张表写通用逻辑，不要各自 `if (workspace === 'preset')` 硬编码 |
 | 加一份正则脚本的 add/delete/reorder CRUD | 走 `composables/useRegexScripts.ts`，presetStore 和 characterStore 都从这拿同一份实现，调用方只喂"怎么拿当前 scripts 数组 getter"和三个 domain 无关的依赖 |
 | 要往 SillyTavern 读/存数据 | 只走 `api/presetApi.ts`/`api/worldbookApi.ts`/`api/characterApi.ts` 现成的函数（domain 各自的读写层）；传给 ST 自己 API 的对象**必须**先深拷贝，与 ST API 的数据契约要深拷贝 |
-| 改动 `utils.ts`/`regexEngine.ts` 里的纯函数算法 | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
-| 判断当前是不是移动端布局 | `composables/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |
+| 改动 `lib/` 下的纯函数算法（`diff.ts`/`variables.ts`/`regexEngine.ts` 等） | 改之前/改之后脱离 Vue 用 `npx tsx` 单独跑测试用例，确认没有回归再合并 |
+| 判断当前是不是移动端布局 | `lib/hostEnv.ts` 的 `useIsMobile()`，别自己重新写一个 `resize` 监听器 |
 | 新增一个"工作区内部还有子集合"的 domain 时 | 不要在某个 Sidebar 组件内部再发明一个本地 `localMode`，直接调 `tabsStore.setSidebarCollection(activeWorkspace, collection)` |
 | 加一个图标 / 按钮里要放小符号 | `components/shared/Icon.vue`（统一 16×16 viewBox、`stroke="currentColor"`、1.4 描边），`name` 从 `IconName` 枚举挑；需要新图标就在 ICONS 表里加一笔并补逐键 JSDoc。**不要**在模板或 i18n 字符串里写裸 emoji/Unicode 符号——跨字体渲染不一致 |
 
