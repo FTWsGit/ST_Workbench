@@ -44,7 +44,6 @@ registerAgentTool({
   name: 'preset_preview_blocks',
   description: TOOL_DESC.presetPreviewBlocks,
   parameters: { type: 'object', properties: {} },
-  readonly: true,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -94,7 +93,6 @@ registerAgentTool({
   name: 'preset_preview_raw',
   description: TOOL_DESC.presetPreviewRaw,
   parameters: { type: 'object', properties: {} },
-  readonly: false,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };

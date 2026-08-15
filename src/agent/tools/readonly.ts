@@ -100,7 +100,6 @@ registerAgentTool({
   name: 'preset_list_blocks',
   description: TOOL_DESC.presetListBlocks,
   parameters: { type: 'object', properties: {} },
-  readonly: true,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -182,7 +181,6 @@ registerAgentTool({
     },
     required: ['identifier'],
   },
-  readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const id = String(args?.identifier ?? '').trim();
@@ -221,7 +219,6 @@ registerAgentTool({
     },
     required: ['query'],
   },
-  readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const query = String(args?.query ?? '').trim();
@@ -265,7 +262,6 @@ registerAgentTool({
   name: 'worldbook_list_entries',
   description: TOOL_DESC.worldbookListEntries,
   parameters: { type: 'object', properties: {} },
-  readonly: true,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true };
@@ -314,7 +310,6 @@ registerAgentTool({
     },
     required: ['uid'],
   },
-  readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const uid = Number(args?.uid);
@@ -352,7 +347,6 @@ registerAgentTool({
     },
     required: ['query'],
   },
-  readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const query = String(args?.query ?? '').trim();
@@ -401,7 +395,6 @@ registerAgentTool({
   name: 'character_get_fields',
   description: TOOL_DESC.characterGetFields,
   parameters: { type: 'object', properties: {} },
-  readonly: true,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     if (!store.character) return { text: frame('当前没有加载任何角色卡。'), isError: true };
@@ -447,7 +440,6 @@ registerAgentTool({
     },
     required: ['field_key'],
   },
-  readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     const key = String(args?.field_key ?? '').trim();

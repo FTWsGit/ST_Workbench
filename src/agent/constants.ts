@@ -21,9 +21,6 @@ export const SUMMARY_TOO_BIG_PREFIX = 2 * 1024;
 /** 单次用户提交内的工具调用轮数熔断。防止模型陷入调用循环。 */
 export const MAX_TOOL_ROUNDS = 8;
 
-/** 单轮内并行只读工具的最大并发数。 */
-export const READONLY_TOOL_CONCURRENCY = 3;
-
 /** 持久化保留的最大会话索引条数。超过则丢弃最旧的已归档会话。 */
 export const MAX_RETAINED_SESSIONS = 20;
 

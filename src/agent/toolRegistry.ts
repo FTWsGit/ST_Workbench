@@ -42,8 +42,6 @@ export interface AgentToolDef {
   description: string;
   /** OpenAI 风格 parameters schema。 */
   parameters: JsonSchemaObject;
-  /** true 才允许并行执行（只读工具）。 */
-  readonly: boolean;
   /** 执行函数。args 是已解析的参数对象。 */
   execute: (args: Record<string, unknown>, ctx: AgentToolContext) => Promise<AgentToolResult>;
 }

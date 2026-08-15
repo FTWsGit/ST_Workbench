@@ -12148,7 +12148,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.presetStore;
 		if (!n.presetName) return {
@@ -12202,7 +12201,6 @@ lg({
 		},
 		required: ["identifier"]
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.presetStore, r = String(e?.identifier ?? "").trim();
 		if (!r) return {
@@ -12240,7 +12238,6 @@ lg({
 		} },
 		required: ["query"]
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.presetStore, r = String(e?.query ?? "").trim();
 		if (!r) return {
@@ -12287,7 +12284,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.worldbookStore;
 		if (!n.worldbookName) return {
@@ -12324,7 +12320,6 @@ lg({
 		},
 		required: ["uid"]
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.worldbookStore, r = Number(e?.uid);
 		if (!Number.isFinite(r)) return {
@@ -12360,7 +12355,6 @@ lg({
 		} },
 		required: ["query"]
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.worldbookStore, r = String(e?.query ?? "").trim();
 		if (!r) return {
@@ -12407,7 +12401,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.characterStore;
 		if (!n.character) return {
@@ -12469,7 +12462,6 @@ lg({
 		},
 		required: ["field_key"]
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.characterStore, r = String(e?.field_key ?? "").trim();
 		if (!r) return {
@@ -12540,7 +12532,6 @@ lg({
 		},
 		required: ["identifier", "fields"]
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.presetStore, r = String(e?.identifier ?? "").trim(), i = e?.fields;
 		if (!r) return {
@@ -12585,7 +12576,6 @@ lg({
 		},
 		required: ["name"]
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.presetStore;
 		if (!n.presetName) return {
@@ -12631,7 +12621,6 @@ lg({
 		},
 		required: ["identifier", "direction"]
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.presetStore, r = String(e?.identifier ?? "").trim(), i = String(e?.direction ?? "").trim();
 		if (!r || !i) return {
@@ -12664,7 +12653,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.presetStore;
 		if (!n.presetName) return {
@@ -12684,7 +12672,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.presetStore;
 		if (!n.presetName) return {
@@ -12701,7 +12688,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.presetStore;
 		if (!n.presetName) return {
@@ -12743,7 +12729,6 @@ lg({
 		},
 		required: ["comment"]
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.worldbookStore;
 		if (!n.worldbookName) return {
@@ -12780,7 +12765,6 @@ lg({
 		},
 		required: ["uid", "direction"]
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.worldbookStore, r = Number(e?.uid), i = String(e?.direction ?? "").trim();
 		if (!Number.isFinite(r)) return {
@@ -12817,7 +12801,6 @@ lg({
 		} },
 		required: ["uid"]
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.worldbookStore, r = Number(e?.uid);
 		if (!Number.isFinite(r)) return {
@@ -12856,7 +12839,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.worldbookStore;
 		if (!n.worldbookName) return {
@@ -12889,7 +12871,6 @@ lg({
 		},
 		required: ["field_key", "value"]
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.characterStore, r = String(e?.field_key ?? "").trim(), i = String(e?.value ?? "");
 		if (!r) return {
@@ -12931,7 +12912,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !1,
 	async execute(e, t) {
 		let n = t.characterStore;
 		if (!n.character) return {
@@ -12967,7 +12947,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !0,
 	async execute(e, t) {
 		let n = t.presetStore;
 		if (!n.presetName) return {
@@ -13001,7 +12980,6 @@ lg({
 		type: "object",
 		properties: {}
 	},
-	readonly: !1,
 	async execute(e, t) {
 		if (!t.presetStore.presetName) return {
 			text: Ig("当前没有加载任何预设。"),

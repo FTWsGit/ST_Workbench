@@ -80,7 +80,6 @@ registerAgentTool({
     },
     required: ['identifier', 'fields'],
   },
-  readonly: false,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const id = String(args?.identifier ?? '').trim();
@@ -125,7 +124,6 @@ registerAgentTool({
     },
     required: ['name'],
   },
-  readonly: false,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -176,7 +174,6 @@ registerAgentTool({
     },
     required: ['identifier', 'direction'],
   },
-  readonly: false,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     const id = String(args?.identifier ?? '').trim();
@@ -219,7 +216,6 @@ registerAgentTool({
   name: 'preset_bind_group',
   description: TOOL_DESC.presetBindGroup,
   parameters: { type: 'object', properties: {} },
-  readonly: false,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -238,7 +234,6 @@ registerAgentTool({
   name: 'preset_unbind_group',
   description: TOOL_DESC.presetUnbindGroup,
   parameters: { type: 'object', properties: {} },
-  readonly: false,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -252,7 +247,6 @@ registerAgentTool({
   name: 'preset_save',
   description: TOOL_DESC.presetSave,
   parameters: { type: 'object', properties: {} },
-  readonly: false,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
     if (!store.presetName) return { text: frame('当前没有加载任何预设。'), isError: true };
@@ -296,7 +290,6 @@ registerAgentTool({
     },
     required: ['comment'],
   },
-  readonly: false,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true };
@@ -338,7 +331,6 @@ registerAgentTool({
     },
     required: ['uid', 'direction'],
   },
-  readonly: false,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const uid = Number(args?.uid);
@@ -387,7 +379,6 @@ registerAgentTool({
     },
     required: ['uid'],
   },
-  readonly: false,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     const uid = Number(args?.uid);
@@ -426,7 +417,6 @@ registerAgentTool({
   name: 'worldbook_save',
   description: TOOL_DESC.worldbookSave,
   parameters: { type: 'object', properties: {} },
-  readonly: false,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
     if (!store.worldbookName) return { text: frame('当前没有加载任何世界书。'), isError: true };
@@ -462,7 +452,6 @@ registerAgentTool({
     },
     required: ['field_key', 'value'],
   },
-  readonly: false,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     const key = String(args?.field_key ?? '').trim();
@@ -510,7 +499,6 @@ registerAgentTool({
   name: 'character_save',
   description: TOOL_DESC.characterSave,
   parameters: { type: 'object', properties: {} },
-  readonly: false,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
     if (!store.character) return { text: frame('当前没有加载任何角色卡。'), isError: true };
