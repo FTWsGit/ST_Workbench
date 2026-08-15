@@ -75,7 +75,7 @@
 import { ref, computed, watch } from 'vue';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useUiStore } from '../../stores/uiStore';
-import { applyRegexScript, parseFindRegex } from '../../regexEngine';
+import { applyRegexScript, parseFindRegex } from '../../lib/regexEngine';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
 import Icon from '../shared/Icon.vue';
 import type { RegexContentEditorProps } from './regexProps';

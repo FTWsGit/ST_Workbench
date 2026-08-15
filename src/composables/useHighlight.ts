@@ -1,4 +1,4 @@
-import { esc, span } from '../utils';
+import { esc, span } from '../lib/display';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-javascript.js';
 

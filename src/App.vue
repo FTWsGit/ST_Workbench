@@ -558,11 +558,11 @@ import SettingsDock from './components/shared/SettingsDock.vue';
 import WorkspaceSelect from './components/shared/WorkspaceSelect.vue';
 import { useTabsStore } from './stores/tabsStore';
 import { useConfirmStore } from './stores/confirmStore';
-import { esc } from './utils';
+import { esc } from './lib/display';
 import type { LocaleKey } from './i18n';
 import type { Workspace } from './types';
 import { computed, onMounted, onUnmounted } from 'vue';
-import { useIsMobile, getHostWindow } from './composables/hostEnv';
+import { useIsMobile, getHostWindow } from './lib/hostEnv';
 import { useMobileWorkspaceDrawer } from './composables/useMobileWorkspaceDrawer';
 import { createWorkspaceRegistry, type DocumentWorkspaceAdapter } from './stores/workspaceRegistry';
 

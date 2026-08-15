@@ -1,4 +1,4 @@
-import type { SearchField, SearchHit, SearchItemMeta } from '../../utils';
+import type { SearchField, SearchHit, SearchItemMeta } from '../../lib/search';
 import { usePresetStore } from '../../stores/presetStore';
 import { useWorldbookStore } from '../../stores/worldbookStore';
 import { useCharacterStore } from '../../stores/characterStore';

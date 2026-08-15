@@ -160,13 +160,13 @@ import { usePresetStore } from '../../stores/presetStore';
 import { useUiStore } from '../../stores/uiStore';
 import type { OrderItem, OrderGroup, FlatNode } from '../../types';
 import { usePanelResize } from '../../composables/usePanelResize';
-import { roleClass as roleClassOf } from '../../utils';
+import { roleClass as roleClassOf } from '../../lib/display';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useListScrollSync } from '../../composables/useListScrollSync';
 import { useDragReorder } from '../../composables/useDragReorder';
 import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
-import { useIsMobile } from '../../composables/hostEnv';
+import { useIsMobile } from '../../lib/hostEnv';
 import ListToolbar from '../shared/ListToolbar.vue';
 import Icon from '../shared/Icon.vue';
 

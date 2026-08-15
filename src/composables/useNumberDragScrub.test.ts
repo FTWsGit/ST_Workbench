@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // 把 hostEnv 的 getHostWindow 替换成返回一个轻量假 window，避免 node 环境没有 window。
-vi.mock('./hostEnv', () => ({
+vi.mock('../lib/hostEnv', () => ({
   getHostWindow: () => ({
     document: { body: { classList: { add() {}, remove() {} } } },
     addEventListener() {},

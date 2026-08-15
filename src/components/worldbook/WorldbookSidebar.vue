@@ -160,7 +160,7 @@ import { useListScrollSync } from '../../composables/useListScrollSync';
 import { useDragReorder } from '../../composables/useDragReorder';
 import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
-import { useIsMobile } from '../../composables/hostEnv';
+import { useIsMobile } from '../../lib/hostEnv';
 import ListToolbar from '../shared/ListToolbar.vue';
 import Icon from '../shared/Icon.vue';
 

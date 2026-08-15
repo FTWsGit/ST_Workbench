@@ -1,4 +1,4 @@
-import { getHostDocument, getHostWindow } from './hostEnv';
+import { getHostDocument, getHostWindow } from '../lib/hostEnv';
 import { ref } from 'vue';
 
 const DRAG_THRESHOLD = 4;

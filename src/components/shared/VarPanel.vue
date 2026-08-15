@@ -106,7 +106,7 @@
 import { watch } from 'vue';
 import { useUiStore } from '../../stores/uiStore';
 import { usePanelResize } from '../../composables/usePanelResize';
-import { varOpBadge } from '../../utils';
+import { varOpBadge } from '../../lib/display';
 import Icon from './Icon.vue';
 
 const uiStore = useUiStore();

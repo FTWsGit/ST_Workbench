@@ -1,5 +1,5 @@
 import { ref, computed, onUnmounted, type CSSProperties } from 'vue';
-import { getHostWindow, useIsMobile } from './hostEnv';
+import { getHostWindow, useIsMobile } from '../lib/hostEnv';
 
 /** 所有悬浮窗共享同一个递增计数器来做"点哪个哪个到最上层"。
  *  基准值 100010，高于 .wb-panel（100000）但低于 var-popup/modal/toast（200000~300001，

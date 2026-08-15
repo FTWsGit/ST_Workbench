@@ -1,4 +1,4 @@
-import { getHostWindow } from './hostEnv';
+import { getHostWindow } from '../lib/hostEnv';
 
 export type SelectMode = 'single' | 'ctrl' | 'shift';
 

@@ -1,5 +1,5 @@
 import { ref, onUnmounted } from 'vue';
-import { getHostWindow } from './hostEnv';
+import { getHostWindow } from '../lib/hostEnv';
 
 /**
  * 拖拽调整面板宽度。`getWidth`/`setWidth` 由调用方决定宽度存储位置。

@@ -36,7 +36,7 @@ import { useTabsStore, type OpenTab } from '../../stores/tabsStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfirmStore } from '../../stores/confirmStore';
 import { createWorkspaceRegistry } from '../../stores/workspaceRegistry';
-import { esc } from '../../utils';
+import { esc } from '../../lib/display';
 import Icon from './Icon.vue';
 const tabsStore = useTabsStore();
 const uiStore = useUiStore();

@@ -101,7 +101,7 @@ import {
   REGEX_PLACEMENT_OPTIONS as PLACEMENT_OPTIONS,
   REGEX_SUBSTITUTE_OPTIONS as SUBSTITUTE_OPTIONS,
 } from '../../types';
-import { parseFindRegex } from '../../regexEngine';
+import { parseFindRegex } from '../../lib/regexEngine';
 import type { RegexSettingsFormProps } from './regexProps';
 import AdvancedGroup from '../shared/AdvancedGroup.vue';
 import SegmentedControl from '../shared/SegmentedControl.vue';

@@ -1,4 +1,4 @@
-import type { RegexScript } from './types';
+import type { RegexScript } from '../types';
 
 /** 解析 ST 的 `/pattern/flags` 字符串格式。不带定界符的裸 pattern 也兼容（容错，不确定所有历史
  *  脚本都严格带 `//`）。强制带上 `g`——预览是"整段文本找全部匹配"，不是只找第一个。

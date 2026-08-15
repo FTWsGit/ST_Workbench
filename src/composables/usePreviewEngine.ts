@@ -1,7 +1,9 @@
 import { ref } from 'vue';
 import type { OrderNode, PromptBlock, PreviewBlockGroup } from '../types';
 import { isGroupNode } from './useGroupedList';
-import { macroAwareDiff } from '../utils';
+import { macroAwareDiff } from '../lib/diff';
+import { getMacroSpans } from '../lib/macroSpans';
+import type { MacroAnalysis } from '../lib/macroSpans';
 import * as ST from '../api/presetApi';
 
 /**
@@ -34,9 +36,9 @@ export function usePreviewEngine(
   const previewRawText = ref('');
 
   /** 无 raw 内容可对比（marker blocks 等）——无需高亮。 */
-  function diffAgainstRaw(raw: string, rendered: string) {
+  function diffAgainstRaw(raw: string, rendered: string, analysis: MacroAnalysis | null) {
     if (!raw.trim()) return [{ text: rendered, added: false }];
-    return macroAwareDiff(raw, rendered);
+    return macroAwareDiff(raw, rendered, analysis ?? undefined);
   }
 
   /**
@@ -60,6 +62,8 @@ export function usePreviewEngine(
         const isMarker = !!p?.marker;
         const rawContent = p?.content || '';
         const diffable = !isMarker && msgs.length === 1;
+        // 宏跨度提取走真实 ST MacroParser（浏览器环境），失败时降级为 null → 正则 splitByMacros。
+        const analysis = diffable ? await getMacroSpans(rawContent) : null;
         groups.push({
           id: o.identifier,
           name: p?.name || o.identifier,
@@ -69,7 +73,7 @@ export function usePreviewEngine(
             tokens: m.tokens,
             identifier: m.identifier,
             segments: diffable
-              ? diffAgainstRaw(rawContent, m.content)
+              ? diffAgainstRaw(rawContent, m.content, analysis)
               : [{ text: m.content, added: false }],
           })),
         });

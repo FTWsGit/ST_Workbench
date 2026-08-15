@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseFindRegex, applyRegexScript } from './regexEngine';
-import type { RegexScript } from './types';
+import type { RegexScript } from '../types';
 
 function mk(findRegex: string, replaceString?: string, trimStrings?: string[]): RegexScript {
   return {

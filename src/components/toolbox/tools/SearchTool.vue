@@ -132,7 +132,8 @@ import { useUiStore } from '../../../stores/uiStore';
 import { usePresetStore } from '../../../stores/presetStore';
 import { useWorldbookStore } from '../../../stores/worldbookStore';
 import { useCharacterStore } from '../../../stores/characterStore';
-import { esc, searchFields, type SearchHit, type SearchField } from '../../../utils';
+import { esc } from '../../../lib/display';
+import { searchFields, type SearchHit, type SearchField } from '../../../lib/search';
 import {
   getSearchScene,
   applyReplace,

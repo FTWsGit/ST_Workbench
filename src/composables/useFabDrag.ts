@@ -1,5 +1,5 @@
 import { ref, reactive, computed, type CSSProperties } from 'vue';
-import { getHostWindow } from './hostEnv';
+import { getHostWindow } from '../lib/hostEnv';
 
 /** FAB 拖拽 + 点击二合一。
  *

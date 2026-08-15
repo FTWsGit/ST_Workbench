@@ -27,7 +27,7 @@ import { useWorldbookStore } from '../../stores/worldbookStore';
 import { useCharacterStore } from '../../stores/characterStore';
 import { createWorkspaceRegistry } from '../../stores/workspaceRegistry';
 import { useConfirmStore } from '../../stores/confirmStore';
-import { esc } from '../../utils';
+import { esc } from '../../lib/display';
 import type { LocaleKey } from '../../i18n';
 
 const uiStore = useUiStore();

@@ -4,7 +4,7 @@
  * 工具直接复用/包装现有 store 方法与 searchFields.ts 的 SearchHit 契约。
  */
 import { registerAgentTool, type AgentToolResult } from '../toolRegistry';
-import { searchFields, type SearchHit } from '../../utils';
+import { searchFields, type SearchHit } from '../../lib/search';
 import { LIST_TOOLS_MAX_ITEMS, TOOL_RESULT_TRUNCATE_BYTES } from '../constants';
 import type { Character } from '../../types';
 

@@ -8,7 +8,7 @@ import type {
   VarAssemblyLayer,
   WorldbookEntry,
 } from '../types';
-import { scanVariableMacros, type VarOpMatch, type VarScope } from '../utils';
+import { scanVariableMacros, type VarOpMatch, type VarScope } from '../lib/variables';
 import { isGroupNode } from './useGroupedList';
 
 /** CHARACTER_FIELDS 里映射到 otherPrompts 的纯文本字段（description 顶层、depthPrompt 复合对象，另行处理）。 */

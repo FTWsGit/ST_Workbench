@@ -154,11 +154,13 @@ import { ref, reactive, computed, onActivated } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useConfirmStore } from '../../stores/confirmStore';
-import { useIsMobile } from '../../composables/hostEnv';
+import { useIsMobile } from '../../lib/hostEnv';
 import * as PS from '../../api/presetApi';
 import type { PresetListEntry } from '../../api/presetApi';
 import type { Preset, PromptBlock } from '../../types';
-import { applyMultiSelect, roleClass, esc, orderedPromptsWithHidden } from '../../utils';
+import { applyMultiSelect } from '../../lib/multiSelect';
+import { roleClass, esc } from '../../lib/display';
+import { orderedPromptsWithHidden } from '../../lib/promptOrder';
 import Icon from '../shared/Icon.vue';
 
 const store = usePresetStore();

@@ -359,7 +359,7 @@ import { useConfirmStore } from '../../stores/confirmStore';
 import { useAgentStore } from '../../agent/agentStore';
 import { countTokensAsync } from '../../agent/contextManager';
 import { usePanelResize } from '../../composables/usePanelResize';
-import { esc } from '../../utils';
+import { esc } from '../../lib/display';
 import FloatingPanelShell from './FloatingPanelShell.vue';
 import PanelModeSwitch from './PanelModeSwitch.vue';
 import AgentSettings from './AgentSettings.vue';

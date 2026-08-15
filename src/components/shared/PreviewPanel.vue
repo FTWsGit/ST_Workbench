@@ -250,9 +250,9 @@
 import { usePresetStore } from '../../stores/presetStore';
 import { useCharacterStore } from '../../stores/characterStore';
 import { useUiStore } from '../../stores/uiStore';
-import { esc, roleClass as roleClassOf } from '../../utils';
+import { esc, roleClass as roleClassOf } from '../../lib/display';
 import { usePanelResize } from '../../composables/usePanelResize';
-import { copyToHostClipboard } from '../../composables/hostEnv';
+import { copyToHostClipboard } from '../../lib/hostEnv';
 import { watch, computed } from 'vue';
 import type { PreviewSegment, PanelMode } from '../../types';
 import FloatingPanelShell from './FloatingPanelShell.vue';

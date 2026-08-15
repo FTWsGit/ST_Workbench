@@ -53,8 +53,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { highlightLines, type HighlightLanguage } from '../../composables/useHighlight';
-import { getHostWindow, getHostDocument } from '../../composables/hostEnv';
-import { esc, scanVariableMacros, type VarOpMatch } from '../../utils';
+import { getHostWindow, getHostDocument } from '../../lib/hostEnv';
+import { esc } from '../../lib/display';
+import { scanVariableMacros, type VarOpMatch } from '../../lib/variables';
 
 interface JumpRequest {
   line: number;

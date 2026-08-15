@@ -20,7 +20,7 @@ import { useRegexScripts } from '../composables/useRegexScripts';
 import { useScriptTree } from '../composables/useScriptTree';
 import { useDirtyFlag } from '../composables/useDirtyFlag';
 import { useItemDirty } from '../composables/useItemDirty';
-import { debounce } from '../utils';
+import { debounce } from '../lib/debounce';
 import { useTabsStore } from './tabsStore';
 import { useConfirmStore } from './confirmStore';
 import { useCharacterStore } from './characterStore';

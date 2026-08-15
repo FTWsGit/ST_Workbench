@@ -10,7 +10,7 @@
  *   })
  *   <span @pointerdown="onPointerDown">拖拽手柄</span> */
 import { ref, onUnmounted } from 'vue';
-import { getHostWindow } from './hostEnv';
+import { getHostWindow } from '../lib/hostEnv';
 
 /** 挂在拖拽函数对象上的临时状态（由 onPointerDown 写入，onPointerMove/onPointerUp 读取）。 */
 type ScrubFnState = ((e: PointerEvent) => void) & {

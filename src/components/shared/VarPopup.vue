@@ -55,8 +55,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
 import { useUiStore } from '../../stores/uiStore';
-import { getHostDocument } from '../../composables/hostEnv';
-import { varOpBadge } from '../../utils';
+import { getHostDocument } from '../../lib/hostEnv';
+import { varOpBadge } from '../../lib/display';
 import Icon from './Icon.vue';
 
 const uiStore = useUiStore();

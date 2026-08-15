@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from 'vue';
 import type { OrderNode, OrderGroup, OrderItem, FlatNode } from '../types';
-import { applyMultiSelect } from '../utils';
+import { applyMultiSelect } from '../lib/multiSelect';
 
 export function isGroupNode(node: OrderNode): node is OrderGroup {
   return 'children' in node && Array.isArray(node.children);

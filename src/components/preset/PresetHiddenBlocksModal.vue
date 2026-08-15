@@ -34,7 +34,7 @@
 import { computed } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { useUiStore } from '../../stores/uiStore';
-import { roleClass } from '../../utils';
+import { roleClass } from '../../lib/display';
 
 const presetStore = usePresetStore();
 const uiStore = useUiStore();

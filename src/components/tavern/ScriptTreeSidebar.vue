@@ -159,7 +159,7 @@ import { useListScrollSync } from '../../composables/useListScrollSync';
 import { useDragReorder } from '../../composables/useDragReorder';
 import { useInlineRename } from '../../composables/useInlineRename';
 import { useListSelection } from '../../composables/useListSelection';
-import { esc } from '../../utils';
+import { esc } from '../../lib/display';
 import ListToolbar from '../shared/ListToolbar.vue';
 import Icon from '../shared/Icon.vue';
 

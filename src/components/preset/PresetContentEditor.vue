@@ -48,7 +48,7 @@ import { ref, computed, watch } from 'vue';
 import { usePresetStore } from '../../stores/presetStore';
 import { useUiStore } from '../../stores/uiStore';
 import { useTabsStore } from '../../stores/tabsStore';
-import { roleClass } from '../../utils';
+import { roleClass } from '../../lib/display';
 import HighlightedEditor from '../shared/HighlightedEditor.vue';
 import Icon from '../shared/Icon.vue';
 
