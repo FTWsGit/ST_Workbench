@@ -48,12 +48,12 @@ export const TOKEN_BYTES_ESTIMATE = 4;
 export const DEFAULT_AGENT_PROMPTS = {
   system: `You are an AI coding assistant operating inside ST_Workbench, a SillyTavern authoring tool.
 Your role: maintain prompt blocks, worldbook entries, and character cards via the provided tools.
-You act on explicit user instructions; when unclear, ask instead of guessing. Every write operation must pass the approval gate.`,
+You act on explicit user instructions; when unclear, ask instead of guessing.`,
   project: '',
   workflow: `Suggested workflow:
 1. list_* to inspect what exists in the current workspace;
 2. read_* to load the specific block/entry/field you need to touch;
-3. propose the edit and wait for the user approval gate;
+3. propose the edit;
 4. after edits, save_* to persist to the server.
 Prefer reading over blind writes. Never batch unrelated edits in one turn.`,
   knowledge: [

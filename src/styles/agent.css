@@ -321,8 +321,7 @@
   flex-shrink: 0;
 }
 .wb-agent-status-dot.thinking,
-.wb-agent-status-dot.tool_loop,
-.wb-agent-status-dot.pending_approval {
+.wb-agent-status-dot.tool_loop {
   background: var(--wb-ac);
 }
 .wb-agent-status-dot.error {

@@ -118,41 +118,6 @@
         </template>
       </div>
 
-      <!-- 审批卡片（内嵌，不弹全局模态、不挡其他操作） -->
-      <div
-        v-if="agentStore.pendingApproval"
-        class="wb-agent-approval"
-        :class="{ danger: agentStore.pendingApproval.danger }"
-      >
-        <div class="wb-agent-approval-tool">
-          <Icon name="wrench" :size="14" /> {{ agentStore.pendingApproval.toolName }}
-        </div>
-        <div class="wb-agent-approval-title">
-          {{ agentStore.pendingApproval.title }}
-        </div>
-        <div class="wb-agent-approval-msg">
-          {{ agentStore.pendingApproval.message }}
-        </div>
-        <div class="wb-agent-approval-actions">
-          <label class="wb-agent-approval-auto">
-            <input type="checkbox" v-model="autoApproveThisSession" />
-            <span>{{ uiStore.t('agent.approval.autoThisSession') }}</span>
-          </label>
-          <div class="wb-row-tight">
-            <button class="wb-btn" @click="onApproval(false)">
-              {{ uiStore.t('common.cancel') }}
-            </button>
-            <button
-              class="wb-btn accent"
-              :class="{ danger: agentStore.pendingApproval.danger }"
-              @click="onApproval(true)"
-            >
-              {{ uiStore.t('common.confirm') }}
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- 状态条 -->
       <div class="wb-agent-status">
         <span class="wb-agent-status-dot" :class="agentStore.turnState"></span>
@@ -349,41 +314,6 @@
         </template>
       </div>
 
-      <!-- 审批卡片（内嵌，不弹全局模态、不挡其他操作） -->
-      <div
-        v-if="agentStore.pendingApproval"
-        class="wb-agent-approval"
-        :class="{ danger: agentStore.pendingApproval.danger }"
-      >
-        <div class="wb-agent-approval-tool">
-          <Icon name="wrench" :size="14" /> {{ agentStore.pendingApproval.toolName }}
-        </div>
-        <div class="wb-agent-approval-title">
-          {{ agentStore.pendingApproval.title }}
-        </div>
-        <div class="wb-agent-approval-msg">
-          {{ agentStore.pendingApproval.message }}
-        </div>
-        <div class="wb-agent-approval-actions">
-          <label class="wb-agent-approval-auto">
-            <input type="checkbox" v-model="autoApproveThisSession" />
-            <span>{{ uiStore.t('agent.approval.autoThisSession') }}</span>
-          </label>
-          <div class="wb-row-tight">
-            <button class="wb-btn" @click="onApproval(false)">
-              {{ uiStore.t('common.cancel') }}
-            </button>
-            <button
-              class="wb-btn accent"
-              :class="{ danger: agentStore.pendingApproval.danger }"
-              @click="onApproval(true)"
-            >
-              {{ uiStore.t('common.confirm') }}
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- 状态条 -->
       <div class="wb-agent-status">
         <span class="wb-agent-status-dot" :class="agentStore.turnState"></span>
@@ -454,8 +384,6 @@ const settingsOpen = ref(false);
 const inputText = ref('');
 const inputEl = ref<HTMLTextAreaElement | null>(null);
 const messagesContainer = ref<HTMLDivElement | null>(null);
-/** 审批卡片上的"本会话自动同意"复选状态。 */
-const autoApproveThisSession = ref(false);
 
 /** 消息内折叠区块的展开状态（key = i+slot）。默认全部折叠。 */
 const openCollapse = ref<Record<string, boolean>>({});
@@ -501,7 +429,6 @@ const stateLabel = computed(() => {
     idle: 'agent.state.idle',
     thinking: 'agent.state.thinking',
     tool_loop: 'agent.state.tool_loop',
-    pending_approval: 'agent.state.pending_approval',
     error: 'agent.state.error',
     complete: 'agent.state.complete',
   };
@@ -603,13 +530,6 @@ function onSendOrStop() {
     return;
   }
   void onSend();
-}
-
-/** 审批卡片同意/拒绝。autoApproveThisSession 勾选时把该工具加入本会话自动放行集合。 */
-function onApproval(approved: boolean) {
-  const auto = approved && autoApproveThisSession.value;
-  agentStore.resolveApproval(approved, auto);
-  autoApproveThisSession.value = false;
 }
 
 async function onNewSession() {

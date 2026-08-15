@@ -1,6 +1,6 @@
 /* agent 只读工具集（P1）。
  *
- * 设计文档 5.2：只读工具（risk:'safe'）接入，工具调用循环跑通（3.2/3.3）。
+ * 设计文档 5.2：只读工具接入，工具调用循环跑通（3.2/3.3）。
  * 工具直接复用/包装现有 store 方法与 searchFields.ts 的 SearchHit 契约。
  */
 import { registerAgentTool, type AgentToolResult } from '../toolRegistry';
@@ -100,7 +100,6 @@ registerAgentTool({
   name: 'preset_list_blocks',
   description: TOOL_DESC.presetListBlocks,
   parameters: { type: 'object', properties: {} },
-  risk: 'safe',
   readonly: true,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
@@ -183,7 +182,6 @@ registerAgentTool({
     },
     required: ['identifier'],
   },
-  risk: 'safe',
   readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
@@ -223,7 +221,6 @@ registerAgentTool({
     },
     required: ['query'],
   },
-  risk: 'safe',
   readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.presetStore;
@@ -268,7 +265,6 @@ registerAgentTool({
   name: 'worldbook_list_entries',
   description: TOOL_DESC.worldbookListEntries,
   parameters: { type: 'object', properties: {} },
-  risk: 'safe',
   readonly: true,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
@@ -318,7 +314,6 @@ registerAgentTool({
     },
     required: ['uid'],
   },
-  risk: 'safe',
   readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
@@ -357,7 +352,6 @@ registerAgentTool({
     },
     required: ['query'],
   },
-  risk: 'safe',
   readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.worldbookStore;
@@ -407,7 +401,6 @@ registerAgentTool({
   name: 'character_get_fields',
   description: TOOL_DESC.characterGetFields,
   parameters: { type: 'object', properties: {} },
-  risk: 'safe',
   readonly: true,
   async execute(_args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;
@@ -454,7 +447,6 @@ registerAgentTool({
     },
     required: ['field_key'],
   },
-  risk: 'safe',
   readonly: true,
   async execute(args, ctx): Promise<AgentToolResult> {
     const store = ctx.characterStore;

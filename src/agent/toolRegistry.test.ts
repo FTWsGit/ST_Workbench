@@ -7,7 +7,6 @@ function makeTool(name: string, overrides: Partial<AgentToolDef> = {}): AgentToo
     name,
     description: 'desc for ' + name,
     parameters: { type: 'object', properties: {} },
-    risk: 'safe',
     readonly: false,
     execute: vi.fn(async () => ({ text: 'ok' })),
     ...overrides,

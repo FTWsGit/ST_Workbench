@@ -1,7 +1,7 @@
 /* agent 专用工具注册表。
  *
  * 与 components/toolbox/registry.ts 的 ToolDef 区别：
- *  - 给模型调用，要 JSON Schema、要风险分级、要 execute 函数；
+ *  - 给模型调用，要 JSON Schema、要 execute 函数；
  *  - 形状照 tool call 的形状设计（snake_case name、OpenAI 风格 parameters）。
  *
  * 设计文档 5.1：另开一个注册表，形状类似但不同。
@@ -9,25 +9,21 @@
 import type { usePresetStore } from '../stores/presetStore';
 import type { useWorldbookStore } from '../stores/worldbookStore';
 import type { useCharacterStore } from '../stores/characterStore';
-import type { useConfirmStore } from '../stores/confirmStore';
 import type { useUiStore } from '../stores/uiStore';
 
-/** 工具执行上下文：注入三个 domain store + confirmStore + uiStore.t。 */
+/** 工具执行上下文：注入三个 domain store + uiStore.t。 */
 export interface AgentToolContext {
   presetStore: ReturnType<typeof usePresetStore>;
   worldbookStore: ReturnType<typeof useWorldbookStore>;
   characterStore: ReturnType<typeof useCharacterStore>;
-  confirmStore: ReturnType<typeof useConfirmStore>;
   uiStore: ReturnType<typeof useUiStore>;
 }
 
 /** 工具执行结果。text 是回给模型的字符串内容。 */
 export interface AgentToolResult {
   text: string;
-  /** 标记错误（如用户拒绝审批、工具抛错）。 */
+  /** 标记错误（工具执行出错）。 */
   isError?: boolean;
-  /** 终止本轮 agent 循环（如用户拒绝审批——不再让模型继续跑工具/续答，直接停）。 */
-  stopTurn?: boolean;
 }
 
 /** JSON Schema 类型（极简子集，够 OpenAI parameters 用）。 */
@@ -46,8 +42,6 @@ export interface AgentToolDef {
   description: string;
   /** OpenAI 风格 parameters schema。 */
   parameters: JsonSchemaObject;
-  /** 风险分级，见模块 7 审批门。 */
-  risk: 'safe' | 'risky';
   /** true 才允许并行执行（只读工具）。 */
   readonly: boolean;
   /** 执行函数。args 是已解析的参数对象。 */

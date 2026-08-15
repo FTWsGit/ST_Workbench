@@ -36,14 +36,12 @@ import { useTabsStore } from '../stores/tabsStore';
 import { usePresetStore } from '../stores/presetStore';
 import { useWorldbookStore } from '../stores/worldbookStore';
 import { useCharacterStore } from '../stores/characterStore';
-import { useConfirmStore } from '../stores/confirmStore';
 
 /** 当前回合状态机的运行时态（纯内存，不持久化）。 */
 const initialRuntime: AgentRuntimeState = {
   turnState: 'idle',
   currentTool: null,
   toolRounds: 0,
-  awaitingApproval: false,
   error: null,
 };
 
@@ -67,16 +65,13 @@ function useWorldbookStoreSafe() {
 function useCharacterStoreSafe() {
   return useCharacterStore();
 }
-function useConfirmStoreSafe() {
-  return useConfirmStore();
-}
 
 /**
  * Agent store：跨 preset/worldbook/character 三个 store 的运维层。
  *
  * 职责边界：
  *  - 持有 AgentPersisted 的 live 状态（从 extensionSettings 加载/写回）；
- *  - 持有运行时状态（当前回合状态机、pending 审批、取消令牌）——不持久化，纯内存；
+ *  - 持有运行时状态（当前回合状态机、取消令牌）——不持久化，纯内存；
  *  - 唯一调用 LLM 生成与工具执行循环的入口；
  *  - 不直接操作 presetStore/worldbookStore/characterStore 的内部字段——所有跨 store 操作必须经过
  *    模块 5 的工具注册表，工具函数内部才去调具体 store 的方法。
@@ -107,19 +102,6 @@ export const useAgentStore = defineStore('agent', () => {
   /** 是否已成功加载过一次（避免重复 load）。 */
   const loaded = ref(false);
 
-  /* ====== 审批门（内嵌卡片，不弹全局模态）====== */
-  /** 当前等待审批的工具调用信息，null 表示无待审批。 */
-  const pendingApproval = ref<{
-    toolName: string;
-    title: string;
-    message: string;
-    danger: boolean;
-  } | null>(null);
-  /** 审批 Promise 的 resolve 函数（resolveApproval 调用）。 */
-  let approvalResolve: ((approved: boolean) => void) | null = null;
-  /** 本会话自动放行的工具名集合（单 session 一键同意）。 */
-  const autoApprovedTools = ref<Set<string>>(new Set());
-
   /* ====== 工具注册表（P1 填充）====== */
   // 占位：P1 阶段在此注册只读工具，P2 注册写类工具
   const availableTools = ref<AgentToolDef[]>([]);
@@ -128,10 +110,7 @@ export const useAgentStore = defineStore('agent', () => {
   const turnState = computed(() => runtime.value.turnState);
   const currentTool = computed(() => runtime.value.currentTool);
   const isBusy = computed(
-    () =>
-      runtime.value.turnState === 'thinking' ||
-      runtime.value.turnState === 'tool_loop' ||
-      runtime.value.turnState === 'pending_approval'
+    () => runtime.value.turnState === 'thinking' || runtime.value.turnState === 'tool_loop'
   );
   const hasActiveSession = computed(() => activeSessionId.value !== null);
   const messageCount = computed(() => activeSessionMessages.value.length);
@@ -240,8 +219,6 @@ export const useAgentStore = defineStore('agent', () => {
     sessionMessages.value[id] = [];
     activeSessionId.value = id;
     sessions.value = [...sessions.value, meta];
-    // 新会话清空自动放行集合（"本会话同意"不跨会话残留）
-    autoApprovedTools.value = new Set();
 
     // 触发容量纪律：sessions 超过 MAX_RETAINED_SESSIONS 时丢弃最旧的已归档会话
     trimSessions();
@@ -489,21 +466,13 @@ export const useAgentStore = defineStore('agent', () => {
           currentTool: result.toolCalls.map((c) => c.name).join(', '),
         };
         const outcomes = await Promise.all(result.toolCalls.map((call) => executeTool(call)));
-        let stoppedByApproval = false;
         result.toolCalls.forEach((call, idx) => {
           const outcome = outcomes[idx];
           pushToolResultMessage(call.id, outcome.text, outcome.isError);
-          if (outcome.stopTurn) stoppedByApproval = true;
         });
 
         // 持久化（每轮工具调用后存一次）
         await persist();
-
-        // 审批拒绝：finalize 成 canceled，跳出工具循环
-        if (stoppedByApproval) {
-          await finalizeTurn('canceled');
-          return;
-        }
       }
 
       // 熔断：MAX_TOOL_ROUNDS 轮还没结束
@@ -527,10 +496,8 @@ export const useAgentStore = defineStore('agent', () => {
     }
   }
 
-  /** 执行单个工具调用（含审批门 P2 接）。 */
-  async function executeTool(
-    call: ToolCall
-  ): Promise<{ text: string; isError?: boolean; stopTurn?: boolean }> {
+  /** 执行单个工具调用。 */
+  async function executeTool(call: ToolCall): Promise<{ text: string; isError?: boolean }> {
     const def = getAgentTool(call.name);
     if (!def) {
       return { text: `unknown tool: ${call.name}`, isError: true };
@@ -552,7 +519,6 @@ export const useAgentStore = defineStore('agent', () => {
       presetStore: usePresetStoreSafe(),
       worldbookStore: useWorldbookStoreSafe(),
       characterStore: useCharacterStoreSafe(),
-      confirmStore: useConfirmStoreSafe(),
       uiStore,
     };
 
@@ -673,49 +639,6 @@ export const useAgentStore = defineStore('agent', () => {
     await persist();
   }
 
-  /* ====== 审批门 actions ====== */
-
-  /**
-   * 工具审批请求（内嵌卡片，不弹全局 confirmStore.ask 模态）。
-   *
-   * 流程：
-   *  1. 先查 autoApprovedTools（本会话一键同意过的工具名），命中直接放行；
-   *  2. 否则设置 pendingApproval，AgentPanel 渲染审批卡片，用户点同意/拒绝触发 resolveApproval；
-   *  3. resolveApproval(true) 时可选把 toolName 加入 autoApprovedTools（"本会话自动同意"）。
-   */
-  function requestApproval(opts: {
-    toolName: string;
-    title: string;
-    message: string;
-    danger?: boolean;
-  }): Promise<boolean> {
-    // 本会话已自动放行
-    if (autoApprovedTools.value.has(opts.toolName)) {
-      return Promise.resolve(true);
-    }
-    pendingApproval.value = {
-      toolName: opts.toolName,
-      title: opts.title,
-      message: opts.message,
-      danger: opts.danger ?? true,
-    };
-    return new Promise<boolean>((resolve) => {
-      approvalResolve = resolve;
-    });
-  }
-
-  /** 用户在审批卡片上点同意/拒绝。 */
-  function resolveApproval(approved: boolean, autoApproveThisSession = false): void {
-    const info = pendingApproval.value;
-    if (approved && autoApproveThisSession && info) {
-      autoApprovedTools.value = new Set(autoApprovedTools.value).add(info.toolName);
-    }
-    pendingApproval.value = null;
-    const fn = approvalResolve;
-    approvalResolve = null;
-    fn?.(approved);
-  }
-
   return {
     // persisted state
     version,
@@ -730,11 +653,6 @@ export const useAgentStore = defineStore('agent', () => {
     loading,
     loaded,
     availableTools,
-    // approval gate
-    pendingApproval,
-    autoApprovedTools,
-    requestApproval,
-    resolveApproval,
     // computed
     turnState,
     currentTool,

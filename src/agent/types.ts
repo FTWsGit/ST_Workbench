@@ -101,11 +101,10 @@ export interface AgentPersisted {
 export type AgentTurnState =
   | 'idle'
   | 'thinking' // 调用 LLM 中
-  | 'tool_loop' // 执行工具中（含 pending 审批子态）
-  | 'pending_approval' // 等待用户审批 risky 工具
+  | 'tool_loop' // 执行工具中
   | 'error'
   | 'complete'
-  | 'canceled'; // 用户拒绝审批，直接停本轮
+  | 'canceled'; // 用户取消，直接停本轮
 
 /** 当前回合的运行时状态（纯内存，不持久化）。 */
 export interface AgentRuntimeState {
@@ -114,8 +113,6 @@ export interface AgentRuntimeState {
   currentTool: string | null;
   /** 当前回合已执行的工具轮数。 */
   toolRounds: number;
-  /** 是否正在等待审批。 */
-  awaitingApproval: boolean;
   /** 错误信息（turnState === 'error' 时）。 */
   error: string | null;
 }
