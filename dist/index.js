@@ -18385,21 +18385,8 @@ function VC() {
 		window.$;
 		let e = n.getElementById("extensionsMenu") || n.getElementById("topRightTogglePanel") || n.body, t = n.createElement("div");
 		t.id = "st-wb-entry-button", t.className = "list-group-item flex-container flexGap5";
-		let r = "#171717";
-		t.style.cssText = `
-      opacity: 0.7;
-      cursor: pointer;
-      pointer-events: auto;
-      color: #7ab8ff;
-      background: ${r};
-      font-family: JetBrains Mono
-    `, t.addEventListener("mouseenter", () => {
-			t.style.opacity = "0.9", t.style.background = "#15202b";
-		}), t.addEventListener("mouseleave", () => {
-			t.style.opacity = "0.7", t.style.background = r;
-		});
-		let i = n.createElement("div");
-		i.className = "fa-solid fa-grip extensionsMenuExtensionButton", t.appendChild(i), t.appendChild(n.createTextNode("Workbench")), t.addEventListener("click", zC), e === n.body && (t.style.position = "fixed", t.style.bottom = "16px", t.style.right = "16px", t.style.zIndex = "2147483647"), e.appendChild(t);
+		let r = n.createElement("div");
+		r.className = "fa-solid fa-grip extensionsMenuExtensionButton", t.appendChild(r), t.appendChild(n.createTextNode("Workbench")), t.addEventListener("click", zC), e === n.body && (t.style.position = "fixed", t.style.bottom = "16px", t.style.right = "16px", t.style.zIndex = "2147483647"), e.appendChild(t);
 	}
 }
 function HC() {

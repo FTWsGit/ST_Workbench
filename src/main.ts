@@ -146,24 +146,24 @@ function registerEntries() {
     const btn = hostDoc.createElement('div');
     btn.id = 'st-wb-entry-button';
     btn.className = 'list-group-item flex-container flexGap5';
-    const defaultOpacity = '0.7';
-    const defaultBackGround = '#171717';
-    btn.style.cssText = `
-      opacity: ${defaultOpacity};
-      cursor: pointer;
-      pointer-events: auto;
-      color: #7ab8ff;
-      background: ${defaultBackGround};
-      font-family: JetBrains Mono
-    `;
-    btn.addEventListener('mouseenter', () => {
-      btn.style.opacity = '0.9';
-      btn.style.background = '#15202b';
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.opacity = defaultOpacity;
-      btn.style.background = defaultBackGround;
-    });
+    // const defaultOpacity = '0.7';
+    // const defaultBackGround = '#171717';
+    // btn.style.cssText = `
+    //   opacity: ${defaultOpacity};
+    //   cursor: pointer;
+    //   pointer-events: auto;
+    //   color: #7ab8ff;
+    //   background: ${defaultBackGround};
+    //   font-family: JetBrains Mono
+    // `;
+    // btn.addEventListener('mouseenter', () => {
+    //   btn.style.opacity = '0.9';
+    //   btn.style.background = '#15202b';
+    // });
+    // btn.addEventListener('mouseleave', () => {
+    //   btn.style.opacity = defaultOpacity;
+    //   btn.style.background = defaultBackGround;
+    // });
     const icon = hostDoc.createElement('div');
     icon.className = 'fa-solid fa-grip extensionsMenuExtensionButton';
     btn.appendChild(icon);
