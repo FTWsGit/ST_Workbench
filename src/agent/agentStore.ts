@@ -23,6 +23,7 @@ import {
 } from './contextManager';
 // side-effect import：触发只读工具注册到 AGENT_TOOL_REGISTRY。
 import './register';
+import { AliasTable } from './vfs/aliasTable';
 import type {
   AgentPersisted,
   AgentConfig,
@@ -101,6 +102,10 @@ export const useAgentStore = defineStore('agent', () => {
   const loading = ref(false);
   /** 是否已成功加载过一次（避免重复 load）。 */
   const loaded = ref(false);
+
+  /** session 级 VFS 别名表（纯内存，不落盘）。session 新建/切换/重置时清空——真实 id 的短别名
+   *  只在单个会话内有效，跨会话不复用。不用 ref（不需要响应式，也不是 UI 状态）。 */
+  let aliasTable = new AliasTable();
 
   /* ====== 工具注册表（P1 填充）====== */
   // 占位：P1 阶段在此注册只读工具，P2 注册写类工具
@@ -190,6 +195,7 @@ export const useAgentStore = defineStore('agent', () => {
     sessionMessages.value = {};
     activeSessionMessages.value = [];
     runtime.value = { ...initialRuntime };
+    aliasTable = new AliasTable();
     versionMismatch.value = null;
   }
 
@@ -224,6 +230,7 @@ export const useAgentStore = defineStore('agent', () => {
     trimSessions();
 
     runtime.value = { ...initialRuntime };
+    aliasTable = new AliasTable();
     await persist();
   }
 
@@ -241,6 +248,7 @@ export const useAgentStore = defineStore('agent', () => {
     if (s) s.updatedAt = Date.now();
     activeSessionId.value = id;
     runtime.value = { ...initialRuntime };
+    aliasTable = new AliasTable();
     await persist();
   }
 
@@ -251,6 +259,7 @@ export const useAgentStore = defineStore('agent', () => {
     if (activeSessionId.value === id) {
       activeSessionId.value = null;
       activeSessionMessages.value = [];
+      aliasTable = new AliasTable();
     }
     await persist();
   }
@@ -520,6 +529,7 @@ export const useAgentStore = defineStore('agent', () => {
       worldbookStore: useWorldbookStoreSafe(),
       characterStore: useCharacterStoreSafe(),
       uiStore,
+      aliasTable,
     };
 
     try {

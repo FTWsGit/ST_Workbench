@@ -10,13 +10,16 @@ import type { usePresetStore } from '../stores/presetStore';
 import type { useWorldbookStore } from '../stores/worldbookStore';
 import type { useCharacterStore } from '../stores/characterStore';
 import type { useUiStore } from '../stores/uiStore';
+import type { AliasTable } from './vfs/aliasTable';
+import type { ChangeOperation } from './vfs/types';
 
-/** 工具执行上下文：注入三个 domain store + uiStore.t。 */
+/** 工具执行上下文：注入三个 domain store + uiStore.t + session 级 alias 表。 */
 export interface AgentToolContext {
   presetStore: ReturnType<typeof usePresetStore>;
   worldbookStore: ReturnType<typeof useWorldbookStore>;
   characterStore: ReturnType<typeof useCharacterStore>;
   uiStore: ReturnType<typeof useUiStore>;
+  aliasTable: AliasTable;
 }
 
 /** 工具执行结果。text 是回给模型的字符串内容。 */
@@ -24,6 +27,10 @@ export interface AgentToolResult {
   text: string;
   /** 标记错误（工具执行出错）。 */
   isError?: boolean;
+  /** 给 UI / 未来 MCP consumer 消费的结构化数据（与 text 同一份数据的不同形态）。 */
+  structured?: unknown;
+  /** 本次调用产生的变更（只记录，不驱动 undo/redo）。 */
+  changes?: ChangeOperation[];
 }
 
 /** JSON Schema 类型（极简子集，够 OpenAI parameters 用）。 */

@@ -103,7 +103,6 @@ export function validateSearchQuery(query: SearchQuery): string | null {
     return `regex too long (${query.source.length} > ${REGEX_SOURCE_MAX_LENGTH} chars)`;
   }
   try {
-    // eslint-disable-next-line no-new
     new RegExp(query.source);
     return null;
   } catch (e) {
