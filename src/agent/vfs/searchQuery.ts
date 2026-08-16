@@ -13,10 +13,7 @@
  * 单个 match 的灾难性回溯时间无法用这些上限根治（同步 JS 无法 abort），只能靠源串长度上限压缩
  * 正则复杂度，接受这个已知边界。
  */
-import {
-  REGEX_SOURCE_MAX_LENGTH,
-  SEARCH_MATCHES_MAX,
-} from '../constants';
+import { REGEX_SOURCE_MAX_LENGTH, SEARCH_MATCHES_MAX } from '../constants';
 import { getPath } from './objectPath';
 
 export type SearchQuery =

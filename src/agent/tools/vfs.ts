@@ -56,11 +56,14 @@ function str(v: unknown): string {
 const TOOL_DESC = {
   list: 'List the children of a VFS path. /workspace → collections; /workspace/collection → items (alias + name + summary); /workspace/collection/alias → fields (name + kind). Explore structure before get/edit. Errors on invalid path or unknown alias (call list first).',
   get: 'Read one leaf field at /workspace/collection/alias/field (or /workspace/meta/field). Never read a container — use list. Returns the raw leaf value. Errors if path is not a leaf or field is undeclared.',
-  search: 'Search a collection /workspace/collection. query forms: plain substring, /regex/flags, or field=value / field!=value. Returns hits as /workspace/collection/alias/field:line:col with context — the path part is directly usable in get/edit. No hits returns a plain message.',
+  search:
+    'Search a collection /workspace/collection. query forms: plain substring, /regex/flags, or field=value / field!=value. Returns hits as /workspace/collection/alias/field:line:col with context — the path part is directly usable in get/edit. No hits returns a plain message.',
   edit: 'Replace a unique substring in a text field: old must appear exactly once in the current value, else errors (0 or 2+ matches). Safer than overwriting on concurrent edits. Use on text fields only (content, findRegex, …); scalar/enum fields use set. In-memory only. Returns the updated path.',
   set: 'Set a scalar/enum field to an exact value (enabled, role, temperature, …). Replaces the whole value, no substring matching. Use on scalar/enum fields only; text fields use edit. In-memory only. Returns the updated path.',
-  create: 'Create a new item in /workspace/collection. fields object is collection-specific: prompts {name, role, content}; entries {comment, content, keys}; regexs/scripts {scriptName/name, findRegex, replaceString, content}. Returns the new alias path. In-memory only.',
-  delete: 'Delete an item at /workspace/collection/alias. IRREVERSIBLE — no undo; double-check the alias before use. In-memory only. Returns the deleted path.',
+  create:
+    'Create a new item in /workspace/collection. fields object is collection-specific: prompts {name, role, content}; entries {comment, content, keys}; regexs/scripts {scriptName/name, findRegex, replaceString, content}. Returns the new alias path. In-memory only.',
+  delete:
+    'Delete an item at /workspace/collection/alias. IRREVERSIBLE — no undo; double-check the alias before use. In-memory only. Returns the deleted path.',
 } as const;
 
 /* ====== list ====== */
@@ -70,7 +73,12 @@ registerAgentTool({
   description: TOOL_DESC.list,
   parameters: {
     type: 'object',
-    properties: { path: { type: 'string', description: 'VFS path to list, e.g. /preset or /preset/prompts or /preset/prompts/1.' } },
+    properties: {
+      path: {
+        type: 'string',
+        description: 'VFS path to list, e.g. /preset or /preset/prompts or /preset/prompts/1.',
+      },
+    },
     required: ['path'],
   },
   async execute(args, ctx): Promise<AgentToolResult> {
@@ -86,7 +94,10 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Leaf path, e.g. /preset/prompts/1/content or /preset/meta/temperature.' },
+      path: {
+        type: 'string',
+        description: 'Leaf path, e.g. /preset/prompts/1/content or /preset/meta/temperature.',
+      },
     },
     required: ['path'],
   },
@@ -103,8 +114,14 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Collection path, e.g. /preset/prompts or /worldbook/entries.' },
-      query: { type: 'string', description: 'Substring, /regex/flags, or field=value / field!=value.' },
+      path: {
+        type: 'string',
+        description: 'Collection path, e.g. /preset/prompts or /worldbook/entries.',
+      },
+      query: {
+        type: 'string',
+        description: 'Substring, /regex/flags, or field=value / field!=value.',
+      },
     },
     required: ['path', 'query'],
   },
@@ -124,7 +141,10 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Leaf text field path, e.g. /preset/prompts/1/content.' },
+      path: {
+        type: 'string',
+        description: 'Leaf text field path, e.g. /preset/prompts/1/content.',
+      },
       old: { type: 'string', description: 'Substring to replace (must appear exactly once).' },
       new: { type: 'string', description: 'Replacement text.' },
     },
@@ -144,7 +164,10 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Leaf scalar/enum field path, e.g. /preset/prompts/1/role.' },
+      path: {
+        type: 'string',
+        description: 'Leaf scalar/enum field path, e.g. /preset/prompts/1/role.',
+      },
       value: { description: 'New value (string, number or boolean).' },
     },
     required: ['path', 'value'],
@@ -163,7 +186,10 @@ registerAgentTool({
   parameters: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Collection path, e.g. /preset/prompts or /worldbook/entries.' },
+      path: {
+        type: 'string',
+        description: 'Collection path, e.g. /preset/prompts or /worldbook/entries.',
+      },
       fields: { type: 'object', description: 'Collection-specific fields (see tool description).' },
     },
     required: ['path'],

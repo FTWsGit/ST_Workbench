@@ -44,7 +44,11 @@ function charFieldGet(char: Record<string, unknown>, key: string): unknown {
   const c = char as unknown as Character;
   if (key === 'description') return c.description;
   if (key === 'depthPrompt') return c.otherPrompts.depthPrompt.prompt;
-  return c.otherPrompts[key as Exclude<(typeof CHAR_FIELD_KEYS)[number], 'description' | 'depthPrompt'>] ?? '';
+  return (
+    c.otherPrompts[
+      key as Exclude<(typeof CHAR_FIELD_KEYS)[number], 'description' | 'depthPrompt'>
+    ] ?? ''
+  );
 }
 
 function charFieldSet(char: Record<string, unknown>, key: string, value: unknown): boolean {
@@ -59,7 +63,8 @@ function charFieldSet(char: Record<string, unknown>, key: string, value: unknown
     return true;
   }
   if (!CHAR_FIELD_KEYS.includes(key as (typeof CHAR_FIELD_KEYS)[number])) return false;
-  c.otherPrompts[key as Exclude<(typeof CHAR_FIELD_KEYS)[number], 'description' | 'depthPrompt'>] = s;
+  c.otherPrompts[key as Exclude<(typeof CHAR_FIELD_KEYS)[number], 'description' | 'depthPrompt'>] =
+    s;
   return true;
 }
 

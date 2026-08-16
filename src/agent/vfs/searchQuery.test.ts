@@ -36,7 +36,12 @@ describe('parseSearchQuery', () => {
       op: '=',
       value: true,
     });
-    expect(parseSearchQuery('depth=5')).toEqual({ kind: 'field', field: 'depth', op: '=', value: 5 });
+    expect(parseSearchQuery('depth=5')).toEqual({
+      kind: 'field',
+      field: 'depth',
+      op: '=',
+      value: 5,
+    });
   });
 
   it('parses field inequality', () => {
@@ -110,10 +115,15 @@ describe('searchItems', () => {
   });
 
   it('regex search matches across fields', () => {
-    const hits = searchItems(ITEMS, FIELDS, { kind: 'regex', source: 'hel+o', flags: 'i' }, (i) => ({
-      id: String(i.id),
-      name: String(i.name),
-    }));
+    const hits = searchItems(
+      ITEMS,
+      FIELDS,
+      { kind: 'regex', source: 'hel+o', flags: 'i' },
+      (i) => ({
+        id: String(i.id),
+        name: String(i.name),
+      })
+    );
     expect(hits).toHaveLength(1);
     expect(hits[0].itemId).toBe('a');
   });
@@ -129,29 +139,44 @@ describe('searchItems', () => {
   });
 
   it('field query does exact match', () => {
-    const hits = searchItems(ITEMS, FIELDS, { kind: 'field', field: 'role', op: '=', value: 'user' }, (i) => ({
-      id: String(i.id),
-      name: String(i.name),
-    }));
+    const hits = searchItems(
+      ITEMS,
+      FIELDS,
+      { kind: 'field', field: 'role', op: '=', value: 'user' },
+      (i) => ({
+        id: String(i.id),
+        name: String(i.name),
+      })
+    );
     expect(hits).toHaveLength(1);
     expect(hits[0].itemId).toBe('b');
     expect(hits[0].line).toBe(-1);
   });
 
   it('field query supports boolean coercion', () => {
-    const hits = searchItems(ITEMS, FIELDS, { kind: 'field', field: 'enabled', op: '=', value: false }, (i) => ({
-      id: String(i.id),
-      name: String(i.name),
-    }));
+    const hits = searchItems(
+      ITEMS,
+      FIELDS,
+      { kind: 'field', field: 'enabled', op: '=', value: false },
+      (i) => ({
+        id: String(i.id),
+        name: String(i.name),
+      })
+    );
     expect(hits).toHaveLength(1);
     expect(hits[0].itemId).toBe('b');
   });
 
   it('field inequality matches the complement', () => {
-    const hits = searchItems(ITEMS, FIELDS, { kind: 'field', field: 'role', op: '!=', value: 'system' }, (i) => ({
-      id: String(i.id),
-      name: String(i.name),
-    }));
+    const hits = searchItems(
+      ITEMS,
+      FIELDS,
+      { kind: 'field', field: 'role', op: '!=', value: 'system' },
+      (i) => ({
+        id: String(i.id),
+        name: String(i.name),
+      })
+    );
     expect(hits.map((h) => h.itemId)).toEqual(['b']);
   });
 });

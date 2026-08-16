@@ -73,7 +73,11 @@ describe('worldbookResolver', () => {
     const get = worldbookResolver.get(['entries', '1', 'position.depth'], c);
     expect(get.structured).toBe(4);
 
-    const set = worldbookResolver.write(['entries', '1', 'position.depth'], { op: 'set', value: 7 }, c);
+    const set = worldbookResolver.write(
+      ['entries', '1', 'position.depth'],
+      { op: 'set', value: 7 },
+      c
+    );
     expect(set.ok).toBe(true);
     expect(store.entries[0].position.depth).toBe(7);
     expect(set.changes![0]).toEqual({

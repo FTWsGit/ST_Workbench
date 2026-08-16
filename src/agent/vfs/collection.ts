@@ -58,7 +58,11 @@ type RefResult =
   | { ok: true; item: Record<string, unknown>; realId: string; alias: string }
   | { ok: false; error: string };
 
-export function okResult(text: string, structured?: unknown, changes?: ChangeOperation[]): VfsResult {
+export function okResult(
+  text: string,
+  structured?: unknown,
+  changes?: ChangeOperation[]
+): VfsResult {
   return { ok: true, text, structured, changes };
 }
 
@@ -152,7 +156,10 @@ export function uniqueSubstringReplace(
   if (second !== -1) {
     return { ok: false, error: 'old substring matches 2+ places — make it more specific' };
   }
-  return { ok: true, value: current.slice(0, first) + newValue + current.slice(first + old.length) };
+  return {
+    ok: true,
+    value: current.slice(0, first) + newValue + current.slice(first + old.length),
+  };
 }
 
 /** 校验 FieldWrite 与 FieldSpec 是否匹配，返回错误或 null。 */
@@ -190,7 +197,10 @@ function applyFieldWrite(
     if (!r.ok) return { error: r.error };
     return { value: r.value, change: { kind: 'set_field', path, before: current, after: r.value } };
   }
-  return { value: write.value, change: { kind: 'set_field', path, before: current, after: write.value } };
+  return {
+    value: write.value,
+    change: { kind: 'set_field', path, before: current, after: write.value },
+  };
 }
 
 function snapshotFields(
@@ -406,7 +416,9 @@ export function makeSingletonResolver(workspace: Workspace, adapter: SingletonAd
     if (!obj) return errResult(adapter.notLoadedError);
     const spec = adapter.fields.find((f) => f.key === rest[0]);
     if (!spec) {
-      return errResult(`field "${rest[0]}" is not declared in /${workspace}/${adapter.name} — rejected`);
+      return errResult(
+        `field "${rest[0]}" is not declared in /${workspace}/${adapter.name} — rejected`
+      );
     }
     if (spec.readonly) return errResult(`field "${spec.key}" is read-only`);
     const err = checkWrite(spec, writeOp);
@@ -430,7 +442,9 @@ export function makeSingletonResolver(workspace: Workspace, adapter: SingletonAd
     return errResult(`/${workspace}/${adapter.name} is a single document — cannot delete`);
   }
   function search(): VfsResult {
-    return errResult(`search is not supported on /${workspace}/${adapter.name} — search a collection`);
+    return errResult(
+      `search is not supported on /${workspace}/${adapter.name} — search a collection`
+    );
   }
 
   return { list, get, write, create, remove, search };

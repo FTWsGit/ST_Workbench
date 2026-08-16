@@ -3,7 +3,10 @@ import { parseVfsPath, formatVfsPath } from './path';
 
 describe('parseVfsPath', () => {
   it('parses a workspace root', () => {
-    expect(parseVfsPath('/preset')).toEqual({ ok: true, path: { workspace: 'preset', segments: [] } });
+    expect(parseVfsPath('/preset')).toEqual({
+      ok: true,
+      path: { workspace: 'preset', segments: [] },
+    });
   });
 
   it('parses collection/item/field segments', () => {

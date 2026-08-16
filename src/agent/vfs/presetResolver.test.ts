@@ -4,7 +4,12 @@ import { AliasTable } from './aliasTable';
 import type { VfsContext } from './types';
 import type { PromptBlock, OrderNode, PresetSettings } from '../../types';
 
-function makeBlock(identifier: string, name: string, role: PromptBlock['role'], content: string): PromptBlock {
+function makeBlock(
+  identifier: string,
+  name: string,
+  role: PromptBlock['role'],
+  content: string
+): PromptBlock {
   return {
     identifier,
     name,
@@ -123,14 +128,22 @@ describe('presetResolver', () => {
 
   it('rejects undeclared field', () => {
     const { c } = listed();
-    const r = presetResolver.write(['prompts', '1', 'identifier'], { op: 'set', value: 'hacked' }, c);
+    const r = presetResolver.write(
+      ['prompts', '1', 'identifier'],
+      { op: 'set', value: 'hacked' },
+      c
+    );
     expect(r.ok).toBe(false);
     expect(r.error).toContain('not declared');
   });
 
   it('does unique substring replace on text field', () => {
     const { c, store } = listed();
-    const r = presetResolver.write(['prompts', '1', 'content'], { op: 'replace', old: 'hello', newValue: 'goodbye' }, c);
+    const r = presetResolver.write(
+      ['prompts', '1', 'content'],
+      { op: 'replace', old: 'hello', newValue: 'goodbye' },
+      c
+    );
     expect(r.ok).toBe(true);
     expect(store.prompts[0].content).toBe('goodbye world');
     expect(r.changes).toHaveLength(1);
@@ -144,7 +157,11 @@ describe('presetResolver', () => {
 
   it('rejects non-unique substring', () => {
     const { c } = listed();
-    const r = presetResolver.write(['prompts', '1', 'content'], { op: 'replace', old: 'o', newValue: 'x' }, c);
+    const r = presetResolver.write(
+      ['prompts', '1', 'content'],
+      { op: 'replace', old: 'o', newValue: 'x' },
+      c
+    );
     expect(r.ok).toBe(false);
     expect(r.error).toContain('2+');
   });
@@ -162,7 +179,11 @@ describe('presetResolver', () => {
 
   it('errors when edit is used on a scalar field', () => {
     const { c } = listed();
-    const r = presetResolver.write(['prompts', '1', 'role'], { op: 'replace', old: 'system', newValue: 'user' }, c);
+    const r = presetResolver.write(
+      ['prompts', '1', 'role'],
+      { op: 'replace', old: 'system', newValue: 'user' },
+      c
+    );
     expect(r.ok).toBe(false);
     expect(r.error).toContain('not text');
   });
@@ -199,6 +220,8 @@ describe('presetResolver', () => {
 
     const set = presetResolver.write(['meta', 'temperature'], { op: 'set', value: 0.7 }, c);
     expect(set.ok).toBe(true);
-    expect((c.presetStore as unknown as { settings: PresetSettings }).settings.temperature).toBe(0.7);
+    expect((c.presetStore as unknown as { settings: PresetSettings }).settings.temperature).toBe(
+      0.7
+    );
   });
 });

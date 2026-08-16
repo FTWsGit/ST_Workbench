@@ -53,7 +53,9 @@ function ctx(store: ReturnType<typeof makeStore>): VfsContext {
 describe('characterResolver', () => {
   it('lists workspace collections', () => {
     const r = characterResolver.list([], ctx(makeStore()));
-    const names = (r.structured as { collections: { name: string }[] }).collections.map((c) => c.name);
+    const names = (r.structured as { collections: { name: string }[] }).collections.map(
+      (c) => c.name
+    );
     expect(names).toEqual(['fields', 'greetings', 'regexs', 'scripts']);
   });
 
