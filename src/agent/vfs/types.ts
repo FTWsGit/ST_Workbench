@@ -9,17 +9,21 @@ import type { AliasTable } from './aliasTable';
 import type { usePresetStore } from '../../stores/presetStore';
 import type { useWorldbookStore } from '../../stores/worldbookStore';
 import type { useCharacterStore } from '../../stores/characterStore';
+import type { useUiStore } from '../../stores/uiStore';
 import type { SearchQuery } from './searchQuery';
 
 export type PresetStore = ReturnType<typeof usePresetStore>;
 export type WorldbookStore = ReturnType<typeof useWorldbookStore>;
 export type CharacterStore = ReturnType<typeof useCharacterStore>;
+export type UiStore = ReturnType<typeof useUiStore>;
 
-/** 执行上下文：注入三个 domain store + session 级 alias 表。resolver 只调用 store 现有字段/方法。 */
+/** 执行上下文：注入三个 domain store + uiStore（varResolver 读变量索引用）+ session 级 alias 表。
+ *  resolver 只调用 store 现有字段/方法，不把 Vue store 对象透传给模型。 */
 export interface VfsContext {
   presetStore: PresetStore;
   worldbookStore: WorldbookStore;
   characterStore: CharacterStore;
+  uiStore: UiStore;
   aliasTable: AliasTable;
 }
 
@@ -125,4 +129,24 @@ export interface VfsResolver {
 
   /** 在 segments 指向的 collection 上搜索。 */
   search(segments: string[], query: SearchQuery, ctx: VfsContext): VfsResult;
+
+  /** 对 search 命中的文本字段做唯一子串替换（dry_run 只算不写）。 */
+  replace(
+    segments: string[],
+    query: SearchQuery,
+    old: string,
+    newValue: string,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult;
+
+  /** 对 search 命中的项 set 标量/枚举字段（dry_run 只算不写）。 */
+  modify(
+    segments: string[],
+    query: SearchQuery,
+    field: string,
+    value: unknown,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult;
 }

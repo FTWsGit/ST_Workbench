@@ -371,7 +371,150 @@ export function makeAliasedResolver(workspace: Workspace, adapter: CollectionAda
     return okResult(text || 'no hits', { type: 'hits', hits: rows });
   }
 
-  return { list, get, write, create, remove, search };
+  function replace(
+    rest: string[],
+    query: SearchQuery,
+    old: string,
+    newValue: string,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult {
+    if (rest.length !== 0) {
+      return errResult(`replace applies to a collection root /${workspace}/${adapter.name}`);
+    }
+    const items = adapter.items(ctx);
+    if (!items) return errResult(adapter.notLoadedError);
+    const aliasMap = ctx.aliasTable.register(
+      key,
+      items.map((i) => adapter.realIdOf(i))
+    );
+    const matches = searchItems(items, adapter.searchFields, query, (item) => ({
+      id: adapter.realIdOf(item),
+      name: adapter.nameOf(item),
+    }));
+    // 命中去重到 (itemId, fieldKey)，只留 text 字段。
+    const seen = new Set<string>();
+    const targets: { item: Record<string, unknown>; fieldKey: string }[] = [];
+    for (const m of matches) {
+      const spec = adapter.fields.find((f) => f.key === m.fieldKey && f.kind === 'text');
+      if (!spec) continue;
+      const dk = m.itemId + '\u0000' + m.fieldKey;
+      if (seen.has(dk)) continue;
+      seen.add(dk);
+      const item = items.find((i) => adapter.realIdOf(i) === m.itemId);
+      if (item) targets.push({ item, fieldKey: m.fieldKey });
+    }
+    // 先算完整 hits、校验唯一性，再统一写（dry-run 与 apply 共享这一段）。
+    const planned: {
+      item: Record<string, unknown>;
+      fieldKey: string;
+      before: unknown;
+      after: string;
+      path: string;
+    }[] = [];
+    for (const t of targets) {
+      const current = adapter.getField(t.item, t.fieldKey);
+      const r = uniqueSubstringReplace(String(current ?? ''), old, newValue);
+      if (!r.ok) {
+        const alias = aliasMap.get(adapter.realIdOf(t.item));
+        return errResult(`${t.fieldKey} of ${alias ?? adapter.realIdOf(t.item)}: ${r.error}`);
+      }
+      planned.push({
+        item: t.item,
+        fieldKey: t.fieldKey,
+        before: current,
+        after: r.value,
+        path: formatVfsPath({
+          workspace,
+          segments: [adapter.name, aliasMap.get(adapter.realIdOf(t.item))!, t.fieldKey],
+        }),
+      });
+    }
+    if (dryRun) {
+      const paths = planned.map((p) => p.path);
+      return okResult(
+        `dry-run: would replace ${planned.length} field(s):\n${paths.join('\n') || '(none)'}`,
+        { type: 'dry_run', kind: 'replace', count: planned.length, paths }
+      );
+    }
+    const changes: ChangeOperation[] = planned.map((p) => {
+      adapter.setField(p.item, p.fieldKey, p.after);
+      return { kind: 'set_field', path: p.path, before: p.before, after: p.after };
+    });
+    if (changes.length) adapter.markDirty(ctx);
+    const paths = changes.map((c) => c.path);
+    return okResult(
+      `replaced ${changes.length} field(s):\n${paths.join('\n') || '(none)'}`,
+      { type: 'applied', kind: 'replace', count: changes.length, paths },
+      changes
+    );
+  }
+
+  function modify(
+    rest: string[],
+    query: SearchQuery,
+    field: string,
+    value: unknown,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult {
+    if (rest.length !== 0) {
+      return errResult(`modify applies to a collection root /${workspace}/${adapter.name}`);
+    }
+    const items = adapter.items(ctx);
+    if (!items) return errResult(adapter.notLoadedError);
+    const spec = adapter.fields.find((f) => f.key === field);
+    if (!spec) {
+      return errResult(
+        `field "${field}" is not declared in /${workspace}/${adapter.name} — rejected`
+      );
+    }
+    if (spec.readonly) return errResult(`field "${field}" is read-only`);
+    if (spec.kind === 'text') {
+      return errResult(
+        `field "${field}" is text — use replace(path, query, old, new) or edit(path, old, new)`
+      );
+    }
+    const err = checkWrite(spec, { op: 'set', value });
+    if (err) return errResult(err);
+    const aliasMap = ctx.aliasTable.register(
+      key,
+      items.map((i) => adapter.realIdOf(i))
+    );
+    const matches = searchItems(items, adapter.searchFields, query, (item) => ({
+      id: adapter.realIdOf(item),
+      name: adapter.nameOf(item),
+    }));
+    const itemIds = [...new Set(matches.map((m) => m.itemId))];
+    const targets = itemIds
+      .map((id) => items.find((i) => adapter.realIdOf(i) === id))
+      .filter((i): i is Record<string, unknown> => i !== undefined);
+    const paths = targets.map((item) =>
+      formatVfsPath({
+        workspace,
+        segments: [adapter.name, aliasMap.get(adapter.realIdOf(item))!, field],
+      })
+    );
+    if (dryRun) {
+      return okResult(
+        `dry-run: would modify ${paths.length} item(s):\n${paths.join('\n') || '(none)'}`,
+        { type: 'dry_run', kind: 'modify', count: paths.length, paths }
+      );
+    }
+    const changes: ChangeOperation[] = targets.map((item, i) => {
+      const before = adapter.getField(item, field);
+      adapter.setField(item, field, value);
+      return { kind: 'set_field', path: paths[i], before, after: value };
+    });
+    if (changes.length) adapter.markDirty(ctx);
+    return okResult(
+      `modified ${changes.length} item(s):\n${paths.join('\n') || '(none)'}`,
+      { type: 'applied', kind: 'modify', count: changes.length, paths },
+      changes
+    );
+  }
+
+  return { list, get, write, create, remove, search, replace, modify };
 }
 
 /* ====== singleton resolver ====== */
@@ -446,8 +589,18 @@ export function makeSingletonResolver(workspace: Workspace, adapter: SingletonAd
       `search is not supported on /${workspace}/${adapter.name} — search a collection`
     );
   }
+  function replace(): VfsResult {
+    return errResult(
+      `replace is not supported on /${workspace}/${adapter.name} — search a collection`
+    );
+  }
+  function modify(): VfsResult {
+    return errResult(
+      `modify is not supported on /${workspace}/${adapter.name} — search a collection`
+    );
+  }
 
-  return { list, get, write, create, remove, search };
+  return { list, get, write, create, remove, search, replace, modify };
 }
 
 /* ====== workspace 分派 ====== */
@@ -460,6 +613,22 @@ export interface CollectionResolver {
   create(rest: string[], fields: Record<string, unknown>, ctx: VfsContext): VfsResult;
   remove(rest: string[], ctx: VfsContext): VfsResult;
   search(rest: string[], query: SearchQuery, ctx: VfsContext): VfsResult;
+  replace(
+    rest: string[],
+    query: SearchQuery,
+    old: string,
+    newValue: string,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult;
+  modify(
+    rest: string[],
+    query: SearchQuery,
+    field: string,
+    value: unknown,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult;
 }
 
 /** 把一个 workspace 的 collection 表包成一个 VfsResolver：按 segments[0] 分派到 collection。 */
@@ -528,5 +697,33 @@ export function workspaceResolver(
     return c.search(segments.slice(1), query, ctx);
   }
 
-  return { workspace, list, get, write, create, remove, search };
+  function replace(
+    segments: string[],
+    query: SearchQuery,
+    old: string,
+    newValue: string,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult {
+    const name = segments[0];
+    const c = name ? collections[name] : undefined;
+    if (!c) return errResult(`replace needs a collection path under /${workspace}`);
+    return c.replace(segments.slice(1), query, old, newValue, dryRun, ctx);
+  }
+
+  function modify(
+    segments: string[],
+    query: SearchQuery,
+    field: string,
+    value: unknown,
+    dryRun: boolean,
+    ctx: VfsContext
+  ): VfsResult {
+    const name = segments[0];
+    const c = name ? collections[name] : undefined;
+    if (!c) return errResult(`modify needs a collection path under /${workspace}`);
+    return c.modify(segments.slice(1), query, field, value, dryRun, ctx);
+  }
+
+  return { workspace, list, get, write, create, remove, search, replace, modify };
 }

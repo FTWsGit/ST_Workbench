@@ -169,6 +169,12 @@ const greetingsResolver: CollectionResolver = {
   search() {
     return errResult('search is not supported on greetings — search /character/fields');
   },
+  replace() {
+    return errResult('replace is not supported on greetings — search /character/fields');
+  },
+  modify() {
+    return errResult('modify is not supported on greetings — search /character/fields');
+  },
 };
 
 export const characterResolver = workspaceResolver(

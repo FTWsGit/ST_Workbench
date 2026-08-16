@@ -70,6 +70,7 @@ function ctx(store: ReturnType<typeof makeStore>): VfsContext {
     presetStore: store as unknown as VfsContext['presetStore'],
     worldbookStore: {} as VfsContext['worldbookStore'],
     characterStore: {} as VfsContext['characterStore'],
+    uiStore: {} as VfsContext['uiStore'],
     aliasTable: new AliasTable(),
   };
 }
@@ -223,5 +224,102 @@ describe('presetResolver', () => {
     expect((c.presetStore as unknown as { settings: PresetSettings }).settings.temperature).toBe(
       0.7
     );
+  });
+});
+
+describe('presetResolver search-modify (replace/modify)', () => {
+  it('replace applies unique substring to matched text fields', () => {
+    const { c, store } = listed();
+    const r = presetResolver.replace(
+      ['prompts'],
+      { kind: 'text', value: 'hello' },
+      'hello',
+      'HELLO',
+      false,
+      c
+    );
+    expect(r.ok).toBe(true);
+    expect(store.prompts[0].content).toBe('HELLO world');
+    expect(r.changes).toHaveLength(1);
+    expect(r.changes![0]).toEqual({
+      kind: 'set_field',
+      path: '/preset/prompts/1/content',
+      before: 'hello world',
+      after: 'HELLO world',
+    });
+  });
+
+  it('replace dry_run reports paths without writing', () => {
+    const { c, store } = listed();
+    const r = presetResolver.replace(
+      ['prompts'],
+      { kind: 'text', value: 'hello' },
+      'hello',
+      'HELLO',
+      true,
+      c
+    );
+    expect(r.ok).toBe(true);
+    expect(r.structured).toEqual({
+      type: 'dry_run',
+      kind: 'replace',
+      count: 1,
+      paths: ['/preset/prompts/1/content'],
+    });
+    expect(store.prompts[0].content).toBe('hello world'); // 未写
+  });
+
+  it('replace errors when old is not unique in a matched field', () => {
+    const { c } = listed();
+    const r = presetResolver.replace(
+      ['prompts'],
+      { kind: 'text', value: 'hello' },
+      'o',
+      'x',
+      false,
+      c
+    );
+    expect(r.ok).toBe(false);
+    expect(r.error).toContain('2+');
+  });
+
+  it('modify sets a scalar field on matched items', () => {
+    const { c, store } = listed();
+    const r = presetResolver.modify(
+      ['prompts'],
+      { kind: 'field', field: 'role', op: '=', value: 'user' },
+      'enabled',
+      false,
+      false,
+      c
+    );
+    expect(r.ok).toBe(true);
+    expect(store.prompts[1].enabled).toBe(false);
+    expect(r.changes).toHaveLength(1);
+  });
+
+  it('modify rejects text field and undeclared field', () => {
+    const { c } = listed();
+    const text = presetResolver.modify(
+      ['prompts'],
+      { kind: 'text', value: 'hello' },
+      'content',
+      'x',
+      false,
+      c
+    );
+    expect(text.ok).toBe(false);
+    expect(text.error).toContain('text');
+
+    const undeclared = presetResolver.modify(
+      ['prompts'],
+      { kind: 'text', value: 'hello' },
+      'identifier',
+      'x',
+      false,
+      c
+    );
+    expect(undeclared.ok).toBe(false);
+    expect(undeclared.error).toContain('not declared');
   });
 });

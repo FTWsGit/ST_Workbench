@@ -42,6 +42,7 @@ function ctx(store: ReturnType<typeof makeStore>): VfsContext {
     presetStore: {} as VfsContext['presetStore'],
     worldbookStore: store as unknown as VfsContext['worldbookStore'],
     characterStore: {} as VfsContext['characterStore'],
+    uiStore: {} as VfsContext['uiStore'],
     aliasTable: new AliasTable(),
   };
 }
