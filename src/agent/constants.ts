@@ -39,6 +39,14 @@ export const SACRED_PREFIX_MESSAGES = 2;
 /** 单 token 预估字节数，用于 estimateTokens 的粗略估算（1 token ≈ 4 字节，英文/代码场景）。 */
 export const TOKEN_BYTES_ESTIMATE = 4;
 
+/* ====== VFS search 防护常数 ======
+ * 正则口子一旦打开，模型/提示注入可构造灾难性回溯正则同步卡死主线程（无法 abort）。三层收口：
+ * 源串长度上限 + flags 严格校验 + 匹配循环迭代上限。残余风险（单次匹配回溯时间）见 searchQuery.ts。 */
+export const REGEX_SOURCE_MAX_LENGTH = 256;
+
+/** search 单次最多返回命中数（超出即截断并提示，防止 matchAll 无限产出）。 */
+export const SEARCH_MATCHES_MAX = 500;
+
 /* ====== 默认提示词模板（英文，结构化分块）======
  * 用户可在 AgentPanel 设置区逐块编辑/覆盖；这里只是出厂默认值。
  * runtime 块默认空——运行时由 agentStore 组装时注入（如当前 workspace 打开了什么文档），不持久化用户文本。 */
