@@ -45,6 +45,10 @@ export interface SingletonAdapter {
   fields: FieldSpec[];
   notLoadedError: string;
   get(ctx: VfsContext): Record<string, unknown> | null;
+  /** 读字段值，默认 obj[key]。字段不在对象顶层时（如 character 的 depthPrompt 在 otherPrompts 里）覆写。 */
+  getField?(obj: Record<string, unknown>, key: string): unknown;
+  /** 写字段值，默认 obj[key]=value。覆写以支持非顶层映射。 */
+  setField?(obj: Record<string, unknown>, key: string, value: unknown): boolean;
   markDirty(ctx: VfsContext): void;
 }
 
@@ -54,11 +58,11 @@ type RefResult =
   | { ok: true; item: Record<string, unknown>; realId: string; alias: string }
   | { ok: false; error: string };
 
-function okResult(text: string, structured?: unknown, changes?: ChangeOperation[]): VfsResult {
+export function okResult(text: string, structured?: unknown, changes?: ChangeOperation[]): VfsResult {
   return { ok: true, text, structured, changes };
 }
 
-function errResult(error: string): VfsResult {
+export function errResult(error: string): VfsResult {
   return { ok: false, error };
 }
 
@@ -66,7 +70,7 @@ function collectionKey(workspace: Workspace, name: string): string {
   return `${workspace}:${name}`;
 }
 
-function stringify(v: unknown): string {
+export function stringify(v: unknown): string {
   if (v === null || v === undefined) return '';
   if (Array.isArray(v)) return `[${v.map((x) => String(x)).join(',')}]`;
   if (typeof v === 'object') return JSON.stringify(v);
@@ -134,7 +138,7 @@ function resolveRef(
 }
 
 /** 唯一子串替换：old 必须恰好出现 1 次，否则报错（0 次/2+ 次都算错）。 */
-function uniqueSubstringReplace(
+export function uniqueSubstringReplace(
   current: string,
   old: string,
   newValue: string
@@ -390,7 +394,7 @@ export function makeSingletonResolver(workspace: Workspace, adapter: SingletonAd
     if (!obj) return errResult(adapter.notLoadedError);
     const spec = adapter.fields.find((f) => f.key === rest[0]);
     if (!spec) return errResult(`unknown field "${rest[0]}" in /${workspace}/${adapter.name}`);
-    const value = obj[spec.key];
+    const value = adapter.getField ? adapter.getField(obj, spec.key) : obj[spec.key];
     return okResult(stringify(value), value);
   }
 
@@ -407,11 +411,14 @@ export function makeSingletonResolver(workspace: Workspace, adapter: SingletonAd
     if (spec.readonly) return errResult(`field "${spec.key}" is read-only`);
     const err = checkWrite(spec, writeOp);
     if (err) return errResult(err);
-    const current = obj[spec.key];
+    const current = adapter.getField ? adapter.getField(obj, spec.key) : obj[spec.key];
     const path = formatVfsPath({ workspace, segments: [adapter.name, spec.key] });
     const applied = applyFieldWrite(spec, current, writeOp, path);
     if ('error' in applied) return errResult(applied.error);
-    obj[spec.key] = applied.value;
+    const written = adapter.setField
+      ? adapter.setField(obj, spec.key, applied.value)
+      : ((obj[spec.key] = applied.value), true);
+    if (!written) return errResult(`failed to write field "${spec.key}"`);
     adapter.markDirty(ctx);
     return okResult(`updated ${path}`, applied.value, [applied.change]);
   }

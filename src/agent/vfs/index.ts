@@ -5,9 +5,13 @@
  */
 import type { VfsResolver } from './types';
 import { presetResolver } from './presetResolver';
+import { worldbookResolver } from './worldbookResolver';
+import { characterResolver } from './characterResolver';
 
 const RESOLVERS: Record<string, VfsResolver> = {
   preset: presetResolver,
+  worldbook: worldbookResolver,
+  character: characterResolver,
 };
 
 export function getResolver(workspace: string): VfsResolver | undefined {

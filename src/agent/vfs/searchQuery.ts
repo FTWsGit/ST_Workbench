@@ -17,6 +17,7 @@ import {
   REGEX_SOURCE_MAX_LENGTH,
   SEARCH_MATCHES_MAX,
 } from '../constants';
+import { getPath } from './objectPath';
 
 export type SearchQuery =
   | { kind: 'text'; value: string }
@@ -175,7 +176,7 @@ export function searchItems(
     if (query.kind === 'field') {
       const f = fields.find((x) => x.key === query.field);
       if (!f) continue;
-      const raw = item[query.field];
+      const raw = getPath(item, query.field);
       if (raw === undefined || raw === null) continue;
       const eq = String(raw) === String(query.value);
       if (query.op === '=' ? eq : !eq) {
@@ -194,7 +195,7 @@ export function searchItems(
     for (const f of fields) {
       if (f.kind === 'enum') continue;
       if (matches.length >= SEARCH_MATCHES_MAX) break;
-      const raw = item[f.key];
+      const raw = getPath(item, f.key);
       if (raw === undefined || raw === null) continue;
       if (f.kind === 'list') {
         if (!Array.isArray(raw)) continue;
