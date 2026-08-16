@@ -1,0 +1,45 @@
+---
+name: "0011-agent-vfs-resource-layer"
+kind: "decision"
+description: "为什么 agent 工具从 domain-RPC 收敛成 verb-oriented VFS resource layer，alias 为什么做唯一身份而不是 name"
+alwaysApply: false
+status: "accepted"
+supersedes: ""
+---
+
+# 0011. agent 工具收敛成 verb-oriented VFS resource layer
+
+## 背景
+
+原型期 agent 工具是 18 个 domain-oriented 函数（`preset_list_blocks`/`preset_get_block`/
+`worldbook_get_entry`/`character_set_field`…），一个 domain 一套 list/get/search。问题：工具数量随
+domain 数线性增长，模型要记一张 RPC API 表；真实 id（preset 的 `custom_1734928374627`、worldbook
+的 `uid`）长且无规律、插入删除后位置不稳；`get` 把 7 个 meta 字段和全文一起吐，稀释注意力。
+
+## 决策
+
+1. **工具面收敛成 verb-oriented 小集合**：`list`/`get`/`search`/`edit`/`set`/`create`/`delete`，
+   用 VFS 路径寻址（`/workspace/collection[/alias][/field]`），第一段=workspace（复用 decision 0001
+   的两轴路由语义，把它序列化成字符串）。不模拟 shell（不做 cd/grep/sed/awk），不引入通用 move。
+2. **三层架构**：协议层（`toolRegistry.ts`，薄注册表）→ VFS Resource Layer（新增 `src/agent/vfs/`）
+   → domain store（不改）。抽的是**路由层**（"怎么被找到"），不是数据层（"返回什么形状"）——与
+   decision 0004 拒绝的 `BaseApi<T>` 不是一回事；resolver 内部形状可完全不同，只要满足统一行为接口。
+3. **alias 做 session 内稳定身份，name 只做便捷查找**：数字短别名首次登记后永久稳定、delete 后号码
+   永久退休不复用（counter 只增不减）；name 是每次现查现算的精确匹配（0 匹配报"call list"、2+ 匹配
+   报候选），不作为身份——name/comment 是可编辑字段，改名是日常操作，让身份依赖可编辑内容是循环依赖。
+4. **FieldSpec 声明表做可写字段白名单**：每个 collection 一份 `FieldSpec[]`（`kind: text|scalar|enum`），
+   `list(item)` 输出的字段名、`edit/set` 的合法性都以它为准——worldbook 的 40+ 底层字段只有声明的
+   可寻址，未声明字段拒写，不透传进底层 store 对象。
+5. **写语义二分**：text 字段（content/findRegex…）走唯一子串替换（`edit path old new`，old 必须恰好
+   出现 1 次，否则报错），并发安全且省 token；scalar/enum 字段（enabled/role/temperature…）直接
+   `set path value` 整值替换。
+
+## 后果
+
+- 写类工具纯内存，dirty 追踪照旧（复用 `useDirtyFlag`/各 store 的 deep watch），持久化（save）本轮
+  未实现——`save` 工具与 reorder、bind/unbind、preview 等旧工具一并删除，后续按需补。
+- `search`/`replace`/`modify` 共享同一份匹配核心（`searchQuery.ts` 的 `searchItems`），dry-run 与
+  apply 只在"是否写回"分叉；regex 口子有 ReDoS 收口（源串长度上限 + flags 校验 + 迭代上限）。
+- 未来 MCP bridge 只需在 VFS Resource Layer 外包一层协议适配壳（JSON-RPC ↔ resolver 调用），不用另写
+  业务逻辑——分层边界就是为这个留的。
+- 每次写类操作顺手记一条 `ChangeOperation`（只记录，不建 undo/redo），为未来 diff/跳转 UI 铺路。

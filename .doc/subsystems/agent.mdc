@@ -18,7 +18,7 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的持续对话
    ▼
 核心循环层  runAgentTurn        ← 工具调用循环，与业务零耦合
    ▼
-能力层  tools/ + toolRegistry  ← 工具注册表、只读/写类/测试创作工具集
+能力层  tools/vfs.ts + vfs/ + toolRegistry ← 工具注册表 + VFS Resource Layer（verb 工具 → resolver → store）
 ```
 
 依赖方向**单向向下**，禁止反向引用。
@@ -31,10 +31,9 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的持续对话
 | `src/api/agentApi.ts` | agent 持久化读写层，走 `extensionSettings`（服务端 `settings.json` 同级），跟 `characterApi.ts`/`presetApi.ts` 同一套 `ensureTopImporter()` 顶层动态 import 模式 |
 | `src/agent/callModel.ts` | LLM 调用层：监听 `CHAT_COMPLETION_SETTINGS_READY` 事件，在请求体组装完成、即将发 API 之前把 `tools` 塞进去；`generateRawData` 返回原始 response object。**传参绕过 ST 宏替换**：传 `prompt: ''`（空字符串）给 `generateRawData`，让 ST 的 `createRawPrompt` 只处理它自己创建的空消息；在 `CHAT_COMPLETION_SETTINGS_READY` 的 handler 里把 `generateData.messages` 覆盖成我们的原始消息数组，同时注入 `tools`/`tool_choice`/采样参数/`thinking`。ST 的 `createRawPrompt`（`script.js:3886`）会对每条 message 的 content 跑 `substituteParams`，把 `{{addvar::...}}` 这类宏执行掉并替换成空字符串——所以**绝不能把我们的消息数组直接传给 `generateRawData`**，只能传空字符串让 ST 吃自己的空消息，再在 handler 里覆盖 |
 | `src/agent/toolCallCompat.ts` | 极简 tool-call 提取层（非流式，OpenAI/Claude/Cohere 三族） |
-| `src/agent/toolRegistry.ts` | agent 专用工具注册表（JSON Schema + execute 函数）|
-| `src/agent/tools/readonly.ts` | 只读工具集 |
-| `src/agent/tools/write.ts` | 写类工具集 |
-| `src/agent/tools/preview.ts` | 测试/创作工具集 |
+| `src/agent/toolRegistry.ts` | agent 专用工具注册表（JSON Schema + execute 函数）；`AgentToolResult` 带 `structured`（UI/MCP 消费的结构化数据）+ `changes`（`ChangeOperation[]`，只记录不驱动 undo）|
+| `src/agent/tools/vfs.ts` | VFS verb 工具 facade：`list`/`get`/`search`/`edit`/`set`/`create`/`delete` 七件套，execute 只做 parse→dispatch→format |
+| `src/agent/vfs/` | VFS Resource Layer：`path.ts`（路径 parse/format）、`aliasTable.ts`（session 级短别名）、`searchQuery.ts`（SearchQuery parser + ReDoS 收口 + 匹配核心）、`collection.ts`（aliased/singleton resolver 机制 + workspace 分派）、`order.ts`（折叠无关的 order 树展平）、`objectPath.ts`（点路径读写）、`presetResolver.ts`/`worldbookResolver.ts`/`characterResolver.ts`（各 workspace resolver）、`regexResolver.ts`/`scriptResolver.ts`（宿主无关的 collection adapter）、`index.ts`（按 workspace 分派）。分层理由见 decision 0011 |
 | `src/agent/contextManager.ts` | 上下文管理：神圣前缀（压缩永不触碰）+ 入库截断 + 整段摘要压缩 |
 | `src/agent/constants.ts` | agent 子系统的可调常数集中表（禁止散落到各文件当魔法数字） |
 | `src/agent/types.ts` | agent 类型定义（`Message`/`ToolCall`/`AgentPersisted`/`AgentConfig`/`AgentSessionMeta`/`AgentRuntimeState`） |
@@ -113,9 +112,13 @@ UI（`AgentPanel.vue`）的发送按钮在 busy 时变"停止"，不禁用、不
 
 所有工具一次性全导进 `tools` 数组发给模型，不按当前 workspace 过滤。agent 跨 preset/worldbook/character 三个 store 运维，工具全集常驻一次到位，避免按 ws 分导致的 provider 端 tools 缓存不命中
 
-### 分页语义
+### VFS 寻址与 alias
 
-三个 get 工具支持 `offset`/`limit` 分页（1-based 行号），`sliceLines` 切片后附 "showing lines X-Y of N, call again with offset Z" 翻页报告，避免长内容被 truncate 锁死读不到。
+工具用 VFS 路径寻址：`/workspace/collection[/alias][/field]`（如 `/preset/prompts/1/content`、`/character/greetings/0`、`/worldbook/entries/2/position.depth`）。`list` 永远答"这一层有什么子节点"、`get` 永远只答"这个叶子值是多少"——不存在"get 一个容器吐一整坨 JSON"。
+
+数字 `alias` 是 session 内稳定身份，真实 `identifier`/`uid` 不暴露给模型；`alias` 首次 `list` 时登记、delete 后号码永久退休。name 段（如 `/preset/prompts/jailbreak/content`）是现查现算的便捷查找，不作为身份。`edit`（text 字段唯一子串替换）与 `set`（scalar/enum 整值）二分，字段合法性以每个 collection 的 `FieldSpec[]` 白名单为准。语义细节见 decision 0011。
+
+写类工具（`edit`/`set`/`create`/`delete`）只改内存（走各 store 的 dirty 追踪），**没有 save 工具**——持久化本轮未实现。
 
 ### 提示注入防护
 
@@ -143,4 +146,4 @@ UI（`AgentPanel.vue` 会话头）：`<select>` 下拉列所有 sessions（按 `
 
 ## 工具 description 管理
 
-三个 tools 文件（`readonly.ts`/`write.ts`/`preview.ts`）顶部各有一个 `const TOOL_DESC = { ... } as const` 集中管理所有工具描述文案，英文 atomcode 风格（做什么/不做什么/边界/何时用/参数语义/返回形态/错误边界/反例陷阱，150-250 字符），`registerAgentTool` 里 `description` 字段引用 `TOOL_DESC.xxx`。改描述改 const 即可，便于 diff 评审。
+`tools/vfs.ts` 顶部一个 `const TOOL_DESC = { ... } as const` 集中管理七个 verb 工具的 description 文案，英文 atomcode 风格（做什么/不做什么/边界/何时用/参数语义/返回形态/错误边界/反例陷阱，150-250 字符），`registerAgentTool` 里 `description` 字段引用 `TOOL_DESC.xxx`。改描述改 const 即可，便于 diff 评审。
