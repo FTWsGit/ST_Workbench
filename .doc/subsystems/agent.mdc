@@ -33,7 +33,7 @@ Agent 子系统是横跨 preset/worldbook/character 三个 store 的持续对话
 | `src/agent/toolCallCompat.ts` | 极简 tool-call 提取层（非流式，OpenAI/Claude/Cohere 三族） |
 | `src/agent/toolRegistry.ts` | agent 专用工具注册表（JSON Schema + execute 函数）；`AgentToolResult` 带 `structured`（UI/MCP 消费的结构化数据）+ `changes`（`ChangeOperation[]`，只记录不驱动 undo）|
 | `src/agent/tools/vfs.ts` | VFS verb 工具 facade：`list`/`get`/`search`/`edit`/`set`/`create`/`delete` 七件套，execute 只做 parse→dispatch→format |
-| `src/agent/vfs/` | VFS Resource Layer：`path.ts`（路径 parse/format）、`aliasTable.ts`（session 级短别名）、`searchQuery.ts`（SearchQuery parser + ReDoS 收口 + 匹配核心）、`collection.ts`（aliased/singleton resolver 机制 + workspace 分派）、`order.ts`（折叠无关的 order 树展平）、`objectPath.ts`（点路径读写）、`presetResolver.ts`/`worldbookResolver.ts`/`characterResolver.ts`（各 workspace resolver）、`regexResolver.ts`/`scriptResolver.ts`（宿主无关的 collection adapter）、`index.ts`（按 workspace 分派）。分层理由见 decision 0011 |
+| `src/agent/vfs/` | VFS Resource Layer：`path.ts`（路径 parse/format）、`aliasTable.ts`（session 级短别名）、`searchQuery.ts`（SearchQuery parser + ReDoS 收口 + 匹配核心）、`collection.ts`（aliased/singleton resolver 机制 + workspace 分派 + replace/modify）、`order.ts`（折叠无关的 order 树展平）、`objectPath.ts`（点路径读写）、`presetResolver.ts`/`worldbookResolver.ts`/`characterResolver.ts`（各 workspace resolver）、`regexResolver.ts`/`scriptResolver.ts`（宿主无关的 collection adapter）、`varResolver.ts`（变量追踪 refs/defs，薄壳 uiStore 的 useVarNav 索引）、`index.ts`（按 workspace 分派）。分层理由见 decision 0011 |
 | `src/agent/contextManager.ts` | 上下文管理：神圣前缀（压缩永不触碰）+ 入库截断 + 整段摘要压缩 |
 | `src/agent/constants.ts` | agent 子系统的可调常数集中表（禁止散落到各文件当魔法数字） |
 | `src/agent/types.ts` | agent 类型定义（`Message`/`ToolCall`/`AgentPersisted`/`AgentConfig`/`AgentSessionMeta`/`AgentRuntimeState`） |
@@ -118,7 +118,7 @@ UI（`AgentPanel.vue`）的发送按钮在 busy 时变"停止"，不禁用、不
 
 数字 `alias` 是 session 内稳定身份，真实 `identifier`/`uid` 不暴露给模型；`alias` 首次 `list` 时登记、delete 后号码永久退休。name 段（如 `/preset/prompts/jailbreak/content`）是现查现算的便捷查找，不作为身份。`edit`（text 字段唯一子串替换）与 `set`（scalar/enum 整值）二分，字段合法性以每个 collection 的 `FieldSpec[]` 白名单为准。语义细节见 decision 0011。
 
-写类工具（`edit`/`set`/`create`/`delete`）只改内存（走各 store 的 dirty 追踪），**没有 save 工具**——持久化本轮未实现。
+写类工具（`edit`/`set`/`create`/`delete`/`replace`/`modify`）只改内存（走各 store 的 dirty 追踪），**没有 save 工具**——持久化本轮未实现。`replace`/`modify` 是 search-modify：先 `searchItems` 算出完整命中列表、校验唯一性/字段合法性、再统一写，`dry_run=true` 只算不写，与 apply 走同一段匹配代码（不会 dry-run 说 5 处、真跑改 6 处）。`refs`/`defs` 是跨域变量追踪，薄壳 `uiStore` 的 useVarNav 索引，输出 VFS path + `certain`（是否确定注入），不重新扫描三域数据。
 
 ### 提示注入防护
 
@@ -146,4 +146,4 @@ UI（`AgentPanel.vue` 会话头）：`<select>` 下拉列所有 sessions（按 `
 
 ## 工具 description 管理
 
-`tools/vfs.ts` 顶部一个 `const TOOL_DESC = { ... } as const` 集中管理七个 verb 工具的 description 文案，英文 atomcode 风格（做什么/不做什么/边界/何时用/参数语义/返回形态/错误边界/反例陷阱，150-250 字符），`registerAgentTool` 里 `description` 字段引用 `TOOL_DESC.xxx`。改描述改 const 即可，便于 diff 评审。
+`tools/vfs.ts` 顶部一个 `const TOOL_DESC = { ... } as const` 集中管理 11 个 verb 工具的 description 文案（`list`/`get`/`search`/`edit`/`set`/`create`/`delete`/`replace`/`modify`/`refs`/`defs`），英文 atomcode 风格（做什么/不做什么/边界/何时用/参数语义/返回形态/错误边界/反例陷阱，150-250 字符），`registerAgentTool` 里 `description` 字段引用 `TOOL_DESC.xxx`。改描述改 const 即可，便于 diff 评审。
