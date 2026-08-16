@@ -10,6 +10,10 @@
  *    各自独立），符合"不同目录下数字文件名互不冲突"的直觉。
  *
  * 纯内存、不落盘，session 切换时 reset()。
+ *
+ * 登记时机前提：真实 id 在 create 时即定死、save 只落盘不改 id（preset identifier = custom_+Date.now()、
+ * worldbook uid = max+1、regex/script id = 前缀+Date.now(36)+rand），所以 alias 在 create 返回时立即登记
+ * 即可，不必等 save。若未来某 domain 的 id 变成"save 后才最终确定"，这里要改成 save 后再登记。
  */
 export class AliasTable {
   private tables = new Map<
