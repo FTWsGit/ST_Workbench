@@ -73,7 +73,7 @@ function mount() {
   /** 卸载清理：ST 扩展被禁用/移除或页面卸载时，卸载 Vue app 并移除根容器，让 FAB 等所有可见元素一并消失。
    *  CSS 由 manifest `css` 字段注入，不再有手动注入的 <style> 需要清理。
    *
-   *  pagehide 在 bfcache 关闭时最可靠；unload 作为旧浏览器兜底。两者都设 once 避免重复卸载。 */
+   *  pagehide 覆盖页面卸载与 bfcache 关闭场景，设 once 避免重复卸载。 */
   const selfWin = window;
   function teardown() {
     try {
@@ -87,11 +87,7 @@ function mount() {
       // 卸载阶段抛错可忽略，不阻塞后续清理
     }
   }
-  const teardownOnce = () => {
-    teardown();
-  };
-  selfWin.addEventListener('pagehide', teardownOnce, { once: true });
-  selfWin.addEventListener('unload', teardownOnce, { once: true });
+  selfWin.addEventListener('pagehide', teardown, { once: true });
 }
 
 /** App.vue ↔ 入口侧的事件契约：入口在宿主 window 上派发本事件触发 openPanel()。

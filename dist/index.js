@@ -19383,10 +19383,7 @@ function Xw() {
 			e.remove();
 		} catch {}
 	}
-	let i = () => {
-		r();
-	};
-	n.addEventListener("pagehide", i, { once: !0 }), n.addEventListener("unload", i, { once: !0 });
+	n.addEventListener("pagehide", r, { once: !0 });
 }
 var Zw = "st-workbench:open-panel";
 function Qw() {
