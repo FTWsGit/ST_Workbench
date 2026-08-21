@@ -321,6 +321,8 @@
               'wb-mobile-drawer-open': isMobile && drawer.visible === 'agent',
             }"
           />
+          <!-- 开发调试用，非正式产品功能：见 src/agent/dev/AgentToolDebugPanel.vue 顶部说明。 -->
+          <AgentToolDebugPanel />
         </div>
 
         <!-- 移动端遮罩：任一抽屉/操作表打开时覆盖编辑区，点击关闭；桌面端不渲染。 -->
@@ -543,6 +545,7 @@ import VarPopup from './components/shared/VarPopup.vue';
 import PresetHiddenBlocksModal from './components/preset/PresetHiddenBlocksModal.vue';
 import MetaPanel from './components/shared/MetaPanel.vue';
 import AgentPanel from './components/shared/AgentPanel.vue';
+import AgentToolDebugPanel from './agent/dev/AgentToolDebugPanel.vue';
 import { useAgentStore } from './agent/agentStore';
 import RegexSidebar from './components/regex/RegexSidebar.vue';
 import ScriptTreeSidebar from './components/tavern/ScriptTreeSidebar.vue';
