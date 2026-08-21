@@ -50,20 +50,19 @@ type ScriptFolder = {
 
 ```ts
 // 正则脚本：预设/角色卡共用，随宿主一起存取（不需单独 IO）
+// 数字枚举（placement/substituteRegex）与 ST 原生数字在 api/scriptConvert.ts 边界互转
 type RegexScript = {
   id: string;
-  scriptName: string;
+  name: string;
   findRegex: string;
   replaceString: string;
   trimStrings: string[];
-  placement: number[];          // 生效位置（0=用户输入前/1=AI输出前/2=AI输出后等）
-  disabled: boolean;
-  markdownOnly: boolean;        // 仅影响显示
-  promptOnly: boolean;          // 仅影响后端提示词
+  placement: RegexPlacement[];        // 字符串枚举：user_input/ai_output/quick_command/world_info/reasoning
+  enabled: boolean;                    // ST 原生是 disabled，取反转换在 api 边界完成
+  scope: RegexScope[];                // 'displayOnly' | 'promptOnly' | 'both' → 映射回原生 markdownOnly/promptOnly 两个 bool
   runOnEdit: boolean;
-  substituteRegex: 0 | 1 | 2;   // 0 不替换 / 1 替换(原始) / 2 替换(转义)
-  minDepth: number | null;
-  maxDepth: number | null;
+  substituteRegex: 'none' | 'raw' | 'escaped';  // 对应原生 0/1/2
+  depth: { minDepth: number | null; maxDepth: number | null };
   [k: string]: any;             // 分组字段 _gid/_gname/_gcollapsed/_genabled/_gidx 塞进来
 };
 ```

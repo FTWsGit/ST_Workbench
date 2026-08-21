@@ -9,7 +9,7 @@ alwaysApply: false
 
 ## 能力边界与限制
 
-`applyRegexScript()` 只做查找/替换/修剪的本地模拟：不解析 `substituteRegex`——匹配前的宏替换需要真实 ST context，本地模拟迟早会跟真实的对不上；不体现 `placement`/`minDepth`/`maxDepth`——这几个是"这条消息在聊天记录里第几层/属于哪类消息"的上下文概念，单独一段贴进来的测试文本没有这个信息。
+`applyRegexScript()` 只做查找/替换/修剪的本地模拟：不解析 `substituteRegex`——匹配前的宏替换需要真实 ST context，本地模拟迟早会跟真实的对不上；不体现 `placement`/`depth.minDepth`/`depth.maxDepth`——这几个是"这条消息在聊天记录里第几层/属于哪类消息"的上下文概念，单独一段贴进来的测试文本没有这个信息。
 
 ## 为什么 UI 要明示"预览≠真实"
 

@@ -74,7 +74,7 @@ alwaysApply: false
 | 干净层 | ST 原生 | 说明 |
 | --- | --- | --- |
 | `description`（顶层） | v2.description / v1.description | |
-| `otherPrompts.*` | v2 同名字段 | scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt；depthPrompt.role 字符串 ⇄ 0/1/2 |
+| `otherPrompts.*` | v2 同名字段 | scenario/mesExample/personality/systemPrompt/postHistoryInstructions/depthPrompt；depthPrompt.role 字符串枚举与 ST 原生一致，兼容历史数字值兜底 |
 | `creatorMeta.*` | v2.creator / creator_notes / character_version / tags | creatorNotes 兜底 v1.creatorcomment |
 | `regexs`/`scripts` | extensions.regex_scripts / tavern_helper.scripts | 同预设 |
 | `worldbook` | extensions.world | undefined → null |
