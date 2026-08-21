@@ -63,7 +63,7 @@ const TOOL_DESC = {
   edit: 'Replace a unique substring in a text field: old must appear exactly once in the current value, else errors (0 or 2+ matches). Safer than overwriting on concurrent edits. Use on text fields only (content, findRegex, …); scalar/enum fields use set. In-memory only. Returns the updated path.',
   set: 'Set a scalar/enum field to an exact value (enabled, role, temperature, …). Replaces the whole value, no substring matching. Use on scalar/enum fields only; text fields use edit. In-memory only. Returns the updated path.',
   create:
-    'Create a new item in /workspace/collection. fields object is collection-specific: prompts {name, role, content}; entries {comment, content, keys}; regexs/scripts {scriptName/name, findRegex, replaceString, content}. Returns the new alias path. In-memory only.',
+    'Create a new item in /workspace/collection. fields object is collection-specific: prompts {name, role, content}; entries {comment, content, keys}; regexs/scripts {name, findRegex, replaceString, content}. Returns the new alias path. In-memory only.',
   delete:
     'Delete an item at /workspace/collection/alias. IRREVERSIBLE — no undo; double-check the alias before use. In-memory only. Returns the deleted path.',
   replace:

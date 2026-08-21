@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fromRaw, buildFormData, depthPromptRoleToNum, depthPromptRoleToStr } from './characterApi';
+import { fromRaw, buildFormData, depthPromptRoleToStr } from './characterApi';
 import type { Character } from '../types';
 
 /* ---------- fixture ---------- */
@@ -15,7 +15,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
       personality: '',
       systemPrompt: '',
       postHistoryInstructions: '',
-      depthPrompt: { prompt: '', depth: 4, role: 0 },
+      depthPrompt: { prompt: '', depth: 4, role: 'system' },
     },
     greetings: ['hi'],
     creatorMeta: {
@@ -33,41 +33,24 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
   };
 }
 
-describe('characterApi - depthPromptRoleToNum', () => {
-  it('字符串枚举 → 数字', () => {
-    expect(depthPromptRoleToNum('system')).toBe(0);
-    expect(depthPromptRoleToNum('user')).toBe(1);
-    expect(depthPromptRoleToNum('assistant')).toBe(2);
-  });
-
-  it('兼容历史数字值 1/2 直接返回', () => {
-    expect(depthPromptRoleToNum(1)).toBe(1);
-    expect(depthPromptRoleToNum(2)).toBe(2);
-  });
-
-  it('0 走映射表亦为 0', () => {
-    expect(depthPromptRoleToNum(0)).toBe(0);
-  });
-
-  it('未知值默认 0', () => {
-    expect(depthPromptRoleToNum('unknown')).toBe(0);
-    expect(depthPromptRoleToNum(null)).toBe(0);
-    expect(depthPromptRoleToNum(undefined)).toBe(0);
-    expect(depthPromptRoleToNum(99)).toBe(0);
-  });
-});
-
 describe('characterApi - depthPromptRoleToStr', () => {
-  it('数字 → 字符串', () => {
+  it('字符串原样返回', () => {
+    expect(depthPromptRoleToStr('system')).toBe('system');
+    expect(depthPromptRoleToStr('user')).toBe('user');
+    expect(depthPromptRoleToStr('assistant')).toBe('assistant');
+  });
+
+  it('兼容历史数字值', () => {
     expect(depthPromptRoleToStr(0)).toBe('system');
     expect(depthPromptRoleToStr(1)).toBe('user');
     expect(depthPromptRoleToStr(2)).toBe('assistant');
   });
 
-  it('越界 index 返回 system', () => {
-    // TS 类型上不允许传越界值，但运行时容错用 ?['system']
-    // 这里仅测合法路径
-    expect(depthPromptRoleToStr(0)).toBe('system');
+  it('未知值默认 system', () => {
+    expect(depthPromptRoleToStr('unknown')).toBe('system');
+    expect(depthPromptRoleToStr(null)).toBe('system');
+    expect(depthPromptRoleToStr(undefined)).toBe('system');
+    expect(depthPromptRoleToStr(99)).toBe('system');
   });
 });
 
@@ -124,10 +107,10 @@ describe('characterApi - fromRaw', () => {
     });
     expect(c.otherPrompts.depthPrompt.prompt).toBe('p');
     expect(c.otherPrompts.depthPrompt.depth).toBe(7);
-    expect(c.otherPrompts.depthPrompt.role).toBe(2);
+    expect(c.otherPrompts.depthPrompt.role).toBe('assistant');
     const c2 = fromRaw({ data: { extensions: { depth_prompt: { prompt: 'p' } } } });
     expect(c2.otherPrompts.depthPrompt.depth).toBe(4);
-    expect(c2.otherPrompts.depthPrompt.role).toBe(0);
+    expect(c2.otherPrompts.depthPrompt.role).toBe('system');
   });
 
   it('talkativeness：v2 extensions 优先，v1 兜底，可能是字符串用 Number(...)||0.5', () => {
@@ -244,7 +227,7 @@ describe('characterApi - buildFormData', () => {
     expect(ext.regex_scripts).toEqual([]);
   });
 
-  it('depth_prompt.role 经 depthPromptRoleToStr 转字符串', () => {
+  it('depth_prompt.role 字符串原样透传', () => {
     const data = makeCharacter({
       otherPrompts: {
         scenario: '',
@@ -252,7 +235,7 @@ describe('characterApi - buildFormData', () => {
         personality: '',
         systemPrompt: '',
         postHistoryInstructions: '',
-        depthPrompt: { prompt: 'p', depth: 6, role: 2 },
+        depthPrompt: { prompt: 'p', depth: 6, role: 'assistant' },
       },
     });
     const fd = buildFormData(data, null);

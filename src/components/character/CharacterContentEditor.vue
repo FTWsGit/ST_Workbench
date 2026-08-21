@@ -17,7 +17,7 @@
       <label class="wb-form-label">{{ uiStore.t('character.editor.depthLabel') }}</label>
       <input type="number" class="wb-form-input wb-form-num" v-model.number="depthPromptDepth" />
       <label class="wb-form-label">{{ uiStore.t('character.editor.roleLabel') }}</label>
-      <select class="wb-select-wide" v-model.number="depthPromptRole">
+      <select class="wb-select-wide" v-model="depthPromptRole">
         <option v-for="opt in CHARACTER_DEPTH_ROLE_OPTIONS" :key="opt.value" :value="opt.value">
           {{ uiStore.t(opt.labelKey) }}
         </option>
@@ -83,8 +83,8 @@ const depthPromptDepth = computed<number>({
     }
   },
 });
-const depthPromptRole = computed<0 | 1 | 2>({
-  get: () => store.character?.otherPrompts.depthPrompt.role ?? 0,
+const depthPromptRole = computed<'system' | 'user' | 'assistant'>({
+  get: () => store.character?.otherPrompts.depthPrompt.role ?? 'system',
   set: (v) => {
     if (store.character) {
       store.character.otherPrompts.depthPrompt.role = v;

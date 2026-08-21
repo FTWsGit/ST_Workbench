@@ -71,7 +71,7 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
       personality: '',
       systemPrompt: '',
       postHistoryInstructions: '',
-      depthPrompt: { prompt: '', depth: 4, role: 0 },
+      depthPrompt: { prompt: '', depth: 4, role: 'system' },
     },
     greetings: [],
     creatorMeta: { creator: '', creatorNotes: '', version: '', tags: [] },

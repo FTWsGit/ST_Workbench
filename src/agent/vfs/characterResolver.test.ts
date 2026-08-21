@@ -15,7 +15,7 @@ function makeChar(): Character {
       personality: 'brave',
       systemPrompt: '',
       postHistoryInstructions: '',
-      depthPrompt: { prompt: 'deep prompt', depth: 4, role: 0 },
+      depthPrompt: { prompt: 'deep prompt', depth: 4, role: 'system' },
     },
     greetings: ['Hello!', 'Yo!'],
     creatorMeta: { creator: '', creatorNotes: '', version: '', tags: [] },

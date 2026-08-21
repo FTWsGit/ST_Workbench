@@ -46,7 +46,7 @@ function emptyCharacter(name: string): Character {
       personality: '',
       systemPrompt: '',
       postHistoryInstructions: '',
-      depthPrompt: { prompt: '', depth: 4, role: 0 },
+      depthPrompt: { prompt: '', depth: 4, role: 'system' },
     },
     greetings: [''],
     creatorMeta: { creator: '', creatorNotes: '', version: '', tags: [] },
@@ -62,7 +62,7 @@ function emptyCharacter(name: string): Character {
 type OtherPromptTextKey = Exclude<keyof Character['otherPrompts'], 'depthPrompt'>;
 
 /** 字段基线的值类型：普通文本字段是 string，depthPrompt 是整个复合对象。 */
-type FieldBaseline = string | { prompt: string; depth: number; role: 0 | 1 | 2 };
+type FieldBaseline = string | Character['otherPrompts']['depthPrompt'];
 
 /** 按 CHARACTER_FIELDS key 从 Character 取虚拟字段的值：description 读顶层，depthPrompt 读
  *  otherPrompts.depthPrompt.prompt，其余读 otherPrompts[key]。非字段 key 返回 null。 */
@@ -254,7 +254,7 @@ export const useCharacterStore = defineStore('character', () => {
     showToast,
     t,
     loadFirstMessageKey: 'character.toast.loadFirst',
-    defaultPlacement: [2],
+    defaultPlacement: ['ai_output'],
   });
 
   /* ====== Regex 分组树（同 presetStore regex 段，identifier 填 regex script id）====== */

@@ -21,7 +21,7 @@
     <FormField :label="props.t('regex.settings.scriptNameLabel')">
       <input
         class="wb-form-input"
-        v-model="script.scriptName"
+        v-model="script.name"
         :placeholder="props.t('regex.settings.scriptNamePlaceholder')"
       />
     </FormField>
@@ -43,22 +43,22 @@
       <div class="wb-btn-surface">
         <button
           class="wb-btn sm"
-          :class="{ active: script.markdownOnly && !script.promptOnly }"
-          @click="setSurfaceMode('display')"
+          :class="{ active: scopeMode === 'displayOnly' }"
+          @click="setScopeMode('displayOnly')"
         >
           {{ props.t('regex.settings.displayOnly') }}
         </button>
         <button
           class="wb-btn sm"
-          :class="{ active: script.promptOnly && !script.markdownOnly }"
-          @click="setSurfaceMode('prompt')"
+          :class="{ active: scopeMode === 'promptOnly' }"
+          @click="setScopeMode('promptOnly')"
         >
           {{ props.t('regex.settings.promptOnly') }}
         </button>
         <button
           class="wb-btn sm"
-          :class="{ active: script.markdownOnly && script.promptOnly }"
-          @click="setSurfaceMode('both')"
+          :class="{ active: scopeMode === 'both' }"
+          @click="setScopeMode('both')"
         >
           {{ props.t('regex.settings.both') }}
         </button>
@@ -101,6 +101,7 @@ import {
   REGEX_PLACEMENT_OPTIONS as PLACEMENT_OPTIONS,
   REGEX_SUBSTITUTE_OPTIONS as SUBSTITUTE_OPTIONS,
 } from '../../types';
+import type { RegexScript } from '../../types';
 import { parseFindRegex } from '../../lib/regexEngine';
 import type { RegexSettingsFormProps } from './regexProps';
 import AdvancedGroup from '../shared/AdvancedGroup.vue';
@@ -129,15 +130,15 @@ const trimStringsText = computed({
   },
 });
 const minDepthModel = computed({
-  get: () => script.value?.minDepth ?? null,
+  get: () => script.value?.depth.minDepth ?? null,
   set: (v: number | null) => {
-    if (script.value) script.value.minDepth = v === null || Number.isNaN(v) ? null : v;
+    if (script.value) script.value.depth.minDepth = v === null || Number.isNaN(v) ? null : v;
   },
 });
 const maxDepthModel = computed({
-  get: () => script.value?.maxDepth ?? null,
+  get: () => script.value?.depth.maxDepth ?? null,
   set: (v: number | null) => {
-    if (script.value) script.value.maxDepth = v === null || Number.isNaN(v) ? null : v;
+    if (script.value) script.value.depth.maxDepth = v === null || Number.isNaN(v) ? null : v;
   },
 });
 const substituteOptions = computed(() =>
@@ -147,26 +148,36 @@ const substituteOptions = computed(() =>
   }))
 );
 const substituteModel = computed({
-  get: () => script.value?.substituteRegex ?? 0,
+  get: () => script.value?.substituteRegex ?? 'none',
   set: (v: unknown) => {
-    if (script.value) script.value.substituteRegex = Number(v);
+    if (script.value) script.value.substituteRegex = v as RegexScript['substituteRegex'];
   },
 });
-function togglePlacement(v: number) {
+const scopeMode = computed<'displayOnly' | 'promptOnly' | 'both'>(() => {
+  const s = script.value;
+  if (!s) return 'both';
+  const d = s.scope.includes('displayOnly');
+  const p = s.scope.includes('promptOnly');
+  if (d && p) return 'both';
+  if (d) return 'displayOnly';
+  if (p) return 'promptOnly';
+  return 'both';
+});
+function togglePlacement(v: RegexScript['placement'][number]) {
   if (!script.value) return;
   const p = script.value.placement;
   const i = p.indexOf(v);
   if (i >= 0) p.splice(i, 1);
   else p.push(v);
 }
-function setSurfaceMode(mode: 'display' | 'prompt' | 'both') {
+function setScopeMode(mode: 'displayOnly' | 'promptOnly' | 'both') {
   if (!script.value) return;
-  script.value.markdownOnly = mode === 'display' || mode === 'both';
-  script.value.promptOnly = mode === 'prompt' || mode === 'both';
+  if (mode === 'both') script.value.scope = ['displayOnly', 'promptOnly'];
+  else script.value.scope = [mode];
 }
 /** 同步标签名。用 renameTab() 而非 open()：open() 会触发侧边栏 scrollIntoView，每字输入会卡顿。 */
 watch(
-  () => script.value?.scriptName,
+  () => script.value?.name,
   (name) => {
     if (script.value && name !== undefined)
       tabsStore.renameTab('regex', script.value.id, name || props.t('common.unnamed'));

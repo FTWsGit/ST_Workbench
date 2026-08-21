@@ -38,7 +38,7 @@
 
       <details v-if="currentDef" class="wb-dbg-schema">
         <summary>parameters schema</summary>
-        <pre style="font-size: 13px; font-family: consolas;">{{ prettySchema }}</pre>
+        <pre style="font-size: 13px; font-family: consolas">{{ prettySchema }}</pre>
       </details>
 
       <!-- 参数编辑 -->
@@ -54,7 +54,7 @@
         class="wb-form-textarea wb-dbg-args"
         spellcheck="false"
         placeholder="{}"
-        style="font-size: 13px; font-family: consolas;"
+        style="font-size: 13px; font-family: consolas"
       ></textarea>
       <p v-if="argsError" class="wb-dbg-error">{{ argsError }}</p>
 
@@ -70,14 +70,18 @@
           {{ lastResult.isError ? '✗ error' : '✓ ok' }} · {{ lastResult.tool }} ·
           {{ lastResult.ms }}ms
         </div>
-        <pre style="font-size: 13px; font-family: consolas;">{{ lastResult.text }}</pre>
+        <pre style="font-size: 13px; font-family: consolas">{{ lastResult.text }}</pre>
         <details v-if="lastResult.structured !== undefined">
           <summary>structured</summary>
-          <pre style="font-size: 13px; font-family: consolas;">{{ formatJson(lastResult.structured) }}</pre>
+          <pre style="font-size: 13px; font-family: consolas">{{
+            formatJson(lastResult.structured)
+          }}</pre>
         </details>
         <details v-if="lastResult.changes !== undefined">
           <summary>changes</summary>
-          <pre style="font-size: 13px; font-family: consolas;">{{ formatJson(lastResult.changes) }}</pre>
+          <pre style="font-size: 13px; font-family: consolas">{{
+            formatJson(lastResult.changes)
+          }}</pre>
         </details>
       </div>
 

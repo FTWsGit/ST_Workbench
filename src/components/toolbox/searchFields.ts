@@ -99,7 +99,7 @@ const PRESET_ITEM_FIELDS: SearchField[] = [
 const REGEX_FIELDS: SearchField[] = [
   { key: 'findRegex', labelKey: 'regex.field.findRegex', kind: 'text' },
   { key: 'replaceString', labelKey: 'regex.field.replaceString', kind: 'text' },
-  { key: 'scriptName', labelKey: 'regex.field.scriptName', kind: 'text' },
+  { key: 'name', labelKey: 'regex.field.scriptName', kind: 'text' },
   { key: 'placement', labelKey: 'regex.field.placement', kind: 'list' },
   { key: 'trimStrings', labelKey: 'regex.field.trimStrings', kind: 'list' },
   {
@@ -280,7 +280,7 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
       return {
         items: toSearchItems(store.regexs),
         fields: REGEX_FIELDS,
-        getItemMeta: (r) => ({ id: r.id, name: r.scriptName || r.id }),
+        getItemMeta: (r) => ({ id: r.id, name: r.name || r.id }),
       };
     }
     return {
@@ -305,7 +305,7 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
     return {
       items: toSearchItems(store.regexs),
       fields: REGEX_FIELDS,
-      getItemMeta: (r) => ({ id: r.id, name: r.scriptName || r.id }),
+      getItemMeta: (r) => ({ id: r.id, name: r.name || r.id }),
     };
   }
   return getCharacterFieldsScene(store);

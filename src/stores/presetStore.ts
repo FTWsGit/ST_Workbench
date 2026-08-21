@@ -177,7 +177,7 @@ export const usePresetStore = defineStore('main', () => {
     showToast,
     t,
     loadFirstMessageKey: 'preset.toast.loadFirst',
-    defaultPlacement: [2],
+    defaultPlacement: ['ai_output'],
   });
 
   /* ====== Regex 分组树（独立于 preset 域的 order，同 useGroupedList 模式）======
@@ -1085,7 +1085,7 @@ export const usePresetStore = defineStore('main', () => {
       tabsStore.open({
         domain: 'regex',
         key: script.id,
-        label: script.scriptName || script.id,
+        label: script.name || script.id,
         workspace: 'preset',
       });
       return;

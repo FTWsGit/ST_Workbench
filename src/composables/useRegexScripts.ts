@@ -1,4 +1,4 @@
-import type { RegexScript } from '../types';
+import type { RegexPlacement, RegexScript } from '../types';
 import { useScriptList } from './useScriptList';
 
 /**
@@ -12,27 +12,25 @@ export function useRegexScripts(
     showToast: (msg: string) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
     loadFirstMessageKey?: string;
-    defaultPlacement?: number[];
+    defaultPlacement?: RegexPlacement[];
   }
 ) {
-  const defaultPlacement = options.defaultPlacement || [2];
+  const defaultPlacement = options.defaultPlacement || (['ai_output'] as RegexPlacement[]);
 
   const list = useScriptList<RegexScript>(getScripts, {
     idPrefix: 'regex_',
     createScript: (id) => ({
       id,
-      scriptName: 'New Regex',
+      name: 'New Regex',
       findRegex: '',
       replaceString: '',
       trimStrings: [],
-      placement: defaultPlacement,
+      placement: [...defaultPlacement],
       enabled: true,
-      markdownOnly: false,
-      promptOnly: false,
+      scope: ['displayOnly', 'promptOnly'],
       runOnEdit: false,
-      substituteRegex: 0,
-      minDepth: null,
-      maxDepth: null,
+      substituteRegex: 'none',
+      depth: { minDepth: null, maxDepth: null },
     }),
     markDirty: options.markDirty,
     showToast: options.showToast,

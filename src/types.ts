@@ -79,21 +79,35 @@ export interface Preset {
 }
 
 /* ====== 正则脚本 / 酒馆助手脚本 ====== */
+
+/** 正则脚本生效位置——字符串枚举，与 ST 原生数字在 api 边界互转。 */
+export type RegexPlacement =
+  | 'user_input' // 1 用户输入前
+  | 'ai_output' // 2 AI输出前
+  | 'quick_command' // 3 快捷命令
+  | 'world_info' // 5 世界书插入
+  | 'reasoning'; // 6 推理内容
+
+/** 正则脚本作用范围：displayOnly=仅影响显示(markdownOnly=true), promptOnly=仅影响后端提示词(promptOnly=true), both=两者都生效。 */
+export type RegexScope = 'displayOnly' | 'promptOnly' | 'both';
+
+/** 正则脚本替换宏模式。 */
+export type RegexSubstitute = 'none' | 'raw' | 'escaped';
+
 export interface RegexScript extends GroupFields {
   id: string;
-  scriptName: string;
+  name: string;
   findRegex: string;
   replaceString: string;
   trimStrings: string[];
-  placement: number[];
+  placement: RegexPlacement[];
   /** 工作层统一用 enabled，ST 原生是 disabled，取反转换在 api 边界完成。 */
   enabled: boolean;
-  markdownOnly: boolean; // 仅影响显示
-  promptOnly: boolean; // 仅影响后端提示词
+  /** 作用范围：displayOnly → markdownOnly=true/promptOnly=false; promptOnly → markdownOnly=false/promptOnly=true; both → 两 true。 */
+  scope: RegexScope[];
   runOnEdit: boolean;
-  substituteRegex: number; // 0 不替换 / 1 替换(原始) / 2 替换(转义)
-  minDepth: number | null;
-  maxDepth: number | null;
+  substituteRegex: RegexSubstitute;
+  depth: { minDepth: number | null; maxDepth: number | null };
 }
 
 /** ScriptButton 的字段名跟上游 Js-Slash-Runner 的 zod schema 一致：name 是按钮显示文字，
@@ -301,19 +315,26 @@ export const SYNTAX_LABEL_KEYS = {
   'hl-sb': 'shared.syntax.hl-sb',
 } as const;
 
-/**No value 4 here, decided by SillyTavern-v1.18*/
+/**No value 4 here, decided by SillyTavern-v1.18.
+ *  字符串枚举与 ST 原生 placement 数字在 api/scriptConvert.ts 互转。 */
 export const REGEX_PLACEMENT_OPTIONS = [
-  { value: 1, labelKey: 'regex.placement.userInput' },
-  { value: 2, labelKey: 'regex.placement.aiOutput' },
-  { value: 3, labelKey: 'regex.placement.quickCommand' },
-  { value: 5, labelKey: 'regex.placement.worldInfo' },
-  { value: 6, labelKey: 'regex.placement.reasoning' },
+  { value: 'user_input' as const, labelKey: 'regex.placement.userInput' },
+  { value: 'ai_output' as const, labelKey: 'regex.placement.aiOutput' },
+  { value: 'quick_command' as const, labelKey: 'regex.placement.quickCommand' },
+  { value: 'world_info' as const, labelKey: 'regex.placement.worldInfo' },
+  { value: 'reasoning' as const, labelKey: 'regex.placement.reasoning' },
 ] as const;
 
 export const REGEX_SUBSTITUTE_OPTIONS = [
-  { value: 0, labelKey: 'regex.substitute.none' },
-  { value: 1, labelKey: 'regex.substitute.raw' },
-  { value: 2, labelKey: 'regex.substitute.escaped' },
+  { value: 'none' as const, labelKey: 'regex.substitute.none' },
+  { value: 'raw' as const, labelKey: 'regex.substitute.raw' },
+  { value: 'escaped' as const, labelKey: 'regex.substitute.escaped' },
+] as const;
+
+export const REGEX_SCOPE_OPTIONS = [
+  { value: 'displayOnly' as const, labelKey: 'regex.settings.displayOnly' },
+  { value: 'promptOnly' as const, labelKey: 'regex.settings.promptOnly' },
+  { value: 'both' as const, labelKey: 'regex.settings.both' },
 ] as const;
 
 /* ====== 世界书（Worldbook / Lorebook） ====== */
@@ -409,15 +430,15 @@ export interface Character {
 
   description: string;
 
-  /** 除 description 外的"大文本框"创作字段。depthPrompt.role 用数字 0/1/2 表示
-   *  system/user/assistant（与 WORLDBOOK_ROLE_OPTIONS 同序），转换在 api 边界完成。 */
+  /** 除 description 外的"大文本框"创作字段。depthPrompt.role 使用字符串枚举，与
+   *  ST 原生 depth_prompt.role 字符串一致，无需数字互转。 */
   otherPrompts: {
     scenario: string;
     mesExample: string;
     personality: string;
     systemPrompt: string;
     postHistoryInstructions: string;
-    depthPrompt: { prompt: string; depth: number; role: 0 | 1 | 2 };
+    depthPrompt: { prompt: string; depth: number; role: 'system' | 'user' | 'assistant' };
   };
 
   /** 开场白：index 0 = 正式开场白（原生 first_mes），其余 = 候选开场白（原生 alternate_greetings）。 */
@@ -462,7 +483,7 @@ export const CHARACTER_FIELDS = [
 ] as const;
 
 export const CHARACTER_DEPTH_ROLE_OPTIONS = [
-  { value: 0, labelKey: 'worldbook.role.system' },
-  { value: 1, labelKey: 'worldbook.role.user' },
-  { value: 2, labelKey: 'worldbook.role.assistant' },
+  { value: 'system' as const, labelKey: 'worldbook.role.system' },
+  { value: 'user' as const, labelKey: 'worldbook.role.user' },
+  { value: 'assistant' as const, labelKey: 'worldbook.role.assistant' },
 ] as const;

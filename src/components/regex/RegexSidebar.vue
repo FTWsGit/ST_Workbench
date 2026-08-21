@@ -107,16 +107,13 @@
             class="wb-tree-name"
             @dblclick.stop="startEditBlockName(gi)"
           >
-            {{
-              getScript((node.ref as OrderItem).identifier)?.scriptName ||
-              uiStore.t('common.unnamed')
-            }}
+            {{ getScript((node.ref as OrderItem).identifier)?.name || uiStore.t('common.unnamed') }}
           </span>
           <input
             v-else
             :ref="(el) => setBlockNameInput(el, gi)"
             class="wb-tree-name-input"
-            :value="getScript((node.ref as OrderItem).identifier)?.scriptName || ''"
+            :value="getScript((node.ref as OrderItem).identifier)?.name || ''"
             @blur="finishEditBlockName(gi, $event)"
             @keydown.enter.prevent="finishEditBlockName(gi, $event)"
             @keydown.esc.prevent="cancelEditBlockName()"
@@ -262,7 +259,7 @@ function startEditGroupName(gi: number) {
   startEditGroupNameRaw(gi);
 }
 
-/** block 名就地编辑。提交时同步 scriptName + renameTab + markDirty。 */
+/** block 名就地编辑。提交时同步 name + renameTab + markDirty。 */
 const {
   editingId: editingBlockGi,
   setInputRef: setBlockNameInputRaw,
@@ -274,7 +271,7 @@ const {
     const node = store.value.regexFlatNodes[gi];
     if (!node || node.isGroup) return '';
     const item = node.ref as OrderItem;
-    return getScript(item.identifier)?.scriptName || '';
+    return getScript(item.identifier)?.name || '';
   },
   onCommit: (gi, newName) => {
     const s = store.value;
@@ -283,7 +280,7 @@ const {
     const item = node.ref as OrderItem;
     const script = getScript(item.identifier);
     if (!script) return;
-    script.scriptName = newName;
+    script.name = newName;
     s.markDirty();
     tabsStore.renameTab('regex', item.identifier, newName);
   },
@@ -310,7 +307,7 @@ function onAdd() {
   tabsStore.open({
     domain: 'regex',
     key: id,
-    label: script?.scriptName || uiStore.t('common.unnamed'),
+    label: script?.name || uiStore.t('common.unnamed'),
     workspace: workspace.value,
   });
 }
@@ -326,7 +323,7 @@ function onDeleteBlock(gi: number) {
   confirmStore.ask({
     title: uiStore.t('regex.confirm.delete.title'),
     message: uiStore.t('regex.confirm.delete.message', {
-      name: esc(script.scriptName || script.id),
+      name: esc(script.name || script.id),
     }),
     confirmText: uiStore.t('common.delete'),
     cancelText: uiStore.t('common.cancel'),
@@ -442,7 +439,7 @@ const listSelection = useListSelection<number>({
       tabsStore.open({
         domain: 'regex',
         key: item.identifier,
-        label: script?.scriptName || uiStore.t('common.unnamed'),
+        label: script?.name || uiStore.t('common.unnamed'),
         workspace: workspace.value,
       });
     }

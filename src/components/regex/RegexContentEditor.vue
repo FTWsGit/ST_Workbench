@@ -1,7 +1,7 @@
 <template>
   <div class="wb-editor-panel wb-regex-editor" v-if="script">
     <div class="wb-editor-meta">
-      <span class="wb-regex-editor-name">{{ script.scriptName || props.t('common.unnamed') }}</span>
+      <span class="wb-regex-editor-name">{{ script.name || props.t('common.unnamed') }}</span>
       <span class="wb-spacer"></span>
       <button
         v-if="script && props.isDirty(script.id)"

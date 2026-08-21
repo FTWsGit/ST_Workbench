@@ -5,18 +5,16 @@ import type { RegexScript } from '../types';
 function mk(findRegex: string, replaceString?: string, trimStrings?: string[]): RegexScript {
   return {
     id: 'test',
-    scriptName: 'test',
+    name: 'test',
     findRegex: findRegex,
     replaceString: replaceString ?? '',
     trimStrings: trimStrings ?? [],
     placement: [],
     enabled: true,
-    markdownOnly: false,
-    promptOnly: false,
+    scope: ['displayOnly', 'promptOnly'],
     runOnEdit: false,
-    substituteRegex: 0,
-    minDepth: null,
-    maxDepth: null,
+    substituteRegex: 'none',
+    depth: { minDepth: null, maxDepth: null },
   };
 }
 

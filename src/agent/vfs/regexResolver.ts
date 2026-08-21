@@ -9,14 +9,13 @@ import type { VfsContext, FieldSpec } from './types';
 import type { CollectionAdapter } from './collection';
 
 const REGEX_FIELDS: FieldSpec[] = [
-  { key: 'scriptName', kind: 'text' },
+  { key: 'name', kind: 'text' },
   { key: 'findRegex', kind: 'text' },
   { key: 'replaceString', kind: 'text' },
   { key: 'enabled', kind: 'scalar', valueKind: 'boolean' },
-  { key: 'markdownOnly', kind: 'scalar', valueKind: 'boolean' },
-  { key: 'promptOnly', kind: 'scalar', valueKind: 'boolean' },
+  { key: 'scope', kind: 'enum', enumValues: ['displayOnly', 'promptOnly', 'both'] },
   { key: 'runOnEdit', kind: 'scalar', valueKind: 'boolean' },
-  { key: 'substituteRegex', kind: 'enum', enumValues: ['0', '1', '2'] },
+  { key: 'substituteRegex', kind: 'enum', enumValues: ['none', 'raw', 'escaped'] },
   { key: 'minDepth', kind: 'scalar', valueKind: 'number' },
   { key: 'maxDepth', kind: 'scalar', valueKind: 'number' },
 ];
@@ -29,6 +28,22 @@ export interface RegexHost {
   markDirty(): void;
 }
 
+/** scope 数组 → VFS 单值枚举。空数组（两者都不生效）也归为 both。 */
+function scopeToEnum(scope: RegexScript['scope']): 'displayOnly' | 'promptOnly' | 'both' {
+  const d = scope.includes('displayOnly');
+  const p = scope.includes('promptOnly');
+  if (d && p) return 'both';
+  if (d) return 'displayOnly';
+  if (p) return 'promptOnly';
+  return 'both';
+}
+
+function enumToScope(v: string): RegexScript['scope'] {
+  if (v === 'displayOnly') return ['displayOnly'];
+  if (v === 'promptOnly') return ['promptOnly'];
+  return ['displayOnly', 'promptOnly'];
+}
+
 export function makeRegexCollection(
   getHost: (ctx: VfsContext) => RegexHost,
   notLoadedError: string
@@ -37,11 +52,11 @@ export function makeRegexCollection(
     name: 'regexs',
     fields: REGEX_FIELDS,
     searchFields: [
-      { key: 'scriptName', kind: 'text' },
+      { key: 'name', kind: 'text' },
       { key: 'findRegex', kind: 'text' },
       { key: 'replaceString', kind: 'text' },
     ],
-    summaryKeys: ['enabled', 'scriptName'],
+    summaryKeys: ['enabled', 'name'],
     notLoadedError,
     items(ctx) {
       const host = getHost(ctx);
@@ -52,12 +67,29 @@ export function makeRegexCollection(
     },
     nameOf(item) {
       const s = item as unknown as RegexScript;
-      return s.scriptName || s.id;
+      return s.name || s.id;
     },
     getField(item, key) {
+      const s = item as unknown as RegexScript;
+      if (key === 'scope') return scopeToEnum(s.scope);
+      if (key === 'minDepth') return s.depth.minDepth;
+      if (key === 'maxDepth') return s.depth.maxDepth;
       return (item as Record<string, unknown>)[key];
     },
     setField(item, key, value) {
+      const s = item as unknown as RegexScript;
+      if (key === 'scope') {
+        s.scope = enumToScope(value as string);
+        return true;
+      }
+      if (key === 'minDepth') {
+        s.depth.minDepth = value as number | null;
+        return true;
+      }
+      if (key === 'maxDepth') {
+        s.depth.maxDepth = value as number | null;
+        return true;
+      }
       (item as Record<string, unknown>)[key] = value;
       return true;
     },
@@ -67,7 +99,7 @@ export function makeRegexCollection(
       if (!id) return '';
       const s = host.regexs.find((x) => x.id === id);
       if (s) {
-        if (typeof fields.scriptName === 'string') s.scriptName = fields.scriptName;
+        if (typeof fields.name === 'string') s.name = fields.name;
         if (typeof fields.findRegex === 'string') s.findRegex = fields.findRegex;
         if (typeof fields.replaceString === 'string') s.replaceString = fields.replaceString;
       }

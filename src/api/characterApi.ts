@@ -60,18 +60,13 @@ async function postMultipart(path: string, fd: FormData): Promise<Response> {
 }
 
 /** ST 的 depth_prompt.role 是字符串枚举（'system' | 'user' | 'assistant'，char-data.js），工作层
- *  Character 用数字 0/1/2（与 WORLDBOOK_ROLE_OPTIONS 同序）——转换边界在这里映射，兼容历史数字值。 */
-const DEPTH_PROMPT_ROLE_NUM: Record<string, 0 | 1 | 2> = {
-  system: 0,
-  user: 1,
-  assistant: 2,
-};
-export function depthPromptRoleToNum(role: unknown): 0 | 1 | 2 {
-  if (role === 1 || role === 2) return role;
-  return DEPTH_PROMPT_ROLE_NUM[String(role)] ?? 0;
-}
-export function depthPromptRoleToStr(role: 0 | 1 | 2): string {
-  return (['system', 'user', 'assistant'][role] as string) ?? 'system';
+ *  Character 直接使用字符串枚举，无需数字互转。兼容历史数字值兜底。 */
+export function depthPromptRoleToStr(role: unknown): 'system' | 'user' | 'assistant' {
+  if (role === 'system' || role === 'user' || role === 'assistant') return role;
+  if (role === 0) return 'system';
+  if (role === 1) return 'user';
+  if (role === 2) return 'assistant';
+  return 'system';
 }
 
 /* ====== v1CharData/v2CharData ⇄ 工作层 Character 双向转换 ======
@@ -108,7 +103,7 @@ export function fromRaw(raw: Record<string, unknown>): Character {
       depthPrompt: {
         prompt: (dp.prompt ?? '') as string,
         depth: typeof dp.depth === 'number' ? dp.depth : 4,
-        role: depthPromptRoleToNum(dp.role),
+        role: depthPromptRoleToStr(dp.role),
       },
     },
     greetings: [(v2.first_mes ?? raw?.first_mes ?? '') as string, ...alternates],
@@ -176,7 +171,7 @@ export function buildFormData(
     depth_prompt: {
       prompt: data.otherPrompts.depthPrompt.prompt,
       depth: data.otherPrompts.depthPrompt.depth,
-      role: depthPromptRoleToStr(data.otherPrompts.depthPrompt.role),
+      role: data.otherPrompts.depthPrompt.role,
     },
     tavern_helper: {
       ...oldTH,
