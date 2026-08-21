@@ -37,6 +37,13 @@ registerTool('preset', 'regex', {
   component: BatchTool,
 });
 
+// preset 工作区的酒馆助手脚本集合：Search
+registerTool('preset', 'tavern', {
+  id: 'search',
+  labelKey: 'toolbox.tool.search',
+  component: SearchTool,
+});
+
 // worldbook/items：Search + Batch
 registerTool('worldbook', 'items', {
   id: 'search',
@@ -66,4 +73,11 @@ registerTool('character', 'regex', {
   id: 'batch',
   labelKey: 'toolbox.tool.batch',
   component: BatchTool,
+});
+
+// character 工作区的酒馆助手脚本集合：Search
+registerTool('character', 'tavern', {
+  id: 'search',
+  labelKey: 'toolbox.tool.search',
+  component: SearchTool,
 });

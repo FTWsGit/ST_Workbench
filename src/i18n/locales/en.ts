@@ -240,6 +240,7 @@ export default {
   'preset.field.name': 'Name',
   'preset.field.role': 'Role',
   'preset.field.identifier': 'Identifier',
+  'preset.field.enabled': 'Enabled',
   'preset.role.system': 'system',
   'preset.role.user': 'user',
   'preset.role.assistant': 'assistant',
@@ -341,9 +342,11 @@ export default {
   'regex.field.replaceString': 'Replacement Text',
   'regex.field.scriptName': 'Script Name',
   'regex.field.placement': 'Placement',
+  'regex.field.scope': 'Scope',
   'regex.field.trimStrings': 'Trim Strings',
   'regex.field.substituteRegex': 'Substitute Regex',
   'regex.field.enabled': 'Enabled',
+  'regex.field.runOnEdit': 'Run on edit',
   'regex.field.disabled': 'Disabled',
 
   // ---- 确认弹窗 ----
@@ -389,6 +392,12 @@ export default {
   'tavern.settings.dataJsonInvalid': 'JSON parse failed: {msg}',
   'tavern.settings.exportDataLabel': 'Export variables',
   'tavern.settings.exportButtonLabel': 'Export buttons',
+
+  // ---- Field labels (toolbox search) ----
+  'tavern.field.name': 'Name',
+  'tavern.field.content': 'Content',
+  'tavern.field.info': 'Info',
+  'tavern.field.enabled': 'Enabled',
 
   // ========================================
   // worldbook：世界书域

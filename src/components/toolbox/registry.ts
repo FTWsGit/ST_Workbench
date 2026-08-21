@@ -2,10 +2,10 @@ import type { Component } from 'vue';
 import type { LocaleKey } from '../../i18n';
 
 /** 工具出现的"场景"：按 (workspace, sidebarCollection) 维度组织可用工具清单。
- *  preset 有 'items'/'regex'，character 有 'fields'/'regex'，worldbook 只有 'items'。 */
+ *  preset 有 'items'/'regex'/'tavern'，character 有 'fields'/'regex'/'tavern'，worldbook 只有 'items'。 */
 export interface ToolScene {
   workspace: 'preset' | 'worldbook' | 'character';
-  collection: 'items' | 'fields' | 'regex';
+  collection: 'items' | 'fields' | 'regex' | 'tavern';
 }
 
 /** 一个可用工具的定义。labelKey 是工具切换 tab 的 i18n 标签（由注册方提供），

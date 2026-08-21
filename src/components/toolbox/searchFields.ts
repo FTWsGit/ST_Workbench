@@ -53,6 +53,7 @@ const ENUM_CHOICES: Record<string, EnumChoice[]> = {
     labelKey: o.labelKey,
   })),
   enabled: BOOL_CHOICES,
+  runOnEdit: BOOL_CHOICES,
   // worldbook/items
   positionType: WORLDBOOK_POSITION_OPTIONS.map((o) => ({
     value: o.value,
@@ -94,6 +95,7 @@ const PRESET_ITEM_FIELDS: SearchField[] = [
   { key: 'name', labelKey: 'preset.field.name', kind: 'text' },
   { key: 'role', labelKey: 'preset.field.role', kind: 'enum' },
   { key: 'identifier', labelKey: 'preset.field.identifier', kind: 'enum' },
+  { key: 'enabled', labelKey: 'preset.field.enabled', kind: 'enum' },
 ];
 
 const REGEX_FIELDS: SearchField[] = [
@@ -102,12 +104,14 @@ const REGEX_FIELDS: SearchField[] = [
   { key: 'name', labelKey: 'regex.field.scriptName', kind: 'text' },
   { key: 'placement', labelKey: 'regex.field.placement', kind: 'list' },
   { key: 'trimStrings', labelKey: 'regex.field.trimStrings', kind: 'list' },
+  { key: 'scope', labelKey: 'regex.field.scope', kind: 'list' },
   {
     key: 'substituteRegex',
     labelKey: 'regex.field.substituteRegex',
     kind: 'enum',
   },
   { key: 'enabled', labelKey: 'regex.field.enabled', kind: 'enum' },
+  { key: 'runOnEdit', labelKey: 'regex.field.runOnEdit', kind: 'enum' },
 ];
 
 const WORLDBOOK_FIELDS: SearchField[] = [
@@ -121,6 +125,13 @@ const WORLDBOOK_FIELDS: SearchField[] = [
   { key: 'probability', labelKey: 'worldbook.field.probability', kind: 'enum' },
   { key: 'enabled', labelKey: 'worldbook.field.enabled', kind: 'enum' },
   { key: 'strategyType', labelKey: 'worldbook.field.strategyType', kind: 'enum' },
+];
+
+const SCRIPT_FIELDS: SearchField[] = [
+  { key: 'content', labelKey: 'tavern.field.content', kind: 'text' },
+  { key: 'name', labelKey: 'tavern.field.name', kind: 'text' },
+  { key: 'info', labelKey: 'tavern.field.info', kind: 'text' },
+  { key: 'enabled', labelKey: 'tavern.field.enabled', kind: 'enum' },
 ];
 
 /** store 里的严格接口类型数组（无 index signature）→ searchFields 需要的 Record<string, unknown>[]。
@@ -283,6 +294,13 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
         getItemMeta: (r) => ({ id: r.id, name: r.name || r.id }),
       };
     }
+    if (collection === 'tavern') {
+      return {
+        items: toSearchItems(store.scripts),
+        fields: SCRIPT_FIELDS,
+        getItemMeta: (s) => ({ id: s.id, name: s.name || s.id }),
+      };
+    }
     return {
       items: toSearchItems(store.prompts.filter((b) => !b.hidden)),
       fields: PRESET_ITEM_FIELDS,
@@ -306,6 +324,13 @@ export function getSearchScene(workspace: string, collection: string): SearchSce
       items: toSearchItems(store.regexs),
       fields: REGEX_FIELDS,
       getItemMeta: (r) => ({ id: r.id, name: r.name || r.id }),
+    };
+  }
+  if (collection === 'tavern') {
+    return {
+      items: toSearchItems(store.scripts),
+      fields: SCRIPT_FIELDS,
+      getItemMeta: (s) => ({ id: s.id, name: s.name || s.id }),
     };
   }
   return getCharacterFieldsScene(store);

@@ -235,6 +235,7 @@ export default {
   'preset.field.name': '名称',
   'preset.field.role': '角色',
   'preset.field.identifier': '标识符',
+  'preset.field.enabled': '启用',
   'preset.role.system': 'system',
   'preset.role.user': 'user',
   'preset.role.assistant': 'assistant',
@@ -336,9 +337,11 @@ export default {
   'regex.field.replaceString': '替换文本',
   'regex.field.scriptName': '脚本名称',
   'regex.field.placement': '作用范围',
+  'regex.field.scope': '生效范围',
   'regex.field.trimStrings': '修剪文本',
   'regex.field.substituteRegex': '替换宏',
   'regex.field.enabled': '启用',
+  'regex.field.runOnEdit': '编辑时运行',
   'regex.field.disabled': '已禁用',
 
   // ---- 确认弹窗 ----
@@ -384,6 +387,12 @@ export default {
   'tavern.settings.dataJsonInvalid': 'JSON 解析失败：{msg}',
   'tavern.settings.exportDataLabel': '导出变量',
   'tavern.settings.exportButtonLabel': '导出按钮',
+
+  // ---- 字段标签（工具箱搜索用）----
+  'tavern.field.name': '名称',
+  'tavern.field.content': '脚本内容',
+  'tavern.field.info': '说明',
+  'tavern.field.enabled': '启用',
 
   // ========================================
   // worldbook：世界书域
